@@ -286,5 +286,6 @@ def ecrire_xlsx(resultats, chemin):
 
     if journees:
         wb.active = wb.sheetnames.index(f"J{journees[-1]}")
+    wb.calculation.fullCalcOnLoad = True  # Excel calcule toutes les formules à l'ouverture
     wb.save(chemin)
     return chemin
