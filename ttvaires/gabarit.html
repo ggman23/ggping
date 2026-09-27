@@ -168,6 +168,7 @@ function lieu(r, equipe) {
   return `<span class="badge ext">EXT</span> ${esc(adr)} <a href="${carte}" target="_blank" rel="noopener" class="petit">plan</a>`;
 }
 function scoreTxt(r) {
+  if (!r.adversaire) return "";
   if (!r.score) return dateRenc(r) && dateRenc(r) < AUJOURDHUI ? '<span class="petit">non saisi</span>' : "";
   const [a, b] = r.score;
   const nous = r.vaires_domicile ? a : b, eux = r.vaires_domicile ? b : a;
