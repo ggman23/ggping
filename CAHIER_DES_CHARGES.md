@@ -74,3 +74,16 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
 
 ## Dépôt
 - Code dans le dépôt GitHub `ggman23/ggping`.
+
+## Précisions constatées lors de la réalisation
+
+- Source : pages publiques de pingpocket.fr. Le site sature au-delà de 2-3 requêtes
+  simultanées : l'outil reste à 2 requêtes, avec cache disque (premier lancement ~40 min,
+  lancements suivants de quelques secondes à ~15 min selon ce qui a changé).
+- La poule féminine est la « D1 Championnat Féminin 77/94 » (équipes de 3 joueuses).
+- Les horaires des rencontres ne sont pas publiés : seules les dates sont affichées.
+- L'historique n'est pas lu pour les joueurs restés à 500 points (le minimum) qui n'ont pas
+  joué de la phase : leur meilleur classement est affiché « — ».
+- Le meilleur classement est le maximum des points officiels de début de phase (janvier et
+  juillet) sur tout l'historique ; il est mis en évidence quand il dépasse d'au moins
+  2 classements le classement actuel.

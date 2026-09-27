@@ -15,8 +15,10 @@ Le détail des besoins et des règles de brûlage appliquées est dans
 
 Les données viennent des pages publiques de **pingpocket.fr** (aucun identifiant FFTT
 nécessaire). Elles sont gardées dans le dossier `cache\` : le **premier lancement** télécharge
-plusieurs milliers de pages (**30 à 45 minutes** : le site sature vite, l'outil reste discret), les suivants seulement ce qui a changé
-(résultats, nouvelles feuilles de match), en quelques minutes.
+environ 2 000 pages (**40 minutes environ** : le site sature vite, l'outil reste discret).
+Les lancements suivants ne retéléchargent que ce qui a pu changer : quelques secondes le même
+jour, 10 à 20 minutes d'une semaine sur l'autre (poules, listes de licenciés, nouvelles
+feuilles de match).
 
 > Les horaires des rencontres ne sont pas publiés par pingpocket : seules les dates figurent.
 

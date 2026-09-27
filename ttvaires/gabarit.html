@@ -88,6 +88,7 @@ tr.vaires td { font-weight: 700; background: var(--accent-fond); }
 .m.egal { color: var(--accent); }
 .m.faible { color: var(--faible); }
 .score { font-size: 18px; font-weight: 700; }
+.haut { color: var(--ext); }
 .note { background: var(--attention-fond); color: var(--attention); border-radius: 8px; padding: 8px 10px;
   margin: 10px 0 0; font-size: 14px; }
 details { margin-top: 12px; }
@@ -153,10 +154,10 @@ function joueurCourt(j, ch) {
 function meilleur(j) {
   const m = j.meilleur;
   if (!m) return "—";
-  const val = m.classement ?? clt(m.points);
-  const ecart = m.points && j.points && m.points - j.points >= 100
-    ? ` <span class="badge att" title="Meilleur classement nettement au-dessus du classement actuel">+${m.points - j.points}</span>` : "";
-  return `${esc(val)}${m.annee ? ` <span class="petit">(${esc(m.annee)})</span>` : ""}${ecart}`;
+  const val = esc(m.classement ?? clt(m.points));
+  // Mis en évidence quand le joueur a été classé au moins 2 classements au-dessus d'aujourd'hui.
+  const haut = m.points && pts(j) && m.points - pts(j) >= 200;
+  return `${haut ? `<b class="haut" title="${m.points} pts, nettement au-dessus du classement actuel">${val}</b>` : val}${m.annee ? ` <span class="petit">(${esc(m.annee)})</span>` : ""}`;
 }
 function lieu(r, equipe) {
   const club = r.vaires_domicile ? D.club : CLUBS[(r.adversaire || {}).club];
