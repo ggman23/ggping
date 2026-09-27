@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adversaires CVTT Vaires</title>
+<style>
+:root {
+  --fond: #f4f5f7; --surface: #ffffff; --surface2: #f0f2f5; --texte: #1c2330; --doux: #5b6576;
+  --bord: #dde1e7; --accent: #1f5fbf; --accent-fond: #e7effb;
+  --dom: #1d7a46; --dom-fond: #e3f4ea; --ext: #a45a00; --ext-fond: #fbeedd;
+  --danger: #b3261e; --danger-fond: #fbe7e5; --fort: #b3261e; --faible: #8a93a3;
+  --ok: #1d7a46; --ok-fond: #e3f4ea; --attention: #8a5a00; --attention-fond: #fff4d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fond: #12151b; --surface: #1b2029; --surface2: #232a35; --texte: #e6e9ef; --doux: #9aa4b5;
+    --bord: #313a48; --accent: #7fb0ff; --accent-fond: #1e2c44;
+    --dom: #6fd39b; --dom-fond: #173323; --ext: #f3b163; --ext-fond: #3a2a14;
+    --danger: #ff8f86; --danger-fond: #3d1c1a; --fort: #ff8f86; --faible: #7c8698;
+    --ok: #6fd39b; --ok-fond: #173323; --attention: #f3cd6b; --attention-fond: #3a3014;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--accent); }
+header.entete { position: sticky; top: 0; z-index: 5; background: var(--surface);
+  border-bottom: 1px solid var(--bord); }
+.entete .titre { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+  padding: 10px 16px 4px; }
+.entete h1 { font-size: 18px; margin: 0; }
+.entete p { margin: 0; color: var(--doux); font-size: 13px; }
+nav { display: flex; gap: 4px; overflow-x: auto; padding: 4px 12px 0; scrollbar-width: thin; }
+nav a { flex: none; padding: 8px 12px; text-decoration: none; color: var(--doux);
+  border-bottom: 3px solid transparent; font-weight: 600; white-space: nowrap; }
+nav a:hover { color: var(--texte); }
+nav a.actif { color: var(--accent); border-bottom-color: var(--accent); }
+main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+.demo { background: var(--attention-fond); color: var(--attention); padding: 8px 16px;
+  font-weight: 600; text-align: center; }
+h2 { font-size: 20px; margin: 4px 0 2px; }
+h3 { font-size: 16px; margin: 0 0 8px; }
+h4 { font-size: 15px; margin: 18px 0 8px; }
+.sous { color: var(--doux); margin: 0 0 14px; }
+.carte { background: var(--surface); border: 1px solid var(--bord); border-radius: 10px;
+  padding: 14px; margin-bottom: 14px; }
+.grille2 { display: grid; grid-template-columns: 3fr 2fr; gap: 14px; }
+.grille4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+@media (max-width: 900px) { .grille2, .grille4 { grid-template-columns: 1fr; } }
+.grille4 > div { background: var(--surface2); border-radius: 8px; padding: 10px; }
+.grille4 h5 { margin: 0 0 6px; font-size: 14px; }
+.grille4 ul { list-style: none; margin: 0; padding: 0; }
+.grille4 li { padding: 3px 0; border-bottom: 1px dashed var(--bord); font-size: 14px; }
+.grille4 li:last-child { border-bottom: 0; }
+.grille4 .vide { color: var(--doux); font-size: 13px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--bord); vertical-align: top; }
+th { color: var(--doux); font-weight: 600; font-size: 13px; white-space: nowrap; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.c, th.c { text-align: center; }
+.defil { overflow-x: auto; }
+tr.vaires td { font-weight: 700; background: var(--accent-fond); }
+.badge { display: inline-block; padding: 1px 7px; border-radius: 99px; font-size: 12px;
+  font-weight: 700; white-space: nowrap; }
+.dom { background: var(--dom-fond); color: var(--dom); }
+.ext { background: var(--ext-fond); color: var(--ext); }
+.brule { background: var(--danger-fond); color: var(--danger); }
+.okb { background: var(--ok-fond); color: var(--ok); }
+.neutre { background: var(--surface2); color: var(--doux); }
+.att { background: var(--attention-fond); color: var(--attention); }
+.fille { background: var(--accent-fond); color: var(--accent); }
+.petit { font-size: 12.5px; color: var(--doux); }
+.puces { display: flex; flex-wrap: wrap; gap: 8px; }
+.puces a { text-decoration: none; color: var(--texte); background: var(--surface2);
+  border: 1px solid var(--bord); border-radius: 8px; padding: 7px 10px; font-size: 14px; }
+.puces a:hover { border-color: var(--accent); }
+.puces a.actif { border-color: var(--accent); background: var(--accent-fond); }
+.puces a b { display: block; }
+.filtres { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.filtres a { text-decoration: none; padding: 5px 11px; border-radius: 99px; border: 1px solid var(--bord);
+  color: var(--texte); background: var(--surface); font-size: 14px; }
+.filtres a.actif { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.semaine.courante { border: 2px solid var(--accent); }
+.semaine h3 .badge { margin-left: 6px; }
+.m { font-variant-numeric: tabular-nums; font-weight: 700; }
+.m.fort { color: var(--fort); }
+.m.egal { color: var(--accent); }
+.m.faible { color: var(--faible); }
+.score { font-size: 18px; font-weight: 700; }
+.note { background: var(--attention-fond); color: var(--attention); border-radius: 8px; padding: 8px 10px;
+  margin: 10px 0 0; font-size: 14px; }
+details { margin-top: 12px; }
+summary { cursor: pointer; font-weight: 600; }
+.vide-page { color: var(--doux); padding: 30px 0; text-align: center; }
+@media (max-width: 640px) {
+  main { padding: 10px; }
+  table.liste thead { display: none; }
+  table.liste tr { display: block; border-bottom: 1px solid var(--bord); padding: 6px 0; }
+  table.liste td { display: block; border: 0; padding: 2px 4px; }
+  table.liste td[data-l]::before { content: attr(data-l) " : "; color: var(--doux); font-size: 12.5px; }
+}
+@media print {
+  header.entete { position: static; }
+  nav, .filtres, .puces { display: none; }
+  .carte { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<header class="entete">
+  <div class="titre"><h1>CVTT Vaires — adversaires</h1><p id="sous-titre"></p></div>
+  <nav id="onglets"></nav>
+</header>
+<div id="bandeau"></div>
+<main id="contenu"></main>
+<script id="donnees" type="application/json">__DONNEES_JSON__</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("donnees").textContent);
+const CLUBS = D.clubs || {};
+const EQUIPES = D.equipes || [];
+const AUJOURDHUI = new Date().toISOString().slice(0, 10);
+const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const dateObj = (iso) => new Date(iso + "T12:00:00");
+const dd = (n) => String(n).padStart(2, "0");
+function fmtDate(iso, annee) {
+  if (!iso) return "date inconnue";
+  const d = dateObj(iso);
+  return `${JOURS[d.getDay()]} ${dd(d.getDate())}/${dd(d.getMonth() + 1)}${annee ? "/" + d.getFullYear() : ""}`;
+}
+function lundi(iso) {
+  const d = dateObj(iso);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+}
+function plusJours(iso, n) { const d = dateObj(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+const dateRenc = (r) => r.date_reelle || r.date;
+const clt = (p) => (p == null ? "—" : Math.max(5, Math.floor(p / 100)));
+const pts = (j) => j.points_mensuels ?? j.points ?? 0;
+
+function nomJoueur(j) { return `${esc(j.nom)} ${esc(j.prenom)}`.trim(); }
+function joueurCourt(j, ch) {
+  const fille = j.sexe === "F" && ch !== "F" ? ' <span class="badge fille">F</span>' : "";
+  return `${nomJoueur(j)}${fille} <span class="petit">${clt(j.points)} · ${j.points ?? "?"} pts${j.categorie ? " · " + esc(j.categorie) : ""}</span>`;
+}
+function meilleur(j) {
+  const m = j.meilleur;
+  if (!m) return "—";
+  const val = m.classement ?? clt(m.points);
+  const ecart = m.points && j.points && m.points - j.points >= 100
+    ? ` <span class="badge att" title="Meilleur classement nettement au-dessus du classement actuel">+${m.points - j.points}</span>` : "";
+  return `${esc(val)}${m.annee ? ` <span class="petit">(${esc(m.annee)})</span>` : ""}${ecart}`;
+}
+function lieu(r, equipe) {
+  const club = r.vaires_domicile ? D.club : CLUBS[(r.adversaire || {}).club];
+  const salle = r.salle || (club && club.salle);
+  if (r.vaires_domicile) return `<span class="badge dom">DOM</span>${salle ? ` <span class="petit">${esc(salle.nom || "")}</span>` : ""}`;
+  if (!salle) return '<span class="badge ext">EXT</span> <span class="petit">adresse inconnue</span>';
+  const adr = [salle.nom, salle.adresse, [salle.cp, salle.ville].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  const carte = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent([salle.adresse, salle.cp, salle.ville].filter(Boolean).join(" "));
+  return `<span class="badge ext">EXT</span> ${esc(adr)} <a href="${carte}" target="_blank" rel="noopener" class="petit">plan</a>`;
+}
+function scoreTxt(r) {
+  if (!r.score) return dateRenc(r) && dateRenc(r) < AUJOURDHUI ? '<span class="petit">non saisi</span>' : "";
+  const [a, b] = r.score;
+  const nous = r.vaires_domicile ? a : b, eux = r.vaires_domicile ? b : a;
+  const cls = nous > eux ? "okb" : nous < eux ? "brule" : "neutre";
+  return `<span class="badge ${cls}">${a} – ${b}</span>`;
+}
+function libelleAdv(r) { return r.adversaire ? esc(r.adversaire.libelle) : '<span class="petit">exempt</span>'; }
+function heure(r) { return r.heure ? " " + esc(r.heure) : ""; }
+function dateTxt(r) {
+  const reportee = r.date_reelle && r.date_reelle !== r.date
+    ? ` <span class="badge att" title="Date prévue : ${esc(fmtDate(r.date))}">déplacée</span>` : "";
+  return `${fmtDate(dateRenc(r))}${heure(r)}${reportee}`;
+}
+
+/* ---------- Onglets et navigation ---------- */
+function onglets(actif) {
+  const liens = [`<a href="#recap" class="${actif === "recap" ? "actif" : ""}">Récapitulatif</a>`]
+    .concat(EQUIPES.map((e) => `<a href="#e/${e.id}" class="${actif === e.id ? "actif" : ""}">${esc(e.nom_court || e.libelle)}</a>`));
+  document.getElementById("onglets").innerHTML = liens.join("");
+}
+function route() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  const [vue, id, sous, journee] = h.split("/");
+  const main = document.getElementById("contenu");
+  if (vue === "e" && EQUIPES.some((e) => e.id === id)) {
+    onglets(id);
+    main.innerHTML = vueEquipe(EQUIPES.find((e) => e.id === id), sous === "j" ? Number(journee) : null);
+    if (sous === "j") document.getElementById("panneau")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    else window.scrollTo(0, 0);
+  } else {
+    onglets("recap");
+    main.innerHTML = vueRecap(vue === "recap" ? id : null);
+    document.querySelector(".semaine.courante")?.scrollIntoView({ block: "start" });
+    window.scrollBy(0, -110);
+  }
+}
+
+/* ---------- Récapitulatif par semaine ---------- */
+function vueRecap(filtre) {
+  if (!EQUIPES.length) return '<p class="vide-page">Aucune équipe trouvée.</p>';
+  const equipes = filtre ? EQUIPES.filter((e) => e.id === filtre) : EQUIPES;
+  const semaines = {};
+  for (const e of equipes) for (const r of e.rencontres || []) {
+    const cle = dateRenc(r) ? lundi(dateRenc(r)) : "inconnue";
+    (semaines[cle] ||= []).push({ e, r });
+  }
+  const cles = Object.keys(semaines).sort();
+  const courante = cles.find((c) => c !== "inconnue" && plusJours(c, 6) >= AUJOURDHUI);
+  const filtres = `<div class="filtres"><a href="#recap" class="${filtre ? "" : "actif"}">Toutes les équipes</a>` +
+    EQUIPES.map((e) => `<a href="#recap/${e.id}" class="${filtre === e.id ? "actif" : ""}">${esc(e.nom_court || e.libelle)}</a>`).join("") + "</div>";
+  const blocs = cles.map((c) => {
+    const lignes = semaines[c].sort((a, b) => (dateRenc(a.r) || "").localeCompare(dateRenc(b.r) || "") || EQUIPES.indexOf(a.e) - EQUIPES.indexOf(b.e));
+    const journees = [...new Set(lignes.map((l) => "J" + l.r.journee))].join(", ");
+    const titre = c === "inconnue" ? "Date inconnue" : `Semaine du ${fmtDate(c)} au ${fmtDate(plusJours(c, 6), true)}`;
+    return `<article class="carte semaine ${c === courante ? "courante" : ""}">
+      <h3>${titre}<span class="badge neutre">${journees}</span>${c === courante ? '<span class="badge okb">cette semaine / prochaine</span>' : ""}</h3>
+      <div class="defil"><table class="liste"><thead><tr><th>Équipe</th><th>Date</th><th>Adversaire</th><th>Lieu</th><th>Score</th></tr></thead><tbody>
+      ${lignes.map(({ e, r }) => `<tr>
+        <td data-l="Équipe"><a href="#e/${e.id}"><b>${esc(e.nom_court || e.libelle)}</b></a></td>
+        <td data-l="Date">${dateTxt(r)}</td>
+        <td data-l="Adversaire">${r.adversaire ? `<a href="#e/${e.id}/j/${r.journee}">${libelleAdv(r)}</a>` : libelleAdv(r)}</td>
+        <td data-l="Lieu">${r.adversaire ? lieu(r, e) : ""}</td>
+        <td data-l="Score">${scoreTxt(r)}</td></tr>`).join("")}
+      </tbody></table></div></article>`;
+  });
+  return filtres + blocs.join("");
+}
+
+/* ---------- Onglet d'une équipe de Vaires ---------- */
+function vueEquipe(e, journee) {
+  const rencs = e.rencontres || [];
+  const cal = `<div class="carte"><h3>Calendrier de la phase</h3><div class="defil"><table class="liste">
+    <thead><tr><th>J</th><th>Date</th><th>Adversaire</th><th>Lieu</th><th>Score</th></tr></thead><tbody>
+    ${rencs.map((r) => `<tr>
+      <td data-l="Journée">J${r.journee}</td><td data-l="Date">${dateTxt(r)}</td>
+      <td data-l="Adversaire">${r.adversaire ? `<a href="#e/${e.id}/j/${r.journee}">${libelleAdv(r)}</a>` : libelleAdv(r)}</td>
+      <td data-l="Lieu">${r.adversaire ? lieu(r, e) : ""}</td><td data-l="Score">${scoreTxt(r)}</td></tr>`).join("")}
+    </tbody></table></div></div>`;
+  const clst = (e.classement || []).length ? `<div class="carte"><h3>Classement de la poule</h3><div class="defil"><table>
+    <thead><tr><th class="num">#</th><th>Équipe</th><th class="num">Pts</th><th class="num">J</th><th class="num">V</th><th class="num">N</th><th class="num">D</th></tr></thead><tbody>
+    ${e.classement.map((c) => `<tr class="${c.club === D.club.numero ? "vaires" : ""}"><td class="num">${c.rang ?? ""}</td><td>${esc(c.libelle)}</td>
+      <td class="num">${c.points ?? ""}</td><td class="num">${c.joues ?? ""}</td><td class="num">${c.v ?? ""}</td><td class="num">${c.n ?? ""}</td><td class="num">${c.d ?? ""}</td></tr>`).join("")}
+    </tbody></table></div></div>` : '<div class="carte"><h3>Classement de la poule</h3><p class="petit">Pas encore disponible.</p></div>';
+  const puces = `<div class="carte"><h3>Adversaires — clique sur une équipe pour voir son club</h3><div class="puces">
+    ${rencs.filter((r) => r.adversaire).map((r) => `<a href="#e/${e.id}/j/${r.journee}" class="${r.journee === journee ? "actif" : ""}">
+      <b>${libelleAdv(r)}</b><span class="petit">J${r.journee} · ${fmtDate(dateRenc(r))} · ${r.vaires_domicile ? "dom." : "ext."}</span></a>`).join("")}
+    </div></div>`;
+  const r = journee != null ? rencs.find((x) => x.journee === journee) : null;
+  const panneau = r && r.adversaire ? panneauRencontre(e, r) : "";
+  return `<h2>${esc(e.libelle)}</h2><p class="sous">${[e.division, e.poule, e.championnat === "F" ? "championnat féminin" : "championnat masculin", e.jour].filter(Boolean).map(esc).join(" · ")}</p>
+    <div class="grille2">${cal}${clst}</div>${puces}<div id="panneau">${panneau}</div>`;
+}
+
+/* ---------- Fiche d'une rencontre : club adverse, effectif, brûlage ---------- */
+function panneauRencontre(e, r) {
+  const club = CLUBS[r.adversaire.club];
+  const tete = `<h3>J${r.journee} · ${dateTxt(r)} — ${r.vaires_domicile ? `${esc(e.libelle)} reçoit ${libelleAdv(r)}` : `${libelleAdv(r)} reçoit ${esc(e.libelle)}`}</h3>
+    <p>${lieu(r, e)}</p>`;
+  if (!club) return `<div class="carte">${tete}<p class="petit">Club ${esc(r.adversaire.club)} : données non récupérées.</p></div>`;
+  const ch = e.championnat || "M";
+  const idx = Object.fromEntries((club.joueurs || []).map((j) => [j.id, j]));
+  const a = r.analyse;
+  const N = r.adversaire.numero;
+  const nom = (id) => (idx[id] ? joueurCourt(idx[id], ch) : esc(id));
+  const liste = (items, vide, extra) => items.length
+    ? `<ul>${items.map((it) => `<li>${nom(it.id ?? it)}${extra ? extra(it) : ""}</li>`).join("")}</ul>`
+    : `<p class="vide">${vide}</p>`;
+
+  let bloc = "";
+  if (r.score && r.composition_adverse) {
+    bloc = `<p><span class="score">${esc(r.domicile?.libelle ?? "")} ${r.score[0]} – ${r.score[1]} ${esc(r.exterieur?.libelle ?? "")}</span></p>
+      <h4>Joueurs alignés par ${libelleAdv(r)}</h4>${liste(r.composition_adverse, "Feuille de match non disponible.")}`;
+  } else if (r.score) {
+    bloc = `<p><span class="score">${esc(r.domicile?.libelle ?? "")} ${r.score[0]} – ${r.score[1]} ${esc(r.exterieur?.libelle ?? "")}</span></p>
+      <p class="petit">Feuille de match non disponible.</p>`;
+  } else if (a) {
+    const renf = a.renforts.map((x) => ({ ...x }));
+    bloc = `<div class="grille4">
+      <div><h5>Composition probable <span class="badge att">estimation</span></h5>${liste(a.probable, "Pas assez de données.")}</div>
+      <div><h5>Renforts possibles</h5>${liste(renf, "Aucun joueur d'une équipe plus forte n'est disponible.",
+        (x) => ` <span class="petit">(a joué en ${x.equipes.join(", ")})</span>${x.j1_plus_forte ? ' <span class="badge att">J1</span>' : ""}`)}</div>
+      <div><h5>Brûlés / indisponibles</h5>${liste(a.brules, "Aucun joueur brûlé pour cette équipe.", (x) => ` <span class="badge brule" title="${esc(x.raison)}">${x.raison.startsWith("2 matchs") ? "éq. " + x.equipes.join(" + ") : "déjà joué la J" + r.journee}</span>`)}</div>
+      <div><h5>Pas encore joué cette phase</h5>${liste(a.non_alignes, "Tous les joueurs ont déjà joué.")}</div>
+    </div>
+    ${a.regle_j2 ? `<p class="note"><b>Règle de la J2 :</b> ${libelleAdv(r)} ne peut aligner qu'<b>un seul</b> des joueurs marqués <span class="badge att">J1</span> (ils ont joué la J1 dans une équipe plus forte).</p>` : ""}
+    <p class="petit">Équipes de ${a.taille} joueurs. Brûlage calculé avec les matchs joués avant le ${fmtDate(a.date || dateRenc(r))}.</p>`;
+  }
+
+  return `<div class="carte">${tete}${bloc}${tableEffectif(club, ch, a, N, r)}${tableEquipes(club, ch, idx)}</div>`;
+}
+
+function statutJoueur(j, a, r) {
+  if (r.score && r.composition_adverse) return r.composition_adverse.includes(j.id) ? '<span class="badge okb">a joué</span>' : "";
+  if (!a) return "";
+  const b = a.brules.find((x) => x.id === j.id);
+  if (b) return `<span class="badge brule" title="${esc(b.raison)}">${b.raison.startsWith("2 matchs") ? "brûlé" : "indisponible"}</span>`;
+  if (a.probable.includes(j.id)) return '<span class="badge okb">probable</span>';
+  if (a.renforts.some((x) => x.id === j.id)) return '<span class="badge att">renfort possible</span>';
+  if (a.habitues.some((x) => x.id === j.id)) return '<span class="badge neutre">habitué</span>';
+  if (a.remplacants.some((x) => x.id === j.id)) return '<span class="badge neutre">équipe plus faible</span>';
+  return '<span class="badge neutre">qualifié</span>';
+}
+
+function tableEffectif(club, ch, a, N, r) {
+  const tous = (club.joueurs || []).filter((j) => ch !== "F" || j.sexe === "F" || j.sexe == null);
+  const actifs = tous.filter((j) => j.renouvele !== false).sort((x, y) => pts(y) - pts(x));
+  const anciens = tous.filter((j) => j.renouvele === false).sort((x, y) => pts(y) - pts(x));
+  const parcours = club.parcours || {};
+  const maxJ = Math.max(1, ...(club.equipes || []).filter((e) => e.championnat === ch)
+    .flatMap((e) => (e.compositions || []).map((c) => c.journee || 1)));
+  const js = Array.from({ length: maxJ }, (_, i) => i + 1);
+  const cellule = (j, jn) => {
+    const ms = (((parcours[j.id] || {})[ch] || {}).matchs || []).filter((m) => m.j === jn);
+    return ms.map((m) => `<span class="m ${m.n < N ? "fort" : m.n === N ? "egal" : "faible"}" title="Équipe ${m.n}">${m.n}</span>`).join(" ");
+  };
+  const ligne = (j, avecStatut) => `<tr>
+    <td>${nomJoueur(j)}${j.sexe === "F" && ch !== "F" ? ' <span class="badge fille">F</span>' : ""}</td>
+    <td>${esc(j.categorie ?? "")}</td>
+    <td class="num">${clt(j.points)} <span class="petit">${j.points ?? ""}</span></td>
+    <td class="num">${j.points_mensuels ?? "—"}${j.points_mensuels && j.points ? ecartMensuel(j.points_mensuels - j.points) : ""}</td>
+    <td>${meilleur(j)}</td>
+    ${js.map((jn) => `<td class="c">${cellule(j, jn)}</td>`).join("")}
+    ${avecStatut ? `<td>${statutJoueur(j, a, r)}</td>` : ""}</tr>`;
+  const entete = (avecStatut) => `<thead><tr><th>Joueur</th><th>Cat.</th><th class="num">Officiel</th><th class="num">Mensuel</th><th>Meilleur (année)</th>
+    ${js.map((jn) => `<th class="c">J${jn}</th>`).join("")}${avecStatut ? `<th>Pour l'équipe ${N}</th>` : ""}</tr></thead>`;
+  const legende = `<p class="petit">Colonnes J1, J2… : numéro de l'équipe dans laquelle le joueur a joué —
+    <span class="m fort">rouge</span> = équipe plus forte que la ${N}, <span class="m egal">bleu</span> = équipe ${N}, <span class="m faible">gris</span> = équipe plus faible.</p>`;
+  return `<h4>Effectif de ${esc(club.nom)} (${actifs.length} ${ch === "F" ? "joueuses" : "joueurs"})</h4>${legende}
+    <div class="defil"><table>${entete(true)}<tbody>${actifs.map((j) => ligne(j, true)).join("")}</tbody></table></div>
+    ${anciens.length ? `<details><summary>Pas encore renouvelés (${anciens.length})</summary>
+      <div class="defil"><table>${entete(false)}<tbody>${anciens.map((j) => ligne(j, false)).join("")}</tbody></table></div></details>` : ""}`;
+}
+function ecartMensuel(d) {
+  if (Math.abs(d) < 1) return "";
+  return ` <span class="petit" style="color:var(${d > 0 ? "--ok" : "--danger"})">${d > 0 ? "+" : ""}${Math.round(d)}</span>`;
+}
+
+function tableEquipes(club, ch, idx) {
+  const equipes = (club.equipes || []).filter((e) => e.championnat === ch).sort((a, b) => a.numero - b.numero);
+  if (!equipes.length) return "";
+  const maxJ = Math.max(1, ...equipes.flatMap((e) => (e.compositions || []).map((c) => c.journee || 1)));
+  const js = Array.from({ length: maxJ }, (_, i) => i + 1);
+  const cell = (e, jn) => {
+    const c = (e.compositions || []).find((x) => x.journee === jn);
+    if (!c) return "";
+    return c.joueurs.map((id) => idx[id] ? `${esc(idx[id].nom)} ${esc((idx[id].prenom || "").charAt(0))}. <span class="petit">${clt(idx[id].points)}</span>` : esc(id)).join("<br>");
+  };
+  return `<details><summary>Qui a joué dans quelle équipe (${equipes.length} équipe${equipes.length > 1 ? "s" : ""} du club)</summary><div class="defil"><table>
+    <thead><tr><th>Équipe</th>${js.map((jn) => `<th>J${jn}</th>`).join("")}</tr></thead><tbody>
+    ${equipes.map((e) => `<tr><td><b>${esc(e.libelle)}</b><br><span class="petit">${esc(e.division || "")}</span></td>${js.map((jn) => `<td>${cell(e, jn)}</td>`).join("")}</tr>`).join("")}
+    </tbody></table></div></details>`;
+}
+
+/* ---------- Démarrage ---------- */
+document.getElementById("sous-titre").textContent =
+  `${D.club.nom} · phase ${D.phase ?? "?"} ${D.saison ?? ""} · données du ${D.genere_le ? new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "?"}`;
+if (D.demo) document.getElementById("bandeau").innerHTML = '<div class="demo">Données de démonstration (fictives)</div>';
+window.addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>
