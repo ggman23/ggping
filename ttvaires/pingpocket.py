@@ -424,8 +424,14 @@ def recuperer(client, numero_club="08770250", aujourdhui=None):
                             "points_mensuels": j["points"], "meilleur": None, "renouvele": True,
                         })
 
-    # 5. Historique des classements (meilleur classement)
-    a_lire = [j for club in clubs.values() for j in club["joueurs"] if j["renouvele"]]
+    # 5. Historique des classements (meilleur classement). Les joueurs restés à 500 points (le
+    # minimum) qui n'ont pas joué n'ont en pratique jamais été mieux classés : on épargne ces pages
+    # au site. Les plus utiles d'abord (joueurs alignés cette phase, puis par points).
+    alignes = {jid for club in clubs.values() for e in club["equipes"]
+               for compo in e["compositions"] for jid in compo["joueurs"]}
+    a_lire = [j for club in clubs.values() for j in club["joueurs"]
+              if j["renouvele"] and ((j["points_mensuels"] or 0) > 500 or j["id"] in alignes)]
+    a_lire.sort(key=lambda j: (j["id"] not in alignes, -(j["points_mensuels"] or 0)))
     print(f"5/5 Historiques des joueurs : {len(a_lire)}", flush=True)
     pages = client.get_plusieurs(
         [f"/app/fftt/licencies/{j['licence']}/graphiques/historique-classement" for j in a_lire],

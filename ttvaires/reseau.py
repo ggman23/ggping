@@ -30,12 +30,13 @@ class Client:
     ttl : durée de validité du cache en secondes (None = page conservée indéfiniment).
     """
 
-    def __init__(self, dossier_cache, paralleles=3, hors_ligne=False, tentatives=5):
+    def __init__(self, dossier_cache, paralleles=2, hors_ligne=False, tentatives=5, pause=0.3):
         self.dossier = Path(dossier_cache)
         self.dossier.mkdir(parents=True, exist_ok=True)
         self.paralleles = paralleles
         self.hors_ligne = hors_ligne
         self.tentatives = tentatives
+        self.pause = pause
         self._local = threading.local()
         self._verrou = threading.Lock()
         self.nb_telecharges = 0
@@ -77,6 +78,7 @@ class Client:
                 fichier.write_text(r.text, encoding="utf-8")
                 with self._verrou:
                     self.nb_telecharges += 1
+                time.sleep(self.pause)  # le site sature vite : on reste discret
                 return r.text
             derniere_erreur = f"HTTP {r.status_code}"
             if r.status_code == 404:

@@ -22,7 +22,7 @@ def main():
     parser = argparse.ArgumentParser(description="Adversaires des équipes du CVTT Vaires")
     parser.add_argument("--demo", action="store_true", help="page avec des données fictives")
     parser.add_argument("--hors-ligne", action="store_true", help="n'utilise que les pages déjà téléchargées")
-    parser.add_argument("--paralleles", type=int, default=3, help="requêtes simultanées (défaut : 3)")
+    parser.add_argument("--paralleles", type=int, default=2, help="requêtes simultanées (défaut : 2)")
     parser.add_argument("--club", default=CLUB_VAIRES, help="numéro FFTT du club (défaut : Vaires)")
     parser.add_argument("--pas-de-navigateur", action="store_true", help="n'ouvre pas la page à la fin")
     args = parser.parse_args()
@@ -32,7 +32,7 @@ def main():
         donnees = donnees_demo()
         chemin = SORTIE / "vaires_demo.html"
     else:
-        print("Récupération des données sur pingpocket.fr (le premier lancement peut durer 20 à 30 minutes,")
+        print("Récupération des données sur pingpocket.fr (le premier lancement peut durer 30 à 45 minutes,")
         print("les suivants sont beaucoup plus rapides grâce au cache).", flush=True)
         client = Client(CACHE, paralleles=args.paralleles, hors_ligne=args.hors_ligne)
         donnees = recuperer(client, args.club)
