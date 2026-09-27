@@ -201,6 +201,29 @@ def lire_feuille(html):
     return cotes
 
 
+def lire_parties(html):
+    """Parties de simple d'une feuille de match -> [{a, b, gagnant}] (numéros de licence).
+
+    Les doubles (sans lien vers les joueurs) et les parties sans vainqueur sont ignorés.
+    """
+    soup = _soupe(html)
+    parties = []
+    for li in soup.select("ul.divisionIndividualRoundMatchesPanel > li"):
+        liens = [a for a in li.find_all("a", href=True) if "/licencies/" in a["href"]]
+        if len(liens) != 2:
+            continue
+        a, b = (re.search(r"/licencies/(\d+)", l["href"])[1] for l in liens)
+        etats = [l.select_one("span.pos, span.neg") for l in liens]
+        if etats[0] is not None and "pos" in etats[0].get("class", []):
+            gagnant = a
+        elif etats[1] is not None and "pos" in etats[1].get("class", []):
+            gagnant = b
+        else:
+            continue
+        parties.append({"a": a, "b": b, "gagnant": gagnant})
+    return parties
+
+
 def lire_liste_licencies(html):
     """Liste des licenciés d'un club (triée par classement, catégorie, état de licence...).
 

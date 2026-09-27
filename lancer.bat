@@ -1,8 +1,9 @@
 @echo off
 REM ============================================================
-REM  Adversaires CVTT Vaires - lancement Windows
+REM  Outils CVTT Vaires - lancement Windows
 REM  Premier lancement : cree l'environnement et installe tout.
-REM  Lancements suivants : met a jour les donnees et ouvre la page.
+REM  Sans argument : affiche un menu. Avec arguments : les transmet
+REM  directement (ex. lancer.bat --resultats --hors-ligne).
 REM ============================================================
 cd /d "%~dp0"
 
@@ -34,6 +35,39 @@ if not exist .venv (
 ) else (
     call .venv\Scripts\activate.bat
 )
+REM Mise a jour des dependances si une nouvelle version de l'outil en demande.
+python -c "import requests, bs4, openpyxl" >nul 2>nul || python -m pip install -r requirements.txt
 
-python -m ttvaires %*
+if not "%~1"=="" (
+    python -m ttvaires %*
+    pause
+    exit /b
+)
+
+echo.
+echo  ==================================================
+echo    CVTT Vaires - championnat par equipes
+echo  ==================================================
+echo    1. Adversaires (effectifs, brulages, calendrier)
+echo    2. Resultats des joueurs de Vaires (page + Excel)
+echo    3. Les deux
+echo    4. Page de demonstration (donnees fictives)
+echo    5. Quitter
+echo.
+choice /c 12345 /n /m "  Votre choix (1 a 5) : "
+if errorlevel 5 exit /b 0
+if errorlevel 4 (
+    python -m ttvaires --demo
+    goto fin
+)
+if errorlevel 3 (
+    python -m ttvaires --resultats --adversaires
+    goto fin
+)
+if errorlevel 2 (
+    python -m ttvaires --resultats
+    goto fin
+)
+python -m ttvaires --adversaires
+:fin
 pause

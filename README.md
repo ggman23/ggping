@@ -10,6 +10,14 @@ Outil qui récupère sur Internet les informations sur les adversaires des équi
   officiel, mensuel, meilleur classement et son année), **qui a joué dans quelle équipe**,
   les **brûlés**, les **renforts possibles** et une **composition probable**.
 
+Une seconde page, **Résultats des joueurs de Vaires** (`sortie\resultats_vaires.html` et
+`sortie\resultats_vaires.xlsx`), donne pour chaque journée les joueurs alignés dans les
+7 équipes : équipe, points, points gagnés/perdus (barème FFTT), victoires, meilleure victoire
+du jour, points après la journée et total depuis la J1. Le tableau se trie en cliquant sur les
+titres de colonnes ; un clic sur un joueur affiche le détail de ses parties. Le classeur Excel
+a un onglet par journée, un onglet Cumul et l'onglet Parties (une ligne par partie, à partir
+de laquelle tout est calculé par formules).
+
 Le détail des besoins et des règles de brûlage appliquées est dans
 [CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md).
 
@@ -27,8 +35,14 @@ feuilles de match).
 1. Installer **Python 3.10 ou plus** depuis <https://www.python.org/downloads/> — cocher
    **« Add python.exe to PATH »**.
 2. Télécharger ce projet (bouton *Code → Download ZIP* sur GitHub) et le décompresser.
-3. Double-cliquer sur **`lancer.bat`** : le premier lancement installe tout, puis la page
-   s'ouvre dans le navigateur. Elle est enregistrée dans le dossier `sortie\`.
+3. Double-cliquer sur **`lancer.bat`** : le premier lancement installe tout, puis un menu
+   propose :
+   1. Adversaires (effectifs, brûlages, calendrier) ;
+   2. Résultats des joueurs de Vaires (page + Excel) — rapide, moins d'une minute ;
+   3. les deux ;
+   4. la page de démonstration.
+
+   Les pages s'ouvrent dans le navigateur et sont enregistrées dans le dossier `sortie\`.
 
 Relancer `lancer.bat` après chaque journée pour mettre à jour les données (les feuilles de
 match sont en général saisies dans les 48 h après la rencontre).
@@ -38,7 +52,8 @@ aux capitaines, elle s'ouvre sans Internet.
 
 Options (dans une invite de commandes, dans le dossier du projet) :
 
-- `lancer.bat --hors-ligne` : régénère la page sans rien télécharger (cache uniquement) ;
+- `lancer.bat --adversaires`, `lancer.bat --resultats` : lance directement une page, sans menu ;
+- `--hors-ligne` (à ajouter) : régénère sans rien télécharger (cache uniquement) ;
 - `lancer.bat --demo` : page de démonstration avec des données fictives.
 
 ## Lancement manuel (Windows/Mac/Linux)
@@ -59,8 +74,10 @@ ttvaires/
   pingpocket.py  Lecture des pages pingpocket.fr et assemblage des données
   reseau.py      Téléchargements : cache disque, requêtes parallèles, nouvelles tentatives
   brulage.py     Règles de brûlage et analyse de chaque rencontre
+  resultats.py   Résultats des joueurs de Vaires : points virtuels, page et classeur Excel
   rendu.py       Génération de la page HTML (un seul fichier)
-  gabarit.html   Mise en page et affichage (HTML/CSS/JavaScript)
+  gabarit.html   Mise en page de la page adversaires (HTML/CSS/JavaScript)
+  gabarit_resultats.html  Mise en page de la page résultats
   demo.py        Données fictives pour tester sans Internet
-tests/           Tests (brûlage, lecture des pages)
+tests/           Tests (brûlage, lecture des pages, points virtuels)
 ```

@@ -1,4 +1,4 @@
-"""Point d'entrée : python -m ttvaires [--demo] [--hors-ligne] [--pas-de-navigateur]."""
+"""Point d'entrée : python -m ttvaires [--adversaires] [--resultats] [--demo] [--hors-ligne] [--pas-de-navigateur]."""
 
 import argparse
 import json
@@ -9,8 +9,9 @@ from pathlib import Path
 from .brulage import enrichir
 from .demo import donnees_demo
 from .pingpocket import recuperer
-from .rendu import generer_html
+from .rendu import GABARIT_RESULTATS, generer_html
 from .reseau import Client
+from .resultats import donnees_page, ecrire_xlsx, recuperer_parties
 
 RACINE = Path(__file__).resolve().parent.parent
 SORTIE = RACINE / "sortie"
@@ -18,34 +19,56 @@ CACHE = RACINE / "cache"
 CLUB_VAIRES = "08770250"
 
 
+def page_adversaires(client, club):
+    print("=== Adversaires : récupération sur pingpocket.fr (le premier lancement peut durer 30 à 45 minutes,")
+    print("les suivants sont beaucoup plus rapides grâce au cache).", flush=True)
+    donnees = recuperer(client, club)
+    enrichir(donnees)
+    (SORTIE / "donnees.json").write_text(json.dumps(donnees, ensure_ascii=False, indent=1), encoding="utf-8")
+    return [generer_html(donnees, SORTIE / "vaires.html")]
+
+
+def page_resultats(client, club):
+    print("=== Résultats des joueurs de Vaires", flush=True)
+    resultats = recuperer_parties(client, club)
+    html = generer_html(donnees_page(resultats), SORTIE / "resultats_vaires.html", GABARIT_RESULTATS)
+    xlsx = ecrire_xlsx(resultats, SORTIE / "resultats_vaires.xlsx")
+    print(f"Classeur Excel : {xlsx}")
+    return [html]
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Adversaires des équipes du CVTT Vaires")
-    parser.add_argument("--demo", action="store_true", help="page avec des données fictives")
+    parser = argparse.ArgumentParser(description="Outils du CVTT Vaires (championnat par équipes)")
+    parser.add_argument("--adversaires", action="store_true", help="page des adversaires (choix par défaut)")
+    parser.add_argument("--resultats", action="store_true", help="résultats des joueurs de Vaires (page + Excel)")
+    parser.add_argument("--demo", action="store_true", help="page des adversaires avec des données fictives")
     parser.add_argument("--hors-ligne", action="store_true", help="n'utilise que les pages déjà téléchargées")
     parser.add_argument("--paralleles", type=int, default=2, help="requêtes simultanées (défaut : 2)")
     parser.add_argument("--club", default=CLUB_VAIRES, help="numéro FFTT du club (défaut : Vaires)")
-    parser.add_argument("--pas-de-navigateur", action="store_true", help="n'ouvre pas la page à la fin")
+    parser.add_argument("--pas-de-navigateur", action="store_true", help="n'ouvre pas les pages à la fin")
     args = parser.parse_args()
 
     debut = time.time()
+    SORTIE.mkdir(exist_ok=True)
     if args.demo:
         donnees = donnees_demo()
-        chemin = SORTIE / "vaires_demo.html"
+        enrichir(donnees)
+        pages = [generer_html(donnees, SORTIE / "vaires_demo.html")]
     else:
-        print("Récupération des données sur pingpocket.fr (le premier lancement peut durer 30 à 45 minutes,")
-        print("les suivants sont beaucoup plus rapides grâce au cache).", flush=True)
         client = Client(CACHE, paralleles=args.paralleles, hors_ligne=args.hors_ligne)
-        donnees = recuperer(client, args.club)
+        pages = []
+        if args.resultats:
+            pages += page_resultats(client, args.club)
+        if args.adversaires or not args.resultats:
+            pages += page_adversaires(client, args.club)
         print(f"Pages téléchargées : {client.nb_telecharges}, reprises du cache : {client.nb_cache}")
-        chemin = SORTIE / "vaires.html"
 
-    enrichir(donnees)
-    SORTIE.mkdir(exist_ok=True)
-    (SORTIE / "donnees.json").write_text(json.dumps(donnees, ensure_ascii=False, indent=1), encoding="utf-8")
-    chemin = generer_html(donnees, chemin)
-    print(f"Page générée en {round(time.time() - debut)} s : {chemin}")
+    for chemin in pages:
+        print(f"Page générée : {chemin}")
+    print(f"Terminé en {round(time.time() - debut)} s.")
     if not args.pas_de_navigateur:
-        webbrowser.open(chemin.as_uri())
+        for chemin in pages:
+            webbrowser.open(chemin.as_uri())
 
 
 if __name__ == "__main__":

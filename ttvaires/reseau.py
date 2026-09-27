@@ -24,6 +24,11 @@ class ErreurReseau(Exception):
     pass
 
 
+def page_valide(texte):
+    """Vrai fragment pingpocket (et non la page « incident technique » renvoyée avec un code 200)."""
+    return "data-title" in texte[:3000] and "un incident technique est survenu" not in texte
+
+
 class Client:
     """Client HTTP avec cache sur disque.
 
@@ -57,6 +62,8 @@ class Client:
 
     def get(self, chemin, ttl=JOUR):
         fichier = self._fichier(chemin)
+        if fichier.exists() and not page_valide(fichier.read_text(encoding="utf-8")):
+            fichier.unlink()  # page d'erreur conservée par une ancienne version
         if fichier.exists() and (self.hors_ligne or ttl is None or time.time() - fichier.stat().st_mtime < ttl):
             with self._verrou:
                 self.nb_cache += 1
@@ -74,13 +81,13 @@ class Client:
             except requests.RequestException as e:
                 derniere_erreur = e
                 continue
-            if r.status_code == 200 and "data-title" in r.text[:3000]:
+            if r.status_code == 200 and page_valide(r.text):
                 fichier.write_text(r.text, encoding="utf-8")
                 with self._verrou:
                     self.nb_telecharges += 1
                 time.sleep(self.pause)  # le site sature vite : on reste discret
                 return r.text
-            derniere_erreur = f"HTTP {r.status_code}"
+            derniere_erreur = f"HTTP {r.status_code}" if r.status_code != 200 else "incident technique pingpocket"
             if r.status_code == 404:
                 break
         raise ErreurReseau(f"{url} : {derniere_erreur}")

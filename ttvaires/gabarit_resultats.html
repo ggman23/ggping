@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Résultats Vaires</title>
+<style>
+:root { color-scheme: light; --texte: #1c2330; --doux: #5b6576; --bord: #9aa3af; --fond: #f4f5f7;
+  --entete: #f8cbad; --accent: #1f5fbf; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte);
+  font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+header { background: #fff; border-bottom: 1px solid #dde1e7; padding: 10px 16px 0; position: sticky; top: 0; z-index: 2; }
+h1 { font-size: 18px; margin: 0 0 2px; }
+header p { margin: 0 0 6px; color: var(--doux); font-size: 13px; }
+nav { display: flex; gap: 4px; overflow-x: auto; }
+nav a { flex: none; padding: 8px 14px; text-decoration: none; color: var(--doux); font-weight: 600;
+  border-bottom: 3px solid transparent; }
+nav a.actif { color: var(--accent); border-bottom-color: var(--accent); }
+main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+.sous { color: var(--doux); margin: 0 0 10px; font-size: 14px; }
+.defil { overflow-x: auto; background: #fff; border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { border: 1px solid var(--bord); padding: 5px 9px; white-space: nowrap; }
+th { background: var(--entete); font-weight: 600; cursor: pointer; user-select: none; position: relative; }
+th:hover { filter: brightness(0.96); }
+th .fleche { font-size: 11px; color: #7a4a2a; margin-left: 4px; }
+td { text-align: center; font-variant-numeric: tabular-nums; }
+td.g { text-align: left; }
+td.joueur { cursor: pointer; }
+td.joueur:hover { text-decoration: underline; }
+.pos { background: #c6efce; color: #006100; }
+.neg { background: #ffc7ce; color: #9c0006; }
+.t-pos { color: #006100; font-weight: 600; }
+.t-neg { color: #9c0006; font-weight: 600; }
+.v-tout { background: #00b050; }
+.v-plus { background: #92d050; }
+.v-moins { background: #ffff00; }
+.v-zero { background: #ff0000; }
+tr.detail td { background: #f7f8fa; text-align: left; font-size: 13.5px; color: var(--doux); white-space: normal; }
+.note { color: var(--doux); font-size: 13px; margin-top: 10px; }
+.vide { color: var(--doux); padding: 30px; text-align: center; }
+@media (max-width: 640px) { main { padding: 8px; } table { font-size: 13.5px; } th, td { padding: 4px 6px; } }
+@media print { header { position: static; } nav { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Résultats des joueurs de Vaires</h1>
+  <p id="sous-titre"></p>
+  <nav id="onglets"></nav>
+</header>
+<main id="contenu"></main>
+<script id="donnees" type="application/json">__DONNEES_JSON__</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("donnees").textContent);
+const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const nombre = (x, dec) => x == null ? "" : x.toLocaleString("fr-FR", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+const signe = (x) => x == null ? "" : (x > 0 ? "+" : "") + nombre(x, 0);
+function fmtDate(iso) { const d = new Date(iso + "T12:00:00"); return `${JOURS[d.getDay()]} ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`; }
+const clsDelta = (x) => x > 0 ? "pos" : x < 0 ? "neg" : "";
+const clsTexte = (x) => x > 0 ? "t-pos" : x < 0 ? "t-neg" : "";
+function clsVict(v, n) { if (!n) return ""; if (v === n) return "v-tout"; if (v * 2 > n) return "v-plus"; if (v > 0) return "v-moins"; return "v-zero"; }
+
+let vue = null, tri = null, ouverts = new Set();
+
+function colonnesJournee(j) {
+  return [
+    { t: "Equipe", k: (l) => l.ordre, v: (l) => esc(l.equipe), c: "g" },
+    { t: "Joueur", k: (l) => l.joueur, v: (l) => esc(l.joueur), c: "g joueur" },
+    { t: "Points", k: (l) => l.points, v: (l) => nombre(l.points, 0) },
+    { t: "Pts +/-", k: (l) => l.delta, v: (l) => nombre(l.delta, 1), cls: (l) => clsDelta(l.delta) },
+    { t: "Victoires", k: (l) => l.v / l.matchs + l.matchs / 1000, v: (l) => `${l.v}/${l.matchs}`, cls: (l) => clsVict(l.v, l.matchs) },
+    { t: "Meilleure victoire", k: (l) => l.meilleure ?? -99999, v: (l) => signe(l.meilleure) },
+    { t: `Points J${j}`, k: (l) => l.apres, v: (l) => nombre(l.apres, 1) },
+    { t: "Total", k: (l) => l.total, v: (l) => nombre(l.total, 1), cls: (l) => clsDelta(l.total) },
+  ];
+}
+function colonnesCumul() {
+  return [
+    { t: "Equipe(s)", k: (c) => c.ordre, v: (c) => esc(c.equipes.join(", ")), c: "g" },
+    { t: "Joueur", k: (c) => c.joueur, v: (c) => esc(c.joueur), c: "g" },
+    { t: "Points", k: (c) => c.points, v: (c) => nombre(c.points, 0) },
+    ...D.journees.map((j) => ({ t: `J${j.numero}`, k: (c) => c.journees[j.numero] ?? -99999,
+      v: (c) => c.journees[j.numero] == null ? "" : nombre(c.journees[j.numero], 1), cls: (c) => clsTexte(c.journees[j.numero]) })),
+    { t: "Total", k: (c) => c.total, v: (c) => nombre(c.total, 1), cls: (c) => clsDelta(c.total) },
+    { t: "Victoires", k: (c) => c.v / c.matchs + c.matchs / 1000, v: (c) => `${c.v}/${c.matchs}`, cls: (c) => clsVict(c.v, c.matchs) },
+  ];
+}
+const ordreDefaut = (a, b) => a.ordre - b.ordre || b.points - a.points || a.joueur.localeCompare(b.joueur);
+
+function tableau(lignes, cols, avecDetail) {
+  const donnees = lignes.slice().sort(ordreDefaut);
+  if (tri) {
+    const col = cols[tri.col];
+    donnees.sort((a, b) => {
+      const x = col.k(a), y = col.k(b);
+      const r = typeof x === "string" ? x.localeCompare(y) : x - y;
+      return (r || ordreDefaut(a, b)) * (r ? tri.sens : 1);
+    });
+  }
+  const tete = cols.map((c, i) => `<th data-col="${i}">${c.t}${tri && tri.col === i ? `<span class="fleche">${tri.sens > 0 ? "▲" : "▼"}</span>` : ""}</th>`).join("");
+  const corps = donnees.map((l) => {
+    const cle = `${l.journee ?? "c"}-${l.equipe ?? ""}-${l.licence}`;
+    const tr = `<tr data-cle="${esc(cle)}">${cols.map((c) => `<td class="${c.c || ""} ${c.cls ? c.cls(l) : ""}">${c.v(l)}</td>`).join("")}</tr>`;
+    const detail = avecDetail && ouverts.has(cle)
+      ? `<tr class="detail"><td colspan="${cols.length}">${l.detail.map(esc).join("<br>")}<br><span class="note">contre ${esc(l.adversaires)}</span></td></tr>` : "";
+    return tr + detail;
+  }).join("");
+  return `<div class="defil"><table><thead><tr>${tete}</tr></thead><tbody>${corps}</tbody></table></div>`;
+}
+
+function afficher() {
+  const main = document.getElementById("contenu");
+  if (!D.journees.length) { main.innerHTML = '<p class="vide">Aucune feuille de match disponible pour le moment.</p>'; return; }
+  document.getElementById("onglets").innerHTML = D.journees.map((j) => `<a href="#J${j.numero}" class="${vue === "J" + j.numero ? "actif" : ""}">J${j.numero}</a>`).join("")
+    + `<a href="#cumul" class="${vue === "cumul" ? "actif" : ""}">Cumul</a>`;
+  if (vue === "cumul") {
+    main.innerHTML = `<p class="sous">Points gagnés ou perdus à chaque journée et depuis la J1.</p>${tableau(D.cumuls, colonnesCumul(), false)}${note()}`;
+  } else {
+    const j = Number(vue.slice(1));
+    const info = D.journees.find((x) => x.numero === j);
+    main.innerHTML = `<p class="sous">Journée ${j} — ${info.dates.map(fmtDate).join(", ")}. Clique sur un joueur pour le détail de ses parties.</p>`
+      + tableau(D.lignes.filter((l) => l.journee === j), colonnesJournee(j), true) + note();
+  }
+  main.querySelectorAll("th").forEach((th) => th.addEventListener("click", () => {
+    const col = Number(th.dataset.col);
+    tri = tri && tri.col === col ? { col, sens: -tri.sens } : { col, sens: col >= 2 ? -1 : 1 };
+    afficher();
+  }));
+  main.querySelectorAll("td.joueur").forEach((td) => td.addEventListener("click", () => {
+    const cle = td.parentElement.dataset.cle;
+    ouverts.has(cle) ? ouverts.delete(cle) : ouverts.add(cle);
+    afficher();
+  }));
+}
+function note() {
+  return `<p class="note">Points virtuels calculés avec le barème FFTT (coefficient 1, championnat par équipes), à partir des points
+    inscrits sur les feuilles de match. Clique sur un titre de colonne pour trier.</p>`;
+}
+function route() {
+  const h = location.hash.slice(1);
+  const dernier = D.journees.length ? "J" + D.journees[D.journees.length - 1].numero : "cumul";
+  const nouvelle = h === "cumul" || D.journees.some((j) => "J" + j.numero === h) ? h : dernier;
+  if (nouvelle !== vue) tri = null;
+  vue = nouvelle;
+  afficher();
+}
+document.getElementById("sous-titre").textContent =
+  `${D.club.nom} · phase ${D.phase} ${D.saison} · données du ${new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`;
+window.addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>
