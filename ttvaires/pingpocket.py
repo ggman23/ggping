@@ -16,7 +16,7 @@ from .reseau import HEURE, JOUR
 MOIS = {m: i for i, m in enumerate(
     ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], 1)}
 CATEGORIES = {"Poussin": "P", "Benjamin": "B", "Minime": "M", "Cadet": "C", "Junior": "J",
-              "Senior": "S", "Vétéran": "V"}
+              "Senior": "S", "Sénior": "S", "Vétéran": "V"}
 JOURS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
 
 

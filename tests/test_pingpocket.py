@@ -84,6 +84,7 @@ def test_utilitaires():
     assert separer_nom("SOARES GARCIA Ricardo Andre") == ("SOARES GARCIA", "Ricardo Andre")
     assert categorie_courte("Vétéran 45") == "V45"
     assert categorie_courte("Senior") == "S"
+    assert categorie_courte("Sénior") == "S"
     assert libelle_division("L08_R2") == "Régionale 2"
     assert libelle_division("DEP 3") == "Départementale 3"
     assert libelle_division("FED_Nationale 2") == "Nationale 2"
