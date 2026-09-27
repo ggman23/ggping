@@ -91,6 +91,8 @@ tr.vaires td { font-weight: 700; background: var(--accent-fond); }
 .note { background: var(--attention-fond); color: var(--attention); border-radius: 8px; padding: 8px 10px;
   margin: 10px 0 0; font-size: 14px; }
 details { margin-top: 12px; }
+details.suite { margin-top: 4px; font-size: 13px; }
+details.suite summary { font-weight: 400; color: var(--accent); }
 summary { cursor: pointer; font-weight: 600; }
 .vide-page { color: var(--doux); padding: 30px 0; text-align: center; }
 @media (max-width: 640px) {
@@ -140,12 +142,13 @@ function lundi(iso) {
 function plusJours(iso, n) { const d = dateObj(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
 const dateRenc = (r) => r.date_reelle || r.date;
 const clt = (p) => (p == null ? "—" : Math.max(5, Math.floor(p / 100)));
+const cltJ = (j) => j.classement ?? clt(j.points ?? j.points_mensuels);
 const pts = (j) => j.points_mensuels ?? j.points ?? 0;
 
 function nomJoueur(j) { return `${esc(j.nom)} ${esc(j.prenom)}`.trim(); }
 function joueurCourt(j, ch) {
   const fille = j.sexe === "F" && ch !== "F" ? ' <span class="badge fille">F</span>' : "";
-  return `${nomJoueur(j)}${fille} <span class="petit">${clt(j.points)} · ${j.points ?? "?"} pts${j.categorie ? " · " + esc(j.categorie) : ""}</span>`;
+  return `${nomJoueur(j)}${fille} <span class="petit">${cltJ(j)} · ${pts(j) || "?"} pts${j.categorie ? " · " + esc(j.categorie) : ""}</span>`;
 }
 function meilleur(j) {
   const m = j.meilleur;
@@ -161,7 +164,7 @@ function lieu(r, equipe) {
   if (r.vaires_domicile) return `<span class="badge dom">DOM</span>${salle ? ` <span class="petit">${esc(salle.nom || "")}</span>` : ""}`;
   if (!salle) return '<span class="badge ext">EXT</span> <span class="petit">adresse inconnue</span>';
   const adr = [salle.nom, salle.adresse, [salle.cp, salle.ville].filter(Boolean).join(" ")].filter(Boolean).join(", ");
-  const carte = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent([salle.adresse, salle.cp, salle.ville].filter(Boolean).join(" "));
+  const carte = salle.carte || "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent([salle.adresse, salle.cp, salle.ville].filter(Boolean).join(" "));
   return `<span class="badge ext">EXT</span> ${esc(adr)} <a href="${carte}" target="_blank" rel="noopener" class="petit">plan</a>`;
 }
 function scoreTxt(r) {
@@ -269,9 +272,14 @@ function panneauRencontre(e, r) {
   const a = r.analyse;
   const N = r.adversaire.numero;
   const nom = (id) => (idx[id] ? joueurCourt(idx[id], ch) : esc(id));
-  const liste = (items, vide, extra) => items.length
-    ? `<ul>${items.map((it) => `<li>${nom(it.id ?? it)}${extra ? extra(it) : ""}</li>`).join("")}</ul>`
-    : `<p class="vide">${vide}</p>`;
+  const MAX = 12;
+  const liste = (items, vide, extra) => {
+    if (!items.length) return `<p class="vide">${vide}</p>`;
+    const li = (it) => `<li>${nom(it.id ?? it)}${extra ? extra(it) : ""}</li>`;
+    const suite = items.length > MAX + 2
+      ? `<details class="suite"><summary>voir les ${items.length - MAX} autres</summary><ul>${items.slice(MAX).map(li).join("")}</ul></details>` : "";
+    return `<ul>${(suite ? items.slice(0, MAX) : items).map(li).join("")}</ul>${suite}`;
+  };
 
   let bloc = "";
   if (r.score && r.composition_adverse) {
@@ -322,8 +330,8 @@ function tableEffectif(club, ch, a, N, r) {
   };
   const ligne = (j, avecStatut) => `<tr>
     <td>${nomJoueur(j)}${j.sexe === "F" && ch !== "F" ? ' <span class="badge fille">F</span>' : ""}</td>
-    <td>${esc(j.categorie ?? "")}</td>
-    <td class="num">${clt(j.points)} <span class="petit">${j.points ?? ""}</span></td>
+    <td title="${esc(j.categorie_long ?? "")}">${esc(j.categorie ?? "")}</td>
+    <td class="num">${cltJ(j)} <span class="petit">${j.points ?? ""}</span></td>
     <td class="num">${j.points_mensuels ?? "—"}${j.points_mensuels && j.points ? ecartMensuel(j.points_mensuels - j.points) : ""}</td>
     <td>${meilleur(j)}</td>
     ${js.map((jn) => `<td class="c">${cellule(j, jn)}</td>`).join("")}
@@ -350,7 +358,7 @@ function tableEquipes(club, ch, idx) {
   const cell = (e, jn) => {
     const c = (e.compositions || []).find((x) => x.journee === jn);
     if (!c) return "";
-    return c.joueurs.map((id) => idx[id] ? `${esc(idx[id].nom)} ${esc((idx[id].prenom || "").charAt(0))}. <span class="petit">${clt(idx[id].points)}</span>` : esc(id)).join("<br>");
+    return c.joueurs.map((id) => idx[id] ? `${esc(idx[id].nom)} ${esc((idx[id].prenom || "").charAt(0))}. <span class="petit">${cltJ(idx[id])}</span>` : esc(id)).join("<br>");
   };
   return `<details><summary>Qui a joué dans quelle équipe (${equipes.length} équipe${equipes.length > 1 ? "s" : ""} du club)</summary><div class="defil"><table>
     <thead><tr><th>Équipe</th>${js.map((jn) => `<th>J${jn}</th>`).join("")}</tr></thead><tbody>

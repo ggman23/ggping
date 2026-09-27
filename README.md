@@ -13,8 +13,12 @@ Outil qui récupère sur Internet les informations sur les adversaires des équi
 Le détail des besoins et des règles de brûlage appliquées est dans
 [CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md).
 
-> **État** : le calcul du brûlage et la page sont prêts et testés sur des données fictives.
-> La récupération des données réelles (pingpocket.fr) est en cours de développement.
+Les données viennent des pages publiques de **pingpocket.fr** (aucun identifiant FFTT
+nécessaire). Elles sont gardées dans le dossier `cache\` : le **premier lancement** télécharge
+plusieurs milliers de pages (**20 à 30 minutes**), les suivants seulement ce qui a changé
+(résultats, nouvelles feuilles de match), en quelques minutes.
+
+> Les horaires des rencontres ne sont pas publiés par pingpocket : seules les dates figurent.
 
 ## Installation (Windows)
 
@@ -24,10 +28,16 @@ Le détail des besoins et des règles de brûlage appliquées est dans
 3. Double-cliquer sur **`lancer.bat`** : le premier lancement installe tout, puis la page
    s'ouvre dans le navigateur. Elle est enregistrée dans le dossier `sortie\`.
 
-Relancer `lancer.bat` après chaque journée pour mettre à jour les données.
+Relancer `lancer.bat` après chaque journée pour mettre à jour les données (les feuilles de
+match sont en général saisies dans les 48 h après la rencontre).
 
-Page de démonstration (données fictives) : dans une invite de commandes, dans le dossier du
-projet, taper `lancer.bat --demo`.
+La page `sortie\vaires.html` est un fichier autonome : on peut l'envoyer par mail ou WhatsApp
+aux capitaines, elle s'ouvre sans Internet.
+
+Options (dans une invite de commandes, dans le dossier du projet) :
+
+- `lancer.bat --hors-ligne` : régénère la page sans rien télécharger (cache uniquement) ;
+- `lancer.bat --demo` : page de démonstration avec des données fictives.
 
 ## Lancement manuel (Windows/Mac/Linux)
 
@@ -44,9 +54,11 @@ python -m pytest
 ```
 ttvaires/
   __main__.py    Point d'entrée (python -m ttvaires)
+  pingpocket.py  Lecture des pages pingpocket.fr et assemblage des données
+  reseau.py      Téléchargements : cache disque, requêtes parallèles, nouvelles tentatives
   brulage.py     Règles de brûlage et analyse de chaque rencontre
   rendu.py       Génération de la page HTML (un seul fichier)
   gabarit.html   Mise en page et affichage (HTML/CSS/JavaScript)
   demo.py        Données fictives pour tester sans Internet
-tests/           Tests du calcul de brûlage
+tests/           Tests (brûlage, lecture des pages)
 ```
