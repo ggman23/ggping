@@ -60,9 +60,11 @@ class Client:
         """Supprime une page du cache (ex. feuille de match pas encore saisie)."""
         self._fichier(chemin).unlink(missing_ok=True)
 
-    def get(self, chemin, ttl=JOUR):
+    def get(self, chemin, ttl=JOUR, entetes=None, valide=page_valide):
+        """Page (ou réponse JSON) en texte. `entetes` complète les en-têtes HTTP (None en retire un),
+        `valide` dit si une réponse est exploitable (les autres ne sont jamais mises en cache)."""
         fichier = self._fichier(chemin)
-        if fichier.exists() and not page_valide(fichier.read_text(encoding="utf-8")):
+        if fichier.exists() and not valide(fichier.read_text(encoding="utf-8")):
             fichier.unlink()  # page d'erreur conservée par une ancienne version
         if fichier.exists() and (self.hors_ligne or ttl is None or time.time() - fichier.stat().st_mtime < ttl):
             with self._verrou:
@@ -77,23 +79,28 @@ class Client:
             if essai:
                 time.sleep(2 ** essai)
             try:
-                r = self._session().get(url, timeout=45)
+                r = self._session().get(url, timeout=60, headers=entetes)
             except requests.RequestException as e:
                 derniere_erreur = e
                 continue
-            if r.status_code == 200 and page_valide(r.text):
+            if r.status_code == 200 and valide(r.text):
                 fichier.write_text(r.text, encoding="utf-8")
                 with self._verrou:
                     self.nb_telecharges += 1
                 time.sleep(self.pause)  # le site sature vite : on reste discret
                 return r.text
-            derniere_erreur = f"HTTP {r.status_code}" if r.status_code != 200 else "incident technique pingpocket"
-            if r.status_code == 404:
+            derniere_erreur = f"HTTP {r.status_code}" if r.status_code != 200 else "réponse inexploitable"
+            if r.headers.get("cf-mitigated") == "challenge":
+                raise ErreurReseau(f"{url} : le site bloque les requêtes automatiques (protection anti-robots "
+                                   "Cloudflare). Réessayez plus tard.")
+            if r.status_code in (401, 404):
                 break
         raise ErreurReseau(f"{url} : {derniere_erreur}")
 
-    def get_plusieurs(self, chemins, ttl=JOUR, message=None):
-        """Télécharge plusieurs pages en parallèle. Renvoie {chemin: html ou None si échec}."""
+    def get_plusieurs(self, chemins, ttl=JOUR, message=None, **options):
+        """Télécharge plusieurs pages en parallèle. Renvoie {chemin: texte ou None si échec}.
+
+        Les options (entetes, valide) sont transmises à get()."""
         chemins = list(dict.fromkeys(chemins))
         resultats = {}
         if not chemins:
@@ -101,7 +108,7 @@ class Client:
 
         def une(chemin):
             try:
-                return chemin, self.get(chemin, ttl)
+                return chemin, self.get(chemin, ttl, **options)
             except ErreurReseau as e:
                 print(f"  ! {e}")
                 return chemin, None

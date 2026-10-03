@@ -1,1 +1,2 @@
-*.bat text eol=crlf
+# Fichiers de commandes Windows : stockés tels quels (CRLF), y compris dans le ZIP GitHub.
+*.bat -text

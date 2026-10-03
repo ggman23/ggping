@@ -3,7 +3,8 @@ REM ============================================================
 REM  Outils CVTT Vaires - lancement Windows
 REM  Premier lancement : cree l'environnement et installe tout.
 REM  Sans argument : affiche un menu. Avec arguments : les transmet
-REM  directement (ex. lancer.bat --resultats --hors-ligne).
+REM  directement, par exemple : lancer.bat --resultats --hors-ligne
+REM  ATTENTION : pas de parentheses dans les echo, elles cassent les blocs if.
 REM ============================================================
 cd /d "%~dp0"
 
@@ -22,7 +23,7 @@ if not defined PYTHON (
 )
 
 if not exist .venv (
-    echo Creation de l'environnement Python (une seule fois)...
+    echo Creation de l'environnement Python, une seule fois...
     %PYTHON% -m venv .venv
     if errorlevel 1 (
         echo Echec de la creation de l'environnement virtuel.
@@ -48,26 +49,26 @@ echo.
 echo  ==================================================
 echo    CVTT Vaires - championnat par equipes
 echo  ==================================================
-echo    1. Adversaires (effectifs, brulages, calendrier)
-echo    2. Resultats des joueurs de Vaires (page + Excel)
+echo    1. Adversaires : effectifs, brulages, calendrier
+echo    2. Resultats des joueurs de Vaires : page + Excel
 echo    3. Les deux
-echo    4. Page de demonstration (donnees fictives)
+echo    4. Page de demonstration, donnees fictives
 echo    5. Quitter
 echo.
-choice /c 12345 /n /m "  Votre choix (1 a 5) : "
+choice /c 12345 /n /m "  Votre choix, de 1 a 5 : "
 if errorlevel 5 exit /b 0
-if errorlevel 4 (
-    python -m ttvaires --demo
-    goto fin
-)
-if errorlevel 3 (
-    python -m ttvaires --resultats --adversaires
-    goto fin
-)
-if errorlevel 2 (
-    python -m ttvaires --resultats
-    goto fin
-)
+if errorlevel 4 goto demo
+if errorlevel 3 goto les_deux
+if errorlevel 2 goto resultats
 python -m ttvaires --adversaires
+goto fin
+:demo
+python -m ttvaires --demo
+goto fin
+:les_deux
+python -m ttvaires --resultats --adversaires
+goto fin
+:resultats
+python -m ttvaires --resultats
 :fin
 pause

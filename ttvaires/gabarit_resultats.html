@@ -41,6 +41,7 @@ td.joueur:hover { text-decoration: underline; }
 tr.detail td { background: #f7f8fa; text-align: left; font-size: 13.5px; color: var(--doux); white-space: normal; }
 .note { color: var(--doux); font-size: 13px; margin-top: 10px; }
 .vide { color: var(--doux); padding: 30px; text-align: center; }
+.autre { color: var(--accent); font-weight: 700; cursor: help; }
 @media (max-width: 640px) { main { padding: 8px; } table { font-size: 13.5px; } th, td { padding: 4px 6px; } }
 @media print { header { position: static; } nav { display: none; } }
 </style>
@@ -75,7 +76,7 @@ function colonnesJournee(j) {
     { t: "Pts +/-", k: (l) => l.delta, v: (l) => nombre(l.delta, 1), cls: (l) => clsDelta(l.delta) },
     { t: "Victoires", k: (l) => l.v / l.matchs + l.matchs / 1000, v: (l) => `${l.v}/${l.matchs}`, cls: (l) => clsVict(l.v, l.matchs) },
     { t: "Meilleure victoire", k: (l) => l.meilleure ?? -99999, v: (l) => signe(l.meilleure) },
-    { t: `Points J${j}`, k: (l) => l.apres, v: (l) => nombre(l.apres, 1) },
+    { t: `Points J${j}`, k: (l) => l.apres, v: (l) => nombre(l.apres, 1) + (l.avant_jour ? '<span class="autre" title="inclut une autre rencontre jouée plus tôt dans la journée"> *</span>' : "") },
     { t: "Total", k: (l) => l.total, v: (l) => nombre(l.total, 1), cls: (l) => clsDelta(l.total) },
   ];
 }
@@ -106,8 +107,9 @@ function tableau(lignes, cols, avecDetail) {
   const corps = donnees.map((l) => {
     const cle = `${l.journee ?? "c"}-${l.equipe ?? ""}-${l.licence}`;
     const tr = `<tr data-cle="${esc(cle)}">${cols.map((c) => `<td class="${c.c || ""} ${c.cls ? c.cls(l) : ""}">${c.v(l)}</td>`).join("")}</tr>`;
+    const autres = (l.autres || []).map((a) => `<br><b>Aussi le ${fmtDate(a.date)} avec ${esc(a.equipe)} : ${(a.delta > 0 ? "+" : "") + nombre(a.delta, 1)}</b>`).join("");
     const detail = avecDetail && ouverts.has(cle)
-      ? `<tr class="detail"><td colspan="${cols.length}">${l.detail.map(esc).join("<br>")}<br><span class="note">contre ${esc(l.adversaires)}</span></td></tr>` : "";
+      ? `<tr class="detail"><td colspan="${cols.length}">${l.detail.map(esc).join("<br>")}<br><span class="note">contre ${esc(l.adversaires)}</span>${autres}</td></tr>` : "";
     return tr + detail;
   }).join("");
   return `<div class="defil"><table><thead><tr>${tete}</tr></thead><tbody>${corps}</tbody></table></div>`;
@@ -123,8 +125,11 @@ function afficher() {
   } else {
     const j = Number(vue.slice(1));
     const info = D.journees.find((x) => x.numero === j);
-    main.innerHTML = `<p class="sous">Journée ${j} — ${info.dates.map(fmtDate).join(", ")}. Clique sur un joueur pour le détail de ses parties.</p>`
-      + tableau(D.lignes.filter((l) => l.journee === j), colonnesJournee(j), true) + note();
+    const lignes = D.lignes.filter((l) => l.journee === j);
+    const legende = lignes.some((l) => l.avant_jour)
+      ? ` <span class="autre">*</span> = la joueuse a aussi joué une autre rencontre plus tôt dans la journée.` : "";
+    main.innerHTML = `<p class="sous">Journée ${j} — ${info.dates.map(fmtDate).join(", ")}. Clique sur un joueur pour le détail de ses parties.${legende}</p>`
+      + tableau(lignes, colonnesJournee(j), true) + note();
   }
   main.querySelectorAll("th").forEach((th) => th.addEventListener("click", () => {
     const col = Number(th.dataset.col);

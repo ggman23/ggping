@@ -16,13 +16,19 @@ Une seconde page, **Résultats des joueurs de Vaires** (`sortie\resultats_vaires
 du jour, points après la journée et total depuis la J1. Le tableau se trie en cliquant sur les
 titres de colonnes ; un clic sur un joueur affiche le détail de ses parties. Le classeur Excel
 a un onglet par journée, un onglet Cumul et l'onglet Parties (une ligne par partie, à partir
-de laquelle tout est calculé par formules).
+de laquelle tout est calculé par formules). Les équipes masculines (vendredi) et l'équipe
+féminine (samedi) sont prises en compte : une joueuse qui a joué les deux rencontres d'une même
+journée apparaît dans les deux équipes, et ses points se cumulent.
+
+Les résultats viennent de l'**API publique de la FFTT** (celle des pages de consultation de
+monclub.fftt.com, lisible sans identifiant) : quelques secondes suffisent.
 
 Le détail des besoins et des règles de brûlage appliquées est dans
 [CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md).
 
-Les données viennent des pages publiques de **pingpocket.fr** (aucun identifiant FFTT
-nécessaire). Elles sont gardées dans le dossier `cache\` : le **premier lancement** télécharge
+Les données de la page adversaires viennent des pages publiques de **pingpocket.fr** (aucun
+identifiant FFTT nécessaire). Si pingpocket bloque les requêtes automatiques (protection
+anti-robots), l'outil l'indique et génère quand même la page des résultats. Elles sont gardées dans le dossier `cache\` : le **premier lancement** télécharge
 environ 2 000 pages (**40 minutes environ** : le site sature vite, l'outil reste discret).
 Les lancements suivants ne retéléchargent que ce qui a pu changer : quelques secondes le même
 jour, 10 à 20 minutes d'une semaine sur l'autre (poules, listes de licenciés, nouvelles
@@ -74,6 +80,7 @@ ttvaires/
   pingpocket.py  Lecture des pages pingpocket.fr et assemblage des données
   reseau.py      Téléchargements : cache disque, requêtes parallèles, nouvelles tentatives
   brulage.py     Règles de brûlage et analyse de chaque rencontre
+  fftt.py        Accès à l'API publique de la FFTT (rencontres, feuilles de match)
   resultats.py   Résultats des joueurs de Vaires : points virtuels, page et classeur Excel
   rendu.py       Génération de la page HTML (un seul fichier)
   gabarit.html   Mise en page de la page adversaires (HTML/CSS/JavaScript)

@@ -1,6 +1,5 @@
 """Calcul des points virtuels et synthèse par journée (cas réel de la J1 de Vaires 3, noms fictifs)."""
 
-from ttvaires.pingpocket import lire_parties
 from ttvaires.resultats import points_partie, synthese
 
 
@@ -40,19 +39,17 @@ def test_synthese_journee_et_total():
     assert c["journees"] == {1: 27.5, 2: -4} and c["total"] == 23.5 and (c["v"], c["matchs"]) == (3, 4)
 
 
-PARTIES = """
-<div data-title="A vs B">
-<ul class="rounded divisionIndividualRoundMatchesPanel"><li><a href="/x/equipes/A"><span>ALPHA 1</span></a></li></ul>
-<div class="division-grid"></div>
-<ul class="rounded divisionIndividualRoundMatchesPanel">
-<li><a href="/app/fftt/licencies/1"><span class="pos">A Un</span></a><p>2</p><p>1</p>
-<a href="/app/fftt/licencies/2"><span class="neg">B Deux</span></a></li>
-<li><a href="/app/fftt/licencies/3"><span class="neg">C Trois</span></a><p>1</p><p>2</p>
-<a href="/app/fftt/licencies/4"><span class="pos">D Quatre</span></a></li>
-<li><p class="labels-fragment"><span class="pos">A Un et C Trois</span></p><p>2</p><p>1</p>
-<p class="labels-fragment"><span class="neg">B Deux et D Quatre</span></p></li>
-</ul></div>"""
-
-
-def test_lire_parties_ignore_les_doubles():
-    assert lire_parties(PARTIES) == [{"a": "1", "b": "2", "gagnant": "1"}, {"a": "3", "b": "4", "gagnant": "4"}]
+def test_joueuse_deux_rencontres_dans_la_journee():
+    # Vendredi en VAIRES 3 (masculin), samedi en VAIRES 1 F : les deux rencontres comptent.
+    vendredi = _partie("LEA", 768, "A", 706, True, journee=2, equipe="VAIRES 3", ordre=2)
+    vendredi["date"] = "2026-10-02"
+    samedi = _partie("LEA", 768, "B", 900, True, journee=2, equipe="VAIRES 1 F", ordre=6)
+    samedi["date"] = "2026-10-03"
+    lignes, cumuls = synthese([samedi, vendredi])
+    v3 = next(l for l in lignes if l["equipe"] == "VAIRES 3")
+    f1 = next(l for l in lignes if l["equipe"] == "VAIRES 1 F")
+    assert (v3["delta"], f1["delta"]) == (5, 10)          # +5 (normale, écart 62) et +10 (anormale, écart 132)
+    assert v3["apres"] == 773 and f1["apres"] == 783      # le samedi part des points virtuels du vendredi
+    assert v3["total"] == f1["total"] == 15
+    assert f1["autres"] == [{"equipe": "VAIRES 3", "date": "2026-10-02", "delta": 5}]
+    assert cumuls[0]["equipes"] == ["VAIRES 3", "VAIRES 1 F"] and cumuls[0]["journees"] == {2: 15}

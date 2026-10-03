@@ -10,7 +10,7 @@ from .brulage import enrichir
 from .demo import donnees_demo
 from .pingpocket import recuperer
 from .rendu import GABARIT_RESULTATS, generer_html
-from .reseau import Client
+from .reseau import Client, ErreurReseau
 from .resultats import donnees_page, ecrire_xlsx, recuperer_parties
 
 RACINE = Path(__file__).resolve().parent.parent
@@ -57,10 +57,16 @@ def main():
     else:
         client = Client(CACHE, paralleles=args.paralleles, hors_ligne=args.hors_ligne)
         pages = []
+        a_faire = []
         if args.resultats:
-            pages += page_resultats(client, args.club)
+            a_faire.append(("résultats", page_resultats))
         if args.adversaires or not args.resultats:
-            pages += page_adversaires(client, args.club)
+            a_faire.append(("adversaires", page_adversaires))
+        for nom, fonction in a_faire:
+            try:
+                pages += fonction(client, args.club)
+            except ErreurReseau as e:
+                print(f"\n!!! Page {nom} non générée : {e}\n")
         print(f"Pages téléchargées : {client.nb_telecharges}, reprises du cache : {client.nb_cache}")
 
     for chemin in pages:

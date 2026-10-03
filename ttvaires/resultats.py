@@ -5,12 +5,13 @@ gagnés ou perdus (barème FFTT, coefficient 1 du championnat par équipes), sa 
 victoire du jour et le total cumulé depuis la J1. Sorties : page HTML triable et classeur Excel.
 """
 
+import json
 from collections import defaultdict
 from datetime import date, datetime
 
-from .pingpocket import (_mon_libelle, lire_equipes_club, lire_feuille, lire_parties, lire_poule,
-                         phase_et_saison)
-from .reseau import HEURE, JOUR
+from . import fftt
+from .pingpocket import phase_et_saison
+from .reseau import HEURE
 
 # Barème FFTT : (écart maximum exclu, victoire normale, défaite normale, victoire anormale,
 # défaite anormale). Normal = le joueur qui a le plus de points gagne.
@@ -39,56 +40,69 @@ def points_partie(points, points_adv, victoire, coefficient=COEFFICIENT_CHAMPION
     return gain * coefficient
 
 
+def bornes_phase(jour):
+    """Dates de début et de fin de la phase en cours."""
+    phase, saison = phase_et_saison(jour)
+    annee = int(saison[:4])
+    return ("%d-07-01" % annee, "%d-12-31" % annee) if phase == 1 else ("%d-01-01" % (annee + 1), "%d-06-30" % (annee + 1))
+
+
 def recuperer_parties(client, numero_club="08770250", aujourdhui=None):
-    """Toutes les parties de simple jouées par les joueurs du club dans la phase en cours."""
+    """Toutes les parties de simple jouées par les joueurs du club dans la phase en cours
+    (championnats masculin et féminin), lues sur l'API publique de la FFTT."""
     aujourdhui = aujourdhui or date.today()
     phase, saison = phase_et_saison(aujourdhui)
-    print(f"Résultats des équipes du club {numero_club} (phase {phase} {saison})", flush=True)
-    nom_club, equipes = lire_equipes_club(client.get(f"/app/fftt/clubs/{numero_club}/equipes?phase={phase}", JOUR))
-    equipes.sort(key=lambda e: (e["championnat"] == "F", e["numero"]))
-    poules = client.get_plusieurs([e["lien"] for e in equipes], ttl=3 * HEURE)
+    debut, fin = bornes_phase(aujourdhui)
+    print(f"Résultats des équipes du club {numero_club} (phase {phase} {saison}, API FFTT)", flush=True)
+    id_club = fftt.id_interne_club(client, numero_club, debut)
+    rencontres = fftt.rencontres_club(client, id_club, debut, fin, ttl=3 * HEURE)
 
-    a_lire = []
-    for ordre, e in enumerate(equipes):
-        if not poules.get(e["lien"]):
-            continue
-        poule = lire_poule(poules[e["lien"]])
-        moi = _mon_libelle(poule, numero_club, e["numero"], e["championnat"], set())
-        nom = f"VAIRES {e['numero']}{' F' if e['championnat'] == 'F' else ''}"
-        for r in poule["rencontres"]:
-            if moi in (r["domicile"], r["exterieur"]) and r["score"] is not None and r["lien"]:
-                a_lire.append((ordre, nom, r, r["domicile"] == moi))
+    nos_equipes = {}  # nom de l'équipe -> (féminine, numéro)
+    jouees = []
+    for r in rencontres:
+        cotes = {c: (r.get(c) or {}).get("team") or {} for c in ("homeOpponent", "awayOpponent")}
+        for c, equipe in cotes.items():
+            if any(club.get("identifier") == numero_club for club in equipe.get("clubs", [])):
+                nos_equipes[equipe["name"]] = (fftt.feminin(r), fftt.numero_equipe(equipe["name"]) or 0)
+                if r["date"][:10] <= aujourdhui.isoformat():
+                    jouees.append((r, c == "homeOpponent"))
+    ordres = {nom: i for i, nom in enumerate(sorted(nos_equipes, key=lambda n: nos_equipes[n]))}
 
-    feuilles = client.get_plusieurs([r["lien"] for _, _, r, _ in a_lire], ttl=None, message="feuilles de match")
+    chemins = [f"/sport_matches/{r['id']}" for r, _ in jouees]
+    details = client.get_plusieurs([fftt.API + c for c in chemins], ttl=None, message="feuilles de match",
+                                   entetes=fftt.ENTETES, valide=fftt.json_valide)
     parties = []
-    for ordre, nom, r, domicile in a_lire:
-        html = feuilles.get(r["lien"])
-        cotes = lire_feuille(html) if html else []
-        if len(cotes) != 2 or not cotes[0]["joueurs"] or not cotes[1]["joueurs"]:
-            client.oublier(r["lien"])  # feuille pas encore saisie : on retentera
+    for (r, domicile), chemin in zip(jouees, chemins):
+        brut = details.get(fftt.API + chemin)
+        d = json.loads(brut) if brut else {}
+        if not d.get("games") or not d.get("homeSheetMatches"):
+            client.oublier(fftt.API + chemin)  # feuille pas encore saisie : on retentera
             continue
-        nous, eux = (cotes[0], cotes[1]) if domicile else (cotes[1], cotes[0])
-        joueurs = {j["licence"]: j for j in nous["joueurs"] + eux["joueurs"]}
-        miens = {j["licence"] for j in nous["joueurs"]}
-        for p in lire_parties(html):
-            for lic, adv in ((p["a"], p["b"]), (p["b"], p["a"])):
-                if lic not in miens or adv not in joueurs:
-                    continue
-                j, a = joueurs[lic], joueurs[adv]
-                pts, pts_adv = j["points"] or 500, a["points"] or 500
-                victoire = p["gagnant"] == lic
-                parties.append({
-                    "journee": r["journee"], "date": r["date_prevue"] or r["date_journee"],
-                    "equipe": nom, "ordre": ordre, "adversaires": eux["equipe"],
-                    "licence": lic, "joueur": f"{j['nom']} {j['prenom']}".strip(), "points": pts,
-                    "adversaire": f"{a['nom']} {a['prenom']}".strip(), "points_adv": pts_adv,
-                    "ecart": pts_adv - pts, "victoire": victoire,
-                    "gain": points_partie(pts, pts_adv, victoire),
-                })
-    parties.sort(key=lambda p: (p["journee"], p["ordre"], -p["points"], p["joueur"]))
+        nous, eux = ("home", "away") if domicile else ("away", "home")
+        notre_equipe = d[f"{nous}Opponent"]["team"]["name"]
+        feminine, numero = nos_equipes[notre_equipe]
+        nom = f"VAIRES {numero}{' F' if feminine else ''}"
+        for g in d["games"]:
+            if g.get("doubleOpposition") or g.get("forfeit") or g.get("notCounted") or g.get("winner") not in ("home", "away"):
+                continue
+            if not g.get(f"{nous}Player") or not g.get(f"{eux}Player"):
+                continue
+            j, a = fftt.joueur(g[f"{nous}Player"]), fftt.joueur(g[f"{eux}Player"])
+            pts, pts_adv = j["points"] or 500, a["points"] or 500
+            victoire = g["winner"] == nous
+            parties.append({
+                "journee": d["day"]["position"], "date": d["date"][:10],
+                "equipe": nom, "ordre": ordres[notre_equipe], "adversaires": d[f"{eux}Opponent"]["team"]["name"],
+                "licence": j["licence"], "joueur": j["nom"], "points": pts,
+                "adversaire": a["nom"], "points_adv": pts_adv,
+                "ecart": pts_adv - pts, "victoire": victoire,
+                "gain": points_partie(pts, pts_adv, victoire),
+            })
+    parties.sort(key=lambda p: (p["journee"], p["date"], p["ordre"], -p["points"], p["joueur"]))
     return {
         "genere_le": datetime.now().isoformat(timespec="minutes"), "saison": saison, "phase": phase,
-        "club": {"numero": numero_club, "nom": nom_club}, "parties": parties,
+        "club": {"numero": numero_club, "nom": "CVTT VAIRES" if numero_club == "08770250" else numero_club},
+        "parties": parties,
     }
 
 
@@ -112,6 +126,22 @@ def synthese(parties):
                 for p in ps
             ],
         })
+    # Une joueuse peut disputer deux rencontres dans la même journée (masculin le vendredi,
+    # féminin le samedi) : les points après une rencontre tiennent compte de celles déjà jouées
+    # dans la journée, et chaque ligne rappelle les autres rencontres du jour.
+    du_jour = defaultdict(list)
+    for ligne in lignes:
+        du_jour[(ligne["licence"], ligne["journee"])].append(ligne)
+    for rencontres in du_jour.values():
+        rencontres.sort(key=lambda l: (l["date"] or "", l["ordre"]))
+        cumul_jour = 0.0
+        for ligne in rencontres:
+            cumul_jour += ligne["delta"]
+            ligne["apres"] = ligne["points"] + cumul_jour
+            ligne["autres"] = [{"equipe": l["equipe"], "date": l["date"], "delta": l["delta"]}
+                               for l in rencontres if l is not ligne]
+            ligne["avant_jour"] = cumul_jour - ligne["delta"]
+
     # Total cumulé de chaque joueur depuis la J1, toutes équipes confondues.
     par_journee = defaultdict(lambda: defaultdict(float))
     for ligne in lignes:
@@ -206,7 +236,7 @@ def ecrire_xlsx(resultats, chemin):
     ws_p.auto_filter.ref = f"A1:K{ws_p.max_row}"
     n = max(ws_p.max_row, 2)
     rng = {k: f"Parties!${c}$2:${c}${n}" for k, c in
-           (("j", "A"), ("eq", "C"), ("jo", "D"), ("res", "I"), ("pts", "J"), ("ecart", "H"))}
+           (("j", "A"), ("date", "B"), ("eq", "C"), ("jo", "D"), ("res", "I"), ("pts", "J"), ("ecart", "H"))}
 
     def mise_en_forme(ws, nb_lignes, col_delta, col_vict, col_total, entetes):
         for c in ws[1]:
@@ -249,7 +279,8 @@ def ecrire_xlsx(resultats, chemin):
                 f"=SUMIFS({rng['pts']},{cle})",
                 f'=COUNTIFS({cle},{rng["res"]},"V")&"/"&COUNTIFS({cle})',
                 f'=IF(COUNTIFS({cle},{rng["res"]},"V")=0,"",_xlfn.MAXIFS({rng["ecart"]},{cle},{rng["res"]},"V"))',
-                f"=C{i}+D{i}",
+                (f'=C{i}+SUMIFS({rng["pts"]},{rng["j"]},{j},{rng["jo"]},$B{i},{rng["date"]},"<="&DATE({l["date"][:4]},{int(l["date"][5:7])},{int(l["date"][8:])}))'
+                 if l["date"] else f"=C{i}+D{i}"),
                 f'=SUMIFS({rng["pts"]},{rng["jo"]},$B{i},{rng["j"]},"<="&{j})',
             ])
             ws[f"C{i}"].number_format = "#,##0"
@@ -259,6 +290,8 @@ def ecrire_xlsx(resultats, chemin):
             ws[f"H{i}"].number_format = "0.0"
         mise_en_forme(ws, len(lj), "D", "E", "H", (13, 26, 10, 10, 11, 18, 12, 9))
         ws["H1"].comment = Comment("Total des points gagnés/perdus depuis la J1 (toutes équipes).", "Outil Vaires")
+        ws["G1"].comment = Comment("Points après la rencontre. Une joueuse qui a joué en masculin le vendredi et en "
+                                   "féminin le samedi cumule les deux rencontres de la journée.", "Outil Vaires")
 
     # --- Cumul ----------------------------------------------------------------------------
     ws = wb.create_sheet("Cumul", index=len(wb.sheetnames) - 1)
