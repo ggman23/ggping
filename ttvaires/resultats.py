@@ -126,28 +126,22 @@ def synthese(parties):
                 for p in ps
             ],
         })
-    # Une joueuse peut disputer deux rencontres dans la même journée (masculin le vendredi,
-    # féminin le samedi) : les points après une rencontre tiennent compte de celles déjà jouées
-    # dans la journée, et chaque ligne rappelle les autres rencontres du jour.
-    du_jour = defaultdict(list)
+    # Classement virtuel : on part des points officiels du joueur (ceux de sa première feuille de
+    # match de la phase) et on cumule, dans l'ordre chronologique, les points gagnés ou perdus à
+    # chaque rencontre. Une joueuse peut disputer deux rencontres dans la même journée (masculin
+    # le vendredi, féminin le samedi) : elles se cumulent aussi.
+    par_joueur = defaultdict(list)
     for ligne in lignes:
-        du_jour[(ligne["licence"], ligne["journee"])].append(ligne)
-    for rencontres in du_jour.values():
-        rencontres.sort(key=lambda l: (l["date"] or "", l["ordre"]))
-        cumul_jour = 0.0
+        par_joueur[ligne["licence"]].append(ligne)
+    for rencontres in par_joueur.values():
+        rencontres.sort(key=lambda l: (l["date"] or "", l["journee"], l["ordre"]))
+        officiels = rencontres[0]["points"]
+        total = 0.0
         for ligne in rencontres:
-            cumul_jour += ligne["delta"]
-            ligne["apres"] = ligne["points"] + cumul_jour
+            total += ligne["delta"]
+            ligne["points"], ligne["total"], ligne["apres"] = officiels, total, officiels + total
             ligne["autres"] = [{"equipe": l["equipe"], "date": l["date"], "delta": l["delta"]}
-                               for l in rencontres if l is not ligne]
-            ligne["avant_jour"] = cumul_jour - ligne["delta"]
-
-    # Total cumulé de chaque joueur depuis la J1, toutes équipes confondues.
-    par_journee = defaultdict(lambda: defaultdict(float))
-    for ligne in lignes:
-        par_journee[ligne["licence"]][ligne["journee"]] += ligne["delta"]
-    for ligne in lignes:
-        ligne["total"] = sum(d for j, d in par_journee[ligne["licence"]].items() if j <= ligne["journee"])
+                               for l in rencontres if l["journee"] == ligne["journee"] and l is not ligne]
     lignes.sort(key=lambda l: (l["journee"], l["ordre"], -l["points"], l["joueur"]))
 
     joueurs = {}
@@ -163,6 +157,8 @@ def synthese(parties):
         c["total"] += ligne["delta"]
         c["v"] += ligne["v"]
         c["matchs"] += ligne["matchs"]
+    for c in joueurs.values():
+        c["virtuels"] = c["points"] + c["total"]
     cumuls = sorted(joueurs.values(), key=lambda c: (c["ordre"], -c["points"], c["joueur"]))
     return lignes, cumuls
 
@@ -279,9 +275,9 @@ def ecrire_xlsx(resultats, chemin):
                 f"=SUMIFS({rng['pts']},{cle})",
                 f'=COUNTIFS({cle},{rng["res"]},"V")&"/"&COUNTIFS({cle})',
                 f'=IF(COUNTIFS({cle},{rng["res"]},"V")=0,"",_xlfn.MAXIFS({rng["ecart"]},{cle},{rng["res"]},"V"))',
-                (f'=C{i}+SUMIFS({rng["pts"]},{rng["j"]},{j},{rng["jo"]},$B{i},{rng["date"]},"<="&DATE({l["date"][:4]},{int(l["date"][5:7])},{int(l["date"][8:])}))'
-                 if l["date"] else f"=C{i}+D{i}"),
-                f'=SUMIFS({rng["pts"]},{rng["jo"]},$B{i},{rng["j"]},"<="&{j})',
+                f"=C{i}+H{i}",
+                (f'=SUMIFS({rng["pts"]},{rng["jo"]},$B{i},{rng["date"]},"<="&DATE({l["date"][:4]},{int(l["date"][5:7])},{int(l["date"][8:])}))'
+                 if l["date"] else f'=SUMIFS({rng["pts"]},{rng["jo"]},$B{i},{rng["j"]},"<="&{j})'),
             ])
             ws[f"C{i}"].number_format = "#,##0"
             ws[f"D{i}"].number_format = "0.0"
@@ -289,28 +285,35 @@ def ecrire_xlsx(resultats, chemin):
             ws[f"G{i}"].number_format = "#,##0.0"
             ws[f"H{i}"].number_format = "0.0"
         mise_en_forme(ws, len(lj), "D", "E", "H", (13, 26, 10, 10, 11, 18, 12, 9))
-        ws["H1"].comment = Comment("Total des points gagnés/perdus depuis la J1 (toutes équipes).", "Outil Vaires")
-        ws["G1"].comment = Comment("Points après la rencontre. Une joueuse qui a joué en masculin le vendredi et en "
-                                   "féminin le samedi cumule les deux rencontres de la journée.", "Outil Vaires")
+        ws["C1"].comment = Comment("Points officiels du joueur (ceux de sa première feuille de match de la phase).",
+                                   "Outil Vaires")
+        ws["G1"].comment = Comment("Classement virtuel après la rencontre : points officiels + total depuis la J1.",
+                                   "Outil Vaires")
+        ws["H1"].comment = Comment("Total des points gagnés/perdus depuis la J1, toutes équipes (une joueuse qui a "
+                                   "joué en masculin le vendredi et en féminin le samedi cumule les deux).", "Outil Vaires")
 
     # --- Cumul ----------------------------------------------------------------------------
     ws = wb.create_sheet("Cumul", index=len(wb.sheetnames) - 1)
-    ws.append(["Equipe(s)", "Joueur", "Points"] + [f"J{j}" for j in journees] + ["Total", "Victoires"])
+    ws.append(["Equipe(s)", "Joueur", "Points"] + [f"J{j}" for j in journees] + ["Total", "Points virtuels", "Victoires"])
     for i, c in enumerate(cumuls, start=2):
         ligne = [", ".join(c["equipes"]), c["joueur"], c["points"]]
         for j in journees:
             cle = f'{rng["jo"]},$B{i},{rng["j"]},{j}'
             ligne.append(f'=IF(COUNTIFS({cle})=0,"",SUMIFS({rng["pts"]},{cle}))')
         ligne.append(f"=SUMIFS({rng['pts']},{rng['jo']},$B{i})")
+        ligne.append(f"=C{i}+{get_column_letter(4 + len(journees))}{i}")
         ligne.append(f'=COUNTIFS({rng["jo"]},$B{i},{rng["res"]},"V")&"/"&COUNTIFS({rng["jo"]},$B{i})')
         ws.append(ligne)
         ws.cell(i, 3).number_format = "#,##0"
         for k in range(4, 5 + len(journees)):
             ws.cell(i, k).number_format = "0.0"
+        ws.cell(i, 5 + len(journees)).number_format = "#,##0.0"
     col_total = get_column_letter(4 + len(journees))
-    col_vict = get_column_letter(5 + len(journees))
+    col_vict = get_column_letter(6 + len(journees))
     mise_en_forme(ws, len(cumuls), col_total, col_vict, col_total,
-                  (16, 26, 10) + (8,) * len(journees) + (9, 11))
+                  (16, 26, 10) + (8,) * len(journees) + (9, 15, 11))
+    ws.cell(1, 5 + len(journees)).comment = Comment("Classement virtuel : points officiels + total depuis la J1.",
+                                                    "Outil Vaires")
     for j_col in range(4, 4 + len(journees)):
         lettre = get_column_letter(j_col)
         zone = f"{lettre}2:{lettre}{len(cumuls) + 1}"

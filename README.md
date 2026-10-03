@@ -12,8 +12,10 @@ Outil qui récupère sur Internet les informations sur les adversaires des équi
 
 Une seconde page, **Résultats des joueurs de Vaires** (`sortie\resultats_vaires.html` et
 `sortie\resultats_vaires.xlsx`), donne pour chaque journée les joueurs alignés dans les
-7 équipes : équipe, points, points gagnés/perdus (barème FFTT), victoires, meilleure victoire
-du jour, points après la journée et total depuis la J1. Le tableau se trie en cliquant sur les
+7 équipes : équipe, points officiels, points gagnés/perdus (barème FFTT), victoires, meilleure
+victoire du jour, classement virtuel (points officiels + total depuis la J1) et total depuis la
+J1. L'onglet Cumul donne, par joueur, les points de chaque journée, le total et le classement
+virtuel. Le tableau se trie en cliquant sur les
 titres de colonnes ; un clic sur un joueur affiche le détail de ses parties. Le classeur Excel
 a un onglet par journée, un onglet Cumul et l'onglet Parties (une ligne par partie, à partir
 de laquelle tout est calculé par formules). Les équipes masculines (vendredi) et l'équipe

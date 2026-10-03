@@ -35,8 +35,11 @@ def test_synthese_journee_et_total():
     assert (j1["RIGUET"]["delta"], j1["RIGUET"]["meilleure"]) == (17, 206)
     j2 = next(l for l in lignes if l["journee"] == 2)
     assert j2["delta"] == -4 and j2["meilleure"] is None and j2["total"] == 23.5
+    # Classement virtuel cumulé : 780 + 27,5 - 4 (et non 807 - 4 ni 780 - 4).
+    assert j2["points"] == 780 and j2["apres"] == 803.5
     c = next(c for c in cumuls if c["joueur"] == "DELOBELLE")
     assert c["journees"] == {1: 27.5, 2: -4} and c["total"] == 23.5 and (c["v"], c["matchs"]) == (3, 4)
+    assert c["points"] == 780 and c["virtuels"] == 803.5
 
 
 def test_joueuse_deux_rencontres_dans_la_journee():
@@ -50,6 +53,6 @@ def test_joueuse_deux_rencontres_dans_la_journee():
     f1 = next(l for l in lignes if l["equipe"] == "VAIRES 1 F")
     assert (v3["delta"], f1["delta"]) == (5, 10)          # +5 (normale, écart 62) et +10 (anormale, écart 132)
     assert v3["apres"] == 773 and f1["apres"] == 783      # le samedi part des points virtuels du vendredi
-    assert v3["total"] == f1["total"] == 15
+    assert (v3["total"], f1["total"]) == (5, 15)
     assert f1["autres"] == [{"equipe": "VAIRES 3", "date": "2026-10-02", "delta": 5}]
     assert cumuls[0]["equipes"] == ["VAIRES 3", "VAIRES 1 F"] and cumuls[0]["journees"] == {2: 15}
