@@ -114,12 +114,16 @@ def synthese(parties):
     lignes = []
     for (journee, ordre, lic), ps in groupes.items():
         victoires = [p["ecart"] for p in ps if p["victoire"]]
+        # Meilleure victoire = le mieux classé des joueurs battus (le plus grand écart, positif ou non).
+        meilleure = max((p for p in ps if p["victoire"]), key=lambda p: p["ecart"], default=None)
         delta = sum(p["gain"] for p in ps)
         lignes.append({
             "journee": journee, "date": ps[0]["date"], "equipe": ps[0]["equipe"], "ordre": ordre,
             "adversaires": ps[0]["adversaires"], "licence": lic, "joueur": ps[0]["joueur"],
             "points": ps[0]["points"], "delta": delta, "v": len(victoires), "matchs": len(ps),
-            "meilleure": max(victoires) if victoires else None, "apres": ps[0]["points"] + delta,
+            "meilleure": meilleure["ecart"] if meilleure else None,
+            "meilleure_adv": meilleure["points_adv"] if meilleure else None,
+            "apres": ps[0]["points"] + delta,
             "detail": [
                 f"{'bat' if p['victoire'] else 'perd contre'} {p['adversaire']} ({p['points_adv']}) : "
                 + f"{p['gain']:+g}".replace(".", ",")
@@ -289,6 +293,9 @@ def ecrire_xlsx(resultats, chemin):
                                    "Outil Vaires")
         ws["G1"].comment = Comment("Classement virtuel après la rencontre : points officiels + total depuis la J1.",
                                    "Outil Vaires")
+        ws["F1"].comment = Comment("Écart de points avec le mieux classé des joueurs battus dans la journée "
+                                   "(positif : il était mieux classé ; négatif : tous les joueurs battus étaient moins "
+                                   "bien classés).", "Outil Vaires")
         ws["H1"].comment = Comment("Total des points gagnés/perdus depuis la J1, toutes équipes (une joueuse qui a "
                                    "joué en masculin le vendredi et en féminin le samedi cumule les deux).", "Outil Vaires")
 

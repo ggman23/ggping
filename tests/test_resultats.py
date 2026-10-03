@@ -56,3 +56,11 @@ def test_joueuse_deux_rencontres_dans_la_journee():
     assert (v3["total"], f1["total"]) == (5, 15)
     assert f1["autres"] == [{"equipe": "VAIRES 3", "date": "2026-10-02", "delta": 5}]
     assert cumuls[0]["equipes"] == ["VAIRES 3", "VAIRES 1 F"] and cumuls[0]["journees"] == {2: 15}
+
+
+def test_meilleure_victoire_est_le_mieux_classe_des_joueurs_battus():
+    # Cas réel de la J2 : Guitton (1410) bat 794, 850 et 806 -> meilleure victoire contre 850, soit -560.
+    parties = [_partie("GUITTON", 1410, "A", 794, True), _partie("GUITTON", 1410, "B", 850, True),
+               _partie("GUITTON", 1410, "C", 806, True), _partie("GUITTON", 1410, "D", 1500, False)]
+    (ligne,), _ = synthese(parties)
+    assert (ligne["meilleure"], ligne["meilleure_adv"]) == (-560, 850)

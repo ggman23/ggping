@@ -38,6 +38,7 @@ td.joueur:hover { text-decoration: underline; }
 .v-plus { background: #92d050; }
 .v-moins { background: #ffff00; }
 .v-zero { background: #ff0000; }
+.adv { color: var(--doux); font-size: 13px; }
 tr.detail td { background: #f7f8fa; text-align: left; font-size: 13.5px; color: var(--doux); white-space: normal; }
 .note { color: var(--doux); font-size: 13px; margin-top: 10px; }
 .vide { color: var(--doux); padding: 30px; text-align: center; }
@@ -74,7 +75,8 @@ function colonnesJournee(j) {
     { t: "Points", k: (l) => l.points, v: (l) => nombre(l.points, 0) },
     { t: "Pts +/-", k: (l) => l.delta, v: (l) => nombre(l.delta, 1), cls: (l) => clsDelta(l.delta) },
     { t: "Victoires", k: (l) => l.v / l.matchs + l.matchs / 1000, v: (l) => `${l.v}/${l.matchs}`, cls: (l) => clsVict(l.v, l.matchs) },
-    { t: "Meilleure victoire", k: (l) => l.meilleure ?? -99999, v: (l) => signe(l.meilleure) },
+    { t: "Meilleure victoire", k: (l) => l.meilleure ?? -99999,
+      v: (l) => l.meilleure == null ? "" : `${signe(l.meilleure)} <span class="adv" title="points de l'adversaire battu">(${nombre(l.meilleure_adv, 0)})</span>` },
     { t: `Points J${j}`, k: (l) => l.apres, v: (l) => nombre(l.apres, 1) },
     { t: "Total", k: (l) => l.total, v: (l) => nombre(l.total, 1), cls: (l) => clsDelta(l.total) },
   ];
@@ -128,7 +130,8 @@ function afficher() {
     const info = D.journees.find((x) => x.numero === j);
     const lignes = D.lignes.filter((l) => l.journee === j);
     main.innerHTML = `<p class="sous">Journée ${j} — ${info.dates.map(fmtDate).join(", ")}. Points J${j} = classement virtuel
-      (points officiels + total depuis la J1). Clique sur un joueur pour le détail de ses parties.</p>`
+      (points officiels + total depuis la J1). Meilleure victoire = écart avec le mieux classé des joueurs battus,
+      ses points entre parenthèses. Clique sur un joueur pour le détail de ses parties.</p>`
       + tableau(lignes, colonnesJournee(j), true) + note();
   }
   main.querySelectorAll("th").forEach((th) => th.addEventListener("click", () => {
