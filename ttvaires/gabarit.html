@@ -161,11 +161,12 @@ function meilleur(j) {
 }
 function lieu(r, equipe) {
   const club = r.vaires_domicile ? D.club : CLUBS[(r.adversaire || {}).club];
-  const salle = r.salle || (club && club.salle);
+  const salle = (club && club.salle) || r.salle;
   if (r.vaires_domicile) return `<span class="badge dom">DOM</span>${salle ? ` <span class="petit">${esc(salle.nom || "")}</span>` : ""}`;
   if (!salle) return '<span class="badge ext">EXT</span> <span class="petit">adresse inconnue</span>';
   const adr = [salle.nom, salle.adresse, [salle.cp, salle.ville].filter(Boolean).join(" ")].filter(Boolean).join(", ");
-  const carte = salle.carte || "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent([salle.adresse, salle.cp, salle.ville].filter(Boolean).join(" "));
+  const carte = salle.carte || "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(
+    [salle.nom, salle.adresse, salle.cp, salle.ville, salle.adresse ? "" : club && club.nom].filter(Boolean).join(" "));
   return `<span class="badge ext">EXT</span> ${esc(adr)} <a href="${carte}" target="_blank" rel="noopener" class="petit">plan</a>`;
 }
 function scoreTxt(r) {
@@ -342,7 +343,10 @@ function tableEffectif(club, ch, a, N, r) {
     ${js.map((jn) => `<th class="c">J${jn}</th>`).join("")}${avecStatut ? `<th>Pour l'équipe ${N}</th>` : ""}</tr></thead>`;
   const legende = `<p class="petit">Colonnes J1, J2… : numéro de l'équipe dans laquelle le joueur a joué —
     <span class="m fort">rouge</span> = équipe plus forte que la ${N}, <span class="m egal">bleu</span> = équipe ${N}, <span class="m faible">gris</span> = équipe plus faible.</p>`;
-  return `<h4>Effectif de ${esc(club.nom)} (${actifs.length} ${ch === "F" ? "joueuses" : "joueurs"})</h4>${legende}
+  const partiel = club.effectif_complet === false
+    ? `<p class="note">Effectif limité aux joueurs déjà alignés cette phase : pingpocket.fr (effectifs complets, catégories,
+       meilleur classement) n'a pas répondu lors de la mise à jour. Relancer plus tard pour le compléter.</p>` : "";
+  return `<h4>Effectif de ${esc(club.nom)} (${actifs.length} ${ch === "F" ? "joueuses" : "joueurs"})</h4>${partiel}${legende}
     <div class="defil"><table>${entete(true)}<tbody>${actifs.map((j) => ligne(j, true)).join("")}</tbody></table></div>
     ${anciens.length ? `<details><summary>Pas encore renouvelés (${anciens.length})</summary>
       <div class="defil"><table>${entete(false)}<tbody>${anciens.map((j) => ligne(j, false)).join("")}</tbody></table></div></details>` : ""}`;

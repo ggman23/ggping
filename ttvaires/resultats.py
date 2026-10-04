@@ -5,12 +5,10 @@ gagnés ou perdus (barème FFTT, coefficient 1 du championnat par équipes), sa 
 victoire du jour et le total cumulé depuis la J1. Sorties : page HTML triable et classeur Excel.
 """
 
-import json
 from collections import defaultdict
 from datetime import date, datetime
 
 from . import fftt
-from .pingpocket import phase_et_saison
 from .reseau import HEURE
 
 # Barème FFTT : (écart maximum exclu, victoire normale, défaite normale, victoire anormale,
@@ -40,19 +38,12 @@ def points_partie(points, points_adv, victoire, coefficient=COEFFICIENT_CHAMPION
     return gain * coefficient
 
 
-def bornes_phase(jour):
-    """Dates de début et de fin de la phase en cours."""
-    phase, saison = phase_et_saison(jour)
-    annee = int(saison[:4])
-    return ("%d-07-01" % annee, "%d-12-31" % annee) if phase == 1 else ("%d-01-01" % (annee + 1), "%d-06-30" % (annee + 1))
-
-
 def recuperer_parties(client, numero_club="08770250", aujourdhui=None):
     """Toutes les parties de simple jouées par les joueurs du club dans la phase en cours
     (championnats masculin et féminin), lues sur l'API publique de la FFTT."""
     aujourdhui = aujourdhui or date.today()
-    phase, saison = phase_et_saison(aujourdhui)
-    debut, fin = bornes_phase(aujourdhui)
+    phase, saison = fftt.phase_et_saison(aujourdhui)
+    debut, fin = fftt.bornes_phase(aujourdhui)
     print(f"Résultats des équipes du club {numero_club} (phase {phase} {saison}, API FFTT)", flush=True)
     id_club = fftt.id_interne_club(client, numero_club, debut)
     rencontres = fftt.rencontres_club(client, id_club, debut, fin, ttl=3 * HEURE)
@@ -68,15 +59,11 @@ def recuperer_parties(client, numero_club="08770250", aujourdhui=None):
                     jouees.append((r, c == "homeOpponent"))
     ordres = {nom: i for i, nom in enumerate(sorted(nos_equipes, key=lambda n: nos_equipes[n]))}
 
-    chemins = [f"/sport_matches/{r['id']}" for r, _ in jouees]
-    details = client.get_plusieurs([fftt.API + c for c in chemins], ttl=None, message="feuilles de match",
-                                   entetes=fftt.ENTETES, valide=fftt.json_valide)
+    details = fftt.details(client, [r for r, _ in jouees], aujourdhui.isoformat())
     parties = []
-    for (r, domicile), chemin in zip(jouees, chemins):
-        brut = details.get(fftt.API + chemin)
-        d = json.loads(brut) if brut else {}
-        if not d.get("games") or not d.get("homeSheetMatches"):
-            client.oublier(fftt.API + chemin)  # feuille pas encore saisie : on retentera
+    for r, domicile in jouees:
+        d = details.get(r["id"])
+        if not d or not d.get("games"):
             continue
         nous, eux = ("home", "away") if domicile else ("away", "home")
         notre_equipe = d[f"{nous}Opponent"]["team"]["name"]
@@ -217,7 +204,7 @@ def ecrire_xlsx(resultats, chemin):
                      p["joueur"], p["points"], p["adversaire"], p["points_adv"], f"=G{i}-E{i}",
                      "V" if p["victoire"] else "D", p["gain"], p["adversaires"]])
     ws_p["J1"].comment = Comment("Points gagnés/perdus sur la partie : barème FFTT, coefficient 1 "
-                                 "(championnat par équipes). Données : feuilles de match pingpocket.fr.",
+                                 "(championnat par équipes). Données : feuilles de match, API publique de la FFTT.",
                                  "Outil Vaires")
     for col, largeur in zip("ABCDEFGHIJK", (9, 11, 13, 26, 9, 26, 11, 8, 10, 9, 22)):
         ws_p.column_dimensions[col].width = largeur

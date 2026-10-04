@@ -3,12 +3,15 @@
 import hashlib
 import threading
 import time
+from collections import defaultdict
+from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import requests
 
 BASE = "https://www.pingpocket.fr"
+ECHECS_AVANT_ABANDON = 4  # échecs consécutifs sur un site avant de ne plus l'interroger
 HEURE = 3600
 JOUR = 24 * HEURE
 
@@ -46,6 +49,7 @@ class Client:
         self._verrou = threading.Lock()
         self.nb_telecharges = 0
         self.nb_cache = 0
+        self._echecs = defaultdict(int)  # échecs consécutifs par site
 
     def _session(self):
         if not hasattr(self._local, "session"):
@@ -74,6 +78,9 @@ class Client:
             raise ErreurReseau(f"page absente du cache (mode hors ligne) : {chemin}")
 
         url = chemin if chemin.startswith("http") else BASE + chemin
+        site = urlparse(url).netloc
+        if self._echecs[site] >= ECHECS_AVANT_ABANDON:
+            raise ErreurReseau(f"{site} ne répond pas correctement : abandonné pour ce lancement")
         derniere_erreur = None
         for essai in range(self.tentatives):
             if essai:
@@ -87,15 +94,25 @@ class Client:
                 fichier.write_text(r.text, encoding="utf-8")
                 with self._verrou:
                     self.nb_telecharges += 1
+                    self._echecs[site] = 0
                 time.sleep(self.pause)  # le site sature vite : on reste discret
                 return r.text
             derniere_erreur = f"HTTP {r.status_code}" if r.status_code != 200 else "réponse inexploitable"
             if r.headers.get("cf-mitigated") == "challenge":
-                raise ErreurReseau(f"{url} : le site bloque les requêtes automatiques (protection anti-robots "
-                                   "Cloudflare). Réessayez plus tard.")
+                derniere_erreur = "le site bloque les requêtes automatiques (protection anti-robots)"
+                with self._verrou:
+                    self._echecs[site] = ECHECS_AVANT_ABANDON
+                break
             if r.status_code in (401, 404):
                 break
+        if derniere_erreur and "HTTP 404" not in str(derniere_erreur):
+            with self._verrou:
+                self._echecs[site] += 1
         raise ErreurReseau(f"{url} : {derniere_erreur}")
+
+    def disponible(self, site):
+        """Faux si le site a été abandonné pour ce lancement (trop d'échecs)."""
+        return self._echecs[site] < ECHECS_AVANT_ABANDON
 
     def get_plusieurs(self, chemins, ttl=JOUR, message=None, **options):
         """Télécharge plusieurs pages en parallèle. Renvoie {chemin: texte ou None si échec}.
@@ -106,11 +123,16 @@ class Client:
         if not chemins:
             return resultats
 
+        abandons = []
+
         def une(chemin):
             try:
                 return chemin, self.get(chemin, ttl, **options)
             except ErreurReseau as e:
-                print(f"  ! {e}")
+                if self.disponible(urlparse(chemin if chemin.startswith("http") else BASE).netloc):
+                    print(f"  ! {e}")
+                else:
+                    abandons.append(chemin)  # site abandonné : un seul message à la fin
                 return chemin, None
 
         with ThreadPoolExecutor(self.paralleles) as ex:
@@ -118,4 +140,6 @@ class Client:
                 resultats[chemin] = html
                 if message and (i % 25 == 0 or i == len(chemins)):
                     print(f"  {message} : {i}/{len(chemins)}", flush=True)
+        if abandons:
+            print(f"  ! {len(abandons)} pages non récupérées : site abandonné pour ce lancement (trop d'erreurs)")
         return resultats

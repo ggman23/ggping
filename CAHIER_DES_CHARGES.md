@@ -81,9 +81,20 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
   simultanées : l'outil reste à 2 requêtes, avec cache disque (premier lancement ~40 min,
   lancements suivants de quelques secondes à ~15 min selon ce qui a changé).
 - La poule féminine est la « D1 Championnat Féminin 77/94 » (équipes de 3 joueuses).
-- Les horaires des rencontres ne sont pas publiés : seules les dates sont affichées.
+- Les horaires des rencontres viennent de l'API publique de la FFTT.
 - L'historique n'est pas lu pour les joueurs restés à 500 points (le minimum) qui n'ont pas
   joué de la phase : leur meilleur classement est affiché « — ».
 - Le meilleur classement est le maximum des points officiels de début de phase (janvier et
   juillet) sur tout l'historique ; il est mis en évidence quand il dépasse d'au moins
   2 classements le classement actuel.
+
+## Sources de données (mise à jour du 04/10/2026)
+
+- pingpocket.fr a commencé à bloquer les requêtes automatiques (protection anti-robots
+  Cloudflare, erreurs 502). La structure des deux pages vient désormais de l'**API publique de
+  la FFTT** (apiv2.fftt.com, celle des pages de consultation de monclub.fftt.com, sans
+  identifiant) : équipes, poules, calendrier avec horaires, scores, classements, feuilles de
+  match et parties.
+- Les données des licenciés (effectifs complets, catégories, historique des classements,
+  adresses des salles) ne sont pas publiques dans cette API : elles restent lues sur pingpocket
+  quand il répond ; sinon la page indique que l'effectif est limité aux joueurs déjà alignés.

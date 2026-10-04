@@ -28,15 +28,19 @@ monclub.fftt.com, lisible sans identifiant) : quelques secondes suffisent.
 Le détail des besoins et des règles de brûlage appliquées est dans
 [CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md).
 
-Les données de la page adversaires viennent des pages publiques de **pingpocket.fr** (aucun
-identifiant FFTT nécessaire). Si pingpocket bloque les requêtes automatiques (protection
-anti-robots), l'outil l'indique et génère quand même la page des résultats. Elles sont gardées dans le dossier `cache\` : le **premier lancement** télécharge
-environ 2 000 pages (**40 minutes environ** : le site sature vite, l'outil reste discret).
-Les lancements suivants ne retéléchargent que ce qui a pu changer : quelques secondes le même
-jour, 10 à 20 minutes d'une semaine sur l'autre (poules, listes de licenciés, nouvelles
-feuilles de match).
+La page adversaires combine deux sources :
 
-> Les horaires des rencontres ne sont pas publiés par pingpocket : seules les dates figurent.
+- l'**API publique de la FFTT** pour tout ce qui concerne la compétition : équipes, poules,
+  calendrier **avec les horaires**, scores, classements, nom des salles et compositions de toutes
+  les équipes des clubs adverses (donc le brûlage) ;
+- **pingpocket.fr** pour les compléments que l'API ne publie pas : effectifs complets (joueurs
+  pas encore alignés, licences loisir écartées, renouvellements), catégories d'âge, classement
+  mensuel, meilleur classement de l'historique et adresses des salles.
+
+Si pingpocket ne répond pas (panne ou protection anti-robots), la page est quand même générée :
+les effectifs se limitent alors aux joueurs déjà alignés, et une note l'indique. Les données
+sont gardées dans le dossier `cache\` : le premier lancement complet peut être long (pingpocket
+sature vite, l'outil reste discret), les suivants ne retéléchargent que ce qui a pu changer.
 
 ## Installation (Windows)
 

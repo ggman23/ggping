@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .brulage import enrichir
 from .demo import donnees_demo
-from .pingpocket import recuperer
+from .adversaires import recuperer
 from .rendu import GABARIT_RESULTATS, generer_html
 from .reseau import Client, ErreurReseau
 from .resultats import donnees_page, ecrire_xlsx, recuperer_parties
@@ -20,8 +20,8 @@ CLUB_VAIRES = "08770250"
 
 
 def page_adversaires(client, club):
-    print("=== Adversaires : récupération sur pingpocket.fr (le premier lancement peut durer 30 à 45 minutes,")
-    print("les suivants sont beaucoup plus rapides grâce au cache).", flush=True)
+    print("=== Adversaires : API FFTT + compléments pingpocket.fr (le premier lancement peut être long :")
+    print("pingpocket sature vite ; les suivants sont beaucoup plus rapides grâce au cache).", flush=True)
     donnees = recuperer(client, club)
     enrichir(donnees)
     (SORTIE / "donnees.json").write_text(json.dumps(donnees, ensure_ascii=False, indent=1), encoding="utf-8")
