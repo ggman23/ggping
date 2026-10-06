@@ -1,4 +1,4 @@
-"""Point d'entrée : python -m ttvaires [--adversaires] [--resultats] [--effectif] [--demo] [--hors-ligne] [--pas-de-navigateur]."""
+"""Point d'entrée : python -m ttvaires [--adversaires] [--resultats] [--effectif] [--virtuel] [--demo] [--hors-ligne] [--pas-de-navigateur]."""
 
 import argparse
 import json
@@ -10,9 +10,10 @@ from .brulage import enrichir
 from .demo import donnees_demo
 from .adversaires import recuperer
 from .effectif import recuperer_effectif
-from .rendu import GABARIT_EFFECTIF, GABARIT_RESULTATS, generer_html
+from .rendu import GABARIT_EFFECTIF, GABARIT_RESULTATS, GABARIT_VIRTUEL, generer_html
 from .reseau import Client, ErreurReseau
 from .resultats import donnees_page, ecrire_xlsx, recuperer_parties
+from .virtuel import recuperer_virtuel
 
 RACINE = Path(__file__).resolve().parent.parent
 SORTIE = RACINE / "sortie"
@@ -45,11 +46,18 @@ def page_effectif(client, club):
     return [generer_html(donnees, SORTIE / "effectif_vaires.html", GABARIT_EFFECTIF)]
 
 
+def page_virtuel(client, club):
+    print("=== Classement virtuel : toutes les compétitions (championnat, critérium, tournois...)", flush=True)
+    donnees = recuperer_virtuel(client, club, dossier_import=IMPORT)
+    return [generer_html(donnees, SORTIE / "classement_virtuel.html", GABARIT_VIRTUEL)]
+
+
 def main():
     parser = argparse.ArgumentParser(description="Outils du CVTT Vaires (championnat par équipes)")
     parser.add_argument("--adversaires", action="store_true", help="page des adversaires (choix par défaut)")
     parser.add_argument("--resultats", action="store_true", help="résultats des joueurs de Vaires (page + Excel)")
     parser.add_argument("--effectif", action="store_true", help="effectif de Vaires : brûlages par joueur et par équipe")
+    parser.add_argument("--virtuel", action="store_true", help="classement virtuel du club, toutes compétitions")
     parser.add_argument("--demo", action="store_true", help="page des adversaires avec des données fictives")
     parser.add_argument("--hors-ligne", action="store_true", help="n'utilise que les pages déjà téléchargées")
     parser.add_argument("--paralleles", type=int, default=2, help="requêtes simultanées (défaut : 2)")
@@ -72,7 +80,9 @@ def main():
             a_faire.append(("résultats", page_resultats))
         if args.effectif:
             a_faire.append(("effectif", page_effectif))
-        if args.adversaires or not (args.resultats or args.effectif):
+        if args.virtuel:
+            a_faire.append(("classement virtuel", page_virtuel))
+        if args.adversaires or not (args.resultats or args.effectif or args.virtuel):
             a_faire.append(("adversaires", page_adversaires))
         for nom, fonction in a_faire:
             try:

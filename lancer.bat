@@ -52,14 +52,16 @@ echo  ==================================================
 echo    1. Adversaires : effectifs, brulages, calendrier
 echo    2. Resultats des joueurs de Vaires : page + Excel
 echo    3. Effectif de Vaires : brulages par joueur et par equipe
-echo    4. Tout : les trois pages
-echo    5. Page de demonstration, donnees fictives
-echo    6. Quitter
+echo    4. Classement virtuel du club : toutes competitions
+echo    5. Tout : les quatre pages
+echo    6. Page de demonstration, donnees fictives
+echo    7. Quitter
 echo.
-choice /c 123456 /n /m "  Votre choix, de 1 a 6 : "
-if errorlevel 6 exit /b 0
-if errorlevel 5 goto demo
-if errorlevel 4 goto tout
+choice /c 1234567 /n /m "  Votre choix, de 1 a 7 : "
+if errorlevel 7 exit /b 0
+if errorlevel 6 goto demo
+if errorlevel 5 goto tout
+if errorlevel 4 goto virtuel
 if errorlevel 3 goto effectif
 if errorlevel 2 goto resultats
 python -m ttvaires --adversaires
@@ -68,7 +70,10 @@ goto fin
 python -m ttvaires --demo
 goto fin
 :tout
-python -m ttvaires --resultats --effectif --adversaires
+python -m ttvaires --resultats --effectif --virtuel --adversaires
+goto fin
+:virtuel
+python -m ttvaires --virtuel
 goto fin
 :effectif
 python -m ttvaires --effectif

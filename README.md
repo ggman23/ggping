@@ -34,6 +34,18 @@ non réinscrits et les licences loisir. La liste des licenciés est revérifiée
 une joueuse alignée en masculin y est traitée comme les garçons, ses matchs en équipe féminine
 ne comptent pas pour le brûlage masculin.
 
+Une quatrième page, **Classement virtuel** (`sortie\classement_virtuel.html`), donne le vrai
+classement virtuel de chaque joueur du club : points officiels de la phase + points gagnés ou
+perdus **dans toutes les compétitions** (championnat par équipes, critérium fédéral, tournois,
+compétitions jeunes...), pas seulement en championnat. Les parties viennent de l'API publique de
+la FFTT, qui donne pour chaque partie les points officiels des deux joueurs et le coefficient de
+la compétition (1 pour le championnat, 1,5 pour le critérium, 0,5 pour le Top Jeune
+départemental...) : points = barème FFTT × coefficient. Les doubles, les victoires par forfait et
+les parties non comptées sont écartés. Un clic sur un joueur affiche le détail de ses parties.
+Pour avoir tous les joueurs (y compris les jeunes qui ne jouent pas en championnat), la liste des
+licenciés est lue sur pingpocket ou dans le dossier `import\` (voir plus bas) ; sinon seuls les
+joueurs alignés en championnat apparaissent.
+
 Le détail des besoins et des règles de brûlage appliquées est dans
 [CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md).
 
@@ -66,7 +78,7 @@ pingpocket. Quand le site refuse les requêtes de l'outil, on peut les lui fourn
 2. les enregistrer (**Ctrl+S**, type **« Page Web, complète »** ou « fichier unique .mhtml ») dans
    le dossier `import\` de l'outil — un fichier par liste, ou un seul après avoir ouvert les
    listes à la suite ;
-3. relancer `lancer.bat`.
+3. relancer `lancer.bat` (option 3 pour l'effectif, 4 pour le classement virtuel).
 
 L'outil retient pour chaque liste la version la plus récente (site, pages enregistrées ou copie
 en cache) et la page indique laquelle est utilisée et sa date. Cela marche aussi pour les clubs
@@ -83,8 +95,9 @@ adverses (remplacer 08770250 par le numéro du club). Le mode d'emploi est aussi
    1. Adversaires (effectifs, brûlages, calendrier) ;
    2. Résultats des joueurs de Vaires (page + Excel) — rapide, moins d'une minute ;
    3. Effectif de Vaires : brûlages par joueur et par équipe — rapide ;
-   4. tout : les trois pages ;
-   5. la page de démonstration.
+   4. Classement virtuel du club, toutes compétitions — rapide ;
+   5. tout : les quatre pages ;
+   6. la page de démonstration.
 
    Les pages s'ouvrent dans le navigateur et sont enregistrées dans le dossier `sortie\`.
 
@@ -96,7 +109,7 @@ aux capitaines, elle s'ouvre sans Internet.
 
 Options (dans une invite de commandes, dans le dossier du projet) :
 
-- `lancer.bat --adversaires`, `--resultats`, `--effectif` : lance directement une page, sans menu ;
+- `lancer.bat --adversaires`, `--resultats`, `--effectif`, `--virtuel` : lance directement une page, sans menu ;
 - `--hors-ligne` (à ajouter) : régénère sans rien télécharger (cache uniquement) ;
 - `lancer.bat --demo` : page de démonstration avec des données fictives.
 
@@ -123,10 +136,12 @@ ttvaires/
   fftt.py        Accès à l'API publique de la FFTT (rencontres, feuilles de match)
   resultats.py   Résultats des joueurs de Vaires : points virtuels, page et classeur Excel
   effectif.py    Effectif de Vaires : équipes jouées, brûlage par joueur et par équipe
+  virtuel.py     Classement virtuel : parties de toutes les compétitions, barème × coefficient
   rendu.py       Génération de la page HTML (un seul fichier)
   gabarit.html   Mise en page de la page adversaires (HTML/CSS/JavaScript)
   gabarit_resultats.html  Mise en page de la page résultats
   gabarit_effectif.html   Mise en page de la page effectif
+  gabarit_virtuel.html    Mise en page de la page classement virtuel
   demo.py        Données fictives pour tester sans Internet
 tests/           Tests (brûlage, lecture des pages, points virtuels)
 import/          Listes de licenciés enregistrées depuis le navigateur (voir LISEZ-MOI.txt)

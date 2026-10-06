@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Classement virtuel Vaires</title>
+<style>
+:root { color-scheme: light; --texte: #1c2330; --doux: #5b6576; --bord: #9aa3af; --fond: #f4f5f7;
+  --entete: #f8cbad; --accent: #1f5fbf; --info: #e7effb; --attention: #8a5a00; --attention-fond: #fff4d6; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte);
+  font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+header { background: #fff; border-bottom: 1px solid #dde1e7; padding: 10px 16px 8px; position: sticky; top: 0; z-index: 2; }
+h1 { font-size: 18px; margin: 0 0 2px; }
+header p { margin: 0; color: var(--doux); font-size: 13px; }
+main { max-width: 1150px; margin: 0 auto; padding: 16px; }
+.sous { color: var(--doux); margin: 0 0 10px; font-size: 14px; }
+.info, .note-site { border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 14px; }
+.info { background: var(--info); }
+.note-site { background: var(--attention-fond); color: var(--attention); }
+details.aide { background: #fff; border: 1px solid #dde1e7; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 14px; }
+details.aide summary { cursor: pointer; font-weight: 600; }
+details.aide ol { margin: 8px 0 4px; padding-left: 20px; }
+.outils { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 10px; }
+.outils input { flex: 1 1 200px; max-width: 280px; padding: 7px 10px; border: 1px solid #c4cad3; border-radius: 6px; font-size: 15px; }
+.puce { border: 1px solid #c4cad3; background: #fff; border-radius: 16px; padding: 5px 12px; font-size: 14px; cursor: pointer; color: var(--texte); }
+.puce.actif { background: var(--accent); border-color: var(--accent); color: #fff; }
+.defil { overflow-x: auto; background: #fff; border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { border: 1px solid var(--bord); padding: 5px 9px; white-space: nowrap; }
+th { background: var(--entete); font-weight: 600; cursor: pointer; user-select: none; }
+th:hover { filter: brightness(0.96); }
+th .fleche { font-size: 11px; color: #7a4a2a; margin-left: 4px; }
+td { text-align: center; font-variant-numeric: tabular-nums; }
+td.g { text-align: left; }
+td.joueur { cursor: pointer; }
+td.joueur:hover .nom { text-decoration: underline; }
+.cat { color: var(--doux); font-size: 12.5px; margin-left: 4px; }
+.pos { background: #c6efce; color: #006100; }
+.neg { background: #ffc7ce; color: #9c0006; }
+.t-pos { color: #006100; font-weight: 600; }
+.t-neg { color: #9c0006; font-weight: 600; }
+.virt { font-weight: 700; }
+.monte { color: #006100; font-weight: 700; }
+.descend { color: #9c0006; font-weight: 700; }
+.doux { color: var(--doux); }
+tr.detail > td { background: #f7f8fa; text-align: left; white-space: normal; padding: 8px 10px; }
+.parties { border-collapse: collapse; width: auto; font-size: 13.5px; background: #fff; }
+.parties th { background: #eef0f3; cursor: default; font-weight: 600; }
+.parties th, .parties td { border: 1px solid #d5d9df; padding: 3px 8px; white-space: normal; }
+.parties .cat { display: block; margin-left: 0; }
+.parties td:first-child { white-space: nowrap; }
+.v { color: #006100; font-weight: 700; }
+.d { color: #9c0006; font-weight: 700; }
+.note { color: var(--doux); font-size: 13px; margin-top: 10px; }
+.comps { margin: 0 0 10px; padding-left: 18px; font-size: 14px; color: var(--doux); }
+.vide { color: var(--doux); padding: 30px; text-align: center; }
+@media (max-width: 640px) { main { padding: 8px; } table { font-size: 13.5px; } th, td { padding: 4px 5px; } .col-option { display: none; }
+  td.joueur { white-space: normal; } .prenom { display: block; font-size: 12.5px; } th { white-space: normal; }
+  tr.detail > td { padding: 6px 4px; } .parties { font-size: 12.5px; } .parties th, .parties td { padding: 3px 4px; } .jour { display: none; } }
+@media print { header { position: static; } .outils, details.aide { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Classement virtuel des joueurs de Vaires</h1>
+  <p id="sous-titre"></p>
+</header>
+<main id="contenu"></main>
+<script id="donnees" type="application/json">__DONNEES_JSON__</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("donnees").textContent);
+const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const nombre = (x, dec) => x == null ? "" : x.toLocaleString("fr-FR", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+const pts = (x) => x == null ? "" : (x > 0 ? "+" : "") + nombre(x, Number.isInteger(x) ? 0 : (Number.isInteger(x * 2) ? 1 : 2));
+const virt = (x) => x == null ? "—" : nombre(x, Number.isInteger(x) ? 0 : 1);
+const clsTexte = (x) => x > 0 ? "t-pos" : x < 0 ? "t-neg" : "";
+const clsFond = (x) => x > 0 ? "pos" : x < 0 ? "neg" : "";
+function fmtDate(iso) { const d = new Date(iso + "T12:00:00"); return `${JOURS[d.getDay()]} ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`; }
+const nomComplet = (j) => `${j.nom || ""} ${j.prenom || ""}`.trim();
+const autresComp = (j) => j.parties.filter((p) => !p.championnat).length;
+
+let filtre = "tous", recherche = "", tri = null;
+const ouverts = new Set();
+
+const COLONNES = [
+  { t: "#", k: (j) => j.rang, v: (j) => j.virtuels == null ? "" : j.rang },
+  { t: "Joueur", k: (j) => nomComplet(j), c: "g joueur",
+    v: (j) => `<span class="nom">${esc(j.nom || "")} <span class="prenom">${esc(j.prenom || "")}</span></span>${j.categorie ? `<span class="cat">${esc(j.categorie)}</span>` : ""}` },
+  { t: "Équipe", k: (j) => j.equipe || "~", v: (j) => esc(j.equipe || ""), c: "col-option" },
+  { t: "Pts off.", titre: "Points officiels de la phase", k: (j) => j.officiels ?? -1, v: (j) => j.officiels == null ? "—" : nombre(j.officiels, 0) },
+  { t: "Champ.", titre: "Championnat par équipes", c: "col-option", k: (j) => j.championnat, v: (j) => j.parties.some((p) => p.championnat) ? pts(j.championnat) : "", cls: (j) => clsTexte(j.championnat) },
+  { t: "Autres compét.", titre: "Critérium, tournois, compétitions jeunes...", c: "col-option", k: (j) => j.autres, v: (j) => autresComp(j) ? pts(j.autres) : "", cls: (j) => clsTexte(j.autres) },
+  { t: "Total", k: (j) => j.total, v: (j) => j.parties.length ? pts(j.total) : "", cls: (j) => clsFond(j.total) },
+  { t: "Pts virtuels", titre: "Points officiels + total", k: (j) => j.virtuels ?? -1, v: (j) => virt(j.virtuels), c: "virt" },
+  { t: "Clt", titre: "Classement virtuel (▲ ▼ : changement par rapport au classement officiel)", k: (j) => j.classement_virtuel ?? -1, v: (j) => {
+      if (j.classement_virtuel == null) return "";
+      const e = j.classement_virtuel - j.classement;
+      return e > 0 ? `<span class="monte" title="était ${j.classement}">${j.classement_virtuel} ▲</span>`
+        : e < 0 ? `<span class="descend" title="était ${j.classement}">${j.classement_virtuel} ▼</span>` : String(j.classement_virtuel);
+    } },
+  { t: "V / D", k: (j) => j.v - j.d / 100, v: (j) => j.parties.length ? `${j.v} / ${j.d}` : "", c: "col-option" },
+];
+
+function detail(j) {
+  if (j.inconnu) return `<span class="doux">Parties non lues : l'API de la FFTT n'a pas répondu lors de la mise à jour.</span>`;
+  const ec = Object.entries(j.ecartees || {}).map(([m, n]) => `${n} ${m}`).join(", ");
+  const pied = ec ? `<p class="note">Parties sans points : ${esc(ec)}.</p>` : "";
+  if (!j.parties.length) return `<span class="doux">Aucune partie de simple depuis le début de la phase.</span>${pied}`;
+  const lignes = j.parties.map((p) => `<tr><td><span class="jour">${fmtDate(p.date).split(" ")[0]} </span>${fmtDate(p.date).split(" ")[1]}</td>
+      <td class="g">${esc(p.competition)}${p.division ? `<span class="cat">${esc(p.division)}</span>` : ""}</td>
+      <td class="g">${esc(p.adversaire)} <span class="doux">(${nombre(p.adv_points, 0)})</span></td>
+      <td class="${p.victoire ? "v" : "d"}">${p.victoire ? "V" : "D"}</td><td class="col-option">${nombre(p.coef, 2)}</td>
+      <td class="${clsTexte(p.points)}">${pts(p.points)}</td></tr>`).join("");
+  return `<div class="defil"><table class="parties"><thead><tr><th>Date</th><th>Compétition</th><th>Adversaire</th>
+    <th>V/D</th><th class="col-option">Coef.</th><th>Points</th></tr></thead><tbody>${lignes}</tbody></table></div>${pied}`;
+}
+
+function bandeaux() {
+  const src = D.source, p = [];
+  const quand = src.date ? `${fmtDate(src.date.slice(0, 10))} à ${src.date.slice(11, 16)}` : "";
+  const vieille = src.date && (Date.now() - new Date(src.date)) / 864e5 > 7;
+  if (!src.liste) p.push(`<div class="note-site">Liste des licenciés indisponible (pingpocket.fr bloque les requêtes de l'outil) :
+    seuls les joueurs alignés en championnat cette phase apparaissent. Les joueurs qui n'ont fait que des compétitions
+    individuelles (critérium, tournois, compétitions jeunes) manquent.</div>`);
+  else if (src.origine === "import") p.push(`<div class="${vieille ? "note-site" : "info"}">Liste des joueurs : page(s) enregistrée(s)
+    depuis le navigateur le ${quand} (dossier import).${vieille ? " Pense à la réenregistrer pour ajouter les nouveaux réinscrits." : ""}</div>`);
+  else if (src.origine === "cache") p.push(`<div class="note-site">pingpocket.fr ne répond pas : liste des joueurs reprise de la mise à jour du ${quand}.</div>`);
+  if (!src.a_jour && src.liens) p.push(`<details class="aide"${src.liste ? "" : " open"}><summary>Compléter la liste des joueurs à la main</summary>
+    <ol><li>Ouvre ces listes dans ton navigateur :
+      <a href="${esc(src.liens.categories)}" target="_blank" rel="noopener">par catégorie d'âge</a>,
+      <a href="${esc(src.liens.etat)}" target="_blank" rel="noopener">par licences à jour</a>.</li>
+    <li>Pour chacune : Ctrl+S, « Page Web, complète », dans le dossier <b>import</b> de l'outil.</li>
+    <li>Relance lancer.bat (option 4).</li></ol></details>`);
+  return p.join("");
+}
+
+function afficher() {
+  const main = document.getElementById("contenu");
+  D.joueurs.forEach((j, i) => { j.rang = i + 1; });
+  const q = recherche.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const filtres = { tous: () => true, joue: (j) => j.parties.length > 0, autres: (j) => autresComp(j) > 0 };
+  const compte = (f) => D.joueurs.filter(filtres[f]).length;
+  let lignes = D.joueurs.filter(filtres[filtre])
+    .filter((j) => nomComplet(j).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().includes(q));
+  if (tri) {
+    const col = COLONNES[tri.col];
+    lignes = lignes.slice().sort((a, b) => {
+      const x = col.k(a), y = col.k(b);
+      return (typeof x === "string" ? x.localeCompare(y) : x - y) * tri.sens || a.rang - b.rang;
+    });
+  }
+  const tete = COLONNES.map((c, i) => `<th data-col="${i}" title="${esc(c.titre || "")}" class="${c.c && c.c.includes("col-option") ? "col-option" : ""}">${c.t}${tri && tri.col === i ? `<span class="fleche">${tri.sens > 0 ? "▲" : "▼"}</span>` : ""}</th>`).join("");
+  const corps = lignes.map((j) => `<tr data-id="${esc(j.id)}">${COLONNES.map((c) =>
+      `<td class="${c.c || ""} ${c.cls ? c.cls(j) : ""}">${c.v(j)}</td>`).join("")}</tr>`
+    + (ouverts.has(j.id) ? `<tr class="detail"><td colspan="${COLONNES.length}">${detail(j)}</td></tr>` : "")).join("");
+  const comps = D.competitions.map((c) => `<li>${esc(c.nom)} : coefficient ${nombre(c.coef, 2)} (${c.parties} partie${c.parties > 1 ? "s" : ""})</li>`).join("");
+  main.innerHTML = `${bandeaux()}
+    <p class="sous">Points virtuels = points officiels de la phase + points gagnés ou perdus depuis le ${fmtDate(D.debut)}
+      dans toutes les compétitions. Clique sur un joueur pour le détail de ses parties.</p>
+    ${comps ? `<ul class="comps">${comps}</ul>` : ""}
+    <div class="outils"><input type="search" id="recherche" placeholder="Rechercher un joueur" value="${esc(recherche)}">
+      ${[["tous", "Tous"], ["joue", "Ont joué"], ["autres", "Autres compétitions"]].map(([f, t]) =>
+        `<button class="puce ${filtre === f ? "actif" : ""}" data-filtre="${f}">${t} (${compte(f)})</button>`).join("")}</div>
+    ${lignes.length ? `<div class="defil"><table><thead><tr>${tete}</tr></thead><tbody>${corps}</tbody></table></div>`
+      : '<p class="vide">Aucun joueur.</p>'}
+    <p class="note">Points d'une partie = barème FFTT × coefficient de la compétition, calculés avec les points officiels
+      de la phase des deux joueurs (parties lues sur l'API publique de la FFTT). Les doubles, les victoires par forfait et
+      les parties non comptées ne rapportent rien. Les points mensuels publiés par la FFTT peuvent différer un peu
+      (parties saisies en retard, corrections). Clique sur un titre de colonne pour trier.</p>`;
+  main.querySelectorAll("th").forEach((th) => th.addEventListener("click", () => {
+    const col = Number(th.dataset.col);
+    tri = tri && tri.col === col ? { col, sens: -tri.sens } : { col, sens: col <= 2 ? 1 : -1 };
+    afficher();
+  }));
+  main.querySelectorAll("td.joueur").forEach((td) => td.addEventListener("click", () => {
+    const id = td.parentElement.dataset.id;
+    ouverts.has(id) ? ouverts.delete(id) : ouverts.add(id);
+    afficher();
+  }));
+  main.querySelectorAll("[data-filtre]").forEach((b) => b.addEventListener("click", () => { filtre = b.dataset.filtre; afficher(); }));
+  const champ = document.getElementById("recherche");
+  champ.addEventListener("input", () => {
+    recherche = champ.value;
+    const pos = champ.selectionStart;
+    afficher();
+    const nouveau = document.getElementById("recherche");
+    nouveau.focus();
+    nouveau.setSelectionRange(pos, pos);
+  });
+}
+document.getElementById("sous-titre").textContent =
+  `${D.club.nom} · phase ${D.phase} ${D.saison} · données du ${new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`;
+afficher();
+</script>
+</body>
+</html>

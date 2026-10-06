@@ -1,8 +1,9 @@
 """Accès en lecture à l'API publique de la FFTT (apiv2.fftt.com).
 
 C'est l'API qu'utilisent les pages publiques de consultation des championnats sur
-monclub.fftt.com : poules, rencontres, feuilles de match et parties sont lisibles sans
-identifiant (les données des licenciés, elles, ne le sont pas).
+monclub.fftt.com : poules, rencontres, feuilles de match, compétitions et parties de chaque
+joueur (toutes compétitions) sont lisibles sans identifiant. Les listes de licenciés d'un club,
+elles, ne le sont pas.
 """
 
 import json

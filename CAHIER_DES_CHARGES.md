@@ -135,3 +135,24 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
     provenance et la date de la liste, avec les liens et le mode d'emploi pour l'actualiser ;
   - le même dossier complète les effectifs des clubs adverses sur la page adversaires.
 - Les pages enregistrées contiennent des données personnelles : le dossier est exclu du dépôt.
+
+## Page « Classement virtuel » (06/10/2026)
+
+- Demande : un vrai classement virtuel des joueurs du club, qui tienne compte de toutes les
+  compétitions et pas seulement du championnat par équipes (exemple : Emily CHOLLET a joué le
+  Top Jeune départemental). Option 4 du menu.
+- Source : l'API publique de la FFTT donne toutes les parties de la saison d'un joueur
+  (`/api/games`, filtrées par licence), avec les points officiels de la phase des deux joueurs,
+  et chaque compétition porte son coefficient (`/api/contests/{id}` : championnat par équipes 1,
+  critérium fédéral 1,5, championnat jeunes par équipes 77 0,75, Top Jeune départemental 0,5).
+- Calcul : points virtuels = points officiels de la phase + somme, sur les parties de simple
+  jouées depuis le début de la phase, de barème FFTT × coefficient. Doubles, victoires par
+  forfait et parties marquées « non comptées » écartées.
+- Vérification : pour les 33 joueurs alignés en championnat au 06/10/2026, points officiels et
+  points du championnat identiques à ceux de la page Résultats (calculés depuis les feuilles de
+  match). Les coefficients n'ont pas pu être confrontés aux points mensuels publiés (aucun
+  classement mensuel de la phase n'intégrait encore de partie) ; les historiques des saisons
+  passées sont incomplets dans l'API et ne permettent pas ce contrôle.
+- Joueurs : liste des licenciés (réinscrits hors licences loisir) lue sur pingpocket ou dans le
+  dossier `import\`, plus les joueurs alignés en championnat. Sans liste, les joueurs qui ne font
+  que des compétitions individuelles n'apparaissent pas (la page le signale).

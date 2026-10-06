@@ -26,7 +26,8 @@ Rien n'est contourné : tu consultes le site normalement, comme d'habitude.
    Une page par liste, ou une seule page après avoir ouvert les trois listes
    à la suite : les deux fonctionnent. Le nom du fichier n'a pas d'importance.
 
-3. Relance lancer.bat (option 3 pour l'effectif de Vaires).
+3. Relance lancer.bat : option 3 pour l'effectif de Vaires, option 4 pour le
+   classement virtuel (qui a besoin de la liste pour inclure tous les joueurs).
 
 La page la plus récente l'emporte : réenregistre les listes de temps en temps
 (par exemple avant chaque journée) pour voir les nouvelles réinscriptions.

@@ -42,13 +42,14 @@ def _joueur_feuille(j):
     }
 
 
-def recuperer_effectif(client, numero_club="08770250", aujourdhui=None, fichier_etat=None, dossier_import=None):
-    aujourdhui = aujourdhui or date.today()
-    auj = aujourdhui.isoformat()
-    phase, saison = fftt.phase_et_saison(aujourdhui)
-    debut, fin = fftt.bornes_phase(aujourdhui)
+def feuilles_du_club(client, numero_club, aujourdhui):
+    """Équipes du club et joueurs alignés cette phase, d'après les feuilles de match (API FFTT).
 
-    print(f"1/2 Équipes et feuilles de match du club {numero_club} (phase {phase} {saison}, API FFTT)", flush=True)
+    Renvoie {"equipes": {(championnat, n): équipe}, "vus": {licence: joueur}, "parts": {licence:
+    [participations]}, "prochaines": {championnat: prochaine journée}, "nom_club", "detail"}.
+    """
+    auj = aujourdhui.isoformat()
+    debut, fin = fftt.bornes_phase(aujourdhui)
     id_club = fftt.id_interne_club(client, numero_club, debut)
     rencontres = fftt.rencontres_club(client, id_club, debut, fin, ttl=HEURE)
     detail = fftt.details(client, rencontres, auj)
@@ -81,18 +82,20 @@ def recuperer_effectif(client, numero_club="08770250", aujourdhui=None, fichier_
                 vu["points"] = j["points"] or vu["points"]
                 if ch == "F":
                     vu["sexe"] = "F"
+    return {"equipes": equipes, "vus": vus, "parts": parts, "prochaines": prochaines, "nom_club": nom_club,
+            "detail": detail}
+
+
+def recuperer_effectif(client, numero_club="08770250", aujourdhui=None, fichier_etat=None, dossier_import=None):
+    aujourdhui = aujourdhui or date.today()
+    phase, saison = fftt.phase_et_saison(aujourdhui)
+
+    print(f"1/2 Équipes et feuilles de match du club {numero_club} (phase {phase} {saison}, API FFTT)", flush=True)
+    f = feuilles_du_club(client, numero_club, aujourdhui)
+    equipes, vus, parts, prochaines, nom_club = f["equipes"], f["vus"], f["parts"], f["prochaines"], f["nom_club"]
 
     print("2/2 Licenciés du club : réinscriptions, licences loisir (pingpocket.fr)", flush=True)
-    liens = {type_: f"/app/fftt/clubs/{numero_club}/licencies?SORT={tri}" for type_, tri in TRIS.items()}
-    pages = client.get_plusieurs(list(liens.values()), ttl=HEURE, perime_si_erreur=True)
-    listes = {type_: {"html": pages[u], "date": client.date(u) or time.time(), "origine": "cache" if u in client.perimes else "pingpocket"}
-              for type_, u in liens.items() if pages.get(u)}
-    for type_, importee in _listes_importees(dossier_import, numero_club).items():
-        if type_ not in listes or importee["date"] > listes[type_]["date"]:
-            listes[type_] = {**importee, "origine": "import"}
-    source = _source(listes, numero_club)
-    liste = pingpocket.licencies({t: l["html"] for t, l in listes.items()}, {t: t for t in TRIS}) if source["liste"] else []
-    _annoncer(source)
+    liste, source = liste_licencies(client, numero_club, dossier_import)
 
     joueurs = {j["id"]: j for j in liste}
     for lic, vu in vus.items():
@@ -122,6 +125,26 @@ def recuperer_effectif(client, numero_club="08770250", aujourdhui=None, fichier_
         "prochaines": prochaines, "source": source, "precedent": precedent,
         "joueurs": sorted(joueurs.values(), key=lambda j: -(j["points"] or j["points_mensuels"] or 0)),
     }
+
+
+def liste_licencies(client, numero_club, dossier_import=None):
+    """Licenciés du club (réinscrits, non réinscrits, licences loisir, catégories) et provenance.
+
+    Pour chaque liste (par catégorie, par état des licences, par classement), la version la plus
+    récente l'emporte : lue sur pingpocket.fr, page enregistrée dans le dossier import, ou
+    dernière copie en cache si le site ne répond pas. Renvoie (liste, source).
+    """
+    liens = {type_: f"/app/fftt/clubs/{numero_club}/licencies?SORT={tri}" for type_, tri in TRIS.items()}
+    pages = client.get_plusieurs(list(liens.values()), ttl=HEURE, perime_si_erreur=True)
+    listes = {type_: {"html": pages[u], "date": client.date(u) or time.time(), "origine": "cache" if u in client.perimes else "pingpocket"}
+              for type_, u in liens.items() if pages.get(u)}
+    for type_, importee in _listes_importees(dossier_import, numero_club).items():
+        if type_ not in listes or importee["date"] > listes[type_]["date"]:
+            listes[type_] = {**importee, "origine": "import"}
+    source = _source(listes, numero_club)
+    liste = pingpocket.licencies({t: l["html"] for t, l in listes.items()}, {t: t for t in TRIS}) if source["liste"] else []
+    _annoncer(source)
+    return liste, source
 
 
 def _listes_importees(dossier, numero_club):
