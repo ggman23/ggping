@@ -12,6 +12,9 @@ import requests
 
 BASE = "https://www.pingpocket.fr"
 ECHECS_AVANT_ABANDON = 4  # échecs consécutifs sur un site avant de ne plus l'interroger
+# Délai minimum entre deux requêtes vers un même site, quel que soit le parallélisme :
+# pingpocket sature (et bloque) vite, on n'y envoie qu'une page toutes les 4 secondes.
+INTERVALLES = {"www.pingpocket.fr": 4.0}
 HEURE = 3600
 JOUR = 24 * HEURE
 
@@ -51,6 +54,8 @@ class Client:
         self.nb_cache = 0
         self._echecs = defaultdict(int)  # échecs consécutifs par site
         self.perimes = {}  # chemin -> date de la copie ancienne utilisée faute de mieux
+        self._dernier = defaultdict(float)  # site -> heure de la dernière requête
+        self._verrous_sites = defaultdict(threading.Lock)
 
     def _session(self):
         if not hasattr(self._local, "session"):
@@ -64,6 +69,16 @@ class Client:
     def oublier(self, chemin):
         """Supprime une page du cache (ex. feuille de match pas encore saisie)."""
         self._fichier(chemin).unlink(missing_ok=True)
+
+    def date(self, chemin):
+        """Date (horodatage) à laquelle la page a été téléchargée, None si elle n'est pas en cache."""
+        fichier = self._fichier(chemin)
+        return fichier.stat().st_mtime if fichier.exists() else None
+
+    def en_cache(self, chemin, ttl):
+        """Vrai si la page est en cache et encore valable (aucune requête ne sera faite)."""
+        date = self.date(chemin)
+        return date is not None and (self.hors_ligne or ttl is None or time.time() - date < ttl)
 
     def get(self, chemin, ttl=JOUR, entetes=None, valide=page_valide, perime_si_erreur=False):
         """Page (ou réponse JSON) en texte. `entetes` complète les en-têtes HTTP (None en retire un),
@@ -100,6 +115,7 @@ class Client:
             if essai:
                 time.sleep(2 ** essai)
             try:
+                self._patienter(site)
                 r = self._session().get(url, timeout=60, headers=entetes)
             except requests.RequestException as e:
                 derniere_erreur = e
@@ -123,6 +139,17 @@ class Client:
             with self._verrou:
                 self._echecs[site] += 1
         raise ErreurReseau(f"{url} : {derniere_erreur}")
+
+    def _patienter(self, site):
+        """Respecte le délai minimum entre deux requêtes vers le même site."""
+        intervalle = INTERVALLES.get(site)
+        if not intervalle:
+            return
+        with self._verrous_sites[site]:
+            attente = self._dernier[site] + intervalle - time.monotonic()
+            if attente > 0:
+                time.sleep(attente)
+            self._dernier[site] = time.monotonic()
 
     def disponible(self, site):
         """Faux si le site a été abandonné pour ce lancement (trop d'échecs)."""

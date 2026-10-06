@@ -2,8 +2,10 @@
 
 from datetime import date
 
-from ttvaires.adversaires import classement_poule, equipes_et_compositions
+from ttvaires import adversaires
+from ttvaires.adversaires import classement_poule, completer_avec_pingpocket, equipes_et_compositions
 from ttvaires.fftt import bornes_phase, libelle_division, phase_et_saison
+from ttvaires.reseau import ErreurReseau
 
 
 def _equipe(nom, club, position=None):
@@ -72,3 +74,74 @@ def test_equipes_et_compositions():
     equipes, joueurs = equipes_et_compositions("08771184", rencontres, detail, {"M", "F"})
     assert [e["libelle"] for e in equipes if e["championnat"] == "F"] == ["LOGNES EP 1"]
     assert joueurs["2"]["sexe"] == "F"
+
+
+MEAUX = "08770135"
+
+
+def _ecran(titre, sections):
+    lignes = "".join(f'<li class="sep"><p><span>{t}</span></p></li>' + "".join(
+        f'<li class="arrow"><a href="/app/fftt/licencies/{lic}?CLUB_ID={MEAUX}"><div class="labels"><p>{nom}</p></div>'
+        f'<small class="counter">{c}</small></a></li>' for lic, nom, c in joueurs) for t, joueurs in sections)
+    return f'<div data-title="CS MEAUX TT, licenciés {titre}"><ul class="edgetoedge">{lignes}</ul></div>'
+
+
+CATEGORIES = _ecran("par catégorie d'âge", [("Sénior", [("1", "ALIGNE Paul", "1210"), ("2", "AUTRE Luc", "900")]),
+                                              ("Vétéran 60", [("3", "LOISIR Jean", "L")])])
+ETAT = _ecran("par licences à jour", [("Licences à jour", [("1", "ALIGNE Paul", ""), ("2", "AUTRE Luc", ""), ("3", "LOISIR Jean", "")])])
+
+
+class FauxPingpocket:
+    def __init__(self, en_ligne, pages=None, en_cache=()):
+        self.en_ligne, self.pages, self.caches, self.demandes = en_ligne, pages or {}, set(en_cache), []
+
+    def get(self, chemin, ttl=None, **options):
+        if not self.en_ligne:
+            raise ErreurReseau(chemin)
+        return self.pages.get(chemin, "")
+
+    def get_plusieurs(self, chemins, ttl=None, message=None, **options):
+        self.demandes.append(list(chemins))
+        return {c: self.pages.get(c) for c in chemins}
+
+    def date(self, chemin):
+        return None
+
+    def en_cache(self, chemin, ttl):
+        return chemin in self.caches
+
+    def disponible(self, site):
+        return self.en_ligne
+
+
+def _donnees():
+    aligne = {"id": "1", "licence": "1", "nom": "ALIGNE", "prenom": "Paul", "sexe": None, "points": 1180,
+              "points_mensuels": None, "classement": 11, "renouvele": True, "meilleur": None}
+    club = {"numero": MEAUX, "nom": "CS MEAUX TT", "salle": None, "joueurs": [aligne],
+            "equipes": [{"compositions": [{"joueurs": ["1"]}]}], "effectif_complet": False}
+    return {"club": {"numero": "08770250", "salle": None}, "clubs": {MEAUX: club}, "sources": {"pingpocket": False}}
+
+
+def test_effectif_adverse_par_le_dossier_import(tmp_path):
+    (tmp_path / "meaux.html").write_text(f"<html><body>{CATEGORIES}{ETAT}</body></html>", encoding="utf-8")
+    donnees, client = _donnees(), FauxPingpocket(en_ligne=False)
+    completer_avec_pingpocket(client, donnees, tmp_path)
+    club = donnees["clubs"][MEAUX]
+    assert club["effectif_complet"] and club["import"] == "meaux.html" and donnees["sources"]["pingpocket"]
+    joueurs = {j["id"]: j for j in club["joueurs"]}
+    assert set(joueurs) == {"1", "2"}  # licence loisir écartée
+    assert joueurs["1"]["points"] == 1180 and joueurs["2"]["points_mensuels"] == 900
+    assert client.demandes == []  # site muet : aucun historique demandé
+
+
+def test_historiques_limites_par_lancement(tmp_path, monkeypatch):
+    monkeypatch.setattr(adversaires, "MAX_HISTORIQUES", 1)
+    base = f"/app/fftt/clubs/{MEAUX}/licencies?SORT="
+    pages = {base + "CATEGORY": _ecran("par catégorie d'âge", [("Sénior", [("1", "ALIGNE Paul", "1210"), ("2", "AUTRE Luc", "900"),
+                                                                          ("4", "TROIS Max", "800")])]),
+             base + "LICENCE_STATE": _ecran("par licences à jour", [("Licences à jour", [("1", "", ""), ("2", "", ""), ("4", "", "")])])}
+    historique = "/app/fftt/licencies/{}/graphiques/historique-classement"
+    client = FauxPingpocket(en_ligne=True, pages=pages, en_cache=[historique.format("4")])
+    completer_avec_pingpocket(client, _donnees(), tmp_path)
+    # Déjà en cache : 4 ; à télécharger : 1 (aligné, prioritaire) et 2 -> un seul par lancement.
+    assert sorted(client.demandes[-1]) == sorted([historique.format("1"), historique.format("4")])

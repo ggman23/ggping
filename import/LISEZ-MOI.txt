@@ -1,0 +1,39 @@
+DOSSIER IMPORT : listes de licenciés enregistrées depuis ton navigateur
+=======================================================================
+
+Quand pingpocket.fr bloque les requêtes de l'outil (protection anti-robot),
+la liste complète des licenciés (non réinscrits, licences loisir, catégories)
+peut être fournie à la main. L'outil lit alors les pages déposées ici.
+Rien n'est contourné : tu consultes le site normalement, comme d'habitude.
+
+1. Ouvre dans ton navigateur (Chrome, Edge ou Firefox) les trois listes du club :
+
+   par catégorie d'âge (indispensable) :
+   https://www.pingpocket.fr/?page=app%2Ffftt%2Fclubs%2F08770250%2Flicencies%3FSORT%3DCATEGORY
+
+   par licences à jour (indispensable : sépare les non réinscrits) :
+   https://www.pingpocket.fr/?page=app%2Ffftt%2Fclubs%2F08770250%2Flicencies%3FSORT%3DLICENCE_STATE
+
+   par classement officiel (facultatif) :
+   https://www.pingpocket.fr/?page=app%2Ffftt%2Fclubs%2F08770250%2Flicencies%3FSORT%3DOFFICIAL_RANK
+
+   Si un lien n'affiche pas la liste : ouvre https://www.pingpocket.fr/?page=app/fftt/clubs/08770250
+   puis va dans « Licenciés » et choisis le classement voulu.
+
+2. Quand la liste est affichée : Ctrl+S, type « Page Web, complète »
+   (ou « Page Web, fichier unique .mhtml »), et enregistre dans CE dossier.
+   Pas « HTML uniquement » : la liste n'y figure pas.
+   Une page par liste, ou une seule page après avoir ouvert les trois listes
+   à la suite : les deux fonctionnent. Le nom du fichier n'a pas d'importance.
+
+3. Relance lancer.bat (option 3 pour l'effectif de Vaires).
+
+La page la plus récente l'emporte : réenregistre les listes de temps en temps
+(par exemple avant chaque journée) pour voir les nouvelles réinscriptions.
+Si pingpocket répond de nouveau à l'outil, sa liste du jour est utilisée.
+
+Ça marche aussi pour les clubs adverses (option 1) : remplace 08770250 par
+le numéro du club dans les liens ci-dessus (indiqué en haut de sa fiche).
+
+Ces pages contiennent des données personnelles (dont des mineurs) :
+elles ne sont jamais envoyées sur GitHub (dossier exclu du dépôt).

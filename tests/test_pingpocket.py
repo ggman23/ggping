@@ -1,7 +1,11 @@
 """Tests des compléments pingpocket (effectifs, salles, historiques), sur des extraits HTML fictifs."""
 
+import os
+from email.message import EmailMessage
+
 from ttvaires.pingpocket import (
-    categorie_courte, effectif, lire_historique, lire_liste_licencies, lire_salle, resume_historique, separer_nom,
+    categorie_courte, effectif, lire_historique, lire_liste_licencies, lire_salle, listes_du_dossier,
+    listes_enregistrees, resume_historique, separer_nom,
 )
 
 LISTE = """
@@ -68,3 +72,53 @@ def test_effectif_ecarte_les_loisirs_et_repere_les_non_renouveles():
     assert set(joueurs) == {"7700001", "7700009"}        # 7700003 (licence loisir « L ») écarté
     assert joueurs["7700001"]["renouvele"] and not joueurs["7700009"]["renouvele"]
     assert joueurs["7700001"]["categorie"] == "V45" and joueurs["7700001"]["points_mensuels"] == 1014
+
+
+def _ecran(titre, club, sections, info=True):
+    lignes = "".join(f'<li class="sep"><p><span>{t}</span></p></li>'
+                     f'<li class="arrow"><a href="/app/fftt/licencies/{lic}?CLUB_ID={club}" class="item-container">'
+                     f'<div class="labels"><p>NOM Prenom</p></div><small class="counter">{c}</small></a></li>'
+                     for t, lic, c in sections)
+    entete = f'<div class="info"><p>n° <span>{club}</span> - <span>2</span> <span>licenciés</span></p></div>' if info else ""
+    return f'<div class="current" data-title="{titre}">{entete}<ul class="edgetoedge">{lignes}</ul></div>'
+
+
+# Page « complète » enregistrée après avoir consulté plusieurs écrans dans l'application
+ENREGISTREE = ('<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><div id="jqt">'
+               '<div data-title="Accueil"><ul class="edgetoedge"><li><a href="#clubs">Clubs</a></li></ul></div>'
+               + _ecran("CVTT VAIRES, licenciés par catégorie d&#039;âge", "08770250", [("Sénior", "1", "850")])
+               + _ecran("CVTT VAIRES, licenciés par licences à jour", "08770250", [("Licences à jour", "1", "9/9/26")])
+               + _ecran("CS MEAUX TT, licenciés par classement officiel", "08770135", [("12", "7", "1210")])
+               + '<div data-title="DUPONT Jean, matchs par journée"><div class="info"><p>Licence n° <span>77000011</span></p></div>'
+                 '<ul class="edgetoedge"><li class="sep"><p>25 Sep 2026</p></li><li class="arrow">'
+                 '<a href="/app/fftt/licencies/7732747">RIEU Luka</a></li></ul></div>'
+               + "</div></body></html>")
+
+
+def test_listes_enregistrees_plusieurs_ecrans_et_clubs():
+    l = listes_enregistrees(ENREGISTREE)
+    assert {c: sorted(t) for c, t in l.items()} == {"08770250": ["categories", "etat"], "08770135": ["classements"]}
+    assert "850" in l["08770250"]["categories"] and "9/9/26" not in l["08770250"]["categories"]
+
+
+def test_liste_reconnue_sans_titre_d_ecran():
+    ecran = _ecran("", "08770250", [("Licences non renouvelées", "3", "")]).replace(' data-title=""', "")
+    assert list(listes_enregistrees(ecran)["08770250"]) == ["etat"]
+
+
+def test_listes_du_dossier_html_et_mhtml(tmp_path):
+    (tmp_path / "vaires.html").write_text(ENREGISTREE, encoding="utf-8")
+    message = EmailMessage()
+    message.set_content(_ecran("CVTT VAIRES, licenciés par catégorie d'âge", "08770250", [("Vétéran 45", "1", "900")]),
+                        subtype="html", cte="quoted-printable")
+    (tmp_path / "vaires plus récente.mhtml").write_bytes(message.as_bytes())
+    os.utime(tmp_path / "vaires.html", (1e9, 1e9))
+    (tmp_path / "notes.txt").write_text("pas une page")
+    (tmp_path / "accueil.htm").write_text("<html><body>Accueil</body></html>")
+
+    listes, ignores = listes_du_dossier(tmp_path)
+    assert ignores == ["accueil.htm"]
+    vaires = listes["08770250"]
+    assert vaires["categories"]["fichier"] == "vaires plus récente.mhtml" and "900" in vaires["categories"]["html"]
+    assert vaires["etat"]["fichier"] == "vaires.html"
+    assert listes_du_dossier(tmp_path / "absent") == ({}, [])

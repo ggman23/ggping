@@ -48,8 +48,30 @@ La page adversaires combine deux sources :
 
 Si pingpocket ne répond pas (panne ou protection anti-robots), la page est quand même générée :
 les effectifs se limitent alors aux joueurs déjà alignés, et une note l'indique. Les données
-sont gardées dans le dossier `cache\` : le premier lancement complet peut être long (pingpocket
-sature vite, l'outil reste discret), les suivants ne retéléchargent que ce qui a pu changer.
+sont gardées dans le dossier `cache\` : le premier lancement complet peut être long, les suivants
+ne retéléchargent que ce qui a pu changer. L'outil reste discret avec pingpocket : une page toutes
+les 4 secondes au plus, 150 historiques au plus par lancement (les autres aux lancements
+suivants), arrêt immédiat en cas de vérification anti-robot. Il ne contourne aucune protection.
+
+## Liste des licenciés quand pingpocket bloque l'outil : le dossier `import\`
+
+Les listes de licenciés (non réinscrits, licences loisir, catégories) ne sont publiées que par
+pingpocket. Quand le site refuse les requêtes de l'outil, on peut les lui fournir à la main :
+
+1. ouvrir dans son navigateur, normalement, les listes du club :
+   [par catégorie d'âge](https://www.pingpocket.fr/?page=app%2Ffftt%2Fclubs%2F08770250%2Flicencies%3FSORT%3DCATEGORY)
+   et [par licences à jour](https://www.pingpocket.fr/?page=app%2Ffftt%2Fclubs%2F08770250%2Flicencies%3FSORT%3DLICENCE_STATE)
+   (indispensables), [par classement officiel](https://www.pingpocket.fr/?page=app%2Ffftt%2Fclubs%2F08770250%2Flicencies%3FSORT%3DOFFICIAL_RANK)
+   (facultatif) ;
+2. les enregistrer (**Ctrl+S**, type **« Page Web, complète »** ou « fichier unique .mhtml ») dans
+   le dossier `import\` de l'outil — un fichier par liste, ou un seul après avoir ouvert les
+   listes à la suite ;
+3. relancer `lancer.bat`.
+
+L'outil retient pour chaque liste la version la plus récente (site, pages enregistrées ou copie
+en cache) et la page indique laquelle est utilisée et sa date. Cela marche aussi pour les clubs
+adverses (remplacer 08770250 par le numéro du club). Le mode d'emploi est aussi dans
+`import\LISEZ-MOI.txt`. Les pages enregistrées ne sont jamais envoyées sur GitHub.
 
 ## Installation (Windows)
 
@@ -94,7 +116,8 @@ python -m pytest
 ttvaires/
   __main__.py    Point d'entrée (python -m ttvaires)
   adversaires.py Données de la page adversaires (API FFTT + compléments pingpocket)
-  pingpocket.py  Compléments lus sur pingpocket.fr (licenciés, salles, historiques)
+  pingpocket.py  Compléments lus sur pingpocket.fr (licenciés, salles, historiques) et
+                 pages enregistrées depuis un navigateur (dossier import)
   reseau.py      Téléchargements : cache disque, requêtes parallèles, nouvelles tentatives
   brulage.py     Règles de brûlage et analyse de chaque rencontre
   fftt.py        Accès à l'API publique de la FFTT (rencontres, feuilles de match)
@@ -106,4 +129,5 @@ ttvaires/
   gabarit_effectif.html   Mise en page de la page effectif
   demo.py        Données fictives pour tester sans Internet
 tests/           Tests (brûlage, lecture des pages, points virtuels)
+import/          Listes de licenciés enregistrées depuis le navigateur (voir LISEZ-MOI.txt)
 ```

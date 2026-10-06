@@ -41,6 +41,10 @@ h3 { font-size: 16px; margin: 0 0 8px; }
 .grille2 > * { min-width: 0; }
 @media (max-width: 900px) { .grille2 { grid-template-columns: 1fr; } }
 .info { background: var(--accent-fond); color: var(--texte); border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; font-size: 14px; }
+details.aide { border: 1px solid var(--bord); border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; font-size: 14px; }
+details.aide summary { cursor: pointer; font-weight: 600; }
+details.aide ol { margin: 8px 0 4px; padding-left: 20px; }
+details.aide li { margin-bottom: 4px; }
 .note { background: var(--attention-fond); color: var(--attention); border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; font-size: 14px; }
 .defil { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-size: 14px; }
@@ -129,10 +133,24 @@ function bandeaux() {
   const pm = D.prochaines.M, pf = D.prochaines.F;
   if (pm || pf) p.push(`<div class="info">Prochaine journée : ${pm ? `masculin J${pm.journee} — ${fmtDate(pm.date)}${pm.heure ? " " + pm.heure : ""}` : ""}${pm && pf ? " · " : ""}${pf ? `féminin J${pf.journee} — ${fmtDate(pf.date)}${pf.heure ? " " + pf.heure : ""}` : ""}.
     Brûlage calculé avec les feuilles de match déjà saisies.</div>`);
-  if (!D.source.liste) p.push(`<div class="note">Liste des licenciés indisponible (pingpocket.fr ne répond pas) : seuls les joueurs déjà alignés
-    cette phase apparaissent, sans les non réinscrits ni les licences loisir. Relancer plus tard pour la compléter.</div>`);
-  else if (!D.source.a_jour) p.push(`<div class="note">pingpocket.fr ne répond pas : liste des licenciés reprise de la mise à jour du
-    ${esc(D.source.date.slice(0, 16).replace("T", " "))}. Les nouvelles réinscriptions depuis cette date n'apparaissent pas.</div>`);
+  const src = D.source, quand = src.date ? fmtDate(src.date.slice(0, 10)) + " à " + src.date.slice(11, 16) : "";
+  const vieille = src.date && (Date.now() - new Date(src.date)) / 864e5 > 7;
+  if (!src.liste) p.push(`<div class="note">Liste des licenciés indisponible (pingpocket.fr bloque les requêtes de l'outil) :
+    seuls les joueurs déjà alignés cette phase apparaissent, sans les non réinscrits ni les licences loisir.</div>`);
+  else if (src.origine === "import") p.push(`<div class="${vieille ? "note" : "info"}">Liste des licenciés : page(s) enregistrée(s)
+    depuis le navigateur le ${quand} (dossier import).${vieille ? " Pense à la réenregistrer pour voir les nouvelles réinscriptions." : ""}</div>`);
+  else if (src.origine === "cache") p.push(`<div class="note">pingpocket.fr ne répond pas : liste des licenciés reprise de la mise à jour du
+    ${quand}. Les nouvelles réinscriptions depuis cette date n'apparaissent pas.</div>`);
+  if (src.liste && (src.manquantes || []).includes("etat")) p.push(`<div class="note">Liste « par licences à jour » absente :
+    les non réinscrits ne peuvent pas être séparés des réinscrits.</div>`);
+  if (!src.a_jour && src.liens) p.push(`<details class="aide"${src.liste ? "" : " open"}><summary>Compléter ou actualiser la liste à la main</summary>
+    <ol><li>Ouvre ces listes dans ton navigateur :
+      <a href="${esc(src.liens.categories)}" target="_blank" rel="noopener">par catégorie d'âge</a> (indispensable),
+      <a href="${esc(src.liens.etat)}" target="_blank" rel="noopener">par licences à jour</a> (indispensable),
+      <a href="${esc(src.liens.classements)}" target="_blank" rel="noopener">par classement officiel</a> (facultatif).</li>
+    <li>Pour chacune : Ctrl+S, « Page Web, complète », dans le dossier <b>import</b> de l'outil.</li>
+    <li>Relance lancer.bat (option 3).</li></ol>
+    <p class="petit">Tu consultes le site normalement : rien n'est contourné. Détails dans import/LISEZ-MOI.txt.</p></details>`);
   return p.join("");
 }
 

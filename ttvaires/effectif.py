@@ -2,14 +2,16 @@
 
 - Matchs joués par chaque joueur, équipe par équipe : feuilles de match de l'API FFTT.
 - Liste des licenciés (réinscrits, non réinscrits, licences loisir, catégories) : pingpocket.fr,
-  revérifiée à chaque lancement ; si le site ne répond pas, la dernière liste obtenue est reprise
-  (avec sa date) ; à défaut, seuls les joueurs déjà alignés sont connus.
+  revérifiée à chaque lancement, ou pages de ces listes enregistrées depuis un navigateur dans le
+  dossier import (quand le site bloque l'outil). La version la plus récente l'emporte, la
+  dernière copie en cache servant de secours ; à défaut, seuls les joueurs déjà alignés sont connus.
 
 Brûlage : championnat masculin et championnat féminin sont indépendants. Une joueuse alignée en
 masculin y est traitée comme les garçons (ses matchs en équipe féminine ne comptent pas).
 """
 
 import json
+import time
 from collections import Counter, defaultdict
 from datetime import date, datetime
 from pathlib import Path
@@ -17,6 +19,17 @@ from pathlib import Path
 from . import fftt, pingpocket
 from .brulage import brulage_par_equipe, equipe_max
 from .reseau import HEURE
+
+# Listes de licenciés de pingpocket : type -> tri demandé dans l'adresse de la page
+TRIS = {"categories": "CATEGORY", "etat": "LICENCE_STATE", "classements": "OFFICIAL_RANK"}
+NOMS_LISTES = {"categories": "par catégorie d'âge", "etat": "par licences à jour",
+               "classements": "par classement officiel (facultatif)"}
+
+
+def liens_navigateur(numero_club):
+    """Adresses des listes de licenciés à ouvrir dans un navigateur (pour le dossier import)."""
+    return {type_: f"https://www.pingpocket.fr/?page=app%2Ffftt%2Fclubs%2F{numero_club}%2Flicencies%3FSORT%3D{tri}"
+            for type_, tri in TRIS.items()}
 
 
 def _joueur_feuille(j):
@@ -29,7 +42,7 @@ def _joueur_feuille(j):
     }
 
 
-def recuperer_effectif(client, numero_club="08770250", aujourdhui=None, fichier_etat=None):
+def recuperer_effectif(client, numero_club="08770250", aujourdhui=None, fichier_etat=None, dossier_import=None):
     aujourdhui = aujourdhui or date.today()
     auj = aujourdhui.isoformat()
     phase, saison = fftt.phase_et_saison(aujourdhui)
@@ -70,22 +83,16 @@ def recuperer_effectif(client, numero_club="08770250", aujourdhui=None, fichier_
                     vu["sexe"] = "F"
 
     print("2/2 Licenciés du club : réinscriptions, licences loisir (pingpocket.fr)", flush=True)
-    liens = {"categories": f"/app/fftt/clubs/{numero_club}/licencies?SORT=CATEGORY",
-             "classements": f"/app/fftt/clubs/{numero_club}/licencies?SORT=OFFICIAL_RANK",
-             "etat": f"/app/fftt/clubs/{numero_club}/licencies?SORT=LICENCE_STATE"}
+    liens = {type_: f"/app/fftt/clubs/{numero_club}/licencies?SORT={tri}" for type_, tri in TRIS.items()}
     pages = client.get_plusieurs(list(liens.values()), ttl=HEURE, perime_si_erreur=True)
-    if all(pages.get(u) for u in liens.values()):
-        liste = pingpocket.licencies(pages, liens)
-        anciennes = [client.perimes[u] for u in liens.values() if u in client.perimes]
-        source = {"liste": True, "a_jour": not anciennes,
-                  "date": datetime.fromtimestamp(min(anciennes)).isoformat(timespec="minutes") if anciennes
-                  else datetime.now().isoformat(timespec="minutes")}
-        if anciennes:
-            print(f"  ! pingpocket.fr ne répond pas : reprise de la liste du {source['date'][:16].replace('T', ' ')}")
-    else:
-        liste = []
-        source = {"liste": False, "a_jour": False, "date": None}
-        print("  ! Liste des licenciés indisponible : seuls les joueurs déjà alignés apparaissent.")
+    listes = {type_: {"html": pages[u], "date": client.date(u) or time.time(), "origine": "cache" if u in client.perimes else "pingpocket"}
+              for type_, u in liens.items() if pages.get(u)}
+    for type_, importee in _listes_importees(dossier_import, numero_club).items():
+        if type_ not in listes or importee["date"] > listes[type_]["date"]:
+            listes[type_] = {**importee, "origine": "import"}
+    source = _source(listes, numero_club)
+    liste = pingpocket.licencies({t: l["html"] for t, l in listes.items()}, {t: t for t in TRIS}) if source["liste"] else []
+    _annoncer(source)
 
     joueurs = {j["id"]: j for j in liste}
     for lic, vu in vus.items():
@@ -117,6 +124,57 @@ def recuperer_effectif(client, numero_club="08770250", aujourdhui=None, fichier_
     }
 
 
+def _listes_importees(dossier, numero_club):
+    """Listes du club trouvées dans les pages enregistrées depuis un navigateur (dossier import)."""
+    if not dossier:
+        return {}
+    listes, ignores = pingpocket.listes_du_dossier(dossier)
+    for nom in ignores:
+        print(f"  ! import : aucune liste de licenciés dans « {nom} » (enregistrer en « Page Web, complète »)")
+    return listes.get(numero_club, {})
+
+
+def _iso(horodatage):
+    return datetime.fromtimestamp(horodatage).isoformat(timespec="minutes")
+
+
+def _source(listes, numero_club):
+    """Provenance de la liste des licenciés, affichée dans la page.
+
+    origine : « pingpocket » (lue à l'instant), « cache » (site muet : dernière liste obtenue),
+    « import » (page enregistrée depuis un navigateur), None (aucune liste).
+    """
+    source = {"liste": "categories" in listes, "a_jour": False, "date": None, "origine": None,
+              "manquantes": [t for t in TRIS if t not in listes], "fichiers": [],
+              "liens": liens_navigateur(numero_club)}
+    if source["liste"]:
+        origines = {l["origine"] for l in listes.values()}
+        source.update(
+            a_jour=origines == {"pingpocket"},
+            date=_iso(min(l["date"] for l in listes.values())),
+            origine=next(o for o in ("import", "cache", "pingpocket") if o in origines),
+            fichiers=sorted({l["fichier"] for l in listes.values() if l.get("fichier")}))
+    return source
+
+
+def _annoncer(source):
+    date = (source["date"] or "")[:16].replace("T", " ")
+    if source["origine"] == "import":
+        print(f"  liste des licenciés : page(s) enregistrée(s) le {date} ({', '.join(source['fichiers'])})")
+        print("    Réenregistre-les de temps en temps pour voir les nouvelles réinscriptions (import/LISEZ-MOI.txt).")
+    elif source["origine"] == "cache":
+        print(f"  ! pingpocket.fr ne répond pas : reprise de la liste du {date}")
+    elif not source["liste"]:
+        print("  ! Liste des licenciés indisponible : seuls les joueurs déjà alignés apparaissent.")
+    if source["liste"] and "etat" in source["manquantes"]:
+        print(f"  ! liste {NOMS_LISTES['etat']} absente : les non réinscrits ne peuvent pas être séparés.")
+    if source["origine"] in (None, "cache"):
+        print("    Pour une liste complète et récente : ouvre ces pages dans ton navigateur, enregistre-les")
+        print("    (Ctrl+S, « Page Web, complète ») dans le dossier import de l'outil, puis relance :")
+        for type_, lien in source["liens"].items():
+            print(f"      {NOMS_LISTES[type_]} : {lien}")
+
+
 def _nouveaux(joueurs, fichier_etat, source):
     """Marque les joueurs réinscrits depuis le lancement précédent et mémorise la liste actuelle."""
     if not fichier_etat or not source["liste"]:
@@ -128,7 +186,7 @@ def _nouveaux(joueurs, fichier_etat, source):
         nouveaux = set(actuels) - set(precedent["renouveles"])
         for j in joueurs.values():
             j["nouveau"] = j["id"] in nouveaux
-    if source["a_jour"]:
+    if precedent is None or source["date"] > precedent["date"]:  # liste plus récente que la mémorisée
         fichier.parent.mkdir(parents=True, exist_ok=True)
         fichier.write_text(json.dumps({"date": source["date"], "renouveles": actuels}), encoding="utf-8")
     return precedent["date"] if precedent else None

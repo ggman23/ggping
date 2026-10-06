@@ -130,6 +130,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const dateObj = (iso) => new Date(iso + "T12:00:00");
 const dd = (n) => String(n).padStart(2, "0");
+const listeClub = (num, tri) => `https://www.pingpocket.fr/?page=app%2Ffftt%2Fclubs%2F${num}%2Flicencies%3FSORT%3D${tri}`;
 function fmtDate(iso, annee) {
   if (!iso) return "date inconnue";
   const d = dateObj(iso);
@@ -345,7 +346,10 @@ function tableEffectif(club, ch, a, N, r) {
     <span class="m fort">rouge</span> = équipe plus forte que la ${N}, <span class="m egal">bleu</span> = équipe ${N}, <span class="m faible">gris</span> = équipe plus faible.</p>`;
   const partiel = club.effectif_complet === false
     ? `<p class="note">Effectif limité aux joueurs déjà alignés cette phase : pingpocket.fr (effectifs complets, catégories,
-       meilleur classement) n'a pas répondu lors de la mise à jour. Relancer plus tard pour le compléter.</p>` : "";
+       meilleur classement) n'a pas répondu lors de la mise à jour. Relancer plus tard, ou enregistrer ses listes
+       <a href="${listeClub(club.numero, "CATEGORY")}" target="_blank" rel="noopener">par catégorie d'âge</a> et
+       <a href="${listeClub(club.numero, "LICENCE_STATE")}" target="_blank" rel="noopener">par licences à jour</a>
+       (Ctrl+S, « Page Web, complète ») dans le dossier import de l'outil.</p>` : "";
   return `<h4>Effectif de ${esc(club.nom)} (${actifs.length} ${ch === "F" ? "joueuses" : "joueurs"})</h4>${partiel}${legende}
     <div class="defil"><table>${entete(true)}<tbody>${actifs.map((j) => ligne(j, true)).join("")}</tbody></table></div>
     ${anciens.length ? `<details><summary>Pas encore renouvelés (${anciens.length})</summary>

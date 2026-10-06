@@ -113,3 +113,25 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
   comme les garçons (2 matchs en équipe 4 → brûlée pour 5 et 6, disponible de 1 à 4) ; ses
   matchs en Vaires 1 F ne comptent pas pour le masculin. Une seule équipe féminine : pas de
   brûlage en féminin.
+
+## Liste complète des licenciés malgré le blocage de pingpocket (06/10/2026)
+
+- Demande : obtenir la liste complète des joueurs de Vaires même quand pingpocket bloque
+  l'outil (piste évoquée : Playwright).
+- Choix retenu : **ne pas contourner la protection anti-robots** (pas de navigateur automatisé
+  déguisé, pas de résolution de vérification). L'outil d'origine fait sous ChatGPT applique la
+  même règle (arrêt sur 401/403/429 ou vérification).
+- À la place :
+  - requêtes plus espacées vers pingpocket : une page toutes les 4 secondes au plus, quel que
+    soit le nombre de requêtes simultanées ; au plus 150 historiques téléchargés par lancement
+    (joueurs alignés d'abord), les autres aux lancements suivants ;
+  - **dossier `import\`** : l'utilisateur enregistre depuis son navigateur (Ctrl+S, « Page Web,
+    complète » ou .mhtml) les listes de licenciés du club (par catégorie d'âge et par licences à
+    jour, indispensables ; par classement officiel, facultatif). L'outil y reconnaît chaque
+    écran de liste (titre de l'écran, numéro du club), même si une page en contient plusieurs ou
+    concerne plusieurs clubs ;
+  - pour chaque liste, la version la plus récente l'emporte : lue sur le site au lancement,
+    page enregistrée (date du fichier) ou dernière copie en cache. La page Effectif indique la
+    provenance et la date de la liste, avec les liens et le mode d'emploi pour l'actualiser ;
+  - le même dossier complète les effectifs des clubs adverses sur la page adversaires.
+- Les pages enregistrées contiennent des données personnelles : le dossier est exclu du dépôt.

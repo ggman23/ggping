@@ -5,9 +5,12 @@ Ces données ne sont pas publiques dans l'API de la FFTT. Pingpocket peut être 
 bloquer les requêtes automatiques : l'outil fonctionne alors sans ces compléments.
 """
 
+import email
+import email.policy
 import re
+from pathlib import Path
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, UnicodeDammit
 
 CATEGORIES = {"Poussin": "P", "Benjamin": "B", "Minime": "M", "Cadet": "C", "Junior": "J",
               "Senior": "S", "Sénior": "S", "Vétéran": "V"}
@@ -146,3 +149,84 @@ def licencies(pages, liens):
 def effectif(pages, liens):
     """Licenciés du club hors licences loisir."""
     return [j for j in licencies(pages, liens) if not j.pop("loisir")]
+
+
+
+# ---------------------------------------------------------------------------
+# Pages enregistrées depuis un navigateur (dossier import/)
+# ---------------------------------------------------------------------------
+
+# Titre d'écran pingpocket (« CVTT VAIRES, licenciés par catégorie d'âge ») -> type de liste
+TYPES_LISTES = (("par catégorie", "categories"), ("par classement officiel", "classements"),
+                ("par licences", "etat"))
+
+
+def lire_fichier_enregistre(chemin):
+    """Texte HTML d'une page enregistrée : « Page Web, complète » (.html) ou « fichier unique » (.mhtml)."""
+    donnees = Path(chemin).read_bytes()
+    if Path(chemin).suffix.lower() in (".mht", ".mhtml"):
+        message = email.message_from_bytes(donnees, policy=email.policy.default)
+        parties = [p for p in message.walk() if p.get_content_type() == "text/html"]
+        return "\n".join(p.get_content() for p in parties)
+    return UnicodeDammit(donnees, is_html=True).unicode_markup or ""
+
+
+def _type_liste(ecran, sections):
+    titre = (ecran.get("data-title") or "").lower()
+    for mot, type_ in TYPES_LISTES:
+        if mot in titre:
+            return type_
+    titres = [t for t, _ in sections]  # titre d'écran absent : on reconnaît les sections
+    if any(t.lower().startswith("licences") for t in titres):
+        return "etat"
+    if titres and all(re.fullmatch(r"\d+", t) for t in titres):
+        return "classements"
+    if any(categorie_courte(t) != t for t in titres):
+        return "categories"
+    return None
+
+
+def listes_enregistrees(html):
+    """Listes de licenciés contenues dans une page enregistrée -> {numéro de club: {type: html}}.
+
+    L'application pingpocket garde en mémoire les écrans déjà consultés : une même page
+    enregistrée peut en contenir plusieurs (catégories, classements, état des licences, de
+    plusieurs clubs). Chaque écran est examiné séparément.
+    """
+    trouves = {}
+    soup = _soupe(html)
+    for ecran in soup.select("[data-title]") or [soup]:
+        if ecran.select("[data-title]") or not ecran.select("ul.edgetoedge li a[href*='/licencies/']"):
+            continue  # conteneur d'autres écrans, ou écran sans liste de joueurs
+        m = (re.search(r"CLUB_ID=(\d+)", str(ecran))
+             or re.search(r"n°\s*(\d{8})\s*-\s*\d+\s*licenci", _texte(ecran.select_one(".info"))))
+        type_ = _type_liste(ecran, lire_liste_licencies(str(ecran))) if m else None
+        if type_:
+            trouves.setdefault(m[1], {})[type_] = str(ecran)
+    return trouves
+
+
+EXTENSIONS_ENREGISTREES = (".html", ".htm", ".mhtml", ".mht")
+
+
+def listes_du_dossier(dossier):
+    """Listes de licenciés de toutes les pages enregistrées dans un dossier.
+
+    Renvoie ({numéro de club: {type: {"html", "date", "fichier"}}}, [fichiers sans liste]).
+    Pour un même club et un même type, la page enregistrée le plus récemment l'emporte.
+    """
+    listes, ignores = {}, []
+    dossier = Path(dossier)
+    fichiers = sorted(f for f in dossier.iterdir() if f.is_file() and f.suffix.lower() in EXTENSIONS_ENREGISTREES) \
+        if dossier.is_dir() else []
+    for fichier in fichiers:
+        trouves = listes_enregistrees(lire_fichier_enregistre(fichier))
+        if not trouves:
+            ignores.append(fichier.name)
+        date = fichier.stat().st_mtime
+        for club, types in trouves.items():
+            for type_, html in types.items():
+                actuelle = listes.setdefault(club, {}).get(type_)
+                if actuelle is None or date > actuelle["date"]:
+                    listes[club][type_] = {"html": html, "date": date, "fichier": fichier.name}
+    return listes, ignores

@@ -1,4 +1,4 @@
-"""Point d'entrée : python -m ttvaires [--adversaires] [--resultats] [--demo] [--hors-ligne] [--pas-de-navigateur]."""
+"""Point d'entrée : python -m ttvaires [--adversaires] [--resultats] [--effectif] [--demo] [--hors-ligne] [--pas-de-navigateur]."""
 
 import argparse
 import json
@@ -17,13 +17,14 @@ from .resultats import donnees_page, ecrire_xlsx, recuperer_parties
 RACINE = Path(__file__).resolve().parent.parent
 SORTIE = RACINE / "sortie"
 CACHE = RACINE / "cache"
+IMPORT = RACINE / "import"  # listes de licenciés enregistrées depuis un navigateur
 CLUB_VAIRES = "08770250"
 
 
 def page_adversaires(client, club):
     print("=== Adversaires : API FFTT + compléments pingpocket.fr (le premier lancement peut être long :")
     print("pingpocket sature vite ; les suivants sont beaucoup plus rapides grâce au cache).", flush=True)
-    donnees = recuperer(client, club)
+    donnees = recuperer(client, club, dossier_import=IMPORT)
     enrichir(donnees)
     (SORTIE / "donnees.json").write_text(json.dumps(donnees, ensure_ascii=False, indent=1), encoding="utf-8")
     return [generer_html(donnees, SORTIE / "vaires.html")]
@@ -40,7 +41,7 @@ def page_resultats(client, club):
 
 def page_effectif(client, club):
     print("=== Effectif de Vaires : équipes jouées et brûlages", flush=True)
-    donnees = recuperer_effectif(client, club, fichier_etat=CACHE / f"effectif_{club}.json")
+    donnees = recuperer_effectif(client, club, fichier_etat=CACHE / f"effectif_{club}.json", dossier_import=IMPORT)
     return [generer_html(donnees, SORTIE / "effectif_vaires.html", GABARIT_EFFECTIF)]
 
 
@@ -58,6 +59,7 @@ def main():
 
     debut = time.time()
     SORTIE.mkdir(exist_ok=True)
+    IMPORT.mkdir(exist_ok=True)
     if args.demo:
         donnees = donnees_demo()
         enrichir(donnees)
