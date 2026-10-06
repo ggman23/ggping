@@ -38,6 +38,7 @@ def test_points_de_chaque_partie_avec_le_coefficient_de_la_competition():
                                            "2026-07-01", "2026-12-31")
     assert [(l["id"], l["points"], l["coef"], l["championnat"]) for l in lignes] == [(1, 10, 1, True), (2, -4, 0.5, False)]
     assert lignes[1]["competition"] == "Top Jeune Departemental" and not lignes[1]["victoire"]
+    assert [(l["pts_joueur"], l["ecart"]) for l in lignes] == [(800, 100), (800, -100)]  # perf, puis contre
     assert ecartees == {"forfait": 1, "non comptée": 1, "points inconnus": 1}
     assert officiels.most_common(1)[0][0] == 800
 

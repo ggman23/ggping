@@ -143,7 +143,8 @@ def analyser(licence, parties, competitions, etats, debut, fin):
             lignes.append({
                 "id": g["id"], "date": jour, "competition": libelle_competition(nom), "division": etat.get("division"),
                 "championnat": est_championnat(nom), "coef": comp["coef"],
-                "adversaire": adversaire["nom"], "adv_points": adv["points"], "victoire": victoire,
+                "pts_joueur": moi["points"], "adversaire": adversaire["nom"], "adv_points": adv["points"],
+                "ecart": adv["points"] - moi["points"], "victoire": victoire,
                 "points": round(points_partie(moi["points"], adv["points"], victoire, comp["coef"]), 3),
             })
     lignes.sort(key=lambda l: (l["date"], l["id"]))

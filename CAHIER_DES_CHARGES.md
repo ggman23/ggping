@@ -156,3 +156,9 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
 - Joueurs : liste des licenciés (réinscrits hors licences loisir) lue sur pingpocket ou dans le
   dossier `import\`, plus les joueurs alignés en championnat. Sans liste, les joueurs qui ne font
   que des compétitions individuelles n'apparaissent pas (la page le signale).
+- Onglets « Meilleures perfs » et « Pires contres » (demande du 06/10/2026) : classement des
+  parties de simple de la phase, toutes compétitions, par points gagnés (victoires) ou perdus
+  (défaites) sur une partie. À points égaux, la plus grande différence de classement passe
+  devant ; ex aequo si même écart. Colonnes : joueur (ses points), adversaire (ses points),
+  écart (points de l'adversaire − points du joueur), points, compétition, date. Choix « toutes
+  les parties » ou « une ligne par joueur » ; les 30 premières affichées, le reste sur demande.

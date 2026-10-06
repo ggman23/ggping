@@ -11,7 +11,7 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--fond); color: var(--texte);
   font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-header { background: #fff; border-bottom: 1px solid #dde1e7; padding: 10px 16px 8px; position: sticky; top: 0; z-index: 2; }
+header { background: #fff; border-bottom: 1px solid #dde1e7; padding: 10px 16px 0; position: sticky; top: 0; z-index: 2; }
 h1 { font-size: 18px; margin: 0 0 2px; }
 header p { margin: 0; color: var(--doux); font-size: 13px; }
 main { max-width: 1150px; margin: 0 auto; padding: 16px; }
@@ -53,19 +53,30 @@ tr.detail > td { background: #f7f8fa; text-align: left; white-space: normal; pad
 .parties td:first-child { white-space: nowrap; }
 .v { color: #006100; font-weight: 700; }
 .d { color: #9c0006; font-weight: 700; }
+nav { display: flex; gap: 4px; overflow-x: auto; margin-top: 6px; }
+nav a { flex: none; padding: 7px 14px; text-decoration: none; color: var(--doux); font-weight: 600; border-bottom: 3px solid transparent; }
+nav a.actif { color: var(--accent); border-bottom-color: var(--accent); }
+table.perfs th { cursor: default; }
+table.perfs td.comp { white-space: normal; min-width: 190px; }
+table.perfs td.comp .cat { display: block; margin-left: 0; }
+table.perfs th:hover { filter: none; }
+.medaille { font-size: 17px; }
+.plus { display: block; margin: 10px auto 0; }
 .note { color: var(--doux); font-size: 13px; margin-top: 10px; }
 .comps { margin: 0 0 10px; padding-left: 18px; font-size: 14px; color: var(--doux); }
 .vide { color: var(--doux); padding: 30px; text-align: center; }
 @media (max-width: 640px) { main { padding: 8px; } table { font-size: 13.5px; } th, td { padding: 4px 5px; } .col-option { display: none; }
   td.joueur { white-space: normal; } .prenom { display: block; font-size: 12.5px; } th { white-space: normal; }
-  tr.detail > td { padding: 6px 4px; } .parties { font-size: 12.5px; } .parties th, .parties td { padding: 3px 4px; } .jour { display: none; } }
-@media print { header { position: static; } .outils, details.aide { display: none; } }
+  tr.detail > td { padding: 6px 4px; } .parties { font-size: 12.5px; } .parties th, .parties td { padding: 3px 4px; } .jour { display: none; }
+  table.perfs td.g { white-space: normal; } .medaille { font-size: 15px; } nav a { padding: 7px 8px; font-size: 14px; } }
+@media print { header { position: static; } nav, .outils, details.aide, .plus { display: none; } }
 </style>
 </head>
 <body>
 <header>
   <h1>Classement virtuel des joueurs de Vaires</h1>
   <p id="sous-titre"></p>
+  <nav id="onglets"></nav>
 </header>
 <main id="contenu"></main>
 <script id="donnees" type="application/json">__DONNEES_JSON__</script>
@@ -83,8 +94,11 @@ function fmtDate(iso) { const d = new Date(iso + "T12:00:00"); return `${JOURS[d
 const nomComplet = (j) => `${j.nom || ""} ${j.prenom || ""}`.trim();
 const autresComp = (j) => j.parties.filter((p) => !p.championnat).length;
 
-let filtre = "tous", recherche = "", tri = null;
-const ouverts = new Set();
+let vue = "classement", filtre = "tous", recherche = "", tri = null, parJoueur = false;
+const ouverts = new Set(), toutVoir = new Set();
+const ONGLETS = [["classement", "Classement"], ["perfs", "Meilleures perfs"], ["contres", "Pires contres"]];
+const sansAccent = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const LIMITE = 30;
 
 const COLONNES = [
   { t: "#", k: (j) => j.rang, v: (j) => j.virtuels == null ? "" : j.rang },
@@ -119,7 +133,7 @@ function detail(j) {
     <th>V/D</th><th class="col-option">Coef.</th><th>Points</th></tr></thead><tbody>${lignes}</tbody></table></div>${pied}`;
 }
 
-function bandeaux() {
+function bandeaux(avecAide = true) {
   const src = D.source, p = [];
   const quand = src.date ? `${fmtDate(src.date.slice(0, 10))} à ${src.date.slice(11, 16)}` : "";
   const vieille = src.date && (Date.now() - new Date(src.date)) / 864e5 > 7;
@@ -129,7 +143,7 @@ function bandeaux() {
   else if (src.origine === "import") p.push(`<div class="${vieille ? "note-site" : "info"}">Liste des joueurs : page(s) enregistrée(s)
     depuis le navigateur le ${quand} (dossier import).${vieille ? " Pense à la réenregistrer pour ajouter les nouveaux réinscrits." : ""}</div>`);
   else if (src.origine === "cache") p.push(`<div class="note-site">pingpocket.fr ne répond pas : liste des joueurs reprise de la mise à jour du ${quand}.</div>`);
-  if (!src.a_jour && src.liens) p.push(`<details class="aide"${src.liste ? "" : " open"}><summary>Compléter la liste des joueurs à la main</summary>
+  if (avecAide && !src.a_jour && src.liens) p.push(`<details class="aide"${src.liste ? "" : " open"}><summary>Compléter la liste des joueurs à la main</summary>
     <ol><li>Ouvre ces listes dans ton navigateur :
       <a href="${esc(src.liens.categories)}" target="_blank" rel="noopener">par catégorie d'âge</a>,
       <a href="${esc(src.liens.etat)}" target="_blank" rel="noopener">par licences à jour</a>.</li>
@@ -138,14 +152,12 @@ function bandeaux() {
   return p.join("");
 }
 
-function afficher() {
-  const main = document.getElementById("contenu");
+function vueClassement() {
   D.joueurs.forEach((j, i) => { j.rang = i + 1; });
-  const q = recherche.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const q = sansAccent(recherche);
   const filtres = { tous: () => true, joue: (j) => j.parties.length > 0, autres: (j) => autresComp(j) > 0 };
   const compte = (f) => D.joueurs.filter(filtres[f]).length;
-  let lignes = D.joueurs.filter(filtres[filtre])
-    .filter((j) => nomComplet(j).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().includes(q));
+  let lignes = D.joueurs.filter(filtres[filtre]).filter((j) => sansAccent(nomComplet(j)).includes(q));
   if (tri) {
     const col = COLONNES[tri.col];
     lignes = lignes.slice().sort((a, b) => {
@@ -158,7 +170,7 @@ function afficher() {
       `<td class="${c.c || ""} ${c.cls ? c.cls(j) : ""}">${c.v(j)}</td>`).join("")}</tr>`
     + (ouverts.has(j.id) ? `<tr class="detail"><td colspan="${COLONNES.length}">${detail(j)}</td></tr>` : "")).join("");
   const comps = D.competitions.map((c) => `<li>${esc(c.nom)} : coefficient ${nombre(c.coef, 2)} (${c.parties} partie${c.parties > 1 ? "s" : ""})</li>`).join("");
-  main.innerHTML = `${bandeaux()}
+  return `${bandeaux()}
     <p class="sous">Points virtuels = points officiels de la phase + points gagnés ou perdus depuis le ${fmtDate(D.debut)}
       dans toutes les compétitions. Clique sur un joueur pour le détail de ses parties.</p>
     ${comps ? `<ul class="comps">${comps}</ul>` : ""}
@@ -171,17 +183,82 @@ function afficher() {
       de la phase des deux joueurs (parties lues sur l'API publique de la FFTT). Les doubles, les victoires par forfait et
       les parties non comptées ne rapportent rien. Les points mensuels publiés par la FFTT peuvent différer un peu
       (parties saisies en retard, corrections). Clique sur un titre de colonne pour trier.</p>`;
-  main.querySelectorAll("th").forEach((th) => th.addEventListener("click", () => {
-    const col = Number(th.dataset.col);
-    tri = tri && tri.col === col ? { col, sens: -tri.sens } : { col, sens: col <= 2 ? 1 : -1 };
-    afficher();
-  }));
-  main.querySelectorAll("td.joueur").forEach((td) => td.addEventListener("click", () => {
-    const id = td.parentElement.dataset.id;
-    ouverts.has(id) ? ouverts.delete(id) : ouverts.add(id);
-    afficher();
-  }));
-  main.querySelectorAll("[data-filtre]").forEach((b) => b.addEventListener("click", () => { filtre = b.dataset.filtre; afficher(); }));
+}
+
+/* Meilleures perfs (victoires qui ont rapporté le plus) et pires contres (défaites qui ont coûté le plus) */
+function classementParties(type) {
+  const gagne = type === "perfs";
+  let l = D.joueurs.flatMap((j) => j.parties
+    .filter((p) => p.victoire === gagne && (gagne ? p.points > 0 : p.points < 0)).map((p) => ({ j, p })));
+  l.sort((a, b) => (gagne ? b.p.points - a.p.points || b.p.ecart - a.p.ecart : a.p.points - b.p.points || a.p.ecart - b.p.ecart)
+    || a.p.date.localeCompare(b.p.date));
+  if (parJoueur) { const vus = new Set(); l = l.filter(({ j }) => !vus.has(j.id) && vus.add(j.id)); }
+  // à points égaux, la plus grosse perf (ou la pire contre) passe devant ; ex aequo si même écart
+  l.forEach((x, i) => { const y = l[i - 1]; x.rang = y && x.p.points === y.p.points && x.p.ecart === y.p.ecart ? y.rang : i + 1; });
+  return l;
+}
+const MEDAILLES = { 1: "🥇", 2: "🥈", 3: "🥉" };
+
+function vuePerfs(type) {
+  const gagne = type === "perfs";
+  const toutes = classementParties(type);
+  const q = sansAccent(recherche);
+  let l = toutes.filter(({ j }) => sansAccent(nomComplet(j)).includes(q));
+  const coupe = !q && !toutVoir.has(type) && l.length > LIMITE;
+  if (coupe) l = l.slice(0, LIMITE);
+  const corps = l.map(({ j, p, rang }) => `<tr>
+      <td>${MEDAILLES[rang] ? `<span class="medaille" title="${rang}">${MEDAILLES[rang]}</span>` : rang}</td>
+      <td class="g"><span class="nom">${esc(j.nom || "")} <span class="prenom">${esc(j.prenom || "")}</span></span>
+        <span class="doux">(${nombre(p.pts_joueur, 0)})</span></td>
+      <td class="col-option">${esc(j.equipe || "")}</td>
+      <td class="g">${esc(p.adversaire)} <span class="doux">(${nombre(p.adv_points, 0)})</span></td>
+      <td class="${gagne ? "t-pos" : "t-neg"}">${pts(p.ecart)}</td>
+      <td class="${clsFond(p.points)}"><b>${pts(p.points)}</b></td>
+      <td class="g comp col-option">${esc(p.competition)}${p.division ? `<span class="cat">${esc(p.division)}</span>` : ""}${p.coef !== 1 ? `<span class="cat">coef. ${nombre(p.coef, 2)}</span>` : ""}</td>
+      <td class="col-option">${fmtDate(p.date)}</td></tr>`).join("");
+  const intro = gagne
+    ? `Les victoires qui ont rapporté le plus de points depuis le ${fmtDate(D.debut)}, toutes compétitions confondues.
+       Écart = points de l'adversaire − points du joueur : plus il est grand, plus la perf est belle.`
+    : `Les défaites qui ont coûté le plus de points depuis le ${fmtDate(D.debut)}, toutes compétitions confondues.
+       Écart négatif = défaite contre un joueur moins bien classé (contre-performance).`;
+  const choix = [[false, "Toutes les parties"], [true, gagne ? "La meilleure de chaque joueur" : "La pire de chaque joueur"]];
+  return `${bandeaux(false)}<p class="sous">${intro}</p>
+    <div class="outils"><input type="search" id="recherche" placeholder="Rechercher un joueur" value="${esc(recherche)}">
+      ${choix.map(([v, t]) => `<button class="puce ${parJoueur === v ? "actif" : ""}" data-par-joueur="${v}">${t}</button>`).join("")}</div>
+    ${l.length ? `<div class="defil"><table class="perfs"><thead><tr><th>#</th><th>Joueur</th><th class="col-option">Équipe</th>
+      <th>Adversaire</th><th title="points de l'adversaire − points du joueur">Écart</th><th>Points</th>
+      <th class="col-option">Compétition</th><th class="col-option">Date</th></tr></thead><tbody>${corps}</tbody></table></div>`
+      : `<p class="vide">${gagne ? "Aucune victoire" : "Aucune défaite"} qui ${gagne ? "rapporte" : "coûte"} des points pour le moment.</p>`}
+    ${coupe ? `<button class="puce plus" id="tout-voir">Afficher les ${toutes.length} parties</button>` : ""}
+    <p class="note">Points d'une partie = barème FFTT × coefficient de la compétition (critérium 1,5, tournois 0,5…).
+      Entre parenthèses : points officiels de la phase.</p>`;
+}
+
+function afficher() {
+  document.getElementById("onglets").innerHTML = ONGLETS.map(([id, t]) =>
+    `<a href="#${id}" class="${vue === id ? "actif" : ""}">${t}</a>`).join("");
+  const main = document.getElementById("contenu");
+  main.innerHTML = vue === "classement" ? vueClassement() : vuePerfs(vue);
+  if (vue === "classement") {
+    main.querySelectorAll("th").forEach((th) => th.addEventListener("click", () => {
+      const col = Number(th.dataset.col);
+      tri = tri && tri.col === col ? { col, sens: -tri.sens } : { col, sens: col <= 2 ? 1 : -1 };
+      afficher();
+    }));
+    main.querySelectorAll("td.joueur").forEach((td) => td.addEventListener("click", () => {
+      const id = td.parentElement.dataset.id;
+      ouverts.has(id) ? ouverts.delete(id) : ouverts.add(id);
+      afficher();
+    }));
+    main.querySelectorAll("[data-filtre]").forEach((b) => b.addEventListener("click", () => { filtre = b.dataset.filtre; afficher(); }));
+  } else {
+    main.querySelectorAll("[data-par-joueur]").forEach((b) => b.addEventListener("click", () => {
+      parJoueur = b.dataset.parJoueur === "true";
+      afficher();
+    }));
+    const plus = document.getElementById("tout-voir");
+    if (plus) plus.addEventListener("click", () => { toutVoir.add(vue); afficher(); });
+  }
   const champ = document.getElementById("recherche");
   champ.addEventListener("input", () => {
     recherche = champ.value;
@@ -192,9 +269,15 @@ function afficher() {
     nouveau.setSelectionRange(pos, pos);
   });
 }
+function route() {
+  const h = location.hash.slice(1);
+  vue = ONGLETS.some(([id]) => id === h) ? h : "classement";
+  afficher();
+}
 document.getElementById("sous-titre").textContent =
   `${D.club.nom} · phase ${D.phase} ${D.saison} · données du ${new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`;
-afficher();
+window.addEventListener("hashchange", () => { route(); window.scrollTo(0, 0); });
+route();
 </script>
 </body>
 </html>

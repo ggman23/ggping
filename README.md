@@ -42,6 +42,9 @@ la FFTT, qui donne pour chaque partie les points officiels des deux joueurs et l
 la compétition (1 pour le championnat, 1,5 pour le critérium, 0,5 pour le Top Jeune
 départemental...) : points = barème FFTT × coefficient. Les doubles, les victoires par forfait et
 les parties non comptées sont écartés. Un clic sur un joueur affiche le détail de ses parties.
+Deux autres onglets classent les parties elles-mêmes : **Meilleures perfs** (les victoires qui ont
+rapporté le plus de points, avec l'écart de classement) et **Pires contres** (les défaites qui ont
+coûté le plus), toutes compétitions confondues, en entier ou une seule ligne par joueur.
 Pour avoir tous les joueurs (y compris les jeunes qui ne jouent pas en championnat), la liste des
 licenciés est lue sur pingpocket ou dans le dossier `import\` (voir plus bas) ; sinon seuls les
 joueurs alignés en championnat apparaissent.
