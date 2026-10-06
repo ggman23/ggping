@@ -51,6 +51,20 @@ def equipe_max(parts):
     return numeros[1] if len(numeros) >= 2 else None
 
 
+def brulage_par_equipe(parts, numeros):
+    """Pour chaque numéro d'équipe : le joueur est-il brûlé, et à cause de quels matchs ?
+
+    `parts` : matchs du joueur dans un même championnat (chacun avec "numero"). Brûlé pour
+    l'équipe N = au moins 2 matchs dans des équipes de numéro < N. Renvoie
+    {N: {"brule": bool, "plus_fortes": [numéros des équipes plus fortes où il a joué]}}.
+    """
+    res = {}
+    for n in numeros:
+        plus_fortes = sorted(p["numero"] for p in parts if p["numero"] < n)
+        res[n] = {"brule": len(plus_fortes) >= 2, "plus_fortes": plus_fortes}
+    return res
+
+
 def _avant(part, journee, date_match):
     """La participation a-t-elle eu lieu avant la rencontre analysée ?"""
     if date_match and part.get("date"):

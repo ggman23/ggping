@@ -9,7 +9,8 @@ from pathlib import Path
 from .brulage import enrichir
 from .demo import donnees_demo
 from .adversaires import recuperer
-from .rendu import GABARIT_RESULTATS, generer_html
+from .effectif import recuperer_effectif
+from .rendu import GABARIT_EFFECTIF, GABARIT_RESULTATS, generer_html
 from .reseau import Client, ErreurReseau
 from .resultats import donnees_page, ecrire_xlsx, recuperer_parties
 
@@ -37,10 +38,17 @@ def page_resultats(client, club):
     return [html]
 
 
+def page_effectif(client, club):
+    print("=== Effectif de Vaires : équipes jouées et brûlages", flush=True)
+    donnees = recuperer_effectif(client, club, fichier_etat=CACHE / f"effectif_{club}.json")
+    return [generer_html(donnees, SORTIE / "effectif_vaires.html", GABARIT_EFFECTIF)]
+
+
 def main():
     parser = argparse.ArgumentParser(description="Outils du CVTT Vaires (championnat par équipes)")
     parser.add_argument("--adversaires", action="store_true", help="page des adversaires (choix par défaut)")
     parser.add_argument("--resultats", action="store_true", help="résultats des joueurs de Vaires (page + Excel)")
+    parser.add_argument("--effectif", action="store_true", help="effectif de Vaires : brûlages par joueur et par équipe")
     parser.add_argument("--demo", action="store_true", help="page des adversaires avec des données fictives")
     parser.add_argument("--hors-ligne", action="store_true", help="n'utilise que les pages déjà téléchargées")
     parser.add_argument("--paralleles", type=int, default=2, help="requêtes simultanées (défaut : 2)")
@@ -60,7 +68,9 @@ def main():
         a_faire = []
         if args.resultats:
             a_faire.append(("résultats", page_resultats))
-        if args.adversaires or not args.resultats:
+        if args.effectif:
+            a_faire.append(("effectif", page_effectif))
+        if args.adversaires or not (args.resultats or args.effectif):
             a_faire.append(("adversaires", page_adversaires))
         for nom, fonction in a_faire:
             try:

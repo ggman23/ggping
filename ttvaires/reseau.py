@@ -50,6 +50,7 @@ class Client:
         self.nb_telecharges = 0
         self.nb_cache = 0
         self._echecs = defaultdict(int)  # échecs consécutifs par site
+        self.perimes = {}  # chemin -> date de la copie ancienne utilisée faute de mieux
 
     def _session(self):
         if not hasattr(self._local, "session"):
@@ -64,9 +65,22 @@ class Client:
         """Supprime une page du cache (ex. feuille de match pas encore saisie)."""
         self._fichier(chemin).unlink(missing_ok=True)
 
-    def get(self, chemin, ttl=JOUR, entetes=None, valide=page_valide):
+    def get(self, chemin, ttl=JOUR, entetes=None, valide=page_valide, perime_si_erreur=False):
         """Page (ou réponse JSON) en texte. `entetes` complète les en-têtes HTTP (None en retire un),
-        `valide` dit si une réponse est exploitable (les autres ne sont jamais mises en cache)."""
+        `valide` dit si une réponse est exploitable (les autres ne sont jamais mises en cache).
+        Avec `perime_si_erreur`, une copie ancienne du cache est rendue si le site ne répond pas
+        (sa date est notée dans `self.perimes`)."""
+        try:
+            return self._get(chemin, ttl, entetes, valide)
+        except ErreurReseau:
+            fichier = self._fichier(chemin)
+            if perime_si_erreur and fichier.exists():
+                with self._verrou:
+                    self.perimes[chemin] = fichier.stat().st_mtime
+                return fichier.read_text(encoding="utf-8")
+            raise
+
+    def _get(self, chemin, ttl, entetes, valide):
         fichier = self._fichier(chemin)
         if fichier.exists() and not valide(fichier.read_text(encoding="utf-8")):
             fichier.unlink()  # page d'erreur conservée par une ancienne version

@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Effectif Vaires</title>
+<style>
+:root {
+  --fond: #f4f5f7; --surface: #ffffff; --surface2: #f0f2f5; --texte: #1c2330; --doux: #5b6576;
+  --bord: #dde1e7; --accent: #1f5fbf; --accent-fond: #e7effb;
+  --danger: #b3261e; --danger-fond: #fbe7e5; --ok: #1d7a46; --ok-fond: #e3f4ea;
+  --attention: #8a5a00; --attention-fond: #fff4d6; --rose: #b0306f; --rose-fond: #fbe6f0;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fond: #12151b; --surface: #1b2029; --surface2: #232a35; --texte: #e6e9ef; --doux: #9aa4b5;
+    --bord: #313a48; --accent: #7fb0ff; --accent-fond: #1e2c44;
+    --danger: #ff8f86; --danger-fond: #3d1c1a; --ok: #6fd39b; --ok-fond: #173323;
+    --attention: #f3cd6b; --attention-fond: #3a3014; --rose: #f28dbd; --rose-fond: #3b1d2c;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+header { position: sticky; top: 0; z-index: 5; background: var(--surface); border-bottom: 1px solid var(--bord); }
+.titre { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding: 10px 16px 4px; }
+h1 { font-size: 18px; margin: 0; }
+.titre p { margin: 0; color: var(--doux); font-size: 13px; }
+nav { display: flex; gap: 4px; overflow-x: auto; padding: 4px 12px 0; }
+nav a { flex: none; padding: 8px 12px; text-decoration: none; color: var(--doux); font-weight: 600;
+  border-bottom: 3px solid transparent; white-space: nowrap; }
+nav a:hover { color: var(--texte); }
+nav a.actif { color: var(--accent); border-bottom-color: var(--accent); }
+main { max-width: 1250px; margin: 0 auto; padding: 16px; }
+h2 { font-size: 20px; margin: 4px 0 2px; }
+h3 { font-size: 16px; margin: 0 0 8px; }
+.sous { color: var(--doux); margin: 0 0 14px; }
+.carte { background: var(--surface); border: 1px solid var(--bord); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+.grille2 { display: grid; grid-template-columns: 3fr 2fr; gap: 14px; }
+.grille2 > * { min-width: 0; }
+@media (max-width: 900px) { .grille2 { grid-template-columns: 1fr; } }
+.info { background: var(--accent-fond); color: var(--texte); border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; font-size: 14px; }
+.note { background: var(--attention-fond); color: var(--attention); border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; font-size: 14px; }
+.defil { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--bord); vertical-align: middle; }
+th { color: var(--doux); font-weight: 600; font-size: 13px; white-space: nowrap; }
+th.tri { cursor: pointer; user-select: none; }
+th.tri:hover { color: var(--texte); }
+td.c, th.c { text-align: center; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+th.equipe { text-align: center; }
+.badge { display: inline-block; padding: 1px 7px; border-radius: 99px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.ok { background: var(--ok-fond); color: var(--ok); }
+.brule { background: var(--danger-fond); color: var(--danger); }
+.att { background: var(--attention-fond); color: var(--attention); }
+.neutre { background: var(--surface2); color: var(--doux); }
+.fille { background: var(--rose-fond); color: var(--rose); }
+.nouveau { background: var(--accent-fond); color: var(--accent); }
+.m { display: inline-block; min-width: 22px; padding: 0 4px; border-radius: 6px; font-weight: 700; font-size: 13px;
+  background: var(--surface2); }
+.m.f { background: var(--rose-fond); color: var(--rose); }
+.petit { font-size: 12.5px; color: var(--doux); }
+.outils { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.outils input { padding: 6px 10px; border: 1px solid var(--bord); border-radius: 8px; background: var(--surface);
+  color: var(--texte); font-size: 14px; width: 220px; max-width: 100%; }
+.filtres a { text-decoration: none; padding: 5px 11px; border-radius: 99px; border: 1px solid var(--bord);
+  color: var(--texte); background: var(--surface); font-size: 14px; cursor: pointer; }
+.filtres a.actif { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.vide { color: var(--doux); font-size: 14px; }
+@media (max-width: 640px) { main { padding: 10px; } }
+@media print { header { position: static; } nav, .outils { display: none; } .carte { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="titre"><h1>Effectif de Vaires — brûlages</h1><p id="sous-titre"></p></div>
+  <nav id="onglets"></nav>
+</header>
+<main id="contenu"></main>
+<script id="donnees" type="application/json">__DONNEES_JSON__</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("donnees").textContent);
+const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function fmtDate(iso) { if (!iso) return ""; const d = new Date(iso + "T12:00:00"); return `${JOURS[d.getDay()]} ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`; }
+const MASC = D.equipes.filter((e) => e.championnat === "M");
+const FEM = D.equipes.filter((e) => e.championnat === "F");
+const ACTIFS = D.joueurs.filter((j) => j.renouvele && !j.loisir);
+const maxJ = Math.max(1, ...D.joueurs.flatMap((j) => j.matchs.map((m) => m.j)));
+const pts = (j) => j.points ?? j.points_mensuels;
+const clt = (j) => j.classement ?? (pts(j) ? Math.max(5, Math.floor(pts(j) / 100)) : "—");
+
+function nom(j) {
+  return `${esc(j.nom)} ${esc(j.prenom)}${j.sexe === "F" ? ' <span class="badge fille">F</span>' : ""}`
+    + (j.nouveau ? ` <span class="badge nouveau" title="réinscrit depuis la mise à jour du ${esc((D.precedent || "").slice(0, 10))}">nouveau</span>` : "");
+}
+const ptsTxt = (j) => pts(j) ? `${clt(j)} <span class="petit">${pts(j)}</span>` : "—";
+function matchsJournee(j, jn) {
+  return j.matchs.filter((m) => m.j === jn).map((m) => m.ch === "F"
+    ? `<span class="m f" title="Vaires ${m.n} F, ${fmtDate(m.d)}">${m.n}F</span>`
+    : `<span class="m" title="Vaires ${m.n}, ${fmtDate(m.d)}">${m.n}</span>`).join(" ");
+}
+function statut(j) {
+  const derniere = MASC.length ? MASC[MASC.length - 1].numero : 0;
+  if (j.equipe_max == null) {
+    const une = j.matchs.filter((m) => m.ch === "M");
+    return une.length ? `<span class="badge ok">libre</span> <span class="petit">1 match en V${une[0].n}</span>` : '<span class="badge ok">libre</span>';
+  }
+  if (j.equipe_max >= derniere) return '<span class="badge ok">libre</span>';
+  return `<span class="badge brule">brûlé à partir de V${j.equipe_max + 1}</span>`;
+}
+function resumeMatchs(j, ch) {
+  const compte = {};
+  j.matchs.filter((m) => !ch || m.ch === ch).forEach((m) => { const k = `V${m.n}${m.ch === "F" ? " F" : ""}`; compte[k] = (compte[k] || 0) + 1; });
+  return Object.entries(compte).map(([k, n]) => `${k}${n > 1 ? " ×" + n : ""}`).join(", ") || '<span class="petit">pas encore aligné</span>';
+}
+
+/* ---------- Onglets ---------- */
+let vue = "club", filtre = "tous", recherche = "", tri = { col: "points", sens: -1 };
+function onglets() {
+  const l = [["club", "Club"], ...D.equipes.map((e) => [e.id, e.nom_court]), ["autres", "Non réinscrits · loisirs"]];
+  document.getElementById("onglets").innerHTML = l.map(([id, t]) => `<a href="#${id}" class="${vue === id ? "actif" : ""}">${esc(t)}</a>`).join("");
+}
+function bandeaux() {
+  const p = [];
+  const pm = D.prochaines.M, pf = D.prochaines.F;
+  if (pm || pf) p.push(`<div class="info">Prochaine journée : ${pm ? `masculin J${pm.journee} — ${fmtDate(pm.date)}${pm.heure ? " " + pm.heure : ""}` : ""}${pm && pf ? " · " : ""}${pf ? `féminin J${pf.journee} — ${fmtDate(pf.date)}${pf.heure ? " " + pf.heure : ""}` : ""}.
+    Brûlage calculé avec les feuilles de match déjà saisies.</div>`);
+  if (!D.source.liste) p.push(`<div class="note">Liste des licenciés indisponible (pingpocket.fr ne répond pas) : seuls les joueurs déjà alignés
+    cette phase apparaissent, sans les non réinscrits ni les licences loisir. Relancer plus tard pour la compléter.</div>`);
+  else if (!D.source.a_jour) p.push(`<div class="note">pingpocket.fr ne répond pas : liste des licenciés reprise de la mise à jour du
+    ${esc(D.source.date.slice(0, 16).replace("T", " "))}. Les nouvelles réinscriptions depuis cette date n'apparaissent pas.</div>`);
+  return p.join("");
+}
+
+/* ---------- Vue club ---------- */
+function vueClub() {
+  let liste = ACTIFS.filter((j) => (filtre === "tous" || (filtre === "joue" ? j.matchs.length : !j.matchs.length))
+    && `${j.nom} ${j.prenom}`.toLowerCase().includes(recherche.toLowerCase()));
+  const cle = { joueur: (j) => `${j.nom} ${j.prenom}`, points: (j) => pts(j) || 0, statut: (j) => j.equipe_max ?? 99 }[tri.col];
+  liste = liste.slice().sort((a, b) => { const x = cle(a), y = cle(b); return (typeof x === "string" ? x.localeCompare(y) : x - y) * tri.sens || (pts(b) || 0) - (pts(a) || 0); });
+  const fl = (c) => tri.col === c ? (tri.sens > 0 ? " ▲" : " ▼") : "";
+  const js = Array.from({ length: maxJ }, (_, i) => i + 1);
+  const lignes = liste.map((j) => `<tr>
+    <td>${nom(j)}</td><td>${esc(j.categorie ?? "")}</td><td class="num">${ptsTxt(j)}</td>
+    ${js.map((jn) => `<td class="c">${matchsJournee(j, jn)}</td>`).join("")}
+    ${MASC.map((e) => `<td class="c">${j.brulage[e.numero]?.brule ? `<span class="badge brule" title="2 matchs en équipes plus fortes : V${j.brulage[e.numero].plus_fortes.join(" + V")}">brûlé</span>` : '<span class="badge ok">✓</span>'}</td>`).join("")}
+    ${FEM.map(() => `<td class="c">${j.sexe === "F" ? '<span class="badge ok">✓</span>' : '<span class="petit">—</span>'}</td>`).join("")}
+    <td>${statut(j)}</td></tr>`).join("");
+  const nb = (f) => ACTIFS.filter((j) => f === "tous" || (f === "joue" ? j.matchs.length : !j.matchs.length)).length;
+  return `${bandeaux()}<div class="carte"><h3>Joueurs réinscrits (${ACTIFS.length}) : équipes jouées et brûlage pour chaque équipe</h3>
+    <div class="outils"><input id="recherche" type="search" placeholder="Rechercher un joueur" value="${esc(recherche)}">
+      <span class="filtres">${[["tous", "Tous"], ["joue", "Ont joué"], ["pas", "Pas encore joué"]].map(([f, t]) => `<a data-f="${f}" class="${filtre === f ? "actif" : ""}">${t} (${nb(f)})</a>`).join(" ")}</span></div>
+    <p class="petit">Colonnes J1, J2… : équipe dans laquelle le joueur a joué (<span class="m">4</span> = Vaires 4, <span class="m f">1F</span> = Vaires 1 féminine).
+      Colonnes V1 à V${MASC.length ? MASC[MASC.length - 1].numero : ""} : <span class="badge ok">✓</span> peut jouer, <span class="badge brule">brûlé</span> ne peut plus jouer dans cette équipe.
+      Les matchs en équipe féminine ne comptent pas pour le brûlage masculin.</p>
+    <div class="defil"><table><thead><tr>
+      <th class="tri" data-t="joueur">Joueur${fl("joueur")}</th><th>Cat.</th><th class="num tri" data-t="points">Clt · pts${fl("points")}</th>
+      ${js.map((jn) => `<th class="c">J${jn}</th>`).join("")}
+      ${MASC.map((e) => `<th class="equipe">V${e.numero}</th>`).join("")}${FEM.map((e) => `<th class="equipe">V${e.numero} F</th>`).join("")}
+      <th class="tri" data-t="statut">Statut${fl("statut")}</th></tr></thead><tbody>${lignes}</tbody></table></div></div>`;
+}
+
+/* ---------- Vue d'une équipe ---------- */
+function vueEquipe(e) {
+  const prochaine = D.prochaines[e.championnat];
+  const entete = `${bandeaux()}<h2>${esc(e.nom_court)} <span class="petit">${esc(e.libelle)}</span></h2>
+    <p class="sous">${esc(e.division)}${prochaine ? ` · prochaine rencontre : J${prochaine.journee}, ${fmtDate(prochaine.date)}${prochaine.heure ? " " + prochaine.heure : ""}` : ""}</p>`;
+  if (e.championnat === "F") return entete + vueFeminine(e);
+  const N = e.numero;
+  const possibles = ACTIFS.filter((j) => !j.brulage[N]?.brule);
+  const brules = ACTIFS.filter((j) => j.brulage[N]?.brule);
+  const remarque = (j) => {
+    const r = [];
+    const fortes = j.brulage[N]?.plus_fortes || [];
+    if (fortes.length === 1) r.push(`<span class="badge att" title="Encore 1 match dans une équipe plus forte que V${N} et il sera brûlé pour V${N}">1 match en V${fortes[0]} : plus qu'1</span>`);
+    if (j.habituelle && j.habituelle < N) r.push(`renfort (habituellement V${j.habituelle})`);
+    if (j.habituelle && j.habituelle > N) r.push(`habituellement V${j.habituelle}`);
+    return r.join(" · ");
+  };
+  const ligne = (j, colonne) => `<tr><td>${nom(j)}</td><td>${esc(j.categorie ?? "")}</td><td class="num">${ptsTxt(j)}</td><td>${colonne(j)}</td></tr>`;
+  const table = (liste, titre, colonne) => liste.length
+    ? `<div class="defil"><table><thead><tr><th>Joueur</th><th>Cat.</th><th class="num">Clt · pts</th><th>${titre}</th></tr></thead>
+       <tbody>${liste.map((j) => ligne(j, colonne)).join("")}</tbody></table></div>` : '<p class="vide">Aucun.</p>';
+  return entete + `<div class="grille2">
+    <div class="carte"><h3>Joueurs possibles pour V${N} (${possibles.length})</h3>
+      ${table(possibles, "A joué · remarque", (j) => `${resumeMatchs(j, "M")}${remarque(j) ? `<br><span class="petit">${remarque(j)}</span>` : ""}`)}</div>
+    <div class="carte"><h3>Brûlés pour V${N} (${brules.length})</h3>
+      <p class="petit">2 matchs ou plus dans des équipes plus fortes que V${N}. Dans la liste de gauche,
+        <span class="badge att">plus qu'1</span> signale un joueur à qui il reste un seul match possible en équipe plus forte avant d'être brûlé pour V${N}.</p>
+      ${table(brules, "Brûlé par", (j) => `<span class="badge brule">V${j.brulage[N].plus_fortes.join(" + V")}</span>`)}</div>
+  </div>`;
+}
+function vueFeminine(e) {
+  const filles = ACTIFS.filter((j) => j.sexe === "F");
+  const inconnues = ACTIFS.filter((j) => j.sexe == null).length;
+  const lignes = filles.map((j) => `<tr><td>${nom(j)}</td><td>${esc(j.categorie ?? "")}</td><td class="num">${ptsTxt(j)}</td>
+    <td>${resumeMatchs(j, "F")}</td><td>${j.matchs.some((m) => m.ch === "M") ? resumeMatchs(j, "M") + "<br>" + statut(j) : '<span class="petit">—</span>'}</td></tr>`).join("");
+  return `<div class="info">Une seule équipe féminine : pas de brûlage en championnat féminin. Les matchs joués ici ne comptent pas pour le
+      brûlage masculin, et inversement.</div>
+    <div class="carte"><h3>Joueuses possibles pour ${esc(e.nom_court)} (${filles.length})</h3>
+    ${inconnues ? `<p class="petit">${inconnues} joueur(s) sans sexe connu (liste des licenciés indisponible) ne sont pas listés ici.</p>` : ""}
+    <div class="defil"><table><thead><tr><th>Joueuse</th><th>Cat.</th><th class="num">Clt · pts</th><th>En ${esc(e.nom_court)}</th><th>En masculin (vendredi)</th></tr></thead>
+    <tbody>${lignes}</tbody></table></div></div>`;
+}
+
+/* ---------- Non réinscrits et loisirs ---------- */
+function vueAutres() {
+  const non = D.joueurs.filter((j) => !j.renouvele && !j.loisir);
+  const loisirs = D.joueurs.filter((j) => j.loisir);
+  const table = (liste, titre, vide) => `<div class="carte"><h3>${titre} (${liste.length})</h3>${liste.length
+    ? `<div class="defil"><table><thead><tr><th>Joueur</th><th>Cat.</th><th class="num">Clt · pts</th></tr></thead><tbody>
+       ${liste.map((j) => `<tr><td>${nom(j)}</td><td>${esc(j.categorie ?? "")}</td><td class="num">${ptsTxt(j)}</td></tr>`).join("")}</tbody></table></div>`
+    : `<p class="vide">${vide}</p>`}</div>`;
+  if (!D.source.liste) return bandeaux();
+  return bandeaux() + `<div class="grille2">${table(non, "Licences non renouvelées", "Tous les licenciés ont renouvelé.")}
+    ${table(loisirs, "Licences loisir (ne peuvent pas jouer en championnat)", "Aucune licence loisir.")}</div>`;
+}
+
+/* ---------- Démarrage ---------- */
+function afficher() {
+  onglets();
+  const e = D.equipes.find((x) => x.id === vue);
+  const main = document.getElementById("contenu");
+  main.innerHTML = vue === "autres" ? vueAutres() : e ? vueEquipe(e) : vueClub();
+  main.querySelectorAll("th.tri").forEach((th) => th.addEventListener("click", () => {
+    const col = th.dataset.t;
+    tri = tri.col === col ? { col, sens: -tri.sens } : { col, sens: col === "points" ? -1 : 1 };
+    afficher();
+  }));
+  main.querySelectorAll(".filtres a").forEach((a) => a.addEventListener("click", () => { filtre = a.dataset.f; afficher(); }));
+  const champ = document.getElementById("recherche");
+  if (champ) champ.addEventListener("input", () => {
+    recherche = champ.value;
+    const pos = champ.selectionStart;
+    afficher();
+    const nouveau = document.getElementById("recherche");
+    nouveau.focus(); nouveau.setSelectionRange(pos, pos);
+  });
+}
+function route() {
+  const h = location.hash.slice(1);
+  vue = h === "autres" || D.equipes.some((e) => e.id === h) ? h : "club";
+  afficher();
+  window.scrollTo(0, 0);
+}
+document.getElementById("sous-titre").textContent =
+  `${D.club.nom} · phase ${D.phase} ${D.saison} · données du ${new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`;
+window.addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>

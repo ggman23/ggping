@@ -5,6 +5,7 @@ from pathlib import Path
 
 GABARIT = Path(__file__).with_name("gabarit.html")
 GABARIT_RESULTATS = Path(__file__).with_name("gabarit_resultats.html")
+GABARIT_EFFECTIF = Path(__file__).with_name("gabarit_effectif.html")
 
 
 def generer_html(donnees, chemin, gabarit=GABARIT):

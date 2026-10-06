@@ -25,6 +25,15 @@ journée apparaît dans les deux équipes, et ses points se cumulent.
 Les résultats viennent de l'**API publique de la FFTT** (celle des pages de consultation de
 monclub.fftt.com, lisible sans identifiant) : quelques secondes suffisent.
 
+Une troisième page, **Effectif de Vaires** (`sortie\effectif_vaires.html`), donne la vue du
+club pour les capitaines : tous les joueurs réinscrits, les équipes dans lesquelles ils ont joué à
+chaque journée, et pour chaque équipe s'ils peuvent encore y jouer ou s'ils sont brûlés ; un
+onglet par équipe liste les joueurs possibles et les joueurs brûlés ; un dernier onglet liste les
+non réinscrits et les licences loisir. La liste des licenciés est revérifiée à chaque lancement
+(les nouveaux réinscrits sont signalés). Championnats masculin et féminin sont indépendants :
+une joueuse alignée en masculin y est traitée comme les garçons, ses matchs en équipe féminine
+ne comptent pas pour le brûlage masculin.
+
 Le détail des besoins et des règles de brûlage appliquées est dans
 [CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md).
 
@@ -51,8 +60,9 @@ sature vite, l'outil reste discret), les suivants ne retéléchargent que ce qui
    propose :
    1. Adversaires (effectifs, brûlages, calendrier) ;
    2. Résultats des joueurs de Vaires (page + Excel) — rapide, moins d'une minute ;
-   3. les deux ;
-   4. la page de démonstration.
+   3. Effectif de Vaires : brûlages par joueur et par équipe — rapide ;
+   4. tout : les trois pages ;
+   5. la page de démonstration.
 
    Les pages s'ouvrent dans le navigateur et sont enregistrées dans le dossier `sortie\`.
 
@@ -64,7 +74,7 @@ aux capitaines, elle s'ouvre sans Internet.
 
 Options (dans une invite de commandes, dans le dossier du projet) :
 
-- `lancer.bat --adversaires`, `lancer.bat --resultats` : lance directement une page, sans menu ;
+- `lancer.bat --adversaires`, `--resultats`, `--effectif` : lance directement une page, sans menu ;
 - `--hors-ligne` (à ajouter) : régénère sans rien télécharger (cache uniquement) ;
 - `lancer.bat --demo` : page de démonstration avec des données fictives.
 
@@ -83,14 +93,17 @@ python -m pytest
 ```
 ttvaires/
   __main__.py    Point d'entrée (python -m ttvaires)
-  pingpocket.py  Lecture des pages pingpocket.fr et assemblage des données
+  adversaires.py Données de la page adversaires (API FFTT + compléments pingpocket)
+  pingpocket.py  Compléments lus sur pingpocket.fr (licenciés, salles, historiques)
   reseau.py      Téléchargements : cache disque, requêtes parallèles, nouvelles tentatives
   brulage.py     Règles de brûlage et analyse de chaque rencontre
   fftt.py        Accès à l'API publique de la FFTT (rencontres, feuilles de match)
   resultats.py   Résultats des joueurs de Vaires : points virtuels, page et classeur Excel
+  effectif.py    Effectif de Vaires : équipes jouées, brûlage par joueur et par équipe
   rendu.py       Génération de la page HTML (un seul fichier)
   gabarit.html   Mise en page de la page adversaires (HTML/CSS/JavaScript)
   gabarit_resultats.html  Mise en page de la page résultats
+  gabarit_effectif.html   Mise en page de la page effectif
   demo.py        Données fictives pour tester sans Internet
 tests/           Tests (brûlage, lecture des pages, points virtuels)
 ```

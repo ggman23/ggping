@@ -117,10 +117,10 @@ def resume_historique(points):
 # ---------------------------------------------------------------------------
 
 
-def effectif(pages, liens):
+def licencies(pages, liens):
     """Fusionne les listes de licenciés d'un club (catégories, classements, état des licences).
 
-    Les licences loisir (affichées 'L' à la place des points) sont écartées.
+    Chaque joueur porte `loisir` (licence loisir : « L » à la place des points) et `renouvele`.
     """
     joueurs = {}
     for titre, liste in lire_liste_licencies(pages.get(liens["categories"]) or ""):
@@ -140,4 +140,9 @@ def effectif(pages, liens):
         for j in liste:
             if j["licence"] in joueurs:
                 joueurs[j["licence"]]["renouvele"] = not titre.lower().startswith("licences non")
-    return [j for j in joueurs.values() if not j.pop("loisir")]
+    return list(joueurs.values())
+
+
+def effectif(pages, liens):
+    """Licenciés du club hors licences loisir."""
+    return [j for j in licencies(pages, liens) if not j.pop("loisir")]

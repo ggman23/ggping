@@ -51,22 +51,27 @@ echo    CVTT Vaires - championnat par equipes
 echo  ==================================================
 echo    1. Adversaires : effectifs, brulages, calendrier
 echo    2. Resultats des joueurs de Vaires : page + Excel
-echo    3. Les deux
-echo    4. Page de demonstration, donnees fictives
-echo    5. Quitter
+echo    3. Effectif de Vaires : brulages par joueur et par equipe
+echo    4. Tout : les trois pages
+echo    5. Page de demonstration, donnees fictives
+echo    6. Quitter
 echo.
-choice /c 12345 /n /m "  Votre choix, de 1 a 5 : "
-if errorlevel 5 exit /b 0
-if errorlevel 4 goto demo
-if errorlevel 3 goto les_deux
+choice /c 123456 /n /m "  Votre choix, de 1 a 6 : "
+if errorlevel 6 exit /b 0
+if errorlevel 5 goto demo
+if errorlevel 4 goto tout
+if errorlevel 3 goto effectif
 if errorlevel 2 goto resultats
 python -m ttvaires --adversaires
 goto fin
 :demo
 python -m ttvaires --demo
 goto fin
-:les_deux
-python -m ttvaires --resultats --adversaires
+:tout
+python -m ttvaires --resultats --effectif --adversaires
+goto fin
+:effectif
+python -m ttvaires --effectif
 goto fin
 :resultats
 python -m ttvaires --resultats

@@ -98,3 +98,18 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
 - Les données des licenciés (effectifs complets, catégories, historique des classements,
   adresses des salles) ne sont pas publiques dans cette API : elles restent lues sur pingpocket
   quand il répond ; sinon la page indique que l'effectif est limité aux joueurs déjà alignés.
+
+## Page « Effectif de Vaires » (06/10/2026)
+
+- Option 3 du menu. Vue club : tous les réinscrits, l'équipe jouée à chaque journée, et pour
+  chaque équipe de Vaires « ✓ » (peut jouer) ou « brûlé ». Un onglet par équipe : joueurs
+  possibles (avec alerte quand il ne reste qu'un match possible en équipe plus forte) et joueurs
+  brûlés. Un onglet « Non réinscrits · loisirs ».
+- La liste des licenciés est revérifiée à chaque lancement (pingpocket.fr) ; les réinscrits
+  depuis le lancement précédent sont marqués « nouveau ». Si pingpocket ne répond pas, la
+  dernière liste obtenue est reprise (avec sa date), sinon seuls les joueurs déjà alignés
+  apparaissent.
+- Championnats masculin et féminin indépendants : une joueuse alignée en masculin y est traitée
+  comme les garçons (2 matchs en équipe 4 → brûlée pour 5 et 6, disponible de 1 à 4) ; ses
+  matchs en Vaires 1 F ne comptent pas pour le masculin. Une seule équipe féminine : pas de
+  brûlage en féminin.
