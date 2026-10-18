@@ -41,7 +41,7 @@ class Client:
     ttl : durée de validité du cache en secondes (None = page conservée indéfiniment).
     """
 
-    def __init__(self, dossier_cache, paralleles=2, hors_ligne=False, tentatives=5, pause=0.3):
+    def __init__(self, dossier_cache, paralleles=2, hors_ligne=False, tentatives=5, pause=0.3, sites_cache_seul=()):
         self.dossier = Path(dossier_cache)
         self.dossier.mkdir(parents=True, exist_ok=True)
         self.paralleles = paralleles
@@ -56,12 +56,19 @@ class Client:
         self.perimes = {}  # chemin -> date de la copie ancienne utilisée faute de mieux
         self._dernier = defaultdict(float)  # site -> heure de la dernière requête
         self._verrous_sites = defaultdict(threading.Lock)
+        # Sites jamais interrogés : seules les pages déjà en cache servent, même anciennes
+        # (mise à jour en ligne : pages de pingpocket envoyées par le PC).
+        self.sites_cache_seul = set(sites_cache_seul)
 
     def _session(self):
         if not hasattr(self._local, "session"):
             self._local.session = requests.Session()
             self._local.session.headers.update(ENTETES)
         return self._local.session
+
+    @staticmethod
+    def site(chemin):
+        return urlparse(chemin if chemin.startswith("http") else BASE + chemin).netloc
 
     def _fichier(self, chemin):
         return self.dossier / (hashlib.sha1(chemin.encode("utf-8")).hexdigest() + ".html")
@@ -78,7 +85,8 @@ class Client:
     def en_cache(self, chemin, ttl):
         """Vrai si la page est en cache et encore valable (aucune requête ne sera faite)."""
         date = self.date(chemin)
-        return date is not None and (self.hors_ligne or ttl is None or time.time() - date < ttl)
+        return date is not None and (self.hors_ligne or ttl is None or time.time() - date < ttl
+                                     or self.site(chemin) in self.sites_cache_seul)
 
     def get(self, chemin, ttl=JOUR, entetes=None, valide=page_valide, perime_si_erreur=False):
         """Page (ou réponse JSON) en texte. `entetes` complète les en-têtes HTTP (None en retire un),
@@ -108,6 +116,8 @@ class Client:
 
         url = chemin if chemin.startswith("http") else BASE + chemin
         site = urlparse(url).netloc
+        if site in self.sites_cache_seul:
+            raise ErreurReseau(f"{chemin} : absente des données envoyées par le PC")
         if self._echecs[site] >= ECHECS_AVANT_ABANDON:
             raise ErreurReseau(f"{site} ne répond pas correctement : abandonné pour ce lancement")
         derniere_erreur = None
@@ -170,10 +180,11 @@ class Client:
             try:
                 return chemin, self.get(chemin, ttl, **options)
             except ErreurReseau as e:
-                if self.disponible(urlparse(chemin if chemin.startswith("http") else BASE).netloc):
+                site = self.site(chemin)
+                if self.disponible(site) and site not in self.sites_cache_seul:
                     print(f"  ! {e}")
                 else:
-                    abandons.append(chemin)  # site abandonné : un seul message à la fin
+                    abandons.append(chemin)  # site abandonné ou non interrogé : un seul message à la fin
                 return chemin, None
 
         with ThreadPoolExecutor(self.paralleles) as ex:
@@ -182,5 +193,8 @@ class Client:
                 if message and (i % 25 == 0 or i == len(chemins)):
                     print(f"  {message} : {i}/{len(chemins)}", flush=True)
         if abandons:
-            print(f"  ! {len(abandons)} pages non récupérées : site abandonné pour ce lancement (trop d'erreurs)")
+            if all(self.site(c) in self.sites_cache_seul for c in abandons):
+                print(f"  ! {len(abandons)} pages absentes des données envoyées par le PC")
+            else:
+                print(f"  ! {len(abandons)} pages non récupérées : site abandonné pour ce lancement (trop d'erreurs)")
         return resultats

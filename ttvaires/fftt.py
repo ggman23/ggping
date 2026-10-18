@@ -104,11 +104,13 @@ def rencontres_club(client, id_club, debut, fin, ttl):
     """Rencontres de championnat par équipes d'un club entre deux dates (sans le détail)."""
     filtre = (f"{_q('or[homeOpponent.team.clubs.id]')}={id_club}&{_q('or[awayOpponent.team.clubs.id]')}={id_club}"
               f"&{_q('date[after]')}={debut}&{_q('date[before]')}={fin}&{_q('order[date]')}=asc&itemsPerPage=100")
-    return [r for r in lire_tout(client, f"/sport_matches?{filtre}", ttl) if championnat_par_equipes(r)]
+    rencontres = [r for r in lire_tout(client, f"/sport_matches?{filtre}", ttl) if championnat_par_equipes(r)]
+    return sorted(rencontres, key=lambda r: (r["date"], r["id"]))  # l'API ne garantit pas l'ordre à date égale
 
 
 def rencontres_poule(client, id_poule, ttl):
-    return lire_tout(client, f"/sport_matches?{_q('pool.id')}={id_poule}&itemsPerPage=100", ttl)
+    return sorted(lire_tout(client, f"/sport_matches?{_q('pool.id')}={id_poule}&itemsPerPage=100", ttl),
+                  key=lambda r: (r["date"], r["id"]))
 
 
 def details(client, rencontres, aujourdhui, etats=None):

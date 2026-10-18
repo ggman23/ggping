@@ -37,7 +37,7 @@ if not exist .venv (
     call .venv\Scripts\activate.bat
 )
 REM Mise a jour des dependances si une nouvelle version de l'outil en demande.
-python -c "import requests, bs4, openpyxl" >nul 2>nul || python -m pip install -r requirements.txt
+python -c "import requests, bs4, openpyxl, cryptography" >nul 2>nul || python -m pip install -r requirements.txt
 
 if not "%~1"=="" (
     python -m ttvaires %*
@@ -55,16 +55,21 @@ echo    3. Effectif de Vaires : brulages par joueur et par equipe
 echo    4. Classement virtuel du club : toutes competitions
 echo    5. Tout : les quatre pages
 echo    6. Page de demonstration, donnees fictives
-echo    7. Quitter
+echo    7. Lien avec le telephone : reglage et envoi des donnees au site
+echo    8. Quitter
 echo.
-choice /c 1234567 /n /m "  Votre choix, de 1 a 7 : "
-if errorlevel 7 exit /b 0
+choice /c 12345678 /n /m "  Votre choix, de 1 a 8 : "
+if errorlevel 8 exit /b 0
+if errorlevel 7 goto telephone
 if errorlevel 6 goto demo
 if errorlevel 5 goto tout
 if errorlevel 4 goto virtuel
 if errorlevel 3 goto effectif
 if errorlevel 2 goto resultats
 python -m ttvaires --adversaires
+goto fin
+:telephone
+python -m ttvaires.synchro --configurer
 goto fin
 :demo
 python -m ttvaires --demo

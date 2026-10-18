@@ -164,6 +164,7 @@ function bandeaux(avecAide = true) {
   else if (src.origine === "import") p.push(`<div class="${vieille ? "note-site" : "info"}">Liste des joueurs : page(s) enregistrée(s)
     depuis le navigateur le ${quand} (dossier import).${vieille ? " Pense à la réenregistrer pour ajouter les nouveaux réinscrits." : ""}</div>`);
   else if (src.origine === "cache") p.push(`<div class="note-site">pingpocket.fr ne répond pas : liste des joueurs reprise de la mise à jour du ${quand}.</div>`);
+  else if (src.origine === "pc") p.push(`<div class="info">Liste des joueurs lue sur pingpocket.fr par le PC le ${quand} (mise à jour en ligne).</div>`);
   if (avecAide && !src.a_jour && src.liens) p.push(`<details class="aide"${src.liste ? "" : " open"}><summary>Compléter la liste des joueurs à la main</summary>
     <ol><li>Ouvre ces listes dans ton navigateur :
       <a href="${esc(src.liens.categories)}" target="_blank" rel="noopener">par catégorie d'âge</a>,

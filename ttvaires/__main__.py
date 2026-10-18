@@ -15,7 +15,7 @@ from .rendu import GABARIT_EFFECTIF, GABARIT_RESULTATS, GABARIT_VIRTUEL, generer
 from .reseau import Client, ErreurReseau
 from .resultats import donnees_page, ecrire_xlsx, recuperer_parties
 from .virtuel import recuperer_virtuel
-from . import verifications
+from . import synchro, verifications
 
 RACINE = Path(__file__).resolve().parent.parent
 SORTIE = RACINE / "sortie"
@@ -71,6 +71,9 @@ def main():
     parser.add_argument("--paralleles", type=int, default=2, help="requêtes simultanées (défaut : 2)")
     parser.add_argument("--club", default=CLUB_VAIRES, help="numéro FFTT du club (défaut : Vaires)")
     parser.add_argument("--pas-de-navigateur", action="store_true", help="n'ouvre pas les pages à la fin")
+    parser.add_argument("--pingpocket-cache", action="store_true",
+                        help="n'interroge pas pingpocket.fr : seules les pages déjà en cache servent (mise à jour en ligne)")
+    parser.add_argument("--sans-envoi", action="store_true", help="n'envoie pas les données au site (téléphone)")
     args = parser.parse_args()
 
     debut = time.time()
@@ -81,7 +84,8 @@ def main():
         enrichir(donnees)
         pages = [generer_html(donnees, SORTIE / "vaires_demo.html")]
     else:
-        client = Client(CACHE, paralleles=args.paralleles, hors_ligne=args.hors_ligne)
+        client = Client(CACHE, paralleles=args.paralleles, hors_ligne=args.hors_ligne,
+                        sites_cache_seul={"www.pingpocket.fr"} if args.pingpocket_cache else ())
         pages, bilans = [], []
         a_faire = []
         if args.resultats:
@@ -101,9 +105,12 @@ def main():
                 print(f"\n!!! Page {nom} non générée : {e}\n")
                 bilans.append((nom, f"PAGE NON GÉNÉRÉE ({e})", []))
         print(f"Pages téléchargées : {client.nb_telecharges}, reprises du cache : {client.nb_cache}")
+        envoi = None if args.sans_envoi or args.pingpocket_cache else synchro.apres_lancement()
         print("\n=== Bilan des vérifications ===")
         for nom, resume, _ in bilans:
             print(f"  {nom} : {resume}")
+        if envoi:
+            print(f"  site (téléphone) : {envoi}")
         print()
         # Bilan lu par la publication du site (python -m ttvaires.publier)
         (SORTIE / "bilan.json").write_text(json.dumps({

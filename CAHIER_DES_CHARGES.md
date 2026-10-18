@@ -202,3 +202,21 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
   (listes des licenciés non publiées) : effectifs limités aux joueurs alignés.
 - Mise en place par le propriétaire du dépôt : activer Pages (source GitHub Actions), créer le
   secret, premier lancement. Voir PUBLICATION.md.
+
+## Même résultat sur le PC et sur le téléphone (18/10/2026)
+
+- Exigence : les pages produites en ligne doivent être exactement celles du PC (sinon la mise à
+  jour par téléphone ne sert pas).
+- Écarts à combler : pingpocket.fr inaccessible depuis GitHub, dossier `import` seulement sur le PC.
+- Solution : après chaque lancement sur le PC (si le lien est réglé, option 7), l'outil envoie sur
+  GitHub une archive chiffrée (mot de passe du site) du dossier `import`, des pages de pingpocket
+  en cache et de l'état de la page effectif, pièce jointe de la version « donnees-pc » (remplacée
+  à chaque envoi), puis lance la mise à jour du site. En ligne, l'archive est déchiffrée et
+  extraite avec les dates d'origine, et pingpocket n'est pas interrogé (mode « cache seul ») ;
+  l'API FFTT est relue en direct.
+- Ajustements pour l'égalité stricte : la page adversaires reprend les dernières pages de
+  pingpocket téléchargées quand le site ne répond pas (sur le PC comme en ligne) ; l'ordre des
+  rencontres de l'API (variable à date égale) est fixé ; les joueurs « nouveaux » restent signalés
+  tant que la liste des licenciés ne change pas (relancer ne les efface plus).
+- Contrôle : lancement PC puis lancement en ligne à partir de l'archive : données identiques pour
+  les quatre pages (hors heure de génération) et même contenu Excel.

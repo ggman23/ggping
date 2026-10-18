@@ -1,5 +1,7 @@
-# Mise à jour du site depuis un téléphone : récupère les données (API FFTT), chiffre les pages
-# avec le mot de passe du club et les publie sur GitHub Pages.
+# Mise à jour du site depuis un téléphone : récupère les données (API FFTT, plus les données
+# envoyées par le PC : dossier import et pages de pingpocket.fr), chiffre les pages avec le mot
+# de passe du club et les publie sur GitHub Pages. Le PC lance aussi ce workflow après chaque
+# lancement de lancer.bat (si le lien avec le téléphone est réglé : option 7).
 # Lancement : bouton « Mettre à jour » de la page d'accueil du site, ou GitHub (appli ou site) :
 # Actions > Mise à jour du site > Run workflow. Mise en place : voir PUBLICATION.md.
 name: Mise à jour du site
@@ -45,7 +47,7 @@ jobs:
           cache: pip
 
       - name: Installation
-        run: pip install -r requirements.txt cryptography
+        run: pip install -r requirements.txt
 
       - name: Données déjà téléchargées (cache)
         uses: actions/cache@v4
@@ -53,6 +55,20 @@ jobs:
           path: cache
           key: donnees-${{ github.run_id }}
           restore-keys: donnees-
+
+      - name: Mot de passe du site
+        env:
+          MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
+        run: |
+          if [ -z "$MOT_DE_PASSE_SITE" ]; then
+            echo "::error::Ajoutez le secret MOT_DE_PASSE_SITE (Settings > Secrets and variables > Actions). Rien n'est publié sans mot de passe."
+            exit 1
+          fi
+
+      - name: Données envoyées par le PC (dossier import, pages de pingpocket.fr)
+        env:
+          MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
+        run: python -m ttvaires.synchro --recevoir
 
       - name: Récupération des données
         env:
@@ -63,16 +79,8 @@ jobs:
             resultats|effectif|virtuel|adversaires) ARGS="--$CHOIX" ;;
             *) echo "::error::Choix inconnu : $CHOIX"; exit 1 ;;
           esac
-          python -m ttvaires $ARGS --pas-de-navigateur
-
-      - name: Mot de passe du site
-        env:
-          MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
-        run: |
-          if [ -z "$MOT_DE_PASSE_SITE" ]; then
-            echo "::error::Ajoutez le secret MOT_DE_PASSE_SITE (Settings > Secrets and variables > Actions). Rien n'est publié sans mot de passe."
-            exit 1
-          fi
+          # pingpocket.fr refuse les serveurs de GitHub : on utilise ses pages envoyées par le PC
+          python -m ttvaires $ARGS --pas-de-navigateur --pingpocket-cache
 
       - name: Réglage de GitHub Pages
         id: pages

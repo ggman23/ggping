@@ -154,6 +154,8 @@ function bandeaux() {
     seuls les joueurs déjà alignés cette phase apparaissent, sans les non réinscrits ni les licences loisir.</div>`);
   else if (src.origine === "import") p.push(`<div class="${vieille ? "note" : "info"}">Liste des licenciés : page(s) enregistrée(s)
     depuis le navigateur le ${quand} (dossier import).${vieille ? " Pense à la réenregistrer pour voir les nouvelles réinscriptions." : ""}</div>`);
+  else if (src.origine === "pc") p.push(`<div class="info">Liste des licenciés lue sur pingpocket.fr par le PC le ${quand}
+    (mise à jour en ligne).</div>`);
   else if (src.origine === "cache") p.push(`<div class="note">pingpocket.fr ne répond pas : liste des licenciés reprise de la mise à jour du
     ${quand}. Les nouvelles réinscriptions depuis cette date n'apparaissent pas.</div>`);
   if (src.liste && (src.manquantes || []).includes("etat")) p.push(`<div class="note">Liste « par licences à jour » absente :

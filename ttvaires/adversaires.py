@@ -222,12 +222,16 @@ def completer_avec_pingpocket(client, donnees, dossier_import=None):
     liens = {num: {"salle": f"/app/fftt/clubs/{num}/coordonnees",
                    **{t: f"/app/fftt/clubs/{num}/licencies?SORT={tri}" for t, tri in TRIS.items()}} for num in clubs}
     try:
-        donnees["club"]["salle"] = pingpocket.lire_salle(client.get(f"/app/fftt/clubs/{numero_club}/coordonnees", 30 * JOUR))
+        donnees["club"]["salle"] = pingpocket.lire_salle(
+            client.get(f"/app/fftt/clubs/{numero_club}/coordonnees", 30 * JOUR, perime_si_erreur=True))
     except ErreurReseau as err:
         print(f"  ! pingpocket.fr indisponible ({err}).")
         pages = {}
     else:
-        pages = client.get_plusieurs([u for l in liens.values() for u in l.values()], ttl=JOUR, message="pages clubs")
+        # Si le site ne répond plus, la dernière copie téléchargée sert (sur le PC comme en ligne,
+        # où les pages de pingpocket sont celles envoyées par le PC).
+        pages = client.get_plusieurs([u for l in liens.values() for u in l.values()], ttl=JOUR, message="pages clubs",
+                                     perime_si_erreur=True)
     complets = importes = 0
     for num, club in clubs.items():
         l = liens[num]
@@ -257,9 +261,10 @@ def completer_avec_pingpocket(client, donnees, dossier_import=None):
     if complets < len(clubs):
         print("    Effectifs manquants : la page les limite aux joueurs déjà alignés. Ils se complètent aux lancements")
         print("    suivants, ou en enregistrant les listes du club dans le dossier import (voir import/LISEZ-MOI.txt).")
-    if not client.disponible(SITE_PINGPOCKET) or not pages:
-        print("  ! pingpocket.fr ne répond pas : meilleurs classements non récupérés.")
+    if not pages:
+        print("  ! aucune page de pingpocket.fr disponible : meilleurs classements non récupérés.")
         return
+    muet = not client.disponible(SITE_PINGPOCKET) or SITE_PINGPOCKET in client.sites_cache_seul
 
     # 5. Meilleur classement : historique des joueurs (gardé 20 jours en cache). Les joueurs restés à
     # 500 points qui n'ont pas joué n'ont en pratique jamais été mieux classés : on épargne ces pages.
@@ -271,12 +276,14 @@ def completer_avec_pingpocket(client, donnees, dossier_import=None):
     chemin = "/app/fftt/licencies/{}/graphiques/historique-classement"
     # Une page toutes les 4 secondes : on en lit au plus MAX_HISTORIQUES par lancement (les joueurs
     # alignés d'abord) ; les suivants sont lus aux lancements suivants (gardés 20 jours en cache).
-    a_telecharger = [j for j in a_lire if not client.en_cache(chemin.format(j["licence"]), 20 * JOUR)]
+    a_telecharger = [] if muet else [j for j in a_lire if not client.en_cache(chemin.format(j["licence"]), 20 * JOUR)]
     reportes = {j["id"] for j in a_telecharger[MAX_HISTORIQUES:]}
     a_lire = [j for j in a_lire if j["id"] not in reportes]
-    print(f"5/5 Historiques des joueurs : {len(a_lire)} (pingpocket.fr)"
+    print(f"5/5 Historiques des joueurs : {len(a_lire)} ("
+          + ("pages déjà téléchargées, pingpocket.fr non interrogé" if muet else "pingpocket.fr") + ")"
           + (f", {len(reportes)} reportés au prochain lancement" if reportes else ""), flush=True)
-    pages = client.get_plusieurs([chemin.format(j["licence"]) for j in a_lire], ttl=20 * JOUR, message="historiques")
+    pages = client.get_plusieurs([chemin.format(j["licence"]) for j in a_lire], ttl=20 * JOUR, message="historiques",
+                                 perime_si_erreur=True)
     for j in a_lire:
         html = pages.get(chemin.format(j["licence"]))
         if html:

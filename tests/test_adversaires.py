@@ -92,6 +92,8 @@ ETAT = _ecran("par licences à jour", [("Licences à jour", [("1", "ALIGNE Paul"
 
 
 class FauxPingpocket:
+    sites_cache_seul = set()
+
     def __init__(self, en_ligne, pages=None, en_cache=()):
         self.en_ligne, self.pages, self.caches, self.demandes = en_ligne, pages or {}, set(en_cache), []
 

@@ -138,7 +138,9 @@ def liste_licencies(client, numero_club, dossier_import=None):
     """
     liens = {type_: f"/app/fftt/clubs/{numero_club}/licencies?SORT={tri}" for type_, tri in TRIS.items()}
     pages = client.get_plusieurs(list(liens.values()), ttl=HEURE, perime_si_erreur=True)
-    listes = {type_: {"html": pages[u], "date": client.date(u) or time.time(), "origine": "cache" if u in client.perimes else "pingpocket"}
+    en_ligne = "www.pingpocket.fr" in getattr(client, "sites_cache_seul", ())  # mise à jour sur GitHub
+    listes = {type_: {"html": pages[u], "date": client.date(u) or time.time(),
+                      "origine": ("pc" if en_ligne else "cache") if u in client.perimes else "pingpocket"}
               for type_, u in liens.items() if pages.get(u)}
     for type_, importee in _listes_importees(dossier_import, numero_club).items():
         if type_ not in listes or importee["date"] > listes[type_]["date"]:
@@ -167,6 +169,7 @@ def _source(listes, numero_club):
     """Provenance de la liste des licenciés, affichée dans la page.
 
     origine : « pingpocket » (lue à l'instant), « cache » (site muet : dernière liste obtenue),
+    « pc » (mise à jour en ligne : liste lue sur pingpocket par le PC et envoyée sur GitHub),
     « import » (page enregistrée depuis un navigateur), None (aucune liste).
     """
     source = {"liste": "categories" in listes, "a_jour": False, "date": None, "origine": None,
@@ -175,9 +178,9 @@ def _source(listes, numero_club):
     if source["liste"]:
         origines = {l["origine"] for l in listes.values()}
         source.update(
-            a_jour=origines == {"pingpocket"},
+            a_jour=origines <= {"pingpocket", "pc"},
             date=_iso(min(l["date"] for l in listes.values())),
-            origine=next(o for o in ("import", "cache", "pingpocket") if o in origines),
+            origine=next(o for o in ("import", "cache", "pc", "pingpocket") if o in origines),
             fichiers=sorted({l["fichier"] for l in listes.values() if l.get("fichier")}))
     return source
 
@@ -189,6 +192,8 @@ def _annoncer(source):
         print("    Réenregistre-les de temps en temps pour voir les nouvelles réinscriptions (import/LISEZ-MOI.txt).")
     elif source["origine"] == "cache":
         print(f"  ! pingpocket.fr ne répond pas : reprise de la liste du {date}")
+    elif source["origine"] == "pc":
+        print(f"  liste des licenciés : lue sur pingpocket.fr par le PC le {date}")
     elif not source["liste"]:
         print("  ! Liste des licenciés indisponible : seuls les joueurs déjà alignés apparaissent.")
     if source["liste"] and "etat" in source["manquantes"]:
@@ -201,17 +206,25 @@ def _annoncer(source):
 
 
 def _nouveaux(joueurs, fichier_etat, source):
-    """Marque les joueurs réinscrits depuis le lancement précédent et mémorise la liste actuelle."""
+    """Marque les joueurs réinscrits depuis le dernier changement de la liste et la mémorise.
+
+    Tant que la liste ne change pas, les mêmes joueurs restent « nouveaux » (relancer ne les
+    efface pas, et la mise à jour en ligne, qui reprend cet état envoyé par le PC, affiche les
+    mêmes). Renvoie la date de la liste de référence.
+    """
     if not fichier_etat or not source["liste"]:
         return None
     fichier = Path(fichier_etat)
     precedent = json.loads(fichier.read_text(encoding="utf-8")) if fichier.exists() else None
     actuels = sorted(j["id"] for j in joueurs.values() if j["renouvele"] and not j["loisir"])
-    if precedent:
-        nouveaux = set(actuels) - set(precedent["renouveles"])
+    inchangee = precedent is not None and set(precedent["renouveles"]) == set(actuels)
+    reference = precedent.get("avant") if inchangee else precedent
+    if reference:
+        nouveaux = set(actuels) - set(reference["renouveles"])
         for j in joueurs.values():
             j["nouveau"] = j["id"] in nouveaux
-    if precedent is None or source["date"] > precedent["date"]:  # liste plus récente que la mémorisée
+    if not inchangee and (precedent is None or source["date"] > precedent["date"]):  # liste plus récente
         fichier.parent.mkdir(parents=True, exist_ok=True)
-        fichier.write_text(json.dumps({"date": source["date"], "renouveles": actuels}), encoding="utf-8")
-    return precedent["date"] if precedent else None
+        avant = {"date": precedent["date"], "renouveles": precedent["renouveles"]} if precedent else None
+        fichier.write_text(json.dumps({"date": source["date"], "renouveles": actuels, "avant": avant}), encoding="utf-8")
+    return reference["date"] if reference else None

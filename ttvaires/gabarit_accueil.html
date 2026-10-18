@@ -77,7 +77,8 @@ a { color: var(--accent); }
         <li>Ouvre <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Fine-grained tokens → Generate new token</a>
           (connecté avec ton compte GitHub).</li>
         <li>Nom : « Vaires téléphone » ; expiration : 1 an ; <i>Repository access</i> : <b>Only select repositories</b> → <b id="nom-depot"></b>.</li>
-        <li><i>Permissions → Repository permissions → Actions</i> : <b>Read and write</b>. Rien d'autre.</li>
+        <li><i>Permissions → Repository permissions → Actions</i> : <b>Read and write</b> (ajouter <i>Contents : Read and
+          write</i> pour utiliser le même jeton sur le PC, option 7 de lancer.bat). Rien d'autre.</li>
         <li>« Generate token », copie le jeton (il commence par <code>github_pat_</code>) et colle-le ici :</li>
       </ol>
       <input type="password" id="jeton" placeholder="github_pat_…" autocomplete="off" aria-label="Jeton GitHub">

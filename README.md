@@ -125,7 +125,9 @@ les rencontres incomplètes sont retéléchargées à chaque lancement.
 Les mises à jour peuvent aussi être lancées depuis un téléphone : GitHub génère les pages sur ses
 serveurs et les publie, chiffrées par un mot de passe, sur **https://ggman23.github.io/ggping/**
 (bouton « Lancer la mise à jour » sur la page d'accueil, Excel téléchargeable, mises à jour
-automatiques les lendemains de journée). Mise en place et limites : [PUBLICATION.md](PUBLICATION.md).
+automatiques les lendemains de journée). Pour que le site donne exactement les mêmes pages que le PC,
+le PC y envoie, chiffrés, son dossier `import` et ses pages de pingpocket.fr après chaque lancement
+(option 7 du menu pour le réglage). Mise en place : [PUBLICATION.md](PUBLICATION.md).
 
 ## Installation (Windows)
 
@@ -139,7 +141,8 @@ automatiques les lendemains de journée). Mise en place et limites : [PUBLICATIO
    3. Effectif de Vaires : brûlages par joueur et par équipe — rapide ;
    4. Classement virtuel du club, toutes compétitions — rapide ;
    5. tout : les quatre pages ;
-   6. la page de démonstration.
+   6. la page de démonstration ;
+   7. le lien avec le téléphone (réglage, puis envoi automatique des données au site).
 
    Les pages s'ouvrent dans le navigateur et sont enregistrées dans le dossier `sortie\`.
 
@@ -181,6 +184,7 @@ ttvaires/
   virtuel.py     Classement virtuel : parties de toutes les compétitions, barème × coefficient
   verifications.py  Vérifications : résultats de chaque équipe récupérés pour chaque journée
   publier.py     Publication du site pour téléphone : pages chiffrées, page d'accueil
+  synchro.py     Données du PC (import, pages pingpocket) envoyées chiffrées pour le site
   gabarit_accueil.html, gabarit_verrou.html  Accueil du site et page protégée par mot de passe
 .github/workflows/mise-a-jour.yml  Mise à jour en ligne (GitHub Actions + GitHub Pages)
   rendu.py       Génération de la page HTML (un seul fichier)

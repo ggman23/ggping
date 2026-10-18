@@ -10,10 +10,35 @@ Les pages sont générées sur les serveurs de GitHub (GitHub Actions) et publi�
 - Les pages sont **chiffrées** : il faut le mot de passe du club pour les lire (cochez « Se
   souvenir sur cet appareil » pour ne le taper qu'une fois). Le site est public, mais sans le mot
   de passe on n'y voit aucun nom de joueur ; il n'est pas référencé par les moteurs de recherche.
-- Mises à jour automatiques : samedi, dimanche, lundi et mardi vers 8 h (lendemains de journée).
+- Mises à jour automatiques : samedi, dimanche, lundi et mardi vers 8 h (lendemains de journée),
+  et après chaque lancement de `lancer.bat` sur le PC.
 - Gratuit (dépôt public : GitHub Actions et GitHub Pages sans frais).
 
-## Mise en place (une seule fois, faisable depuis le téléphone)
+## Même résultat sur le PC et sur le téléphone
+
+pingpocket.fr refuse les serveurs de GitHub, et le dossier `import` n'existe que sur le PC. Pour
+que la mise à jour en ligne produise **exactement les mêmes pages** que `lancer.bat`, le PC envoie
+ses données sur GitHub après chaque lancement :
+
+- les fichiers du dossier `import` (listes des licenciés enregistrées depuis le navigateur) ;
+- les pages de pingpocket.fr gardées en cache (effectifs complets des clubs, catégories, salles,
+  historiques des classements) et l'état de la page effectif (joueurs « nouveaux ») ;
+
+le tout **chiffré avec le mot de passe du site** (un seul fichier d'environ 2 Mo, remplacé à
+chaque envoi, déposé dans la version « Données du PC » du dépôt). Puis il lance la mise à jour du
+site : 5 à 10 minutes plus tard, le site affiche les mêmes pages que le PC.
+
+En ligne, l'outil reprend ces fichiers avec leur date d'origine et n'interroge pas pingpocket.fr ;
+les résultats des rencontres, eux, sont relus en direct sur l'API de la FFTT. Une mise à jour
+lancée du téléphone (ou automatique) donne donc les mêmes pages que le PC, avec les derniers
+résultats. Seuls les effectifs et historiques de pingpocket ont la fraîcheur du dernier lancement
+sur le PC (la page Effectif indique « liste lue sur pingpocket.fr par le PC le … »).
+
+Contrôle fait le 18/10/2026 : un lancement « PC » puis une mise à jour « en ligne » à partir des
+données envoyées ont produit des données identiques pour les quatre pages et le même contenu
+Excel.
+
+## Mise en place (une seule fois)
 
 Sur github.com, connecté avec le compte propriétaire du dépôt `ggman23/ggping` (dans le
 navigateur du téléphone, choisir « Version pour ordinateur » si un menu n'apparaît pas) :
@@ -26,46 +51,48 @@ navigateur du téléphone, choisir « Version pour ordinateur » si un menu n'ap
    - *Secret* : le mot de passe (au moins 12 caractères, par exemple trois mots et un chiffre).
 
    C'est ce mot de passe que vous donnerez aux capitaines.
-3. **Premier lancement** : dépôt → *Actions* → *Mise à jour du site* → *Run workflow* → *Run
-   workflow*. Environ 5 minutes. Le site est ensuite à l'adresse ci-dessus : l'ajouter à l'écran
-   d'accueil du téléphone (menu du navigateur → « Ajouter à l'écran d'accueil »).
+3. **Créer un jeton GitHub** (sert au PC et au bouton du site) :
+   https://github.com/settings/personal-access-tokens/new (*Fine-grained token*) :
+   - *Token name* : « Vaires », *Expiration* : 1 an ;
+   - *Repository access* : **Only select repositories** → `ggman23/ggping` ;
+   - *Permissions* → *Repository permissions* : **Contents : Read and write** et
+     **Actions : Read and write** (rien d'autre) ;
+   - *Generate token*, puis copier le jeton (`github_pat_…`).
+4. **Sur le PC** : `lancer.bat`, **option 7** (« Lien avec le téléphone ») : coller le jeton, taper
+   le mot de passe du site (le même qu'à l'étape 2). Le PC envoie ses données et lance la
+   première mise à jour du site. Ensuite, chaque lancement de `lancer.bat` (options 1 à 5) envoie
+   les données et met le site à jour automatiquement.
+5. **Sur le téléphone** : ouvrir le site, l'ajouter à l'écran d'accueil (menu du navigateur →
+   « Ajouter à l'écran d'accueil »), et coller le même jeton dans « Réglage du bouton ».
 
 ## Le bouton « Lancer la mise à jour » du site
 
 Il demande à GitHub de lancer la mise à jour, puis affiche son avancement (« en cours… »,
-« terminé »). Il lui faut un **jeton** GitHub, créé une fois et enregistré uniquement sur le
-téléphone (le site explique la marche à suivre dans « Réglage du bouton ») :
-
-1. https://github.com/settings/personal-access-tokens/new (*Fine-grained token*) ;
-2. *Token name* : « Vaires téléphone », *Expiration* : 1 an ;
-3. *Repository access* : **Only select repositories** → `ggman23/ggping` ;
-4. *Permissions* → *Repository permissions* → **Actions : Read and write** (rien d'autre) ;
-5. *Generate token*, copier le jeton (`github_pat_…`) et le coller dans le site.
-
-Ce jeton permet seulement de lancer et de suivre les mises à jour de ce dépôt. Il ne quitte pas
-le téléphone (stockage du navigateur). À renouveler à son expiration ; « Effacer » le retire.
+« terminé »). Il utilise le jeton de l'étape 3, enregistré uniquement sur le téléphone (stockage
+du navigateur) ; « Effacer » le retire. Pour le bouton seul, le droit *Actions : Read and write*
+suffit.
 
 Sans jeton, on peut toujours lancer depuis l'appli ou le site GitHub : *Actions* → *Mise à jour
 du site* → *Run workflow* (choix des pages : tout, résultats, effectif, virtuel, adversaires).
 
-## Ce qui diffère du lancement sur le PC
+Une page non choisie lors d'une mise à jour reste celle de la mise à jour précédente (sa date
+est affichée sur l'accueil).
 
-- Les données viennent de l'API publique de la FFTT, comme sur le PC.
-- **pingpocket.fr** refuse en pratique les serveurs de GitHub : pas d'effectifs complets des
-  adversaires ni de meilleurs classements en ligne (les pages le signalent).
-- **Le dossier `import`** (listes des licenciés enregistrées depuis le navigateur) reste sur le
-  PC : il n'est jamais envoyé sur GitHub (données personnelles). En ligne, les pages Effectif et
-  Classement virtuel ne montrent donc que les joueurs alignés en championnat. Pour la version
-  complète, utiliser `lancer.bat` sur le PC.
-- Une page non choisie lors d'une mise à jour reste celle de la mise à jour précédente (sa date
-  est affichée sur l'accueil).
+## Si le PC n'a pas envoyé ses données
+
+Sans données du PC (lien pas encore réglé), la mise à jour en ligne fonctionne quand même, mais
+sans pingpocket ni dossier `import` : effectifs limités aux joueurs alignés en championnat, sans
+meilleurs classements (les pages le signalent). D'où l'option 7.
 
 ## Sécurité
 
-- Chaque page est chiffrée en AES-256-GCM avec une clé tirée du mot de passe (PBKDF2-SHA256,
-  310 000 itérations) ; le déchiffrement se fait dans le navigateur. Le mot de passe n'est stocké
-  qu'en secret GitHub (illisible, même par le propriétaire) et, si on le demande, sous forme de
-  clé dans le navigateur de l'appareil.
-- Changer le mot de passe : modifier le secret `MOT_DE_PASSE_SITE`, puis relancer une mise à jour
-  « Tout ». Chacun devra saisir le nouveau mot de passe.
+- Chaque page, l'Excel et les données envoyées par le PC sont chiffrés en AES-256-GCM avec une clé
+  tirée du mot de passe (PBKDF2-SHA256, 310 000 itérations) ; le déchiffrement se fait dans le
+  navigateur (pages) ou dans la mise à jour en ligne (données du PC). Rien n'est publié ni envoyé
+  en clair.
+- Le mot de passe est stocké en secret GitHub (illisible, même par le propriétaire), dans le
+  fichier `publication.local.json` du PC (avec le jeton ; jamais envoyé sur GitHub) et, si on le
+  demande, sous forme de clé dans le navigateur de l'appareil.
+- Changer le mot de passe : modifier le secret `MOT_DE_PASSE_SITE`, refaire l'option 7 sur le PC
+  avec le nouveau, puis relancer. Chacun devra saisir le nouveau mot de passe sur le site.
 - Le bilan des vérifications sur l'accueil ne contient que des nombres et des noms d'équipes.
