@@ -62,6 +62,9 @@ table.perfs td.comp .cat { display: block; margin-left: 0; }
 table.perfs th:hover { filter: none; }
 .medaille { font-size: 17px; }
 .plus { display: block; margin: 10px auto 0; }
+.verif-ok { background: #e3f4ea; color: #1d7a46; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 14px; }
+.verif-ko { background: #fbe7e5; color: #b3261e; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 14px; }
+.verif-ko ul { margin: 4px 0; padding-left: 20px; }
 .note { color: var(--doux); font-size: 13px; margin-top: 10px; }
 .comps { margin: 0 0 10px; padding-left: 18px; font-size: 14px; color: var(--doux); }
 .vide { color: var(--doux); padding: 30px; text-align: center; }
@@ -133,8 +136,26 @@ function detail(j) {
     <th>V/D</th><th class="col-option">Coef.</th><th>Points</th></tr></thead><tbody>${lignes}</tbody></table></div>${pied}`;
 }
 
+
+/* Vérification : les résultats de toutes les équipes de Vaires ont-ils été récupérés ? */
+function bandeauVerif(V, consequence) {
+  if (!V) return "";
+  const res = V.journees.map((j) => `J${j.journee} ${j.completes}/${j.attendues + j.du_jour}`).join(" · ");
+  const ms = V.journees.flatMap((j) => j.manquantes);
+  if (!ms.length) return `<div class="verif-ok">✓ Résultats de toutes les équipes de Vaires récupérés (${res}).</div>`;
+  const adv = (m) => m.equipe === m.domicile ? m.exterieur : m.domicile;
+  return `<div class="verif-ko">⚠ ${ms.length} résultat(s) manquant(s) — ${consequence}
+    <ul>${ms.map((m) => `<li>J${m.journee} · ${esc(m.equipe)} contre ${esc(adv(m))} (${fmtDate(m.date)}) : ${esc(m.libelle)}</li>`).join("")}</ul>
+    Relancer plus tard : les résultats sont en général saisis dans les 48 h après la rencontre.</div>`;
+}
 function bandeaux(avecAide = true) {
-  const src = D.source, p = [];
+  const src = D.source, p = [bandeauVerif(D.verification, "les points de ces rencontres ne sont pas encore comptés :")];
+  const c = D.controle || {};
+  if ((c.sans_reponse || []).length) p.push(`<div class="verif-ko">⚠ Parties non lues (l'API de la FFTT n'a pas répondu) :
+    ${c.sans_reponse.map(esc).join(", ")}. Leur classement virtuel est incomplet : relancer plus tard.</div>`);
+  if ((c.parties_absentes || []).length) p.push(`<div class="verif-ko">⚠ Parties de championnat présentes sur les feuilles de match
+    mais pas encore dans la liste des parties de : ${c.parties_absentes.map((a) => `${esc(a.joueur)} (${a.nb})`).join(", ")}.
+    Leur total sera juste au prochain lancement.</div>`);
   const quand = src.date ? `${fmtDate(src.date.slice(0, 10))} à ${src.date.slice(11, 16)}` : "";
   const vieille = src.date && (Date.now() - new Date(src.date)) / 864e5 > 7;
   if (!src.liste) p.push(`<div class="note-site">Liste des licenciés indisponible (pingpocket.fr bloque les requêtes de l'outil) :

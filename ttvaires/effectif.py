@@ -19,6 +19,7 @@ from pathlib import Path
 from . import fftt, pingpocket
 from .brulage import brulage_par_equipe, equipe_max
 from .reseau import HEURE
+from .verifications import bilan_club
 
 # Listes de licenciés de pingpocket : type -> tri demandé dans l'adresse de la page
 TRIS = {"categories": "CATEGORY", "etat": "LICENCE_STATE", "classements": "OFFICIAL_RANK"}
@@ -52,7 +53,8 @@ def feuilles_du_club(client, numero_club, aujourdhui):
     debut, fin = fftt.bornes_phase(aujourdhui)
     id_club = fftt.id_interne_club(client, numero_club, debut)
     rencontres = fftt.rencontres_club(client, id_club, debut, fin, ttl=HEURE)
-    detail = fftt.details(client, rencontres, auj)
+    etats = {}
+    detail = fftt.details(client, rencontres, auj, etats)
 
     equipes, vus, parts, prochaines, nom_club = {}, {}, defaultdict(list), {}, numero_club
     for r in rencontres:
@@ -83,7 +85,7 @@ def feuilles_du_club(client, numero_club, aujourdhui):
                 if ch == "F":
                     vu["sexe"] = "F"
     return {"equipes": equipes, "vus": vus, "parts": parts, "prochaines": prochaines, "nom_club": nom_club,
-            "detail": detail}
+            "detail": detail, "verification": bilan_club(rencontres, etats, auj, numero_club, nom_club)}
 
 
 def recuperer_effectif(client, numero_club="08770250", aujourdhui=None, fichier_etat=None, dossier_import=None):
@@ -122,7 +124,7 @@ def recuperer_effectif(client, numero_club="08770250", aujourdhui=None, fichier_
         "genere_le": datetime.now().isoformat(timespec="minutes"), "saison": saison, "phase": phase,
         "club": {"numero": numero_club, "nom": nom_club},
         "equipes": sorted(equipes.values(), key=lambda e: (e["championnat"] == "F", e["numero"])),
-        "prochaines": prochaines, "source": source, "precedent": precedent,
+        "prochaines": prochaines, "source": source, "precedent": precedent, "verification": f["verification"],
         "joueurs": sorted(joueurs.values(), key=lambda j: -(j["points"] or j["points_mensuels"] or 0)),
     }
 

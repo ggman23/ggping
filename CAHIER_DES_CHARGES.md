@@ -162,3 +162,23 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
   devant ; ex aequo si même écart. Colonnes : joueur (ses points), adversaire (ses points),
   écart (points de l'adversaire − points du joueur), points, compétition, date. Choix « toutes
   les parties » ou « une ligne par joueur » ; les 30 premières affichées, le reste sur demande.
+
+## Vérifications de complétude (18/10/2026)
+
+- Demande : savoir, à la fin de chaque option du menu, si les résultats de toutes les équipes ont
+  bien été récupérés pour chaque journée (exemple : les 21 équipes de Lognes ; un lancement le
+  lundi peut précéder la saisie de certains résultats).
+- État de chaque rencontre jouée, d'après son détail dans l'API FFTT : complète (score et
+  compositions), forfait, résultat non saisi, score sans feuille de match, non récupérée (API
+  muette), du jour (pas encore attendue). Les rencontres incomplètes ne sont pas gardées en cache
+  et sont relues au lancement suivant.
+- Bilan équipe par équipe et journée par journée (équipes complètes / équipes qui ont joué ; les
+  exemptes ne sont pas attendues ; une équipe masculine et une féminine de même nom comptent pour
+  deux). Option 1 : toutes les rencontres des poules de Vaires et de toutes les équipes des clubs
+  adverses (dans le championnat où ils rencontrent Vaires), bilan par journée et par club.
+  Options 2 à 4 : les équipes de Vaires. Le classement virtuel contrôle en plus les parties non
+  lues et la cohérence entre feuilles de match et liste des parties de chaque joueur.
+- Affichage : console (détail puis bilan final avant la pause), bandeaux dans les pages, onglet
+  « Vérifications » et alerte dans la fiche du club concerné sur la page adversaires.
+- Contrôle du 18/10/2026 : 31 clubs (dont Lognes, 21 équipes) et 409 rencontres, tous complets
+  pour les J1 à J3.

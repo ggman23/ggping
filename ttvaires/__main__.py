@@ -14,6 +14,7 @@ from .rendu import GABARIT_EFFECTIF, GABARIT_RESULTATS, GABARIT_VIRTUEL, generer
 from .reseau import Client, ErreurReseau
 from .resultats import donnees_page, ecrire_xlsx, recuperer_parties
 from .virtuel import recuperer_virtuel
+from . import verifications
 
 RACINE = Path(__file__).resolve().parent.parent
 SORTIE = RACINE / "sortie"
@@ -28,7 +29,8 @@ def page_adversaires(client, club):
     donnees = recuperer(client, club, dossier_import=IMPORT)
     enrichir(donnees)
     (SORTIE / "donnees.json").write_text(json.dumps(donnees, ensure_ascii=False, indent=1), encoding="utf-8")
-    return [generer_html(donnees, SORTIE / "vaires.html")]
+    resume = verifications.afficher_adversaires(donnees["verification"]["journees"], donnees["verification"]["clubs"])
+    return [generer_html(donnees, SORTIE / "vaires.html")], resume
 
 
 def page_resultats(client, club):
@@ -37,19 +39,24 @@ def page_resultats(client, club):
     html = generer_html(donnees_page(resultats), SORTIE / "resultats_vaires.html", GABARIT_RESULTATS)
     xlsx = ecrire_xlsx(resultats, SORTIE / "resultats_vaires.xlsx")
     print(f"Classeur Excel : {xlsx}")
-    return [html]
+    return [html], verifications.afficher_club(resultats["verification"], "résultats des équipes de Vaires")
 
 
 def page_effectif(client, club):
     print("=== Effectif de Vaires : équipes jouées et brûlages", flush=True)
     donnees = recuperer_effectif(client, club, fichier_etat=CACHE / f"effectif_{club}.json", dossier_import=IMPORT)
-    return [generer_html(donnees, SORTIE / "effectif_vaires.html", GABARIT_EFFECTIF)]
+    resume = verifications.afficher_club(donnees["verification"], "feuilles de match des équipes de Vaires")
+    if not donnees["source"]["liste"]:
+        resume += " ; liste des licenciés indisponible (voir import/LISEZ-MOI.txt)"
+    return [generer_html(donnees, SORTIE / "effectif_vaires.html", GABARIT_EFFECTIF)], resume
 
 
 def page_virtuel(client, club):
     print("=== Classement virtuel : toutes les compétitions (championnat, critérium, tournois...)", flush=True)
     donnees = recuperer_virtuel(client, club, dossier_import=IMPORT)
-    return [generer_html(donnees, SORTIE / "classement_virtuel.html", GABARIT_VIRTUEL)]
+    resume = verifications.afficher_club(donnees["verification"], "feuilles de match des équipes de Vaires")
+    resume = "; ".join([resume] + verifications.afficher_controle_parties(donnees["controle"]))
+    return [generer_html(donnees, SORTIE / "classement_virtuel.html", GABARIT_VIRTUEL)], resume
 
 
 def main():
@@ -74,7 +81,7 @@ def main():
         pages = [generer_html(donnees, SORTIE / "vaires_demo.html")]
     else:
         client = Client(CACHE, paralleles=args.paralleles, hors_ligne=args.hors_ligne)
-        pages = []
+        pages, bilans = [], []
         a_faire = []
         if args.resultats:
             a_faire.append(("résultats", page_resultats))
@@ -86,10 +93,17 @@ def main():
             a_faire.append(("adversaires", page_adversaires))
         for nom, fonction in a_faire:
             try:
-                pages += fonction(client, args.club)
+                nouvelles, resume = fonction(client, args.club)
+                pages += nouvelles
+                bilans.append((nom, resume))
             except ErreurReseau as e:
                 print(f"\n!!! Page {nom} non générée : {e}\n")
+                bilans.append((nom, f"PAGE NON GÉNÉRÉE ({e})"))
         print(f"Pages téléchargées : {client.nb_telecharges}, reprises du cache : {client.nb_cache}")
+        print("\n=== Bilan des vérifications ===")
+        for nom, resume in bilans:
+            print(f"  {nom} : {resume}")
+        print()
 
     for chemin in pages:
         print(f"Page générée : {chemin}")

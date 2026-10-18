@@ -96,6 +96,9 @@ details.suite { margin-top: 4px; font-size: 13px; }
 details.suite summary { font-weight: 400; color: var(--accent); }
 summary { cursor: pointer; font-weight: 600; }
 .vide-page { color: var(--doux); padding: 30px 0; text-align: center; }
+.verif-ok { background: var(--ok-fond); color: var(--ok); border-radius: 8px; padding: 8px 10px; margin-bottom: 14px; font-size: 14px; }
+.verif-ko { background: var(--danger-fond); color: var(--danger); border-radius: 8px; padding: 8px 10px; margin-bottom: 14px; font-size: 14px; }
+table.verif td.c, table.verif th.c { text-align: center; }
 @media (max-width: 640px) {
   main { padding: 10px; }
   table.liste thead { display: none; }
@@ -123,6 +126,8 @@ summary { cursor: pointer; font-weight: 600; }
 const D = JSON.parse(document.getElementById("donnees").textContent);
 const CLUBS = D.clubs || {};
 const EQUIPES = D.equipes || [];
+const VERIF = D.verification || null;
+const MANQUANTS = VERIF ? VERIF.clubs.reduce((n, c) => n + c.manquantes + (c.erreur ? 1 : 0), 0) : 0;
 const AUJOURDHUI = new Date().toISOString().slice(0, 10);
 const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
 
@@ -189,14 +194,19 @@ function dateTxt(r) {
 /* ---------- Onglets et navigation ---------- */
 function onglets(actif) {
   const liens = [`<a href="#recap" class="${actif === "recap" ? "actif" : ""}">Récapitulatif</a>`]
-    .concat(EQUIPES.map((e) => `<a href="#e/${e.id}" class="${actif === e.id ? "actif" : ""}">${esc(e.nom_court || e.libelle)}</a>`));
+    .concat(EQUIPES.map((e) => `<a href="#e/${e.id}" class="${actif === e.id ? "actif" : ""}">${esc(e.nom_court || e.libelle)}</a>`))
+    .concat(VERIF ? [`<a href="#verif" class="${actif === "verif" ? "actif" : ""}">Vérifications${MANQUANTS ? ` <span class="badge brule">${MANQUANTS}</span>` : " ✓"}</a>`] : []);
   document.getElementById("onglets").innerHTML = liens.join("");
 }
 function route() {
   const h = decodeURIComponent(location.hash.slice(1));
   const [vue, id, sous, journee] = h.split("/");
   const main = document.getElementById("contenu");
-  if (vue === "e" && EQUIPES.some((e) => e.id === id)) {
+  if (vue === "verif" && VERIF) {
+    onglets("verif");
+    main.innerHTML = vueVerif();
+    window.scrollTo(0, 0);
+  } else if (vue === "e" && EQUIPES.some((e) => e.id === id)) {
     onglets(id);
     main.innerHTML = vueEquipe(EQUIPES.find((e) => e.id === id), sous === "j" ? Number(journee) : null);
     if (sous === "j") document.getElementById("panneau")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -207,6 +217,62 @@ function route() {
     document.querySelector(".semaine.courante")?.scrollIntoView({ block: "start" });
     window.scrollBy(0, -110);
   }
+}
+
+/* ---------- Vérifications : tous les résultats ont-ils été récupérés ? ---------- */
+const jjmm = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+const plage = (ds) => ds.length ? jjmm(ds[0]) + (ds[ds.length - 1] !== ds[0] ? " – " + jjmm(ds[ds.length - 1]) : "") : "";
+const manquantes = () => {
+  const vues = new Map();  // une rencontre entre deux clubs suivis n'est listée qu'une fois
+  for (const c of VERIF.clubs) for (const j of c.journees) for (const m of j.manquantes)
+    vues.set(`${m.journee}|${m.domicile}|${m.exterieur}`, m);
+  return [...vues.values()].sort((a, b) => a.journee - b.journee || a.date.localeCompare(b.date));
+};
+function bandeauVerif() {
+  if (!VERIF) return "";
+  const n = VERIF.journees.reduce((s, j) => s + j.attendues, 0);
+  if (!MANQUANTS) return `<div class="verif-ok">✓ Tous les résultats des journées jouées ont été récupérés
+    (${VERIF.clubs.length} clubs, ${n} rencontres). <a href="#verif">Détail par club</a></div>`;
+  return `<div class="verif-ko">⚠ ${MANQUANTS} résultat(s) manquant(s) : brûlages et compositions probables peut-être incomplets.
+    <a href="#verif">Voir lesquels</a> — relancer plus tard (résultats saisis en général sous 48 h).</div>`;
+}
+function noteVerifClub(numero) {
+  const c = VERIF && VERIF.clubs.find((x) => x.numero === numero);
+  if (!c || (c.complet && !c.erreur)) return "";
+  const ms = c.journees.flatMap((j) => j.manquantes);
+  return `<p class="verif-ko">⚠ ${c.erreur ? esc(c.erreur) : `Résultats manquants pour ce club : ${ms.map((m) =>
+    `${esc(m.equipe)} (J${m.journee}, ${esc(m.libelle)})`).join(", ")}`}. Brûlages et compositions peut-être incomplets.</p>`;
+}
+function vueVerif() {
+  const js = [...new Set(VERIF.clubs.flatMap((c) => c.journees.map((j) => j.journee)))].sort((a, b) => a - b);
+  const cellule = (c, jn) => {
+    const j = c.journees.find((x) => x.journee === jn);
+    if (!j) return '<td class="c petit">—</td>';
+    const attendues = j.attendues + j.du_jour;
+    const titre = [j.exemptes ? `${j.exemptes} exempte(s)` : "", j.du_jour ? `${j.du_jour} jouée(s) aujourd'hui` : "",
+      ...j.manquantes.map((m) => `${m.equipe} : ${m.libelle}`)].filter(Boolean).join(" · ");
+    return `<td class="c"><span class="badge ${j.manquantes.length ? "brule" : "okb"}" title="${esc(titre)}">${j.completes}/${attendues}</span></td>`;
+  };
+  const parJournee = `<div class="carte"><h3>Par journée</h3><div class="defil"><table class="verif"><thead><tr><th>Journée</th><th>Dates</th>
+    <th class="c">Rencontres complètes</th><th>État</th></tr></thead><tbody>
+    ${VERIF.journees.map((j) => { const k = j.attendues - j.completes; return `<tr><td>J${j.journee}</td><td>${plage(j.dates)}</td>
+      <td class="c">${j.completes}/${j.attendues}</td><td>${k ? `<span class="badge brule">${k} manquante(s)</span>` : '<span class="badge okb">complet</span>'}
+      ${j.du_jour ? `<span class="petit">${j.du_jour} jouée(s) aujourd'hui</span>` : ""}</td></tr>`; }).join("")}
+    </tbody></table></div><p class="petit">Toutes les rencontres des poules de Vaires et de toutes les équipes des clubs adverses
+    (dans le championnat où ils rencontrent Vaires). Complète = score et feuille de match (compositions) saisis.</p></div>`;
+  const ms = manquantes();
+  const liste = ms.length ? `<div class="carte"><h3>Résultats manquants (${ms.length})</h3><div class="defil"><table class="verif">
+    <thead><tr><th>J</th><th>Date</th><th>Rencontre</th><th>Division</th><th>État</th></tr></thead><tbody>
+    ${ms.map((m) => `<tr><td>J${m.journee}</td><td>${fmtDate(m.date)}</td><td>${esc(m.domicile)} – ${esc(m.exterieur)}</td>
+      <td>${esc(m.division)}</td><td><span class="badge brule">${esc(m.libelle)}</span></td></tr>`).join("")}
+    </tbody></table></div><p class="petit">Relancer plus tard : les résultats sont en général saisis dans les 48 h après la rencontre.</p></div>` : "";
+  const parClub = `<div class="carte"><h3>Par club — équipes dont le résultat est complet / équipes qui ont joué</h3>
+    <div class="defil"><table class="verif"><thead><tr><th>Club</th><th class="c">Équipes</th>${js.map((jn) => `<th class="c">J${jn}</th>`).join("")}</tr></thead><tbody>
+    ${VERIF.clubs.map((c) => `<tr class="${c.numero === D.club.numero ? "vaires" : ""}"><td>${esc(c.nom)}${c.erreur ? `<br><span class="badge brule">${esc(c.erreur)}</span>` : ""}</td>
+      <td class="c">${c.equipes}</td>${js.map((jn) => cellule(c, jn)).join("")}</tr>`).join("")}
+    </tbody></table></div><p class="petit">Les équipes exemptes ne sont pas comptées. Survole une case pour le détail.</p></div>`;
+  return `<p class="sous">Vérification des données du ${new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })} :
+    les résultats de chaque journée déjà jouée ont-ils tous été récupérés ?</p>${bandeauVerif().replace(/\s*<a href="#verif">[^<]*<\/a>( —)?/, "")}${liste}${parJournee}${parClub}`;
 }
 
 /* ---------- Récapitulatif par semaine ---------- */
@@ -237,7 +303,7 @@ function vueRecap(filtre) {
         <td data-l="Score">${scoreTxt(r)}</td></tr>`).join("")}
       </tbody></table></div></article>`;
   });
-  return filtres + blocs.join("");
+  return bandeauVerif() + filtres + blocs.join("");
 }
 
 /* ---------- Onglet d'une équipe de Vaires ---------- */
@@ -350,7 +416,7 @@ function tableEffectif(club, ch, a, N, r) {
        <a href="${listeClub(club.numero, "CATEGORY")}" target="_blank" rel="noopener">par catégorie d'âge</a> et
        <a href="${listeClub(club.numero, "LICENCE_STATE")}" target="_blank" rel="noopener">par licences à jour</a>
        (Ctrl+S, « Page Web, complète ») dans le dossier import de l'outil.</p>` : "";
-  return `<h4>Effectif de ${esc(club.nom)} (${actifs.length} ${ch === "F" ? "joueuses" : "joueurs"})</h4>${partiel}${legende}
+  return `<h4>Effectif de ${esc(club.nom)} (${actifs.length} ${ch === "F" ? "joueuses" : "joueurs"})</h4>${noteVerifClub(club.numero)}${partiel}${legende}
     <div class="defil"><table>${entete(true)}<tbody>${actifs.map((j) => ligne(j, true)).join("")}</tbody></table></div>
     ${anciens.length ? `<details><summary>Pas encore renouvelés (${anciens.length})</summary>
       <div class="defil"><table>${entete(false)}<tbody>${anciens.map((j) => ligne(j, false)).join("")}</tbody></table></div></details>` : ""}`;

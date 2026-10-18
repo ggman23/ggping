@@ -12,6 +12,7 @@ from datetime import date, datetime
 from . import fftt, pingpocket
 from .effectif import TRIS
 from .reseau import HEURE, JOUR, ErreurReseau
+from .verifications import bilan_club, bilan_rencontres
 
 SITE_PINGPOCKET = "www.pingpocket.fr"
 MAX_HISTORIQUES = 150  # historiques téléchargés au plus par lancement (≈ 10 minutes)
@@ -114,7 +115,8 @@ def recuperer(client, numero_club="08770250", aujourdhui=None, dossier_import=No
     poules = sorted({e["poule"] for e in nos_equipes.values()})
     infos = {p: fftt.lire(client, f"/pools/{p}", ttl=JOUR) for p in poules}
     rencontres_poules = {p: fftt.rencontres_poule(client, p, ttl=3 * HEURE) for p in poules}
-    detail = fftt.details(client, [r for rs in rencontres_poules.values() for r in rs], auj)
+    etats = {}  # état de chaque rencontre jouée (complet, non saisi...) pour les vérifications
+    detail = fftt.details(client, [r for rs in rencontres_poules.values() for r in rs], auj, etats)
 
     salles, numeros = {}, {}
     for info in infos.values():
@@ -161,19 +163,21 @@ def recuperer(client, numero_club="08770250", aujourdhui=None, dossier_import=No
 
     # 2 et 3. Clubs adverses : toutes leurs équipes et leurs feuilles de match
     print(f"2/5 Clubs adverses : {len(clubs_adv)} (API FFTT)", flush=True)
-    rencontres_clubs = {}
+    rencontres_clubs, erreurs = {}, {}
     for i, (num, c) in enumerate(sorted(clubs_adv.items()), 1):
         try:
             rencontres_clubs[num] = fftt.rencontres_club(client, c["id"], debut, fin, ttl=3 * HEURE)
         except ErreurReseau as err:
             print(f"  ! {err}")
             rencontres_clubs[num] = []
+            erreurs[num] = "rencontres du club non récupérées (l'API FFTT n'a pas répondu) : relancer"
         if i % 10 == 0 or i == len(clubs_adv):
             print(f"  clubs : {i}/{len(clubs_adv)}", flush=True)
     print("3/5 Feuilles de match des équipes adverses (API FFTT)", flush=True)
-    a_detailler = [r for num, rs in rencontres_clubs.items() for r in rs
-                   if ("F" if fftt.feminin(r) else "M") in clubs_adv[num]["championnats"]]
-    detail.update(fftt.details(client, a_detailler, auj))
+    suivies = {num: [r for r in rs if ("F" if fftt.feminin(r) else "M") in clubs_adv[num]["championnats"]]
+               for num, rs in rencontres_clubs.items()}
+    a_detailler = [r for rs in suivies.values() for r in rs]
+    detail.update(fftt.details(client, a_detailler, auj, etats))
 
     clubs = {}
     for num, c in clubs_adv.items():
@@ -185,9 +189,23 @@ def recuperer(client, numero_club="08770250", aujourdhui=None, dossier_import=No
         "genere_le": datetime.now().isoformat(timespec="minutes"), "saison": saison, "phase": phase,
         "club": {"numero": numero_club, "nom": nom_club, "salle": None},
         "equipes": equipes, "clubs": clubs, "sources": {"pingpocket": False},
+        "verification": verification(numero_club, nom_club, rencontres_poules, suivies, clubs_adv, etats, erreurs, auj),
     }
     completer_avec_pingpocket(client, donnees, dossier_import)
     return donnees
+
+
+def verification(numero_club, nom_club, rencontres_poules, suivies, clubs_adv, etats, erreurs, auj):
+    """Les résultats de chaque journée ont-ils tous été récupérés ? Bilan par journée (toutes les
+    rencontres des poules de Vaires et des clubs adverses) et par club, équipe par équipe."""
+    poules = [r for rs in rencontres_poules.values() for r in rs]
+    clubs = [bilan_club(poules, etats, auj, numero_club, nom_club)]
+    for num, c in sorted(clubs_adv.items(), key=lambda x: x[1]["nom"] or ""):
+        b = bilan_club(suivies[num], etats, auj, num, c["nom"])
+        b["erreur"] = erreurs.get(num)
+        clubs.append(b)
+    return {"journees": bilan_rencontres(poules + [r for rs in suivies.values() for r in rs], etats, auj),
+            "clubs": clubs}
 
 
 def completer_avec_pingpocket(client, donnees, dossier_import=None):

@@ -40,6 +40,9 @@ h3 { font-size: 16px; margin: 0 0 8px; }
 .grille2 { display: grid; grid-template-columns: 3fr 2fr; gap: 14px; }
 .grille2 > * { min-width: 0; }
 @media (max-width: 900px) { .grille2 { grid-template-columns: 1fr; } }
+.verif-ok { background: #e3f4ea; color: #1d7a46; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 14px; }
+.verif-ko { background: #fbe7e5; color: #b3261e; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 14px; }
+.verif-ko ul { margin: 4px 0; padding-left: 20px; }
 .info { background: var(--accent-fond); color: var(--texte); border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; font-size: 14px; }
 details.aide { border: 1px solid var(--bord); border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; font-size: 14px; }
 details.aide summary { cursor: pointer; font-weight: 600; }
@@ -122,6 +125,18 @@ function resumeMatchs(j, ch) {
   return Object.entries(compte).map(([k, n]) => `${k}${n > 1 ? " ×" + n : ""}`).join(", ") || '<span class="petit">pas encore aligné</span>';
 }
 
+
+/* Vérification : les résultats de toutes les équipes de Vaires ont-ils été récupérés ? */
+function bandeauVerif(V, consequence) {
+  if (!V) return "";
+  const res = V.journees.map((j) => `J${j.journee} ${j.completes}/${j.attendues + j.du_jour}`).join(" · ");
+  const ms = V.journees.flatMap((j) => j.manquantes);
+  if (!ms.length) return `<div class="verif-ok">✓ Résultats de toutes les équipes de Vaires récupérés (${res}).</div>`;
+  const adv = (m) => m.equipe === m.domicile ? m.exterieur : m.domicile;
+  return `<div class="verif-ko">⚠ ${ms.length} résultat(s) manquant(s) — ${consequence}
+    <ul>${ms.map((m) => `<li>J${m.journee} · ${esc(m.equipe)} contre ${esc(adv(m))} (${fmtDate(m.date)}) : ${esc(m.libelle)}</li>`).join("")}</ul>
+    Relancer plus tard : les résultats sont en général saisis dans les 48 h après la rencontre.</div>`;
+}
 /* ---------- Onglets ---------- */
 let vue = "club", filtre = "tous", recherche = "", tri = { col: "points", sens: -1 };
 function onglets() {
@@ -129,7 +144,7 @@ function onglets() {
   document.getElementById("onglets").innerHTML = l.map(([id, t]) => `<a href="#${id}" class="${vue === id ? "actif" : ""}">${esc(t)}</a>`).join("");
 }
 function bandeaux() {
-  const p = [];
+  const p = [bandeauVerif(D.verification, "le brûlage est calculé sans ces rencontres :")];
   const pm = D.prochaines.M, pf = D.prochaines.F;
   if (pm || pf) p.push(`<div class="info">Prochaine journée : ${pm ? `masculin J${pm.journee} — ${fmtDate(pm.date)}${pm.heure ? " " + pm.heure : ""}` : ""}${pm && pf ? " · " : ""}${pf ? `féminin J${pf.journee} — ${fmtDate(pf.date)}${pf.heure ? " " + pf.heure : ""}` : ""}.
     Brûlage calculé avec les feuilles de match déjà saisies.</div>`);

@@ -88,6 +88,38 @@ en cache) et la page indique laquelle est utilisée et sa date. Cela marche auss
 adverses (remplacer 08770250 par le numéro du club). Le mode d'emploi est aussi dans
 `import\LISEZ-MOI.txt`. Les pages enregistrées ne sont jamais envoyées sur GitHub.
 
+## Vérifications : tous les résultats ont-ils été récupérés ?
+
+Les résultats sont saisis par les clubs, souvent dans les 48 h après la rencontre : un lancement
+le lundi peut tomber avant que tout soit saisi. Chaque option du menu vérifie donc, pour chaque
+journée déjà jouée, que le résultat de **chaque équipe** a bien été récupéré : score et feuille de
+match (compositions). Une rencontre peut être :
+
+- complète (ou perdue par forfait : pas de feuille à attendre) ;
+- « résultat non saisi » ;
+- « score saisi, feuille de match pas encore saisie » (les brûlages ne peuvent pas en tenir compte) ;
+- « non récupérée » (l'API de la FFTT n'a pas répondu) ;
+- jouée le jour même : résultat pas encore attendu, non compté comme manquant.
+
+Où le voir :
+
+- **dans la fenêtre**, à la fin de chaque page, puis un **bilan des vérifications** juste avant
+  « Appuyez sur une touche » ; pour les adversaires, une ligne par club, par exemple
+  `OK E. P. DE LOGNES (21 équipes) : J1 21/21 | J2 21/21 | J3 21/21`, et le détail de chaque
+  résultat manquant ;
+- **dans la page adversaires** : un bandeau sur le récapitulatif, un onglet **Vérifications**
+  (par journée, par club et liste des rencontres manquantes) et une alerte dans la fiche du club
+  concerné (ses brûlages et sa composition probable peuvent être incomplets) ;
+- **dans les pages résultats, effectif et classement virtuel** : un bandeau vert si les 7 équipes
+  de Vaires ont tous leurs résultats, rouge avec la liste sinon. Le classement virtuel signale en
+  plus les joueurs dont les parties n'ont pas pu être lues, et les parties de championnat pas
+  encore propagées dans la liste des parties d'un joueur. Les compétitions individuelles
+  (critérium, tournois) ne peuvent pas être vérifiées : l'outil ne sait pas à l'avance qui y a
+  participé.
+
+Les équipes exemptes ne sont pas attendues. En cas de manque, il suffit de relancer plus tard :
+les rencontres incomplètes sont retéléchargées à chaque lancement.
+
 ## Installation (Windows)
 
 1. Installer **Python 3.10 ou plus** depuis <https://www.python.org/downloads/> — cocher
@@ -140,6 +172,7 @@ ttvaires/
   resultats.py   Résultats des joueurs de Vaires : points virtuels, page et classeur Excel
   effectif.py    Effectif de Vaires : équipes jouées, brûlage par joueur et par équipe
   virtuel.py     Classement virtuel : parties de toutes les compétitions, barème × coefficient
+  verifications.py  Vérifications : résultats de chaque équipe récupérés pour chaque journée
   rendu.py       Génération de la page HTML (un seul fichier)
   gabarit.html   Mise en page de la page adversaires (HTML/CSS/JavaScript)
   gabarit_resultats.html  Mise en page de la page résultats

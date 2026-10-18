@@ -10,6 +10,7 @@ from datetime import date, datetime
 
 from . import fftt
 from .reseau import HEURE
+from .verifications import bilan_club
 
 # Barème FFTT : (écart maximum exclu, victoire normale, défaite normale, victoire anormale,
 # défaite anormale). Normal = le joueur qui a le plus de points gagne.
@@ -59,7 +60,8 @@ def recuperer_parties(client, numero_club="08770250", aujourdhui=None):
                     jouees.append((r, c == "homeOpponent"))
     ordres = {nom: i for i, nom in enumerate(sorted(nos_equipes, key=lambda n: nos_equipes[n]))}
 
-    details = fftt.details(client, [r for r, _ in jouees], aujourdhui.isoformat())
+    etats = {}
+    details = fftt.details(client, [r for r, _ in jouees], aujourdhui.isoformat(), etats)
     parties = []
     for r, domicile in jouees:
         d = details.get(r["id"])
@@ -90,6 +92,7 @@ def recuperer_parties(client, numero_club="08770250", aujourdhui=None):
         "genere_le": datetime.now().isoformat(timespec="minutes"), "saison": saison, "phase": phase,
         "club": {"numero": numero_club, "nom": "CVTT VAIRES" if numero_club == "08770250" else numero_club},
         "parties": parties,
+        "verification": bilan_club(rencontres, etats, aujourdhui.isoformat(), numero_club, "CVTT VAIRES"),
     }
 
 
@@ -159,6 +162,7 @@ def donnees_page(resultats):
     journees = sorted({l["journee"] for l in lignes})
     return {
         **{k: resultats[k] for k in ("genere_le", "saison", "phase", "club")},
+        "verification": resultats.get("verification"),
         "journees": [{"numero": j, "dates": sorted({l["date"] for l in lignes if l["journee"] == j and l["date"]})}
                      for j in journees],
         "lignes": lignes, "cumuls": cumuls,

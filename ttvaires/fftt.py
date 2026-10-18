@@ -111,12 +111,15 @@ def rencontres_poule(client, id_poule, ttl):
     return lire_tout(client, f"/sport_matches?{_q('pool.id')}={id_poule}&itemsPerPage=100", ttl)
 
 
-def details(client, rencontres, aujourdhui):
+def details(client, rencontres, aujourdhui, etats=None):
     """Détail (score, joueurs, parties) des rencontres déjà jouées : {id: détail}.
 
     Les détails complets sont gardés en cache indéfiniment ; une rencontre dont le résultat
-    n'est pas encore saisi est retentée au lancement suivant.
+    n'est pas encore saisi est retentée au lancement suivant. Si `etats` est fourni, l'état de
+    chaque rencontre y est noté (voir verifications.etat_detail) : complet, forfait, non saisi...
     """
+    from .verifications import OK, etat_detail
+
     jouees = {r["id"] for r in rencontres if r["date"][:10] <= aujourdhui
               and r.get("homeOpponent") and r.get("awayOpponent")}
     chemins = {i: f"{API}/sport_matches/{i}" for i in sorted(jouees)}
@@ -124,11 +127,14 @@ def details(client, rencontres, aujourdhui):
                                  entetes=ENTETES, valide=json_valide)
     resultat = {}
     for i, chemin in chemins.items():
-        d = json.loads(pages[chemin]) if pages.get(chemin) else {}
-        if d.get("homeGamePoints") is None or not d.get("homeSheetMatches"):
+        d = json.loads(pages[chemin]) if pages.get(chemin) else None
+        etat = etat_detail(d)
+        if etats is not None:
+            etats[i] = etat
+        if etat in OK:
+            resultat[i] = d
+        else:
             client.oublier(chemin)
-            continue
-        resultat[i] = d
     return resultat
 
 

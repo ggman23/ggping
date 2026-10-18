@@ -40,6 +40,9 @@ td.joueur:hover { text-decoration: underline; }
 .v-zero { background: #ff0000; }
 .adv { color: var(--doux); font-size: 13px; }
 tr.detail td { background: #f7f8fa; text-align: left; font-size: 13.5px; color: var(--doux); white-space: normal; }
+.verif-ok { background: #e3f4ea; color: #1d7a46; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 14px; }
+.verif-ko { background: #fbe7e5; color: #b3261e; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 14px; }
+.verif-ko ul { margin: 4px 0; padding-left: 20px; }
 .note { color: var(--doux); font-size: 13px; margin-top: 10px; }
 .vide { color: var(--doux); padding: 30px; text-align: center; }
 @media (max-width: 640px) { main { padding: 8px; } table { font-size: 13.5px; } th, td { padding: 4px 6px; } }
@@ -66,6 +69,18 @@ const clsDelta = (x) => x > 0 ? "pos" : x < 0 ? "neg" : "";
 const clsTexte = (x) => x > 0 ? "t-pos" : x < 0 ? "t-neg" : "";
 function clsVict(v, n) { if (!n) return ""; if (v === n) return "v-tout"; if (v * 2 > n) return "v-plus"; if (v > 0) return "v-moins"; return "v-zero"; }
 
+
+/* Vérification : les résultats de toutes les équipes de Vaires ont-ils été récupérés ? */
+function bandeauVerif(V, consequence) {
+  if (!V) return "";
+  const res = V.journees.map((j) => `J${j.journee} ${j.completes}/${j.attendues + j.du_jour}`).join(" · ");
+  const ms = V.journees.flatMap((j) => j.manquantes);
+  if (!ms.length) return `<div class="verif-ok">✓ Résultats de toutes les équipes de Vaires récupérés (${res}).</div>`;
+  const adv = (m) => m.equipe === m.domicile ? m.exterieur : m.domicile;
+  return `<div class="verif-ko">⚠ ${ms.length} résultat(s) manquant(s) — ${consequence}
+    <ul>${ms.map((m) => `<li>J${m.journee} · ${esc(m.equipe)} contre ${esc(adv(m))} (${fmtDate(m.date)}) : ${esc(m.libelle)}</li>`).join("")}</ul>
+    Relancer plus tard : les résultats sont en général saisis dans les 48 h après la rencontre.</div>`;
+}
 let vue = null, tri = null, ouverts = new Set();
 
 function colonnesJournee(j) {
@@ -119,17 +134,18 @@ function tableau(lignes, cols, avecDetail) {
 
 function afficher() {
   const main = document.getElementById("contenu");
-  if (!D.journees.length) { main.innerHTML = '<p class="vide">Aucune feuille de match disponible pour le moment.</p>'; return; }
+  const verif = bandeauVerif(D.verification, "les points de ces rencontres ne sont pas encore comptés :");
+  if (!D.journees.length) { main.innerHTML = verif + '<p class="vide">Aucune feuille de match disponible pour le moment.</p>'; return; }
   document.getElementById("onglets").innerHTML = D.journees.map((j) => `<a href="#J${j.numero}" class="${vue === "J" + j.numero ? "actif" : ""}">J${j.numero}</a>`).join("")
     + `<a href="#cumul" class="${vue === "cumul" ? "actif" : ""}">Cumul</a>`;
   if (vue === "cumul") {
-    main.innerHTML = `<p class="sous">Points gagnés ou perdus à chaque journée, total depuis la J1 et classement virtuel
+    main.innerHTML = verif + `<p class="sous">Points gagnés ou perdus à chaque journée, total depuis la J1 et classement virtuel
       (points officiels + total).</p>${tableau(D.cumuls, colonnesCumul(), false)}${note()}`;
   } else {
     const j = Number(vue.slice(1));
     const info = D.journees.find((x) => x.numero === j);
     const lignes = D.lignes.filter((l) => l.journee === j);
-    main.innerHTML = `<p class="sous">Journée ${j} — ${info.dates.map(fmtDate).join(", ")}. Points J${j} = classement virtuel
+    main.innerHTML = verif + `<p class="sous">Journée ${j} — ${info.dates.map(fmtDate).join(", ")}. Points J${j} = classement virtuel
       (points officiels + total depuis la J1). Meilleure victoire = écart avec le mieux classé des joueurs battus,
       ses points entre parenthèses. Clique sur un joueur pour le détail de ses parties.</p>`
       + tableau(lignes, colonnesJournee(j), true) + note();

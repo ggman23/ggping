@@ -151,6 +151,33 @@ def analyser(licence, parties, competitions, etats, debut, fin):
     return lignes, officiels, ecartees
 
 
+def controle_parties(joueurs, detail_rencontres, numero_club, source):
+    """Contrôles du classement virtuel :
+    - joueurs dont les parties n'ont pas pu être lues (API muette) ;
+    - parties de championnat présentes sur les feuilles de match de Vaires mais absentes de la
+      liste des parties du joueur (saisie pas encore propagée) : son total serait faux.
+    """
+    retenues = {j["id"]: {p["id"] for p in j["parties"]} for j in joueurs}
+    noms = {j["id"]: f"{j['nom'] or ''} {j['prenom'] or ''}".strip() for j in joueurs}
+    inconnus = {j["id"] for j in joueurs if j["inconnu"]}
+    absentes = Counter()
+    for d in detail_rencontres.values():
+        for cote in ("home", "away"):
+            if fftt.club_de((d.get(f"{cote}Opponent") or {}).get("team") or {})[0] != numero_club:
+                continue
+            for g in d.get("games") or []:
+                lic = (g.get(f"{cote}Player") or {}).get("identifier")
+                autre = "away" if cote == "home" else "home"
+                if (not lic or lic not in retenues or not _simple(g) or g.get("notCounted") or g.get("forfeit")
+                        or g.get("winner") not in ("home", "away") or not g.get(f"{autre}Player")):
+                    continue
+                if g.get("id") not in retenues[lic] and lic not in inconnus:
+                    absentes[lic] += 1
+    return {"liste": source["liste"],
+            "sans_reponse": sorted(noms[j["id"]] for j in joueurs if j["inconnu"]),
+            "parties_absentes": [{"joueur": noms[lic], "nb": nb} for lic, nb in sorted(absentes.items(), key=lambda x: noms[x[0]])]}
+
+
 def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_import=None):
     aujourdhui = aujourdhui or date.today()
     phase, saison = fftt.phase_et_saison(aujourdhui)
@@ -197,8 +224,6 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
             "v": sum(l["victoire"] for l in lignes), "d": sum(not l["victoire"] for l in lignes),
             "parties": lignes, "ecartees": dict(ecartees), "inconnu": parties is None,
         })
-    if sans_reponse:
-        print(f"  ! parties non lues pour {sans_reponse} joueur(s) : l'API FFTT n'a pas répondu, relancer plus tard.")
     resultat.sort(key=lambda j: (j["virtuels"] is None, -(j["virtuels"] or 0), j["nom"] or ""))
 
     comps = Counter()
@@ -208,6 +233,8 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
     return {
         "genere_le": datetime.now().isoformat(timespec="minutes"), "saison": saison, "phase": phase,
         "debut": debut, "club": {"numero": numero_club, "nom": feuilles["nom_club"]}, "source": source,
+        "verification": feuilles["verification"],
+        "controle": controle_parties(resultat, feuilles["detail"], numero_club, source),
         "competitions": [{"nom": n, "coef": c, "championnat": ch, "parties": nb}
                          for (n, c, ch), nb in sorted(comps.items(), key=lambda x: (not x[0][2], -x[1]))],
         "joueurs": resultat,
