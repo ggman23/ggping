@@ -7,6 +7,9 @@ Les pages sont générées sur les serveurs de GitHub (GitHub Actions) et publi�
 
 - La page d'accueil liste les pages (adversaires, résultats, Excel, effectif, classement virtuel)
   avec leur date et le bilan des vérifications, et propose un bouton **« Lancer la mise à jour »**.
+- Chaque page s'**ouvre** dans le navigateur ou se **télécharge** ; « Tout télécharger » récupère
+  les quatre pages HTML et l'Excel dans « Téléchargements » : ce sont exactement les fichiers du
+  dossier `sortie` du PC (mêmes noms), lisibles sans connexion et sans mot de passe.
 - Les pages sont **chiffrées** : il faut le mot de passe du club pour les lire (cochez « Se
   souvenir sur cet appareil » pour ne le taper qu'une fois). Le site est public, mais sans le mot
   de passe on n'y voit aucun nom de joueur ; il n'est pas référencé par les moteurs de recherche.
