@@ -123,3 +123,23 @@ def test_envoi_sur_github(monkeypatch, tmp_path):
         ("DELETE", "/repos/d/r/releases/assets/5"),                                   # ancien fichier remplacé
         ("POST", "https://uploads.github.com/repos/d/r/releases/9/assets"),
         ("POST", "/repos/d/r/actions/workflows/mise-a-jour.yml/dispatches")]          # site mis à jour
+
+
+def test_message_clair_si_le_jeton_n_a_pas_le_droit_contents(monkeypatch, tmp_path):
+    """Jeton créé pour le seul bouton du téléphone (Actions) : l'envoi dit quel droit ajouter."""
+    try:
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM  # noqa: F401
+    except BaseException:
+        pytest.skip("bibliothèque cryptography indisponible")
+    monkeypatch.setattr(synchro, "RACINE", tmp_path)
+
+    def requete(methode, url, headers=None, **options):
+        if url.endswith("/releases/tags/donnees-pc"):
+            return _Reponse(404, {})
+        if url.endswith("/repos/d/r"):
+            return _Reponse(200, {"default_branch": "principale"})
+        return _Reponse(403, {"message": "Resource not accessible by personal access token"})
+
+    monkeypatch.setattr(synchro.requests, "request", requete)
+    with pytest.raises(synchro.ErreurSynchro, match="Contents : Read and write"):
+        synchro.envoyer({"depot": "d/r", "jeton": "jeton", "mot_de_passe": "secret"})

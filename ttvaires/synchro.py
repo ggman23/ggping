@@ -105,7 +105,8 @@ def lire_config():
     return config if config.get("jeton") and config.get("mot_de_passe") else None
 
 
-def _github(config, methode, chemin, **options):
+def _github(config, methode, chemin, droit="Contents", **options):
+    """Appel à l'API GitHub. `droit` : la permission du jeton nécessaire à cet appel (pour le message d'erreur)."""
     entetes = {"Accept": "application/vnd.github+json", "Authorization": f"Bearer {config['jeton']}",
                "X-GitHub-Api-Version": "2022-11-28", **options.pop("headers", {})}
     url = chemin if chemin.startswith("http") else API + chemin
@@ -113,7 +114,12 @@ def _github(config, methode, chemin, **options):
     if r.status_code == 401:
         raise ErreurSynchro("jeton GitHub refusé (expiré ou mal copié) : refaire le réglage, option 7 du menu")
     if r.status_code == 403:
-        raise ErreurSynchro("le jeton GitHub n'a pas les droits nécessaires (Contents et Actions : Read and write)")
+        raise ErreurSynchro(
+            f"le jeton GitHub n'a pas le droit « {droit} : Read and write » sur {config['depot']}.\n"
+            f"    Pour l'ajouter (le jeton ne change pas) : github.com > photo de profil > Settings > Developer settings\n"
+            f"    > Personal access tokens > Fine-grained tokens > ton jeton > Edit > Repository permissions >\n"
+            f"    {droit} : Read and write (et aussi {'Actions' if droit == 'Contents' else 'Contents'} : Read and write) > Update.\n"
+            f"    Puis relance l'option 7 et appuie sur Entrée à chaque question pour garder le réglage.")
     return r
 
 
@@ -150,7 +156,7 @@ def envoyer(config, declencher=True):
     if declencher:
         depot = config["depot"]
         branche = _github(config, "GET", f"/repos/{depot}").json().get("default_branch")
-        r = _github(config, "POST", f"/repos/{depot}/actions/workflows/{publier.WORKFLOW}/dispatches",
+        r = _github(config, "POST", f"/repos/{depot}/actions/workflows/{publier.WORKFLOW}/dispatches", droit="Actions",
                     json={"ref": branche, "inputs": {"pages": "tout"}})
         if r.status_code != 204:
             raise ErreurSynchro(f"lancement de la mise à jour du site impossible : HTTP {r.status_code} {r.text[:200]}")
