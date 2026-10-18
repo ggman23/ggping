@@ -7,6 +7,7 @@
   déjà alignés cette phase, avec leurs points officiels.
 """
 
+import time
 from datetime import date, datetime
 
 from . import fftt, pingpocket
@@ -266,7 +267,7 @@ def completer_avec_pingpocket(client, donnees, dossier_import=None):
         return
     muet = not client.disponible(SITE_PINGPOCKET) or SITE_PINGPOCKET in client.sites_cache_seul
 
-    # 5. Meilleur classement : historique des joueurs (gardé 20 jours en cache). Les joueurs restés à
+    # 5. Meilleur classement : historique des joueurs (gardé en cache toute la phase). Les joueurs restés à
     # 500 points qui n'ont pas joué n'ont en pratique jamais été mieux classés : on épargne ces pages.
     alignes = {jid for club in clubs.values() for e in club["equipes"]
                for compo in e["compositions"] for jid in compo["joueurs"]}
@@ -275,14 +276,18 @@ def completer_avec_pingpocket(client, donnees, dossier_import=None):
     a_lire.sort(key=lambda j: (j["id"] not in alignes, -(j["points_mensuels"] or j["points"] or 0)))
     chemin = "/app/fftt/licencies/{}/graphiques/historique-classement"
     # Une page toutes les 4 secondes : on en lit au plus MAX_HISTORIQUES par lancement (les joueurs
-    # alignés d'abord) ; les suivants sont lus aux lancements suivants (gardés 20 jours en cache).
-    a_telecharger = [] if muet else [j for j in a_lire if not client.en_cache(chemin.format(j["licence"]), 20 * JOUR)]
+    # alignés d'abord) ; les suivants sont lus aux lancements suivants.
+    # Le meilleur classement et les points officiels ne changent qu'aux changements de phase (janvier et
+    # juillet) : un historique lu depuis le début de la phase reste bon, les lancements le complètent.
+    debut_phase = datetime.fromisoformat(fftt.bornes_phase(date.today())[0]).timestamp()
+    ttl_historique = max(JOUR, time.time() - debut_phase)
+    a_telecharger = [] if muet else [j for j in a_lire if not client.en_cache(chemin.format(j["licence"]), ttl_historique)]
     reportes = {j["id"] for j in a_telecharger[MAX_HISTORIQUES:]}
     a_lire = [j for j in a_lire if j["id"] not in reportes]
     print(f"5/5 Historiques des joueurs : {len(a_lire)} ("
           + ("pages déjà téléchargées, pingpocket.fr non interrogé" if muet else "pingpocket.fr") + ")"
           + (f", {len(reportes)} reportés au prochain lancement" if reportes else ""), flush=True)
-    pages = client.get_plusieurs([chemin.format(j["licence"]) for j in a_lire], ttl=20 * JOUR, message="historiques",
+    pages = client.get_plusieurs([chemin.format(j["licence"]) for j in a_lire], ttl=ttl_historique, message="historiques",
                                  perime_si_erreur=True)
     for j in a_lire:
         html = pages.get(chemin.format(j["licence"]))

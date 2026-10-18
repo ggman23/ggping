@@ -66,7 +66,8 @@ les effectifs se limitent alors aux joueurs déjà alignés, et une note l'indiq
 sont gardées dans le dossier `cache\` : le premier lancement complet peut être long, les suivants
 ne retéléchargent que ce qui a pu changer. L'outil reste discret avec pingpocket : une page toutes
 les 4 secondes au plus, 150 historiques au plus par lancement (les autres aux lancements
-suivants), arrêt immédiat en cas de vérification anti-robot. Il ne contourne aucune protection.
+suivants ; un historique lu reste valable toute la phase, le meilleur classement ne changeant qu'en
+janvier et juillet), arrêt immédiat en cas de vérification anti-robot. Il ne contourne aucune protection.
 
 ## Liste des licenciés quand pingpocket bloque l'outil : le dossier `import\`
 
