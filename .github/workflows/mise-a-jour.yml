@@ -1,0 +1,95 @@
+# Mise à jour du site depuis un téléphone : récupère les données (API FFTT), chiffre les pages
+# avec le mot de passe du club et les publie sur GitHub Pages.
+# Lancement : bouton « Mettre à jour » de la page d'accueil du site, ou GitHub (appli ou site) :
+# Actions > Mise à jour du site > Run workflow. Mise en place : voir PUBLICATION.md.
+name: Mise à jour du site
+
+on:
+  workflow_dispatch:
+    inputs:
+      pages:
+        description: Pages à mettre à jour
+        type: choice
+        options: [tout, resultats, effectif, virtuel, adversaires]
+        default: tout
+  schedule:
+    # Lendemains de journée (vendredi masculin, samedi féminin) : samedi, dimanche, lundi et
+    # mardi vers 8 h, heure de Paris (6 h 07 UTC).
+    - cron: "7 6 * * 0,1,2,6"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: mise-a-jour-du-site
+  cancel-in-progress: false
+
+jobs:
+  mise-a-jour:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    env:
+      TZ: Europe/Paris
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Installation
+        run: pip install -r requirements.txt cryptography
+
+      - name: Données déjà téléchargées (cache)
+        uses: actions/cache@v4
+        with:
+          path: cache
+          key: donnees-${{ github.run_id }}
+          restore-keys: donnees-
+
+      - name: Récupération des données
+        env:
+          CHOIX: ${{ inputs.pages || 'tout' }}
+        run: |
+          case "$CHOIX" in
+            tout) ARGS="--resultats --effectif --virtuel --adversaires" ;;
+            resultats|effectif|virtuel|adversaires) ARGS="--$CHOIX" ;;
+            *) echo "::error::Choix inconnu : $CHOIX"; exit 1 ;;
+          esac
+          python -m ttvaires $ARGS --pas-de-navigateur
+
+      - name: Mot de passe du site
+        env:
+          MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
+        run: |
+          if [ -z "$MOT_DE_PASSE_SITE" ]; then
+            echo "::error::Ajoutez le secret MOT_DE_PASSE_SITE (Settings > Secrets and variables > Actions). Rien n'est publié sans mot de passe."
+            exit 1
+          fi
+
+      - name: Réglage de GitHub Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Pages déjà en ligne (gardées si elles ne sont pas régénérées)
+        run: python -m ttvaires.publier --recuperer "${{ steps.pages.outputs.base_url }}"
+
+      - name: Chiffrement des pages et page d'accueil
+        env:
+          MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
+        run: python -m ttvaires.publier
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Publication
+        id: deploiement
+        uses: actions/deploy-pages@v4

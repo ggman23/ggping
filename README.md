@@ -120,6 +120,13 @@ Où le voir :
 Les équipes exemptes ne sont pas attendues. En cas de manque, il suffit de relancer plus tard :
 les rencontres incomplètes sont retéléchargées à chaque lancement.
 
+## Sur téléphone
+
+Les mises à jour peuvent aussi être lancées depuis un téléphone : GitHub génère les pages sur ses
+serveurs et les publie, chiffrées par un mot de passe, sur **https://ggman23.github.io/ggping/**
+(bouton « Lancer la mise à jour » sur la page d'accueil, Excel téléchargeable, mises à jour
+automatiques les lendemains de journée). Mise en place et limites : [PUBLICATION.md](PUBLICATION.md).
+
 ## Installation (Windows)
 
 1. Installer **Python 3.10 ou plus** depuis <https://www.python.org/downloads/> — cocher
@@ -173,6 +180,9 @@ ttvaires/
   effectif.py    Effectif de Vaires : équipes jouées, brûlage par joueur et par équipe
   virtuel.py     Classement virtuel : parties de toutes les compétitions, barème × coefficient
   verifications.py  Vérifications : résultats de chaque équipe récupérés pour chaque journée
+  publier.py     Publication du site pour téléphone : pages chiffrées, page d'accueil
+  gabarit_accueil.html, gabarit_verrou.html  Accueil du site et page protégée par mot de passe
+.github/workflows/mise-a-jour.yml  Mise à jour en ligne (GitHub Actions + GitHub Pages)
   rendu.py       Génération de la page HTML (un seul fichier)
   gabarit.html   Mise en page de la page adversaires (HTML/CSS/JavaScript)
   gabarit_resultats.html  Mise en page de la page résultats

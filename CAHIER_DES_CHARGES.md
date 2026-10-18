@@ -182,3 +182,23 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
   « Vérifications » et alerte dans la fiche du club concerné sur la page adversaires.
 - Contrôle du 18/10/2026 : 31 clubs (dont Lognes, 21 équipes) et 409 rencontres, tous complets
   pour les J1 à J3.
+
+## Lancement depuis un téléphone (18/10/2026)
+
+- Demande : lancer les mises à jour depuis un téléphone et y consulter ou télécharger les
+  résultats.
+- Réalisation : workflow GitHub Actions « Mise à jour du site » (lancement manuel avec le choix
+  des pages, et automatique samedi, dimanche, lundi et mardi vers 8 h) qui exécute l'outil sur les
+  serveurs de GitHub et publie le résultat sur GitHub Pages (https://ggman23.github.io/ggping/).
+- Données personnelles (dont mineurs) : le site est public mais chaque page est chiffrée
+  (AES-256-GCM, clé PBKDF2-SHA256 tirée du mot de passe du club, secret GitHub
+  `MOT_DE_PASSE_SITE`) et déchiffrée dans le navigateur ; noindex et robots.txt. Rien n'est
+  publié sans mot de passe. L'Excel est chiffré aussi et déchiffré au téléchargement.
+- Page d'accueil (non chiffrée, sans nom de joueur) : pages et dates, bilan des vérifications,
+  bouton « Lancer la mise à jour » (API GitHub, jeton à droits limités enregistré seulement sur
+  le téléphone) avec suivi de l'avancement.
+- Une page non régénérée reste celle de la mise à jour précédente (reprise du site en ligne).
+- Limites en ligne : pingpocket.fr inaccessible depuis GitHub, dossier `import` resté sur le PC
+  (listes des licenciés non publiées) : effectifs limités aux joueurs alignés.
+- Mise en place par le propriétaire du dépôt : activer Pages (source GitHub Actions), créer le
+  secret, premier lancement. Voir PUBLICATION.md.

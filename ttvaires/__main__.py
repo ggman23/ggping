@@ -4,6 +4,7 @@ import argparse
 import json
 import time
 import webbrowser
+from datetime import datetime
 from pathlib import Path
 
 from .brulage import enrichir
@@ -39,7 +40,7 @@ def page_resultats(client, club):
     html = generer_html(donnees_page(resultats), SORTIE / "resultats_vaires.html", GABARIT_RESULTATS)
     xlsx = ecrire_xlsx(resultats, SORTIE / "resultats_vaires.xlsx")
     print(f"Classeur Excel : {xlsx}")
-    return [html], verifications.afficher_club(resultats["verification"], "résultats des équipes de Vaires")
+    return [html, xlsx], verifications.afficher_club(resultats["verification"], "résultats des équipes de Vaires")
 
 
 def page_effectif(client, club):
@@ -55,7 +56,7 @@ def page_virtuel(client, club):
     print("=== Classement virtuel : toutes les compétitions (championnat, critérium, tournois...)", flush=True)
     donnees = recuperer_virtuel(client, club, dossier_import=IMPORT)
     resume = verifications.afficher_club(donnees["verification"], "feuilles de match des équipes de Vaires")
-    resume = "; ".join([resume] + verifications.afficher_controle_parties(donnees["controle"]))
+    resume = " ; ".join([resume] + verifications.afficher_controle_parties(donnees["controle"]))
     return [generer_html(donnees, SORTIE / "classement_virtuel.html", GABARIT_VIRTUEL)], resume
 
 
@@ -95,22 +96,29 @@ def main():
             try:
                 nouvelles, resume = fonction(client, args.club)
                 pages += nouvelles
-                bilans.append((nom, resume))
+                bilans.append((nom, resume, [Path(f).name for f in nouvelles]))
             except ErreurReseau as e:
                 print(f"\n!!! Page {nom} non générée : {e}\n")
-                bilans.append((nom, f"PAGE NON GÉNÉRÉE ({e})"))
+                bilans.append((nom, f"PAGE NON GÉNÉRÉE ({e})", []))
         print(f"Pages téléchargées : {client.nb_telecharges}, reprises du cache : {client.nb_cache}")
         print("\n=== Bilan des vérifications ===")
-        for nom, resume in bilans:
+        for nom, resume, _ in bilans:
             print(f"  {nom} : {resume}")
         print()
+        # Bilan lu par la publication du site (python -m ttvaires.publier)
+        (SORTIE / "bilan.json").write_text(json.dumps({
+            "debut": datetime.fromtimestamp(debut).isoformat(timespec="minutes"),
+            "fin": datetime.now().isoformat(timespec="minutes"),
+            "pages": [{"nom": nom, "resume": resume, "fichiers": fichiers} for nom, resume, fichiers in bilans],
+        }, ensure_ascii=False, indent=1), encoding="utf-8")
 
     for chemin in pages:
-        print(f"Page générée : {chemin}")
+        print(f"Fichier généré : {chemin}")
     print(f"Terminé en {round(time.time() - debut)} s.")
     if not args.pas_de_navigateur:
         for chemin in pages:
-            webbrowser.open(chemin.as_uri())
+            if Path(chemin).suffix == ".html":
+                webbrowser.open(Path(chemin).as_uri())
 
 
 if __name__ == "__main__":

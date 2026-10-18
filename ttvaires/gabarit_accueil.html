@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>CVTT Vaires · championnat</title>
+<style>
+:root { color-scheme: light dark; --fond: #f4f5f7; --surface: #fff; --surface2: #f0f2f5; --texte: #1c2330; --doux: #5b6576;
+  --bord: #dde1e7; --accent: #1f5fbf; --ok: #1d7a46; --ok-fond: #e3f4ea; --att: #8a5a00; --att-fond: #fff4d6;
+  --ko: #b3261e; --ko-fond: #fbe7e5; }
+@media (prefers-color-scheme: dark) { :root { --fond: #12151b; --surface: #1b2029; --surface2: #232a35; --texte: #e6e9ef;
+  --doux: #9aa4b5; --bord: #313a48; --accent: #7fb0ff; --ok: #6fd39b; --ok-fond: #173323; --att: #f3cd6b;
+  --att-fond: #3a3014; --ko: #ff8f86; --ko-fond: #3d1c1a; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+header { background: var(--surface); border-bottom: 1px solid var(--bord); padding: 14px 16px; }
+h1 { font-size: 19px; margin: 0; }
+header p { margin: 2px 0 0; color: var(--doux); font-size: 13px; }
+main { max-width: 680px; margin: 0 auto; padding: 14px 16px 40px; }
+h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .04em; color: var(--doux); margin: 22px 0 8px; }
+.carte { display: block; background: var(--surface); border: 1px solid var(--bord); border-radius: 12px; padding: 13px 14px;
+  margin-bottom: 10px; color: inherit; text-decoration: none; }
+a.carte:active { background: var(--surface2); }
+.carte b { font-size: 17px; }
+.carte .desc { display: block; color: var(--doux); font-size: 13.5px; margin-top: 2px; }
+.etat { display: inline-block; margin-top: 7px; font-size: 13px; border-radius: 6px; padding: 2px 8px; }
+.ok { background: var(--ok-fond); color: var(--ok); }
+.att { background: var(--att-fond); color: var(--att); }
+.ko { background: var(--ko-fond); color: var(--ko); }
+.date { color: var(--doux); font-size: 12.5px; margin-left: 6px; }
+select, input[type=password], input[type=text] { width: 100%; font-size: 16px; padding: 10px 12px; border: 1px solid var(--bord);
+  border-radius: 8px; background: var(--surface); color: var(--texte); }
+button { font-size: 16px; padding: 10px 14px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; }
+button.second { background: var(--surface2); color: var(--texte); border: 1px solid var(--bord); font-weight: 500; }
+button:disabled { opacity: .6; }
+.ligne { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.ligne > * { flex: 1 1 auto; }
+#statut { margin-top: 10px; font-size: 14.5px; }
+details { margin-top: 12px; font-size: 14px; }
+summary { cursor: pointer; color: var(--accent); }
+ol { padding-left: 20px; margin: 8px 0; }
+li { margin-bottom: 5px; }
+.petit { color: var(--doux); font-size: 13px; }
+ul.bilans { margin: 6px 0 0; padding-left: 18px; font-size: 14px; }
+ul.bilans b { font-size: 14px; }
+ul.bilans li { margin-bottom: 4px; }
+a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>CVTT Vaires · championnat par équipes</h1>
+  <p id="maj"></p>
+</header>
+<main>
+  <h2>Pages</h2>
+  <div id="pages"></div>
+
+  <h2>Mettre à jour maintenant</h2>
+  <div class="carte" id="mise-a-jour">
+    <label for="choix" class="petit">Pages à mettre à jour</label>
+    <select id="choix">
+      <option value="tout">Tout (environ 5 minutes)</option>
+      <option value="resultats">Résultats des joueurs (1 à 2 minutes)</option>
+      <option value="effectif">Effectif et brûlages</option>
+      <option value="virtuel">Classement virtuel</option>
+      <option value="adversaires">Adversaires</option>
+    </select>
+    <div class="ligne"><button id="lancer">Lancer la mise à jour</button></div>
+    <div id="statut" role="status"></div>
+    <details id="reglage">
+      <summary>Réglage du bouton (une seule fois par téléphone)</summary>
+      <p class="petit">Le bouton demande à GitHub de lancer la mise à jour. Il lui faut une « clé » (jeton) que tu crées
+        une fois, et qui reste uniquement sur ce téléphone :</p>
+      <ol>
+        <li>Ouvre <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Fine-grained tokens → Generate new token</a>
+          (connecté avec ton compte GitHub).</li>
+        <li>Nom : « Vaires téléphone » ; expiration : 1 an ; <i>Repository access</i> : <b>Only select repositories</b> → <b id="nom-depot"></b>.</li>
+        <li><i>Permissions → Repository permissions → Actions</i> : <b>Read and write</b>. Rien d'autre.</li>
+        <li>« Generate token », copie le jeton (il commence par <code>github_pat_</code>) et colle-le ici :</li>
+      </ol>
+      <input type="password" id="jeton" placeholder="github_pat_…" autocomplete="off" aria-label="Jeton GitHub">
+      <div class="ligne"><button id="garder-jeton" class="second">Enregistrer sur ce téléphone</button>
+        <button id="oublier-jeton" class="second">Effacer</button></div>
+      <p class="petit" id="info-jeton"></p>
+    </details>
+    <p class="petit">Sans réglage, depuis l'appli ou le site GitHub : <a id="lien-actions" target="_blank" rel="noopener">Actions
+      → Mise à jour du site → Run workflow</a>.</p>
+  </div>
+
+  <h2>Dernier lancement</h2>
+  <div class="carte"><div id="dernier"></div></div>
+
+  <p class="petit">Les pages sont chiffrées : il faut le mot de passe du club pour les lire.
+    <button id="oublier-mdp" class="second" style="font-size:13px;padding:4px 10px;margin-left:4px">Oublier le mot de passe sur cet appareil</button></p>
+</main>
+<script id="etat" type="application/json">__ETAT_JSON__</script>
+<script>
+"use strict";
+const E = JSON.parse(document.getElementById("etat").textContent);
+const CLE = "cvtt-vaires-cle", JETON = "cvtt-vaires-jeton-github";
+const ORDRE = ["adversaires.html", "resultats.html", "resultats_vaires.xlsx.chiffre", "effectif.html", "classement_virtuel.html"];
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const lire = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const ecrire = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) { /* navigation privée */ } };
+const quand = (iso) => iso ? new Date(iso).toLocaleString("fr-FR", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+const octets = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+const b64 = (o) => btoa(String.fromCharCode(...o));
+function classe(resume) {
+  if (/NON GÉNÉRÉE|manquant|non lues|non récupéré/.test(resume || "")) return "ko";
+  if (/indisponible|pas encore/.test(resume || "")) return "att";
+  return "ok";
+}
+
+/* ---------- Pages publiées ---------- */
+function afficherPages() {
+  const noms = Object.keys(E.pages || {}).sort((a, b) => ORDRE.indexOf(a) - ORDRE.indexOf(b));
+  document.getElementById("pages").innerHTML = noms.length ? noms.map((n) => {
+    const p = E.pages[n];
+    const etat = `<span class="etat ${classe(p.verification)}">${esc(p.verification)}</span>`;
+    return p.telechargement
+      ? `<div class="carte"><b>${esc(p.titre)}</b><span class="date">${quand(p.date)}</span><span class="desc">${esc(p.description)}</span>
+          <div class="ligne"><button class="second" data-telecharger="${esc(n)}" data-nom="${esc(p.nom_telecharge)}">Télécharger</button></div></div>`
+      : `<a class="carte" href="${esc(n)}?v=${encodeURIComponent(p.date)}"><b>${esc(p.titre)}</b><span class="date">${quand(p.date)}</span>
+          <span class="desc">${esc(p.description)}</span>${etat}</a>`;
+  }).join("") : '<p class="petit">Aucune page publiée pour le moment : lance une mise à jour.</p>';
+  document.querySelectorAll("[data-telecharger]").forEach((b) => b.addEventListener("click", () => telecharger(b)));
+  const d = E.derniere_maj;
+  document.getElementById("maj").textContent = d ? `Dernière mise à jour : ${quand(d.fin)}` : "";
+  document.getElementById("dernier").innerHTML = d
+    ? `<span class="petit">${quand(d.debut)} → ${quand(d.fin)}</span><ul class="bilans">${d.bilans.map((b) =>
+        `<li><b>${esc(b.nom)}</b> : <span class="etat ${classe(b.resume)}">${esc(b.resume)}</span></li>`).join("")}</ul>`
+    : '<span class="petit">Pas encore de lancement.</span>';
+}
+
+/* ---------- Téléchargement d'un fichier chiffré (Excel) ---------- */
+async function deriver(mdp) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(mdp), "PBKDF2", false, ["deriveBits"]);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256",
+    salt: new TextEncoder().encode(E.sel), iterations: E.iterations }, base, 256));
+}
+async function telecharger(bouton) {
+  bouton.disabled = true;
+  try {
+    let cle = lire(CLE) ? octets(lire(CLE)) : null;
+    if (!cle) {
+      const mdp = prompt("Mot de passe du club");
+      if (!mdp) return;
+      cle = await deriver(mdp);
+    }
+    const brut = new Uint8Array(await (await fetch(`${bouton.dataset.telecharger}?v=${Date.now()}`)).arrayBuffer());
+    const k = await crypto.subtle.importKey("raw", cle, "AES-GCM", false, ["decrypt"]);
+    let clair;
+    try { clair = await crypto.subtle.decrypt({ name: "AES-GCM", iv: brut.slice(0, 12) }, k, brut.slice(12)); }
+    catch (e) { ecrire(CLE, null); alert("Mot de passe incorrect."); return; }
+    ecrire(CLE, b64(cle));
+    const fichier = await new Response(new Blob([clair]).stream().pipeThrough(new DecompressionStream("gzip"))).blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([fichier], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+    a.download = bouton.dataset.nom;
+    document.body.append(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  } catch (e) {
+    alert("Téléchargement impossible : " + e.message);
+  } finally {
+    bouton.disabled = false;
+  }
+}
+
+/* ---------- Mise à jour depuis le téléphone (API GitHub) ---------- */
+const statut = (html) => { document.getElementById("statut").innerHTML = html; };
+async function github(chemin, options = {}) {
+  const r = await fetch(`https://api.github.com${chemin}`, { ...options, headers: { Accept: "application/vnd.github+json",
+    Authorization: `Bearer ${lire(JETON)}`, "X-GitHub-Api-Version": "2022-11-28", ...(options.headers || {}) } });
+  if (!r.ok) throw new Error(r.status === 401 ? "jeton refusé (expiré ou mal copié)"
+    : r.status === 403 || r.status === 404 ? "le jeton n'a pas le droit « Actions : Read and write » sur ce dépôt" : `erreur ${r.status}`);
+  return r.status === 204 ? null : r.json();
+}
+async function lancer() {
+  if (!lire(JETON)) { document.getElementById("reglage").open = true; statut('<span class="etat att">Fais d\'abord le réglage ci-dessous.</span>'); return; }
+  const bouton = document.getElementById("lancer");
+  bouton.disabled = true;
+  const depuis = Date.now();
+  try {
+    await github(`/repos/${E.depot}/actions/workflows/${E.workflow}/dispatches`, { method: "POST",
+      body: JSON.stringify({ ref: E.branche, inputs: { pages: document.getElementById("choix").value } }) });
+    statut("Mise à jour demandée… ");
+    suivre(depuis, 0);
+  } catch (e) {
+    statut(`<span class="etat ko">Échec : ${esc(e.message)}</span>`);
+    bouton.disabled = false;
+  }
+}
+async function suivre(depuis, essais) {
+  try {
+    const r = await github(`/repos/${E.depot}/actions/workflows/${E.workflow}/runs?per_page=5&event=workflow_dispatch`);
+    const run = (r.workflow_runs || []).find((x) => new Date(x.created_at).getTime() >= depuis - 60000);
+    const minutes = Math.round((Date.now() - depuis) / 60000);
+    if (run && run.status === "completed") {
+      document.getElementById("lancer").disabled = false;
+      if (run.conclusion === "success") {
+        statut(`<span class="etat ok">✓ Terminé : les pages sont à jour.</span>
+          <div class="ligne"><button onclick="location.href='./?t=' + Date.now()">Recharger</button></div>`);
+      } else {
+        statut(`<span class="etat ko">✗ La mise à jour a échoué.</span> <a href="${esc(run.html_url)}" target="_blank" rel="noopener">Voir le détail</a>`);
+      }
+      return;
+    }
+    const enCours = run && run.status === "in_progress";
+    statut(`${enCours ? "Mise à jour en cours" : "En attente d'un serveur GitHub"}… (${minutes} min)
+      ${run ? `<a href="${esc(run.html_url)}" target="_blank" rel="noopener">suivre sur GitHub</a>` : ""}`);
+  } catch (e) {
+    statut(`<span class="etat att">Suivi impossible (${esc(e.message)}) : la mise à jour continue quand même.</span>`);
+  }
+  if (essais < 120) setTimeout(() => suivre(depuis, essais + 1), 10000);
+  else document.getElementById("lancer").disabled = false;
+}
+
+/* ---------- Réglages ---------- */
+function afficherJeton() {
+  document.getElementById("info-jeton").textContent = lire(JETON) ? "Jeton enregistré sur ce téléphone." : "Aucun jeton enregistré.";
+}
+document.getElementById("garder-jeton").addEventListener("click", () => {
+  const v = document.getElementById("jeton").value.trim();
+  if (v) { ecrire(JETON, v); document.getElementById("jeton").value = ""; afficherJeton(); }
+});
+document.getElementById("oublier-jeton").addEventListener("click", () => { ecrire(JETON, null); afficherJeton(); });
+document.getElementById("oublier-mdp").addEventListener("click", (ev) => { ecrire(CLE, null); ev.target.textContent = "Mot de passe oublié sur cet appareil"; });
+document.getElementById("lancer").addEventListener("click", lancer);
+document.getElementById("nom-depot").textContent = E.depot || "le dépôt de l'outil";
+document.getElementById("lien-actions").href = `https://github.com/${E.depot}/actions/workflows/${E.workflow}`;
+if (!E.depot) document.getElementById("mise-a-jour").style.display = "none";
+afficherPages();
+afficherJeton();
+</script>
+</body>
+</html>

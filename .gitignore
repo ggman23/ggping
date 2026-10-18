@@ -7,3 +7,4 @@ sortie/
 # Pages enregistrées depuis le navigateur : données personnelles, jamais dans le dépôt
 import/*
 !import/LISEZ-MOI.txt
+site/

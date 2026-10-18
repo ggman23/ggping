@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>__TITRE__ · CVTT Vaires</title>
+<style>
+:root { color-scheme: light dark; --fond: #f4f5f7; --surface: #fff; --texte: #1c2330; --doux: #5b6576; --bord: #dde1e7;
+  --accent: #1f5fbf; --erreur: #b3261e; }
+@media (prefers-color-scheme: dark) { :root { --fond: #12151b; --surface: #1b2029; --texte: #e6e9ef; --doux: #9aa4b5;
+  --bord: #313a48; --accent: #7fb0ff; --erreur: #ff8f86; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 420px; margin: 12vh auto 0; padding: 0 16px; }
+.carte { background: var(--surface); border: 1px solid var(--bord); border-radius: 12px; padding: 20px; }
+h1 { font-size: 20px; margin: 0 0 6px; }
+p { margin: 0 0 14px; color: var(--doux); font-size: 14px; }
+input[type=password] { width: 100%; font-size: 17px; padding: 10px 12px; border: 1px solid var(--bord); border-radius: 8px;
+  background: var(--surface); color: var(--texte); }
+label { display: flex; gap: 8px; align-items: center; margin: 12px 0; font-size: 14px; color: var(--doux); }
+button { width: 100%; font-size: 17px; padding: 11px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; }
+button:disabled { opacity: .6; }
+#message { color: var(--erreur); min-height: 1.4em; margin: 10px 0 0; }
+.retour { display: block; text-align: center; margin-top: 16px; color: var(--accent); font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <form class="carte" id="formulaire">
+    <h1>__TITRE__</h1>
+    <p>Page réservée au CVTT Vaires : entre le mot de passe du club.</p>
+    <input type="password" id="mdp" autocomplete="current-password" placeholder="Mot de passe" aria-label="Mot de passe">
+    <label><input type="checkbox" id="garder" checked> Se souvenir sur cet appareil</label>
+    <button id="ouvrir">Ouvrir</button>
+    <p id="message" role="alert"></p>
+  </form>
+  <a class="retour" href="./">← Accueil</a>
+</main>
+<script id="chiffre" type="text/plain">__CHIFFRE__</script>
+<script>
+"use strict";
+const SEL = "__SEL__", ITERATIONS = __ITERATIONS__, STOCKAGE = "cvtt-vaires-cle";
+const octets = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+const b64 = (o) => btoa(String.fromCharCode(...o));
+function lireCle() { try { const c = localStorage.getItem(STOCKAGE); return c ? octets(c) : null; } catch (e) { return null; } }
+function garderCle(c) { try { localStorage.setItem(STOCKAGE, b64(c)); } catch (e) { /* navigation privée */ } }
+function oublierCle() { try { localStorage.removeItem(STOCKAGE); } catch (e) { /* rien */ } }
+async function deriver(mdp) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(mdp), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: new TextEncoder().encode(SEL), iterations: ITERATIONS }, base, 256);
+  return new Uint8Array(bits);
+}
+async function dechiffrer(cle) {
+  const brut = octets(document.getElementById("chiffre").textContent.trim());
+  const k = await crypto.subtle.importKey("raw", cle, "AES-GCM", false, ["decrypt"]);
+  const clair = await crypto.subtle.decrypt({ name: "AES-GCM", iv: brut.slice(0, 12) }, k, brut.slice(12));
+  return new Response(new Blob([clair]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+}
+function afficher(html) { document.open(); document.write(html); document.close(); }
+const message = (t) => { document.getElementById("message").textContent = t; };
+
+if (!window.crypto || !crypto.subtle || typeof DecompressionStream === "undefined") {
+  message("Ce navigateur est trop ancien pour ouvrir la page : mets-le à jour (Chrome, Safari, Firefox récents).");
+  document.getElementById("ouvrir").disabled = true;
+} else {
+  const memorisee = lireCle();
+  if (memorisee) dechiffrer(memorisee).then(afficher).catch(() => { oublierCle(); message("Le mot de passe a changé : entre le nouveau."); });
+}
+document.getElementById("formulaire").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const bouton = document.getElementById("ouvrir");
+  bouton.disabled = true;
+  message("");
+  try {
+    const cle = await deriver(document.getElementById("mdp").value);
+    const html = await dechiffrer(cle);
+    if (document.getElementById("garder").checked) garderCle(cle);
+    afficher(html);
+  } catch (e) {
+    message("Mot de passe incorrect.");
+    bouton.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
