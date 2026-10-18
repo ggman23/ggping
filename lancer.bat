@@ -56,10 +56,12 @@ echo    4. Classement virtuel du club : toutes competitions
 echo    5. Tout : les quatre pages
 echo    6. Page de demonstration, donnees fictives
 echo    7. Lien avec le telephone : reglage et envoi des donnees au site
-echo    8. Quitter
+echo    8. Adversaires en lisant tous les meilleurs classements manquants - long, une fois
+echo    9. Quitter
 echo.
-choice /c 12345678 /n /m "  Votre choix, de 1 a 8 : "
-if errorlevel 8 exit /b 0
+choice /c 123456789 /n /m "  Votre choix, de 1 a 9 : "
+if errorlevel 9 exit /b 0
+if errorlevel 8 goto historiques
 if errorlevel 7 goto telephone
 if errorlevel 6 goto demo
 if errorlevel 5 goto tout
@@ -67,6 +69,9 @@ if errorlevel 4 goto virtuel
 if errorlevel 3 goto effectif
 if errorlevel 2 goto resultats
 python -m ttvaires --adversaires
+goto fin
+:historiques
+python -m ttvaires --adversaires --tous-les-historiques
 goto fin
 :telephone
 python -m ttvaires.synchro --configurer

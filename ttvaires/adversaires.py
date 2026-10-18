@@ -94,7 +94,7 @@ def equipes_et_compositions(numero, rencontres, detail, championnats):
     return liste, joueurs
 
 
-def recuperer(client, numero_club="08770250", aujourdhui=None, dossier_import=None):
+def recuperer(client, numero_club="08770250", aujourdhui=None, dossier_import=None, tous_les_historiques=False):
     aujourdhui = aujourdhui or date.today()
     auj = aujourdhui.isoformat()
     phase, saison = fftt.phase_et_saison(aujourdhui)
@@ -192,7 +192,7 @@ def recuperer(client, numero_club="08770250", aujourdhui=None, dossier_import=No
         "equipes": equipes, "clubs": clubs, "sources": {"pingpocket": False},
         "verification": verification(numero_club, nom_club, rencontres_poules, suivies, clubs_adv, etats, erreurs, auj),
     }
-    completer_avec_pingpocket(client, donnees, dossier_import)
+    completer_avec_pingpocket(client, donnees, dossier_import, tous_les_historiques)
     return donnees
 
 
@@ -209,7 +209,7 @@ def verification(numero_club, nom_club, rencontres_poules, suivies, clubs_adv, e
             "clubs": clubs}
 
 
-def completer_avec_pingpocket(client, donnees, dossier_import=None):
+def completer_avec_pingpocket(client, donnees, dossier_import=None, tous_les_historiques=False):
     """Effectifs complets, catégories, meilleur classement et adresses des salles (pingpocket.fr).
 
     Les listes de licenciés enregistrées depuis un navigateur dans le dossier import complètent
@@ -282,11 +282,15 @@ def completer_avec_pingpocket(client, donnees, dossier_import=None):
     debut_phase = datetime.fromisoformat(fftt.bornes_phase(date.today())[0]).timestamp()
     ttl_historique = max(JOUR, time.time() - debut_phase)
     a_telecharger = [] if muet else [j for j in a_lire if not client.en_cache(chemin.format(j["licence"]), ttl_historique)]
-    reportes = {j["id"] for j in a_telecharger[MAX_HISTORIQUES:]}
+    reportes = set() if tous_les_historiques else {j["id"] for j in a_telecharger[MAX_HISTORIQUES:]}
     a_lire = [j for j in a_lire if j["id"] not in reportes]
     print(f"5/5 Historiques des joueurs : {len(a_lire)} ("
           + ("pages déjà téléchargées, pingpocket.fr non interrogé" if muet else "pingpocket.fr") + ")"
           + (f", {len(reportes)} reportés au prochain lancement" if reportes else ""), flush=True)
+    a_lire_en_ligne = len(a_telecharger) - len(reportes)
+    if a_lire_en_ligne > 30:
+        print(f"  {a_lire_en_ligne} historiques à télécharger : environ {a_lire_en_ligne * 4 // 60 + 1} minutes "
+              "(une page toutes les 4 secondes). On peut fermer la fenêtre : ce qui est lu est gardé.", flush=True)
     pages = client.get_plusieurs([chemin.format(j["licence"]) for j in a_lire], ttl=ttl_historique, message="historiques",
                                  perime_si_erreur=True)
     for j in a_lire:
@@ -297,3 +301,7 @@ def completer_avec_pingpocket(client, donnees, dossier_import=None):
             j["meilleur"] = meilleur
             if j["classement"] is None and j["points"]:
                 j["classement"] = max(5, j["points"] // 100)
+    donnees["sources"]["historiques_restants"] = len(reportes)
+    if reportes:
+        print(f"  Il reste {len(reportes)} meilleurs classements à lire : ils se complètent au fil des lancements,")
+        print(f"  ou d'un coup avec l'option 8 du menu (environ {len(reportes) * 4 // 60 + 1} minutes, une seule fois).")

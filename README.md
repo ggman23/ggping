@@ -143,7 +143,10 @@ le PC y envoie, chiffrés, son dossier `import` et ses pages de pingpocket.fr ap
    4. Classement virtuel du club, toutes compétitions — rapide ;
    5. tout : les quatre pages ;
    6. la page de démonstration ;
-   7. le lien avec le téléphone (réglage, puis envoi automatique des données au site).
+   7. le lien avec le téléphone (réglage, puis envoi automatique des données au site) ;
+   8. les adversaires en lisant d'un coup tous les meilleurs classements manquants (long : une
+      page toutes les 4 secondes, environ 1 h la première fois ; à faire une fois, ensuite les
+      lancements normaux suffisent).
 
    Les pages s'ouvrent dans le navigateur et sont enregistrées dans le dossier `sortie\`.
 

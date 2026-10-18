@@ -144,6 +144,13 @@ def test_historiques_limites_par_lancement(tmp_path, monkeypatch):
              base + "LICENCE_STATE": _ecran("par licences à jour", [("Licences à jour", [("1", "", ""), ("2", "", ""), ("4", "", "")])])}
     historique = "/app/fftt/licencies/{}/graphiques/historique-classement"
     client = FauxPingpocket(en_ligne=True, pages=pages, en_cache=[historique.format("4")])
-    completer_avec_pingpocket(client, _donnees(), tmp_path)
+    donnees = _donnees()
+    completer_avec_pingpocket(client, donnees, tmp_path)
     # Déjà en cache : 4 ; à télécharger : 1 (aligné, prioritaire) et 2 -> un seul par lancement.
     assert sorted(client.demandes[-1]) == sorted([historique.format("1"), historique.format("4")])
+    assert donnees["sources"]["historiques_restants"] == 1
+    # Option 8 du menu : tous les historiques manquants d'un coup.
+    donnees = _donnees()
+    completer_avec_pingpocket(client, donnees, tmp_path, tous_les_historiques=True)
+    assert sorted(client.demandes[-1]) == sorted(historique.format(n) for n in ("1", "2", "4"))
+    assert donnees["sources"]["historiques_restants"] == 0

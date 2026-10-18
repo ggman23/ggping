@@ -24,13 +24,16 @@ IMPORT = RACINE / "import"  # listes de licenciés enregistrées depuis un navig
 CLUB_VAIRES = "08770250"
 
 
-def page_adversaires(client, club):
+def page_adversaires(client, club, tous_les_historiques=False):
     print("=== Adversaires : API FFTT + compléments pingpocket.fr (le premier lancement peut être long :")
     print("pingpocket sature vite ; les suivants sont beaucoup plus rapides grâce au cache).", flush=True)
-    donnees = recuperer(client, club, dossier_import=IMPORT)
+    donnees = recuperer(client, club, dossier_import=IMPORT, tous_les_historiques=tous_les_historiques)
     enrichir(donnees)
     (SORTIE / "donnees.json").write_text(json.dumps(donnees, ensure_ascii=False, indent=1), encoding="utf-8")
     resume = verifications.afficher_adversaires(donnees["verification"]["journees"], donnees["verification"]["clubs"])
+    restants = donnees["sources"].get("historiques_restants")
+    if restants:
+        resume += f" ; {restants} meilleurs classements pas encore lus (option 8 pour tout lire)"
     return [generer_html(donnees, SORTIE / "vaires.html")], resume
 
 
@@ -74,6 +77,8 @@ def main():
     parser.add_argument("--pingpocket-cache", action="store_true",
                         help="n'interroge pas pingpocket.fr : seules les pages déjà en cache servent (mise à jour en ligne)")
     parser.add_argument("--sans-envoi", action="store_true", help="n'envoie pas les données au site (téléphone)")
+    parser.add_argument("--tous-les-historiques", action="store_true",
+                        help="adversaires : lit d'un coup tous les historiques manquants (meilleur classement), sans limite")
     args = parser.parse_args()
 
     debut = time.time()
@@ -95,7 +100,7 @@ def main():
         if args.virtuel:
             a_faire.append(("classement virtuel", page_virtuel))
         if args.adversaires or not (args.resultats or args.effectif or args.virtuel):
-            a_faire.append(("adversaires", page_adversaires))
+            a_faire.append(("adversaires", lambda c, club: page_adversaires(c, club, args.tous_les_historiques)))
         for nom, fonction in a_faire:
             try:
                 nouvelles, resume = fonction(client, args.club)
