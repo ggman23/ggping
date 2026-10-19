@@ -302,10 +302,12 @@ async function lancer() {
     bouton.disabled = false;
   }
 }
-async function suivre(depuis, essais) {
+async function suivre(depuis, essais, id) {
   try {
-    const r = await github(`/repos/${E.depot}/actions/workflows/${E.workflow}/runs?per_page=5&event=workflow_dispatch`);
-    const run = (r.workflow_runs || []).find((x) => new Date(x.created_at).getTime() >= depuis - 60000);
+    const r = await github(`/repos/${E.depot}/actions/workflows/${E.workflow}/runs?per_page=5`);
+    const runs = r.workflow_runs || [];
+    const run = id ? runs.find((x) => x.id === id) : runs.find((x) => new Date(x.created_at).getTime() >= depuis - 60000);
+    if (run) id = run.id;
     const minutes = Math.round((Date.now() - depuis) / 60000);
     if (run && run.status === "completed") {
       document.getElementById("lancer").disabled = false;
@@ -318,13 +320,34 @@ async function suivre(depuis, essais) {
       return;
     }
     const enCours = run && run.status === "in_progress";
-    statut(`${enCours ? "Mise à jour en cours" : "En attente d'un serveur GitHub"}… (${minutes} min)
-      ${run ? `<a href="${esc(run.html_url)}" target="_blank" rel="noopener">suivre sur GitHub</a>` : ""}`);
+    const apresUneAutre = run && run.status === "pending";  // une mise à jour tourne déjà : elle passe ensuite
+    // Normalement un serveur est attribué en moins d'une minute : au-delà, c'est GitHub qui a un souci.
+    const retard = !enCours && !apresUneAutre && minutes >= 3 ? `<p class="petit">GitHub met du temps à attribuer un serveur
+      (<a href="https://www.githubstatus.com" target="_blank" rel="noopener">état de GitHub</a>). La mise à jour
+      partira toute seule dès que possible : inutile de la relancer.</p>` : "";
+    statut(`${enCours ? "Mise à jour en cours" : apresUneAutre ? "En attente de la mise à jour précédente"
+      : "En attente d'un serveur GitHub"}… (${minutes} min)
+      ${run ? `<a href="${esc(run.html_url)}" target="_blank" rel="noopener">suivre sur GitHub</a>` : ""}${retard}`);
   } catch (e) {
     statut(`<span class="etat att">Suivi impossible (${esc(e.message)}) : la mise à jour continue quand même.</span>`);
   }
-  if (essais < 120) setTimeout(() => suivre(depuis, essais + 1), 10000);
-  else document.getElementById("lancer").disabled = false;
+  if (essais < 120) setTimeout(() => suivre(depuis, essais + 1, id), 10000);
+  else {
+    document.getElementById("lancer").disabled = false;
+    statut(`<span class="etat att">Toujours pas terminée après ${Math.round((Date.now() - depuis) / 60000)} min :
+      la mise à jour continue, recharge la page plus tard pour la suivre.</span>`);
+  }
+}
+async function reprendreSuivi() {
+  /* Page rechargée pendant une mise à jour (lancée d'ici, du PC ou programmée) : on la suit encore. */
+  if (!lire(JETON) || !E.depot) return;
+  try {
+    const r = await github(`/repos/${E.depot}/actions/workflows/${E.workflow}/runs?per_page=5`);
+    const run = (r.workflow_runs || []).find((x) => x.status !== "completed");
+    if (!run) return;
+    document.getElementById("lancer").disabled = true;
+    suivre(new Date(run.created_at).getTime(), 0, run.id);
+  } catch (e) { /* suivi impossible : la page reste utilisable */ }
 }
 
 /* ---------- Réglages ---------- */
@@ -344,6 +367,7 @@ if (!E.depot) document.getElementById("mise-a-jour").style.display = "none";
 afficherPages();
 afficherImages();
 afficherJeton();
+reprendreSuivi();
 </script>
 </body>
 </html>
