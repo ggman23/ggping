@@ -49,6 +49,17 @@ ul.bilans { margin: 6px 0 0; padding-left: 18px; font-size: 14px; }
 ul.bilans b { font-size: 14px; }
 ul.bilans li { margin-bottom: 4px; }
 a { color: var(--accent); }
+.images .ligne-image { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--bord); }
+.images .ligne-image:last-child { border-bottom: 0; }
+.images .ligne-image span { flex: 1 1 auto; font-size: 15px; }
+.images button { flex: none; font-size: 14px; padding: 7px 11px; }
+#visionneuse { position: fixed; inset: 0; background: rgba(10, 14, 20, .94); display: none; flex-direction: column;
+  z-index: 10; }
+#visionneuse.ouverte { display: flex; }
+#visionneuse .barre { display: flex; gap: 8px; padding: 10px; }
+#visionneuse .barre button { flex: 1 1 auto; }
+#visionneuse .cadre { flex: 1 1 auto; overflow: auto; padding: 0 6px 10px; }
+#visionneuse img { width: 100%; height: auto; display: block; border-radius: 6px; }
 </style>
 </head>
 <body>
@@ -59,6 +70,9 @@ a { color: var(--accent); }
 <main>
   <h2>Pages</h2>
   <div id="pages"></div>
+
+  <h2>Images à partager</h2>
+  <div id="images" class="images"></div>
 
   <h2>Mettre à jour maintenant</h2>
   <div class="carte" id="mise-a-jour">
@@ -99,6 +113,11 @@ a { color: var(--accent); }
   <p class="petit">Les pages sont chiffrées : il faut le mot de passe du club pour les lire.
     <button id="oublier-mdp" class="second" style="font-size:13px;padding:4px 10px;margin-left:4px">Oublier le mot de passe sur cet appareil</button></p>
 </main>
+<div id="visionneuse" role="dialog" aria-label="Image">
+  <div class="barre"><button id="partager-image">Partager</button><button id="telecharger-image" class="second">Télécharger</button>
+    <button id="fermer-image" class="second">Fermer</button></div>
+  <div class="cadre"><img id="image-vue" alt=""></div>
+</div>
 <script id="etat" type="application/json">__ETAT_JSON__</script>
 <script>
 "use strict";
@@ -132,7 +151,7 @@ function afficherPages() {
       : `<div class="carte"><a class="titre" href="${lien}"><b>${esc(p.titre)}</b></a><span class="date">${quand(p.date)}</span>
           <span class="desc">${esc(p.description)}</span>${etat}
           <div class="ligne"><a class="bouton" href="${lien}">Ouvrir</a>${bouton}</div></div>`;
-  }).join("") + `<div class="ligne"><button class="second" id="tout-telecharger">Tout télécharger (pages et Excel)</button></div>
+  }).join("") + `<div class="ligne"><button class="second" id="tout-telecharger">Tout télécharger (pages, Excel et images)</button></div>
     <p class="petit">Les fichiers téléchargés vont dans « Téléchargements » : ce sont les mêmes que ceux du dossier sortie
       du PC, lisibles sans connexion et sans mot de passe (à ne pas diffuser en dehors du club).</p>`
     : '<p class="petit">Aucune page publiée pour le moment : lance une mise à jour.</p>';
@@ -155,7 +174,8 @@ async function deriver(mdp) {
   return new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256",
     salt: new TextEncoder().encode(E.sel), iterations: E.iterations }, base, 256));
 }
-const TYPES = { html: "text/html;charset=utf-8", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" };
+const TYPES = { html: "text/html;charset=utf-8", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  png: "image/png" };
 async function cleDuClub() {
   if (lire(CLE)) return octets(lire(CLE));
   const mdp = prompt("Mot de passe du club");
@@ -204,6 +224,59 @@ async function telecharger(boutons) {
     if (tout) tout.disabled = false;
   }
 }
+
+/* ---------- Images à partager ---------- */
+const GROUPES = ["adversaires", "résultats", "effectif", "classement virtuel"];
+const TITRES_GROUPES = { "adversaires": "Adversaires", "résultats": "Résultats des joueurs", "effectif": "Effectif et brûlages",
+  "classement virtuel": "Classement virtuel" };
+function afficherImages() {
+  const zone = document.getElementById("images");
+  const liste = Object.entries(E.images || {}).sort(([, a], [, b]) =>
+    GROUPES.indexOf(a.groupe) - GROUPES.indexOf(b.groupe) || a.ordre - b.ordre);
+  if (!liste.length) { zone.innerHTML = '<p class="petit">Pas encore d\'images : lance une mise à jour.</p>'; return; }
+  const groupes = [...new Set(liste.map(([, i]) => i.groupe))];
+  zone.innerHTML = groupes.map((g) => {
+    const imgs = liste.filter(([, i]) => i.groupe === g);
+    return `<div class="carte"><b>${esc(TITRES_GROUPES[g] || g)}</b><span class="date">${quand(imgs[0][1].date)}</span>
+      ${imgs.map(([n, i]) => `<div class="ligne-image"><span>${esc(i.titre)}</span>
+        <button data-voir="${esc(n)}" data-nom="${esc(i.nom_telecharge)}">Voir</button>
+        <button class="second" data-telecharger="${esc(n)}" data-nom="${esc(i.nom_telecharge)}" aria-label="Télécharger">⬇</button></div>`).join("")}
+    </div>`;
+  }).join("") + '<p class="petit">« Voir » affiche l\'image en grand ; « Partager » l\'envoie directement (WhatsApp, SMS…).</p>';
+  zone.querySelectorAll("[data-telecharger]").forEach((b) => b.addEventListener("click", () => telecharger([b])));
+  zone.querySelectorAll("[data-voir]").forEach((b) => b.addEventListener("click", () => voir(b)));
+}
+let imageOuverte = null;
+async function voir(bouton) {
+  bouton.disabled = true;
+  try {
+    const cle = await cleDuClub();
+    if (!cle) return;
+    let contenu;
+    try { contenu = await dechiffrerFichier(bouton.dataset.voir, false, cle); }
+    catch (e) { if (e.name === "OperationError") { ecrire(CLE, null); alert("Mot de passe incorrect."); return; } throw e; }
+    ecrire(CLE, b64(cle));
+    const blob = new Blob([contenu], { type: "image/png" });
+    if (imageOuverte) URL.revokeObjectURL(imageOuverte.url);
+    imageOuverte = { url: URL.createObjectURL(blob), blob, nom: bouton.dataset.nom };
+    document.getElementById("image-vue").src = imageOuverte.url;
+    const fichier = new File([blob], imageOuverte.nom, { type: "image/png" });
+    document.getElementById("partager-image").style.display =
+      navigator.canShare && navigator.canShare({ files: [fichier] }) ? "" : "none";
+    document.getElementById("visionneuse").classList.add("ouverte");
+  } catch (e) {
+    alert("Image impossible à afficher : " + e.message);
+  } finally {
+    bouton.disabled = false;
+  }
+}
+document.getElementById("fermer-image").addEventListener("click", () => document.getElementById("visionneuse").classList.remove("ouverte"));
+document.getElementById("telecharger-image").addEventListener("click", () => imageOuverte && enregistrer(imageOuverte.blob, imageOuverte.nom));
+document.getElementById("partager-image").addEventListener("click", async () => {
+  if (!imageOuverte) return;
+  try { await navigator.share({ files: [new File([imageOuverte.blob], imageOuverte.nom, { type: "image/png" })] }); }
+  catch (e) { /* partage annulé */ }
+});
 
 /* ---------- Mise à jour depuis le téléphone (API GitHub) ---------- */
 const statut = (html) => { document.getElementById("statut").innerHTML = html; };
@@ -269,6 +342,7 @@ document.getElementById("nom-depot").textContent = E.depot || "le dépôt de l'o
 document.getElementById("lien-actions").href = `https://github.com/${E.depot}/actions/workflows/${E.workflow}`;
 if (!E.depot) document.getElementById("mise-a-jour").style.display = "none";
 afficherPages();
+afficherImages();
 afficherJeton();
 </script>
 </body>

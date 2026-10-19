@@ -67,3 +67,26 @@ def test_rien_n_est_publie_sans_mot_de_passe(tmp_path):
     with pytest.raises(publier.ErreurPublication, match="MOT_DE_PASSE_SITE"):
         publier.publier(sortie, tmp_path / "site", "")
     assert not (tmp_path / "site").exists()
+
+
+def test_images_publiees_et_remplacees_a_chaque_lancement(tmp_path):
+    _crypto()
+    sortie, site = tmp_path / "sortie", tmp_path / "site"
+    (sortie / "images").mkdir(parents=True)
+
+    def lancer(noms, fin):
+        for n in noms:
+            (sortie / "images" / n).write_bytes(b"\x89PNG" + n.encode())
+        (sortie / "bilan.json").write_text(json.dumps({"debut": fin, "fin": fin, "pages": [
+            {"nom": "résultats", "resume": "ok", "fichiers": [],
+             "images": [{"fichier": f"images/{n}", "titre": n} for n in noms]}]}))
+        return publier.publier(sortie, site, "secret")
+
+    lancer(["resultats_J3.png", "resultats_cumul.png"], "2026-10-18T09:00")
+    etat = lancer(["resultats_J4.png", "resultats_cumul.png"], "2026-11-08T09:00")
+    assert sorted(etat["images"]) == ["images/resultats_J4.png.chiffre", "images/resultats_cumul.png.chiffre"]
+    assert not (site / "images" / "resultats_J3.png.chiffre").exists()
+    assert "images/resultats_J4.png.chiffre" in etat["fichiers"]
+    assert publier.dechiffrer((site / "images" / "resultats_J4.png.chiffre").read_bytes(), publier.cle("secret")) \
+        == b"\x89PNGresultats_J4.png"
+    assert etat["images"]["images/resultats_cumul.png.chiffre"]["nom_telecharge"] == "resultats_cumul.png"

@@ -220,3 +220,26 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
   tant que la liste des licenciés ne change pas (relancer ne les efface plus).
 - Contrôle : lancement PC puis lancement en ligne à partir de l'archive : données identiques pour
   les quatre pages (hors heure de génération) et même contenu Excel.
+
+## Images à partager (19/10/2026)
+
+- Demande : une version image des tableaux, la plus lisible possible sur un téléphone, sur le PC
+  comme en ligne, incluse dans « Tout télécharger ».
+- Images produites à chaque lancement (PNG, Pillow, police Liberation Sans fournie : mêmes images
+  sur le PC et en ligne) :
+  - classement virtuel (colonnes Éq., Pts off., Champ., Autre, Total, Virt., Clt, V/D de même
+    largeur, colonne du nom réduite) ;
+  - adversaires : la prochaine journée ; pour chaque équipe de Vaires, le prochain adversaire avec
+    composition probable, renforts possibles et les 8 mieux classés n'ayant pas encore joué ;
+  - résultats : la dernière journée triée par points gagnés sur la journée (« Meilleure victoire »
+    sur deux lignes) ; le cumul trié par points gagnés au total ;
+  - effectif : vue du club (équipes jouées, coche = peut jouer, flamme = brûlé) ; pour chaque
+    équipe masculine 2 à 6, ses joueurs brûlés.
+- Lisibilité : largeur 1080 points, texte 26 points, nom abrégé « NOM P. » si besoin, 25 lignes au
+  plus par image (au-delà, plusieurs images numérotées : une image très haute serait réduite par
+  les messageries).
+- Pages HTML : en-têtes « Autre » et « Virt. » et colonnes de même largeur dans le classement
+  virtuel ; « Meilleure victoire » sur deux lignes dans les résultats.
+- Site : images chiffrées comme les pages ; section « Images à partager » (voir, télécharger,
+  partager) ; « Tout télécharger » inclut les images. Les images d'une page sont remplacées à
+  chaque mise à jour de cette page.

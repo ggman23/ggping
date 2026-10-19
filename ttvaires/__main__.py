@@ -24,6 +24,27 @@ IMPORT = RACINE / "import"  # listes de licenciés enregistrées depuis un navig
 CLUB_VAIRES = "08770250"
 
 
+IMAGES = SORTIE / "images"  # images PNG des tableaux, à partager depuis un téléphone
+_titres_images = {}
+
+
+def faire_images(nom_fonction, *args):
+    """Images PNG d'une page. Un problème de dessin ne doit jamais empêcher les pages : il est signalé."""
+    try:
+        from . import images
+        resultat = getattr(images, nom_fonction)(*args, IMAGES)
+    except ImportError:
+        print("  ! images non générées : bibliothèque Pillow absente (relancer lancer.bat pour l'installer)")
+        return []
+    except Exception as e:  # noqa: BLE001
+        print(f"  ! images non générées : {e}")
+        return []
+    for chemin, titre in resultat:
+        _titres_images[str(chemin)] = titre
+    print(f"Images : {len(resultat)} dans {IMAGES}")
+    return [chemin for chemin, _ in resultat]
+
+
 def page_adversaires(client, club, tous_les_historiques=False):
     print("=== Adversaires : API FFTT + compléments pingpocket.fr (le premier lancement peut être long :")
     print("pingpocket sature vite ; les suivants sont beaucoup plus rapides grâce au cache).", flush=True)
@@ -34,7 +55,8 @@ def page_adversaires(client, club, tous_les_historiques=False):
     restants = donnees["sources"].get("historiques_restants")
     if restants:
         resume += f" ; {restants} meilleurs classements pas encore lus (option 8 pour tout lire)"
-    return [generer_html(donnees, SORTIE / "vaires.html")], resume
+    html = generer_html(donnees, SORTIE / "vaires.html")
+    return [html, *faire_images("images_adversaires", donnees)], resume
 
 
 def page_resultats(client, club):
@@ -43,7 +65,8 @@ def page_resultats(client, club):
     html = generer_html(donnees_page(resultats), SORTIE / "resultats_vaires.html", GABARIT_RESULTATS)
     xlsx = ecrire_xlsx(resultats, SORTIE / "resultats_vaires.xlsx")
     print(f"Classeur Excel : {xlsx}")
-    return [html, xlsx], verifications.afficher_club(resultats["verification"], "résultats des équipes de Vaires")
+    pngs = faire_images("images_resultats", donnees_page(resultats))
+    return [html, xlsx, *pngs], verifications.afficher_club(resultats["verification"], "résultats des équipes de Vaires")
 
 
 def page_effectif(client, club):
@@ -52,7 +75,8 @@ def page_effectif(client, club):
     resume = verifications.afficher_club(donnees["verification"], "feuilles de match des équipes de Vaires")
     if not donnees["source"]["liste"]:
         resume += " ; liste des licenciés indisponible (voir import/LISEZ-MOI.txt)"
-    return [generer_html(donnees, SORTIE / "effectif_vaires.html", GABARIT_EFFECTIF)], resume
+    html = generer_html(donnees, SORTIE / "effectif_vaires.html", GABARIT_EFFECTIF)
+    return [html, *faire_images("images_effectif", donnees)], resume
 
 
 def page_virtuel(client, club):
@@ -60,7 +84,8 @@ def page_virtuel(client, club):
     donnees = recuperer_virtuel(client, club, dossier_import=IMPORT)
     resume = verifications.afficher_club(donnees["verification"], "feuilles de match des équipes de Vaires")
     resume = " ; ".join([resume] + verifications.afficher_controle_parties(donnees["controle"]))
-    return [generer_html(donnees, SORTIE / "classement_virtuel.html", GABARIT_VIRTUEL)], resume
+    html = generer_html(donnees, SORTIE / "classement_virtuel.html", GABARIT_VIRTUEL)
+    return [html, *faire_images("images_virtuel", donnees)], resume
 
 
 def main():
@@ -105,7 +130,7 @@ def main():
             try:
                 nouvelles, resume = fonction(client, args.club)
                 pages += nouvelles
-                bilans.append((nom, resume, [Path(f).name for f in nouvelles]))
+                bilans.append((nom, resume, [Path(f).relative_to(SORTIE).as_posix() for f in nouvelles]))
             except ErreurReseau as e:
                 print(f"\n!!! Page {nom} non générée : {e}\n")
                 bilans.append((nom, f"PAGE NON GÉNÉRÉE ({e})", []))
@@ -121,11 +146,15 @@ def main():
         (SORTIE / "bilan.json").write_text(json.dumps({
             "debut": datetime.fromtimestamp(debut).isoformat(timespec="minutes"),
             "fin": datetime.now().isoformat(timespec="minutes"),
-            "pages": [{"nom": nom, "resume": resume, "fichiers": fichiers} for nom, resume, fichiers in bilans],
+            "pages": [{"nom": nom, "resume": resume, "fichiers": [f for f in fichiers if not f.endswith(".png")],
+                       "images": [{"fichier": f, "titre": _titres_images.get(str(SORTIE / f), Path(f).stem)}
+                                  for f in fichiers if f.endswith(".png")]}
+                      for nom, resume, fichiers in bilans],
         }, ensure_ascii=False, indent=1), encoding="utf-8")
 
     for chemin in pages:
-        print(f"Fichier généré : {chemin}")
+        if Path(chemin).suffix != ".png":
+            print(f"Fichier généré : {chemin}")
     print(f"Terminé en {round(time.time() - debut)} s.")
     if not args.pas_de_navigateur:
         for chemin in pages:

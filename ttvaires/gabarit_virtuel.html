@@ -34,6 +34,7 @@ th:hover { filter: brightness(0.96); }
 th .fleche { font-size: 11px; color: #7a4a2a; margin-left: 4px; }
 td { text-align: center; font-variant-numeric: tabular-nums; }
 td.g { text-align: left; }
+th.n, td.n { width: 5.2em; }
 td.joueur { cursor: pointer; }
 td.joueur:hover .nom { text-decoration: underline; }
 .cat { color: var(--doux); font-size: 12.5px; margin-left: 4px; }
@@ -107,19 +108,19 @@ const COLONNES = [
   { t: "#", k: (j) => j.rang, v: (j) => j.virtuels == null ? "" : j.rang },
   { t: "Joueur", k: (j) => nomComplet(j), c: "g joueur",
     v: (j) => `<span class="nom">${esc(j.nom || "")} <span class="prenom">${esc(j.prenom || "")}</span></span>${j.categorie ? `<span class="cat">${esc(j.categorie)}</span>` : ""}` },
-  { t: "Équipe", k: (j) => j.equipe || "~", v: (j) => esc(j.equipe || ""), c: "col-option" },
-  { t: "Pts off.", titre: "Points officiels de la phase", k: (j) => j.officiels ?? -1, v: (j) => j.officiels == null ? "—" : nombre(j.officiels, 0) },
-  { t: "Champ.", titre: "Championnat par équipes", c: "col-option", k: (j) => j.championnat, v: (j) => j.parties.some((p) => p.championnat) ? pts(j.championnat) : "", cls: (j) => clsTexte(j.championnat) },
-  { t: "Autres compét.", titre: "Critérium, tournois, compétitions jeunes...", c: "col-option", k: (j) => j.autres, v: (j) => autresComp(j) ? pts(j.autres) : "", cls: (j) => clsTexte(j.autres) },
-  { t: "Total", k: (j) => j.total, v: (j) => j.parties.length ? pts(j.total) : "", cls: (j) => clsFond(j.total) },
-  { t: "Pts virtuels", titre: "Points officiels + total", k: (j) => j.virtuels ?? -1, v: (j) => virt(j.virtuels), c: "virt" },
-  { t: "Clt", titre: "Classement virtuel (▲ ▼ : changement par rapport au classement officiel)", k: (j) => j.classement_virtuel ?? -1, v: (j) => {
+  { t: "Équipe", k: (j) => j.equipe || "~", v: (j) => esc(j.equipe || ""), c: "n col-option" },
+  { t: "Pts off.", titre: "Points officiels de la phase", c: "n", k: (j) => j.officiels ?? -1, v: (j) => j.officiels == null ? "—" : nombre(j.officiels, 0) },
+  { t: "Champ.", titre: "Championnat par équipes", c: "n col-option", k: (j) => j.championnat, v: (j) => j.parties.some((p) => p.championnat) ? pts(j.championnat) : "", cls: (j) => clsTexte(j.championnat) },
+  { t: "Autre", titre: "Autres compétitions : critérium, tournois, compétitions jeunes...", c: "n col-option", k: (j) => j.autres, v: (j) => autresComp(j) ? pts(j.autres) : "", cls: (j) => clsTexte(j.autres) },
+  { t: "Total", c: "n", k: (j) => j.total, v: (j) => j.parties.length ? pts(j.total) : "", cls: (j) => clsFond(j.total) },
+  { t: "Virt.", titre: "Points virtuels = points officiels + total", k: (j) => j.virtuels ?? -1, v: (j) => virt(j.virtuels), c: "n virt" },
+  { t: "Clt", titre: "Classement virtuel (▲ ▼ : changement par rapport au classement officiel)", c: "n", k: (j) => j.classement_virtuel ?? -1, v: (j) => {
       if (j.classement_virtuel == null) return "";
       const e = j.classement_virtuel - j.classement;
       return e > 0 ? `<span class="monte" title="était ${j.classement}">${j.classement_virtuel} ▲</span>`
         : e < 0 ? `<span class="descend" title="était ${j.classement}">${j.classement_virtuel} ▼</span>` : String(j.classement_virtuel);
     } },
-  { t: "V / D", k: (j) => j.v - j.d / 100, v: (j) => j.parties.length ? `${j.v} / ${j.d}` : "", c: "col-option" },
+  { t: "V / D", k: (j) => j.v - j.d / 100, v: (j) => j.parties.length ? `${j.v} / ${j.d}` : "", c: "n col-option" },
 ];
 
 function detail(j) {
@@ -187,7 +188,7 @@ function vueClassement() {
       return (typeof x === "string" ? x.localeCompare(y) : x - y) * tri.sens || a.rang - b.rang;
     });
   }
-  const tete = COLONNES.map((c, i) => `<th data-col="${i}" title="${esc(c.titre || "")}" class="${c.c && c.c.includes("col-option") ? "col-option" : ""}">${c.t}${tri && tri.col === i ? `<span class="fleche">${tri.sens > 0 ? "▲" : "▼"}</span>` : ""}</th>`).join("");
+  const tete = COLONNES.map((c, i) => `<th data-col="${i}" title="${esc(c.titre || "")}" class="${(c.c || "").split(" ").filter((x) => x === "n" || x === "col-option").join(" ")}">${c.t}${tri && tri.col === i ? `<span class="fleche">${tri.sens > 0 ? "▲" : "▼"}</span>` : ""}</th>`).join("");
   const corps = lignes.map((j) => `<tr data-id="${esc(j.id)}">${COLONNES.map((c) =>
       `<td class="${c.c || ""} ${c.cls ? c.cls(j) : ""}">${c.v(j)}</td>`).join("")}</tr>`
     + (ouverts.has(j.id) ? `<tr class="detail"><td colspan="${COLONNES.length}">${detail(j)}</td></tr>` : "")).join("");

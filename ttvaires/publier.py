@@ -96,6 +96,7 @@ def recuperer(url, site):
         try:
             r = requests.get(url + nom, timeout=120)
             r.raise_for_status()
+            (site / nom).parent.mkdir(parents=True, exist_ok=True)
             (site / nom).write_bytes(r.content)
             print(f"Repris du site : {nom}")
         except requests.RequestException as e:
@@ -113,6 +114,7 @@ def publier(sortie, site, mot_de_passe, depot="", branche=""):
     fichier_etat = site / "etat.json"
     etat = json.loads(fichier_etat.read_text(encoding="utf-8")) if fichier_etat.exists() else {}
     etat.setdefault("pages", {})
+    etat.setdefault("images", {})
     cle_ = cle(mot_de_passe)
 
     for page in bilan["pages"]:
@@ -129,12 +131,13 @@ def publier(sortie, site, mot_de_passe, depot="", branche=""):
                                      "verification": page["resume"], "telechargement": not publie.endswith(".html"),
                                      "nom_telecharge": nom}
             print(f"Publié (chiffré) : {publie}")
+        publier_images(page, bilan["fin"], sortie, site, etat, cle_)
 
     etat.update({
         "depot": depot, "branche": branche, "workflow": WORKFLOW, "sel": SEL, "iterations": ITERATIONS,
         "derniere_maj": {"debut": bilan["debut"], "fin": bilan["fin"],
                          "bilans": [{"nom": p["nom"], "resume": p["resume"]} for p in bilan["pages"]]},
-        "fichiers": sorted(n for n in etat["pages"] if (site / n).exists()),
+        "fichiers": sorted(n for n in [*etat["pages"], *etat["images"]] if (site / n).exists()),
     })
     fichier_etat.write_text(json.dumps(etat, ensure_ascii=False, indent=1), encoding="utf-8")
     js = json.dumps(etat, ensure_ascii=False).replace("<", "\\u003c")
@@ -143,6 +146,25 @@ def publier(sortie, site, mot_de_passe, depot="", branche=""):
     (site / "robots.txt").write_text("User-agent: *\nDisallow: /\n", encoding="utf-8")
     (site / ".nojekyll").write_text("", encoding="utf-8")
     return etat
+
+
+def publier_images(page, date, sortie, site, etat, cle_):
+    """Images PNG d'une page : celles du lancement précédent pour cette page sont remplacées
+    (leur nombre et leurs noms peuvent changer d'une fois à l'autre : J3 puis J4...)."""
+    if page["resume"].startswith("PAGE NON GÉNÉRÉE"):
+        return  # on garde les images de la fois précédente
+    for publie in [n for n, i in etat["images"].items() if i.get("groupe") == page["nom"]]:
+        (site / publie).unlink(missing_ok=True)
+        del etat["images"][publie]
+    for ordre, image in enumerate(page.get("images", [])):
+        nom = image["fichier"]
+        publie = f"images/{Path(nom).name}.chiffre"
+        (site / publie).parent.mkdir(parents=True, exist_ok=True)
+        (site / publie).write_bytes(chiffrer((sortie / nom).read_bytes(), cle_))
+        etat["images"][publie] = {"titre": image["titre"], "groupe": page["nom"], "ordre": ordre, "date": date,
+                                  "nom_telecharge": Path(nom).name}
+    if page.get("images"):
+        print(f"Publié (chiffré) : {len(page['images'])} image(s) « {page['nom']} »")
 
 
 def main():

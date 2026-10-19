@@ -89,6 +89,26 @@ en cache) et la page indique laquelle est utilisée et sa date. Cela marche auss
 adverses (remplacer 08770250 par le numéro du club). Le mode d'emploi est aussi dans
 `import\LISEZ-MOI.txt`. Les pages enregistrées ne sont jamais envoyées sur GitHub.
 
+## Images à partager (téléphone)
+
+Chaque option du menu produit aussi des **images PNG** des tableaux, faites pour être lues sur un
+téléphone et partagées dans les groupes du club (dossier `sortie\images\` sur le PC, section
+« Images à partager » du site) :
+
+- **adversaires** : la prochaine journée (équipes, dates, adversaires, lieux) et, pour chaque
+  équipe de Vaires, le prochain adversaire avec sa composition probable, ses renforts possibles et
+  les 8 mieux classés qui n'ont pas encore joué ;
+- **résultats** : la dernière journée (triée par points gagnés sur la journée) et le cumul (trié
+  par points gagnés au total) ;
+- **effectif** : tout le club (équipes jouées à chaque journée, coche verte = peut jouer,
+  flamme = brûlé) et, pour chaque équipe masculine de la 2 à la 6, ses joueurs brûlés ;
+- **classement virtuel** : le classement complet.
+
+Largeur 1080 points, texte agrandi, colonnes de même largeur (le nom est abrégé « NOM P. » s'il est
+trop long), 25 lignes au plus par image (un long tableau donne plusieurs images 1/2, 2/2) pour
+qu'elles restent nettes une fois envoyées par une messagerie. Mêmes images sur le PC et en ligne
+(police fournie avec l'outil : Liberation Sans, licence SIL OFL).
+
 ## Vérifications : tous les résultats ont-ils été récupérés ?
 
 Les résultats sont saisis par les clubs, souvent dans les 48 h après la rencontre : un lancement
@@ -187,6 +207,8 @@ ttvaires/
   effectif.py    Effectif de Vaires : équipes jouées, brûlage par joueur et par équipe
   virtuel.py     Classement virtuel : parties de toutes les compétitions, barème × coefficient
   verifications.py  Vérifications : résultats de chaque équipe récupérés pour chaque journée
+  images.py      Images PNG des tableaux (lisibles sur téléphone)
+  polices/       Police des images (Liberation Sans, licence SIL OFL)
   publier.py     Publication du site pour téléphone : pages chiffrées, page d'accueil
   synchro.py     Données du PC (import, pages pingpocket) envoyées chiffrées pour le site
   gabarit_accueil.html, gabarit_verrou.html  Accueil du site et page protégée par mot de passe

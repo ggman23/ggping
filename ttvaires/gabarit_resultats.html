@@ -90,7 +90,7 @@ function colonnesJournee(j) {
     { t: "Points", k: (l) => l.points, v: (l) => nombre(l.points, 0) },
     { t: "Pts +/-", k: (l) => l.delta, v: (l) => nombre(l.delta, 1), cls: (l) => clsDelta(l.delta) },
     { t: "Victoires", k: (l) => l.v / l.matchs + l.matchs / 1000, v: (l) => `${l.v}/${l.matchs}`, cls: (l) => clsVict(l.v, l.matchs) },
-    { t: "Meilleure victoire", k: (l) => l.meilleure ?? -99999,
+    { t: "Meilleure<br>victoire", k: (l) => l.meilleure ?? -99999,
       v: (l) => l.meilleure == null ? "" : `${signe(l.meilleure)} <span class="adv" title="points de l'adversaire battu">(${nombre(l.meilleure_adv, 0)})</span>` },
     { t: `Points J${j}`, k: (l) => l.apres, v: (l) => nombre(l.apres, 1) },
     { t: "Total", k: (l) => l.total, v: (l) => nombre(l.total, 1), cls: (l) => clsDelta(l.total) },

@@ -37,7 +37,7 @@ if not exist .venv (
     call .venv\Scripts\activate.bat
 )
 REM Mise a jour des dependances si une nouvelle version de l'outil en demande.
-python -c "import requests, bs4, openpyxl, cryptography" >nul 2>nul || python -m pip install -r requirements.txt
+python -c "import requests, bs4, openpyxl, cryptography, PIL" >nul 2>nul || python -m pip install -r requirements.txt
 
 if not "%~1"=="" (
     python -m ttvaires %*
