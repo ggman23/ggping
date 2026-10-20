@@ -8,10 +8,10 @@ elles, ne le sont pas.
 
 import json
 import re
-from datetime import date
+from datetime import date, timedelta
 from urllib.parse import quote
 
-from .reseau import JOUR
+from .reseau import HEURE, JOUR
 
 API = "https://apiv2.fftt.com/api"
 ENTETES = {"Accept": "application/ld+json", "X-Requested-With": None, "Referer": None}
@@ -19,6 +19,11 @@ ENTETES = {"Accept": "application/ld+json", "X-Requested-With": None, "Referer":
 IDS_CLUBS = {"08770250": 12770250}
 CHAMPIONNAT_PAR_EQUIPES = "Championnat de France par Equipes"
 JOURS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+# Une feuille de match peut être corrigée après sa saisie (réclamation, validation par la commission) :
+# tant que la rencontre a moins de RELECTURE_JOURS jours, sa feuille est relue si elle date de plus de
+# RELECTURE_TTL. Au-delà, elle ne change plus : gardée en cache.
+RELECTURE_JOURS = 10
+RELECTURE_TTL = 6 * HEURE
 
 
 # ---------------------------------------------------------------------------
@@ -116,17 +121,23 @@ def rencontres_poule(client, id_poule, ttl):
 def details(client, rencontres, aujourdhui, etats=None):
     """Détail (score, joueurs, parties) des rencontres déjà jouées : {id: détail}.
 
-    Les détails complets sont gardés en cache indéfiniment ; une rencontre dont le résultat
-    n'est pas encore saisi est retentée au lancement suivant. Si `etats` est fourni, l'état de
-    chaque rencontre y est noté (voir verifications.etat_detail) : complet, forfait, non saisi...
+    Une rencontre dont le résultat n'est pas encore saisi est retentée au lancement suivant ;
+    une feuille complète est relue tant que la rencontre est récente (corrections), puis gardée
+    en cache indéfiniment. Si `etats` est fourni, l'état de chaque rencontre y est noté (voir
+    verifications.etat_detail) : complet, forfait, non saisi...
     """
     from .verifications import OK, etat_detail
 
-    jouees = {r["id"] for r in rencontres if r["date"][:10] <= aujourdhui
+    jouees = {r["id"]: r["date"][:10] for r in rencontres if r["date"][:10] <= aujourdhui
               and r.get("homeOpponent") and r.get("awayOpponent")}
     chemins = {i: f"{API}/sport_matches/{i}" for i in sorted(jouees)}
-    pages = client.get_plusieurs(list(chemins.values()), ttl=None, message="feuilles de match",
-                                 entetes=ENTETES, valide=json_valide)
+    limite = (date.fromisoformat(aujourdhui) - timedelta(days=RELECTURE_JOURS)).isoformat()
+    recentes = [chemins[i] for i in chemins if jouees[i] >= limite]
+    pages = client.get_plusieurs([chemins[i] for i in chemins if jouees[i] < limite], ttl=None,
+                                 message="feuilles de match", entetes=ENTETES, valide=json_valide)
+    # Si l'API ne répond pas, la dernière copie lue d'une feuille récente sert quand même.
+    pages.update(client.get_plusieurs(recentes, ttl=RELECTURE_TTL, message="feuilles de match récentes",
+                                      entetes=ENTETES, valide=json_valide, perime_si_erreur=True))
     resultat = {}
     for i, chemin in chemins.items():
         d = json.loads(pages[chemin]) if pages.get(chemin) else None

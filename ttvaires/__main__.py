@@ -95,7 +95,8 @@ def main():
     parser.add_argument("--effectif", action="store_true", help="effectif de Vaires : brûlages par joueur et par équipe")
     parser.add_argument("--virtuel", action="store_true", help="classement virtuel du club, toutes compétitions")
     parser.add_argument("--demo", action="store_true", help="page des adversaires avec des données fictives")
-    parser.add_argument("--hors-ligne", action="store_true", help="n'utilise que les pages déjà téléchargées")
+    parser.add_argument("--hors-ligne", action="store_true",
+                        help="n'utilise que les pages déjà téléchargées (refaire pages et images en 30 s, sans envoi au site)")
     parser.add_argument("--paralleles", type=int, default=2, help="requêtes simultanées (défaut : 2)")
     parser.add_argument("--club", default=CLUB_VAIRES, help="numéro FFTT du club (défaut : Vaires)")
     parser.add_argument("--pas-de-navigateur", action="store_true", help="n'ouvre pas les pages à la fin")
@@ -135,8 +136,12 @@ def main():
                 print(f"\n!!! Page {nom} non générée : {e}\n")
                 bilans.append((nom, f"PAGE NON GÉNÉRÉE ({e})", []))
         print(f"Pages téléchargées : {client.nb_telecharges}, reprises du cache : {client.nb_cache}")
-        envoi = None if args.sans_envoi or args.pingpocket_cache else synchro.apres_lancement()
+        # Hors ligne, rien n'a été lu de nouveau : rien à envoyer au site.
+        envoi = None if args.sans_envoi or args.pingpocket_cache or args.hors_ligne else synchro.apres_lancement()
         print("\n=== Bilan des vérifications ===")
+        if args.hors_ligne:
+            print("  (sans téléchargement : pages et images refaites avec les données du dernier lancement ;\n"
+                  "   un résultat paru depuis n'y est pas, même si tout est marqué présent)")
         for nom, resume, _ in bilans:
             print(f"  {nom} : {resume}")
         if envoi:

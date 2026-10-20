@@ -171,7 +171,10 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
 - État de chaque rencontre jouée, d'après son détail dans l'API FFTT : complète (score et
   compositions), forfait, résultat non saisi, score sans feuille de match, non récupérée (API
   muette), du jour (pas encore attendue). Les rencontres incomplètes ne sont pas gardées en cache
-  et sont relues au lancement suivant.
+  et sont relues au lancement suivant. Une feuille complète est relue pendant 10 jours après la
+  rencontre (au plus toutes les 6 h), pour prendre en compte une correction ; ensuite gardée.
+- Menu : option 9 pour refaire les pages et les images sans rien télécharger (données du dernier
+  lancement, rien envoyé au site) ; 0 pour quitter.
 - Bilan équipe par équipe et journée par journée (équipes complètes / équipes qui ont joué ; les
   exemptes ne sont pas attendues ; une équipe masculine et une féminine de même nom comptent pour
   deux). Option 1 : toutes les rencontres des poules de Vaires et de toutes les équipes des clubs

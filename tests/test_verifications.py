@@ -82,3 +82,23 @@ def test_details_note_l_etat_de_chaque_rencontre():
     assert list(detail) == [1]
     assert etats == {1: "complet", 2: "non_saisi", 3: "non_recupere"}
     assert len(client.oubliees) == 2  # retentées au prochain lancement
+
+
+def test_feuilles_recentes_relues_pour_les_corrections():
+    """Une feuille saisie peut être corrigée ensuite : relue tant que la rencontre est récente."""
+    class Faux:
+        appels = []
+
+        def get_plusieurs(self, chemins, ttl=None, **options):
+            self.appels.append((sorted(c.rsplit("/", 1)[1] for c in chemins), ttl, options.get("perime_si_erreur", False)))
+            return {c: json.dumps({"@context": "x", "homeGamePoints": 20, "homeSheetMatches": [{}]}) for c in chemins}
+
+        def oublier(self, chemin):
+            pass
+
+    ancienne = _rencontre(1, ("LOGNES 1", LOGNES), ("AUTRE 1", AUTRE), 1, "2026-09-25")
+    recente = _rencontre(2, ("LOGNES 1", LOGNES), ("AUTRE 1", AUTRE), 3, "2026-10-16")
+    client = Faux()
+    assert list(fftt.details(client, [ancienne, recente], AUJ)) == [1, 2]
+    assert client.appels == [(["1"], None, False),                       # ancienne : gardée en cache
+                             (["2"], fftt.RELECTURE_TTL, True)]          # récente : relue (copie gardée si panne)

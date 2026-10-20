@@ -64,7 +64,21 @@ La page adversaires combine deux sources :
 Si pingpocket ne répond pas (panne ou protection anti-robots), la page est quand même générée :
 les effectifs se limitent alors aux joueurs déjà alignés, et une note l'indique. Les données
 sont gardées dans le dossier `cache\` : le premier lancement complet peut être long, les suivants
-ne retéléchargent que ce qui a pu changer. L'outil reste discret avec pingpocket : une page toutes
+ne retéléchargent que ce qui a pu changer :
+
+| Donnée | Relue |
+|---|---|
+| Listes des rencontres (nouveaux résultats) | à chaque lancement (si plus de 1 à 3 h) |
+| Feuille de match pas encore saisie | à chaque lancement, jusqu'à ce qu'elle soit saisie |
+| Feuille de match saisie | relue pendant 10 jours (corrections), puis gardée |
+| Parties de chaque joueur (classement virtuel) | à chaque lancement (si plus de 1 h) |
+| Liste des licenciés de Vaires (pingpocket) | à chaque lancement (si plus de 1 h) |
+| Listes des licenciés des clubs adverses (pingpocket) | une fois par jour |
+| Adresses des salles (pingpocket) | une fois par mois |
+| Historiques (meilleur classement, pingpocket) | une fois par phase (150 par lancement au plus) |
+
+Un résultat nouveau n'est donc jamais manqué parce qu'un lancement a eu lieu la veille ; le bilan
+des vérifications, à la fin, le confirme équipe par équipe. L'outil reste discret avec pingpocket : une page toutes
 les 4 secondes au plus, 150 historiques au plus par lancement (les autres aux lancements
 suivants ; un historique lu reste valable toute la phase, le meilleur classement ne changeant qu'en
 janvier et juillet), arrêt immédiat en cas de vérification anti-robot. Il ne contourne aucune protection.
@@ -169,7 +183,12 @@ le PC y envoie, chiffrés, son dossier `import` et ses pages de pingpocket.fr ap
    7. le lien avec le téléphone (réglage, puis envoi automatique des données au site) ;
    8. les adversaires en lisant d'un coup tous les meilleurs classements manquants (long : une
       page toutes les 4 secondes, environ 1 h la première fois ; à faire une fois, ensuite les
-      lancements normaux suffisent).
+      lancements normaux suffisent) ;
+   9. refaire les quatre pages et les images **sans rien télécharger** (30 secondes) : avec les
+      données du dernier lancement, par exemple après une nouvelle version de l'outil. Rien n'est
+      envoyé au site. Un résultat paru depuis le dernier lancement n'y est pas : pour les
+      nouveaux résultats, prendre les options 1 à 5 ;
+   0. quitter.
 
    Les pages s'ouvrent dans le navigateur et sont enregistrées dans le dossier `sortie\`.
 
@@ -182,7 +201,7 @@ aux capitaines, elle s'ouvre sans Internet.
 Options (dans une invite de commandes, dans le dossier du projet) :
 
 - `lancer.bat --adversaires`, `--resultats`, `--effectif`, `--virtuel` : lance directement une page, sans menu ;
-- `--hors-ligne` (à ajouter) : régénère sans rien télécharger (cache uniquement) ;
+- `--hors-ligne` (à ajouter) : régénère sans rien télécharger (cache uniquement, rien n'est envoyé au site) ;
 - `lancer.bat --demo` : page de démonstration avec des données fictives.
 
 ## Lancement manuel (Windows/Mac/Linux)
