@@ -36,5 +36,31 @@ Si pingpocket répond de nouveau à l'outil, sa liste du jour est utilisée.
 Ça marche aussi pour les clubs adverses (option 1) : remplace 08770250 par
 le numéro du club dans les liens ci-dessus (indiqué en haut de sa fiche).
 
-Ces pages contiennent des données personnelles (dont des mineurs) :
-elles ne sont jamais envoyées sur GitHub (dossier exclu du dépôt).
+Ces pages contiennent des données personnelles (dont des mineurs) : elles ne
+sont jamais publiées en clair (dossier exclu du dépôt). Seule une copie chiffrée
+avec le mot de passe du club part sur GitHub pour la mise à jour du site (option 7).
+
+
+RÉCAPITULATIF DE LA JOURNÉE (image recap_J3.png, avec l'option 2, 5 ou 9)
+==========================================================================
+
+L'image reprend le modèle du club (Excalidraw) ; la place de la photo est en haut.
+Pour que l'outil la complète tout seul, dépose dans CE dossier :
+
+- photo_J3.jpg : la photo de la journée 3 (photo_J4.jpg pour la J4...). jpg, png
+  ou webp, de n'importe quelle taille : elle est recadrée pour remplir la place
+  (742 x 449, en gardant le haut de la photo). Sans photo, la place reste libre
+  pour la coller soi-même.
+- logo_gauche.png et logo_droite.png (une fois pour toutes) : les logos posés
+  dans les coins haut gauche et haut droit de la photo. Un fond transparent
+  (png) est conseillé.
+- surnoms.txt (facultatif) : le nom affiché d'un joueur, une ligne par joueur,
+  par exemple :
+      GUITTON Marc = Marc G
+      LE CERF Christian = Christian LC
+  Sans surnom : le prénom, suivi des initiales du nom si deux joueurs de l'image
+  ont le même prénom (Jérôme D, Jérôme L).
+
+Puis option 9 (30 secondes, sans rien télécharger) : l'image est refaite avec la
+photo. Ces fichiers sont envoyés au site avec les autres (chiffrés ; une grosse
+photo est réduite), pour que l'image en ligne soit la même.
