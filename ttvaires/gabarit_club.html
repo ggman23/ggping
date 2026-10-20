@@ -143,8 +143,9 @@ button { font: inherit; cursor: pointer; }
 "use strict";
 const D = JSON.parse(document.getElementById("donnees").textContent);
 const CLE = "cvtt-vaires-cle-club";  // distincte de celle de /gg/ (autre mot de passe, même site)
-const GROUPES = ["récapitulatif", "adversaires", "résultats", "rencontres", "effectif", "classement virtuel"];
+const GROUPES = ["récapitulatif", "classements", "adversaires", "résultats", "rencontres", "effectif", "classement virtuel"];
 const TITRES_GROUPES = { "récapitulatif": "Récapitulatif de la journée (à compléter avec la photo)",
+  "classements": "Classements des poules",
   "adversaires": "Adversaires", "résultats": "Résultats des joueurs", "rencontres": "Feuilles de match",
   "effectif": "Effectif et brûlages", "classement virtuel": "Classement virtuel" };
 const TYPES = { html: "text/html;charset=utf-8", png: "image/png",
@@ -180,7 +181,10 @@ const docs = preparer(D.documents);
 const archives = (D.archives || []).map((a) => ({ ...a, docs: preparer(a.documents, a) }));
 const parId = new Map([...docs, ...archives.flatMap((a) => a.docs)].map((d) => [d.id, d]));
 const pages = pagesDe(docs), images = imagesDe(docs);
-const recaps = images.filter((d) => d.groupe === "récapitulatif");  // aussi en tuile sur l'accueil
+const A_LA_UNE = ["récapitulatif", "classements"];  // images aussi en tuile sur l'accueil
+const A_LA_UNE_TEXTE = { "récapitulatif": "L'image de la journée, à compléter avec la photo et les logos",
+  "classements": "La poule de chaque équipe de Vaires, en une image à partager" };
+const recaps = images.filter((d) => A_LA_UNE.includes(d.groupe));
 const jour = (iso) => iso ? new Date(iso + "T12:00").toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }) : "";
 let cle = null;
 const cacheClair = new Map();  // id -> Blob déchiffré
@@ -271,7 +275,7 @@ function construireMenu() {
 function tuile(d) {
   return `<a class="tuile" href="#${encodeURIComponent(d.id)}">
     <span class="icone ${d.type}" style="background: var(--${d.type})">${ICONES[d.type]}</span><b>${esc(d.titre)}</b>
-    <span>${esc(d.type === "image" ? "L'image de la journée, à compléter avec la photo et les logos" : d.description)}</span>
+    <span>${esc(d.type === "image" ? A_LA_UNE_TEXTE[d.groupe] || "" : d.description)}</span>
     ${d.verification ? `<span class="etat ${classe(d.verification)}">${esc(d.verification)}</span>` : ""}</a>`;
 }
 function accueil() {
@@ -288,7 +292,7 @@ function vueArchive(a) {
   return `<div class="accueil"><h1>${esc(a.titre)} <span class="etiquette">archive</span></h1>
     <p>Phase ${esc(a.phase)} ${esc(a.saison)} : les pages, l'Excel et les images telles qu'au ${esc(jour(a.date_reference))}
       (veille de la journée suivante).</p>
-    <div class="tuiles">${[...imgs.filter((d) => d.groupe === "récapitulatif"), ...pagesDe(a.docs)].map(tuile).join("")}</div>
+    <div class="tuiles">${[...imgs.filter((d) => A_LA_UNE.includes(d.groupe)), ...pagesDe(a.docs)].map(tuile).join("")}</div>
     ${imgs.length ? `<h2 class="titre-section">Images</h2><div class="liste-images">${listeImages(imgs)}</div>` : ""}
     <div class="ligne-bas"><button class="second" id="tout-archive">Tout télécharger (${a.docs.length} fichiers)</button></div>
   </div>`;

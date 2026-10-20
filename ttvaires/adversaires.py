@@ -52,6 +52,35 @@ def classement_poule(poule, rencontres, detail):
     return ordre
 
 
+def derniere_journee(donnees):
+    """Dernière journée dont un résultat d'une équipe de Vaires est connu (0 avant la J1)."""
+    return max((r["journee"] for e in donnees.get("equipes", []) for r in e.get("rencontres", [])
+                if r.get("score")), default=0)
+
+
+def donnees_classements(donnees):
+    """Page et image des classements des poules (classements.py) : les classements seuls, aucun nom de joueur."""
+    club = donnees["club"]["numero"]
+    poules = []
+    for e in donnees.get("equipes", []):
+        if not e.get("classement"):
+            continue
+        poules.append({
+            "equipe": e["nom_court"], "libelle": e["libelle"], "division": e.get("division") or "",
+            "poule": e.get("poule") or "", "championnat": e.get("championnat"),
+            "lignes": [{"rang": c["rang"], "libelle": c["libelle"], "points": c["points"], "joues": c["joues"],
+                        "v": c["v"], "n": c["n"], "d": c["d"], "pg": c.get("pg", 0), "pp": c.get("pp", 0),
+                        "nous": c.get("club") == club}
+                       for c in e["classement"]],
+        })
+    sortie = {"club": {"numero": club, "nom": donnees["club"].get("nom", "")}, "saison": donnees["saison"],
+              "phase": donnees["phase"], "genere_le": donnees.get("genere_le"),
+              "journee": derniere_journee(donnees), "poules": poules}
+    if donnees.get("date_reference"):
+        sortie["date_reference"] = donnees["date_reference"]
+    return sortie
+
+
 def _joueur_feuille(j, feminin):
     """Joueur connu seulement par les feuilles de match (pas d'effectif pingpocket)."""
     pts = j["points"]

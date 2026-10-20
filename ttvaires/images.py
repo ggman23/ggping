@@ -630,6 +630,12 @@ def image_recap(donnees, dossier_import, dossier):
     return dessiner(donnees, dossier_import, dossier)
 
 
+def image_classements(donnees, dossier_import, dossier):
+    """Classements des poules de toutes les équipes de Vaires (voir classements.py)."""
+    from .classements import image_classements as dessiner
+    return dessiner(donnees, dossier_import, dossier)
+
+
 def _nom_prenom(complet):
     """'DELOBELLE Jérôme' -> ('DELOBELLE', 'Jérôme')."""
     mots = (complet or "").split()

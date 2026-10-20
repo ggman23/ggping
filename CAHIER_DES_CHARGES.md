@@ -270,6 +270,16 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
   des joueurs battus). Photo `import/photo_J<n>.jpg` et logos `import/logo_gauche|droite.png`
   collés s'ils existent (envoyés au site avec les données du PC, photo réduite si lourde) ; noms
   affichés : prénom (+ initiales du nom si prénom partagé dans l'image) ou `import/surnoms.txt`.
+- Classements des poules (avec la page adversaires, mêmes données : classements calculés à partir
+  des feuilles de match) : page `classements_vaires.html` (publiée sous classements.html) et image
+  `classements_poules.png` sur le modèle proposé par le club : fond sombre, bandeau (logo du club,
+  raquette et balle dessinées, fumée rouge), « CLASSEMENTS DES POULES » / « APRÈS LA JOURNÉE 03 •
+  PHASE 1 • 2026–2027 », une carte par équipe (bandeau rouge « VAIRES 1 », « CLASSEMENT DE LA
+  POULE », division et poule ; colonnes # ÉQUIPE PTS J V N D ; ligne de Vaires en rouge), deux par
+  rangée, la dernière seule si leur nombre est impair, légende en bas. Police DejaVu Sans
+  (fournie). Logo : `import/logo_club.png`, sinon `logo_gauche.png`, sinon écusson CVTT dessiné.
+  Section d'images « Classements des poules » à part (après le récapitulatif) sur le site, /gg/ et
+  /club/ (en tuile sur l'accueil de /club/). Aucun nom de joueur dans la page.
 - Page « Feuilles de match » (avec l'option 2 du menu, sans téléchargement en plus : mêmes feuilles
   que les résultats) : chaque rencontre de Vaires, journée par journée, avec chaque partie, les
   joueurs (lettres de la feuille, points), le score de chaque manche vu de Vaires, le score de la

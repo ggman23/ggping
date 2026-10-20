@@ -36,9 +36,13 @@ PUBLIES = {
     "resultats_vaires.html": ("resultats.html", "Résultats des joueurs", "Points gagnés ou perdus à chaque journée de championnat"),
     "resultats_vaires.xlsx": ("resultats_vaires.xlsx.chiffre", "Résultats (Excel)", "Classeur à télécharger"),
     "rencontres_vaires.html": ("rencontres.html", "Feuilles de match", "Chaque rencontre de Vaires : parties, joueurs et scores des manches"),
+    "classements_vaires.html": ("classements.html", "Classements des poules", "La poule de chaque équipe de Vaires : points, victoires, nuls, défaites"),
     "effectif_vaires.html": ("effectif.html", "Effectif et brûlages", "Joueurs de Vaires : équipes jouées, brûlés et possibles par équipe"),
     "classement_virtuel.html": ("classement_virtuel.html", "Classement virtuel", "Toutes compétitions, meilleures perfs et pires contres"),
 }
+
+# Images à partager rangées à part (et non avec la page qui les produit)
+GROUPES_A_PART = {"recap_": "récapitulatif", "classements_": "classements"}
 
 
 class ErreurPublication(Exception):
@@ -172,8 +176,8 @@ def publier_images(page, date, sortie, site, etat, cle_):
         publie = f"images/{Path(nom).name}.chiffre"
         (site / publie).parent.mkdir(parents=True, exist_ok=True)
         (site / publie).write_bytes(chiffrer((sortie / nom).read_bytes(), cle_))
-        # Le récapitulatif de la journée a sa propre section, en tête des images
-        groupe = "récapitulatif" if Path(nom).name.startswith("recap_") else page["nom"]
+        # Le récapitulatif de la journée et les classements des poules ont leur propre section, en tête des images
+        groupe = next((g for debut, g in GROUPES_A_PART.items() if Path(nom).name.startswith(debut)), page["nom"])
         etat["images"][publie] = {"titre": image["titre"], "groupe": groupe, "page": page["nom"], "ordre": ordre,
                                   "date": date, "nom_telecharge": Path(nom).name}
     if page.get("images"):

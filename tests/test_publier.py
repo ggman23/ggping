@@ -110,3 +110,22 @@ def test_recapitulatif_dans_sa_propre_section_et_remplace(tmp_path):
     assert etat["images"]["images/rencontres_J3_V1.png.chiffre"]["groupe"] == "rencontres"
     etat = lancer(["recap_J4.png", "rencontres_J4_V1.png"], "2026-11-08T09:00")  # journée suivante
     assert sorted(etat["images"]) == ["images/recap_J4.png.chiffre", "images/rencontres_J4_V1.png.chiffre"]
+
+
+def test_classements_des_poules_page_et_image_a_part(tmp_path):
+    _crypto()
+    sortie, site = tmp_path / "sortie", tmp_path / "site"
+    (sortie / "images").mkdir(parents=True)
+    (sortie / "vaires.html").write_text("<p>adversaires</p>", encoding="utf-8")
+    (sortie / "classements_vaires.html").write_text("<p>classements</p>", encoding="utf-8")
+    for n in ("classements_poules.png", "adversaires_V1.png"):
+        (sortie / "images" / n).write_bytes(b"\x89PNG")
+    (sortie / "bilan.json").write_text(json.dumps({"debut": "2026-10-20T08:00", "fin": "2026-10-20T08:05", "pages": [
+        {"nom": "adversaires", "resume": "ok", "fichiers": ["vaires.html", "classements_vaires.html"],
+         "images": [{"fichier": f"images/{n}", "titre": n} for n in ("classements_poules.png", "adversaires_V1.png")]}]}))
+    etat = publier.publier(sortie, site, "secret")
+    assert etat["pages"]["classements.html"]["titre"] == "Classements des poules"
+    assert etat["pages"]["classements.html"]["nom_telecharge"] == "classements_vaires.html"
+    assert etat["images"]["images/classements_poules.png.chiffre"]["groupe"] == "classements"
+    assert etat["images"]["images/classements_poules.png.chiffre"]["page"] == "adversaires"
+    assert etat["images"]["images/adversaires_V1.png.chiffre"]["groupe"] == "adversaires"

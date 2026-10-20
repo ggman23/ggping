@@ -29,6 +29,10 @@ manche (11-7, 8-11…, Vaires toujours en premier, vert = manche gagnée), le sc
 après chaque partie et le bilan de chaque joueur. Sur un téléphone, les manches passent sous la
 partie ; des boutons filtrent une équipe.
 
+La page **Classements des poules** (`sortie\classements_vaires.html`, faite avec la page des
+adversaires) montre la poule de chaque équipe de Vaires (points, joués, victoires, nuls, défaites,
+parties gagnées – perdues), la ligne de Vaires en rouge, comme l'image du même nom.
+
 Les résultats viennent de l'**API publique de la FFTT** (celle des pages de consultation de
 monclub.fftt.com, lisible sans identifiant) : quelques secondes suffisent.
 
@@ -130,6 +134,10 @@ téléphone et partagées dans les groupes du club (dossier `sortie\images\` sur
   points) et des doubles ; le top 5 des perfs ; la place de la photo en haut. Déposer
   `import\photo_J3.jpg` (et une fois pour toutes `logo_gauche.png`, `logo_droite.png`) pour que
   l'outil la complète : voir `import\LISEZ-MOI.txt` (et `surnoms.txt` pour les noms affichés) ;
+- **classements des poules** (`classements_poules.png`, avec la page adversaires) : la poule de
+  chaque équipe de Vaires (# ÉQUIPE PTS J V N D, la ligne de Vaires en rouge), deux cartes par
+  rangée sur fond sombre, « après la journée 03 » ; le logo du club est pris dans
+  `import\logo_club.png` (sinon `logo_gauche.png`, sinon un écusson CVTT) ;
 - **effectif** : tout le club (équipes jouées à chaque journée, coche verte = peut jouer,
   flamme = brûlé) et, pour chaque équipe masculine de la 2 à la 6, ses joueurs brûlés ;
 - **classement virtuel** : le classement complet.
@@ -252,7 +260,7 @@ ttvaires/
   virtuel.py     Classement virtuel : parties de toutes les compétitions, barème × coefficient
   verifications.py  Vérifications : résultats de chaque équipe récupérés pour chaque journée
   images.py      Images PNG des tableaux (lisibles sur téléphone)
-  polices/       Police des images (Liberation Sans, licence SIL OFL)
+  polices/       Polices des images (Liberation Sans, Lilita One, Excalifont : SIL OFL ; DejaVu Sans : licence libre)
   publier.py     Publication du site pour téléphone : pages chiffrées, page d'accueil
   synchro.py     Données du PC (import, pages pingpocket) envoyées chiffrées pour le site
   gabarit_accueil.html, gabarit_verrou.html  Accueil du site et page protégée par mot de passe
@@ -261,6 +269,8 @@ ttvaires/
   gabarit.html   Mise en page de la page adversaires (HTML/CSS/JavaScript)
   gabarit_resultats.html  Mise en page de la page résultats
   gabarit_rencontres.html Mise en page de la page feuilles de match
+  gabarit_classements.html Mise en page de la page classements des poules
+  classements.py Image des classements des poules
   gabarit_effectif.html   Mise en page de la page effectif
   gabarit_virtuel.html    Mise en page de la page classement virtuel
   demo.py        Données fictives pour tester sans Internet

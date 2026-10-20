@@ -9,9 +9,10 @@ from pathlib import Path
 
 from .brulage import enrichir
 from .demo import donnees_demo
-from .adversaires import recuperer
+from .adversaires import donnees_classements, recuperer
 from .effectif import recuperer_effectif
-from .rendu import GABARIT_EFFECTIF, GABARIT_RENCONTRES, GABARIT_RESULTATS, GABARIT_VIRTUEL, generer_html
+from .rendu import (GABARIT_CLASSEMENTS, GABARIT_EFFECTIF, GABARIT_RENCONTRES, GABARIT_RESULTATS, GABARIT_VIRTUEL,
+                    generer_html)
 from .reseau import Client, ErreurReseau
 from .resultats import donnees_page, ecrire_xlsx, recuperer_parties, recuperer_rencontres
 from .virtuel import recuperer_virtuel
@@ -73,7 +74,10 @@ def page_adversaires(client, club, ctx, tous_les_historiques=False):
     if restants:
         resume += f" ; {restants} meilleurs classements pas encore lus (option 8 pour tout lire)"
     html = generer_html(donnees, ctx.sortie / "vaires.html")
-    return [html, *faire_images("images_adversaires", donnees, dossier=ctx.images, aujourdhui=ctx.aujourdhui)], resume
+    # Classements des poules de toutes les équipes du club : une page et une image à partager
+    classements = generer_html(donnees_classements(donnees), ctx.sortie / "classements_vaires.html", GABARIT_CLASSEMENTS)
+    return [html, classements, *faire_images("image_classements", donnees, IMPORT, dossier=ctx.images),
+            *faire_images("images_adversaires", donnees, dossier=ctx.images, aujourdhui=ctx.aujourdhui)], resume
 
 
 def page_resultats(client, club, ctx):

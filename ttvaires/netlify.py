@@ -44,7 +44,7 @@ CHIFFRE = re.compile(r'<script id="chiffre" type="text/plain">([^<]+)</script>')
 GABARIT_CLUB = Path(__file__).with_name("gabarit_club.html")
 VERIF_CLUB = b"cvtt-vaires-club"  # fichier témoin : sert à vérifier le mot de passe de /club/
 ORDRE_CLUB = ["vaires.html", "resultats_vaires.html", "resultats_vaires.xlsx", "rencontres_vaires.html",
-              "effectif_vaires.html", "classement_virtuel.html"]
+              "classements_vaires.html", "effectif_vaires.html", "classement_virtuel.html"]
 
 
 class ErreurNetlify(Exception):

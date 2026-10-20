@@ -129,7 +129,7 @@ a { color: var(--accent); }
 "use strict";
 const E = JSON.parse(document.getElementById("etat").textContent);
 const CLE = "cvtt-vaires-cle", JETON = "cvtt-vaires-jeton-github";
-const ORDRE = ["adversaires.html", "resultats.html", "resultats_vaires.xlsx.chiffre", "rencontres.html", "effectif.html", "classement_virtuel.html"];
+const ORDRE = ["adversaires.html", "resultats.html", "resultats_vaires.xlsx.chiffre", "rencontres.html", "classements.html", "effectif.html", "classement_virtuel.html"];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const lire = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const ecrire = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) { /* navigation privée */ } };
@@ -232,8 +232,9 @@ async function telecharger(boutons) {
 }
 
 /* ---------- Images à partager ---------- */
-const GROUPES = ["récapitulatif", "adversaires", "résultats", "rencontres", "effectif", "classement virtuel"];
+const GROUPES = ["récapitulatif", "classements", "adversaires", "résultats", "rencontres", "effectif", "classement virtuel"];
 const TITRES_GROUPES = { "récapitulatif": "Récapitulatif de la journée (à compléter avec la photo)",
+  "classements": "Classements des poules",
   "adversaires": "Adversaires", "résultats": "Résultats des joueurs", "rencontres": "Feuilles de match",
   "effectif": "Effectif et brûlages",
   "classement virtuel": "Classement virtuel" };

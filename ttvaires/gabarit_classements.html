@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Classements des poules Vaires</title>
+<style>
+:root { color-scheme: dark; --fond: #0d0e11; --carte: #16171c; --alt: #1c1d23; --bord: #34363e; --ligne: #22232a;
+  --texte: #f1f3f5; --doux: #c4c8ce; --gris: #969ca6; --rouge: #cc1028; --rouge-fonce: #960a1c; --rouge-vif: #ff2e40; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte);
+  font: 15px/1.4 "DejaVu Sans", Verdana, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+header { text-align: center; padding: 28px 16px 22px;
+  background: radial-gradient(ellipse 45% 120% at 18% 0%, rgba(170, 8, 24, .55), transparent 70%),
+              radial-gradient(ellipse 45% 120% at 82% 10%, rgba(170, 8, 24, .5), transparent 70%), #12080a; }
+h1 { margin: 0; font-size: clamp(24px, 5.2vw, 42px); font-weight: 800; letter-spacing: .02em; text-transform: uppercase; }
+.sous-titre { margin: 8px 0 0; color: var(--doux); font-size: clamp(13px, 2.4vw, 16px); letter-spacing: .04em; }
+.quand { margin: 6px 0 0; color: var(--gris); font-size: 13px; }
+main { max-width: 1080px; margin: 0 auto; padding: 18px 16px 8px;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 22px; align-items: start; }
+.carte { background: var(--carte); border: 1px solid var(--bord); border-radius: 6px; overflow: hidden; }
+.tete { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 12px;
+  background: linear-gradient(90deg, var(--rouge), var(--rouge-fonce)); }
+.tete h2 { margin: 0; font-size: 19px; font-weight: 800; text-transform: uppercase; white-space: nowrap; }
+.tete p { margin: 0; text-align: right; font-size: 10px; line-height: 1.35; text-transform: uppercase; }
+.tete p span { color: #ffcdd2; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th { color: var(--gris); font-size: 11px; font-weight: 700; padding: 7px 4px 5px; text-align: center; }
+td { padding: 5px 4px; text-align: center; color: var(--doux); border-top: 1px solid var(--ligne); }
+th.g, td.g { text-align: left; }
+td.g { color: var(--texte); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; width: 100%; }
+th.r, td.r { width: 30px; padding-left: 10px; }
+td.r { color: var(--texte); }
+td.pts { color: var(--texte); font-weight: 700; }
+th.pts { padding-left: 10px; }
+td.pa, th.pa { color: var(--gris); font-size: 12.5px; white-space: nowrap; }
+tbody tr:nth-child(odd) { background: var(--alt); }
+tr.nous, tbody tr.nous:nth-child(odd) { background: var(--rouge); box-shadow: inset 4px 0 0 var(--rouge-vif); }
+tr.nous td { color: #fff; font-weight: 700; border-top-color: var(--rouge); }
+th.c, td.c { width: 1%; padding-left: 9px; padding-right: 9px; }
+th.pa, td.pa { width: 1%; padding-left: 10px; padding-right: 12px; }
+.legende { max-width: 1080px; margin: 0 auto; padding: 8px 16px 4px; color: var(--doux); font-size: 13px; }
+.note { max-width: 1080px; margin: 0 auto; padding: 0 16px 24px; color: var(--gris); font-size: 12.5px; }
+.vide { grid-column: 1 / -1; color: var(--doux); text-align: center; }
+@media (max-width: 760px) {
+  main { grid-template-columns: 1fr; gap: 14px; padding: 12px 8px 6px; }
+  .legende, .note { padding-left: 10px; padding-right: 10px; }
+}
+@media (max-width: 420px) { th.pa, td.pa { display: none; } th.r, td.r { padding-left: 6px; }
+  th.c, td.c { padding-left: 7px; padding-right: 7px; } }
+@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Classements des poules</h1>
+  <p class="sous-titre" id="sous-titre"></p>
+  <p class="quand" id="quand"></p>
+</header>
+<main id="contenu"></main>
+<p class="legende">J : joués &nbsp;•&nbsp; V : victoires &nbsp;•&nbsp; N : nuls &nbsp;•&nbsp; D : défaites &nbsp;•&nbsp; PTS : points &nbsp;•&nbsp; Parties : gagnées – perdues</p>
+<p class="note">Classements calculés à partir des feuilles de match saisies : points de rencontre de la FFTT (victoire 3,
+  nul 2, défaite 1), puis rapport parties gagnées / parties perdues en cas d'égalité. Ligne rouge : l'équipe de Vaires.</p>
+<script id="donnees" type="application/json">__DONNEES_JSON__</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("donnees").textContent);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const deux = (n) => String(n).padStart(2, "0");
+
+document.getElementById("sous-titre").textContent =
+  `${D.journee ? "Après la journée " + deux(D.journee) : "Avant la première journée"} • Phase ${D.phase} • ${D.saison.replace("-", "–")}`;
+document.getElementById("quand").textContent = `${D.club.nom} · ${D.date_reference
+  ? "archive, état au " + new Date(D.date_reference + "T12:00").toLocaleDateString("fr-FR")
+  : "données du " + new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`;
+
+const ligne = (l) => `<tr${l.nous ? ' class="nous"' : ""}>
+  <td class="r">${l.rang}</td><td class="g" title="${esc(l.libelle)}">${esc(l.libelle)}</td>
+  <td class="pts c">${l.points}</td><td class="c">${l.joues}</td><td class="c">${l.v}</td><td class="c">${l.n}</td><td class="c">${l.d}</td>
+  <td class="pa">${l.pg}–${l.pp}</td></tr>`;
+
+document.getElementById("contenu").innerHTML = D.poules.length ? D.poules.map((p) => `<section class="carte">
+    <div class="tete"><h2>${esc(p.equipe)}</h2>
+      <p>Classement de la poule<br><span>${esc([p.division, p.poule].filter(Boolean).join(" • "))}</span></p></div>
+    <table>
+      <thead><tr><th class="r">#</th><th class="g">ÉQUIPE</th><th class="pts c">PTS</th><th class="c">J</th><th class="c">V</th>
+        <th class="c">N</th><th class="c">D</th><th class="pa">Parties</th></tr></thead>
+      <tbody>${p.lignes.map(ligne).join("")}</tbody>
+    </table></section>`).join("")
+  : '<p class="vide">Pas encore de classement : aucune poule trouvée pour les équipes du club.</p>';
+</script>
+</body>
+</html>

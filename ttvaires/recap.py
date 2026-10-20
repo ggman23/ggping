@@ -305,11 +305,12 @@ def _image_nommee(fichier, debut):
 
 
 def images_du_recap(dossier_import, journee):
-    """Fichiers du dossier import utilisés par le récapitulatif de la journée (photo, logos)."""
+    """Fichiers du dossier import utilisés par les images de la journée : photo et logos du
+    récapitulatif, logo du club des classements des poules."""
     if not dossier_import or not Path(dossier_import).is_dir():
         return []
-    return [f for f in sorted(Path(dossier_import).iterdir()) if f.is_file()
-            and any(_image_nommee(f, debut) for debut in (f"photo_j{journee}", *(f"logo_{c}" for c in LOGOS)))]
+    debuts = (f"photo_j{journee}", *(f"logo_{c}" for c in LOGOS), "logo_club")
+    return [f for f in sorted(Path(dossier_import).iterdir()) if f.is_file() and any(_image_nommee(f, d) for d in debuts)]
 
 
 def _image_du_dossier(dossier_import, debut):
