@@ -136,8 +136,9 @@ button { font: inherit; cursor: pointer; }
 "use strict";
 const D = JSON.parse(document.getElementById("donnees").textContent);
 const CLE = "cvtt-vaires-cle-club";  // distincte de celle de /gg/ (autre mot de passe, même site)
-const GROUPES = ["adversaires", "résultats", "rencontres", "effectif", "classement virtuel"];
-const TITRES_GROUPES = { "adversaires": "Adversaires", "résultats": "Résultats des joueurs", "rencontres": "Feuilles de match",
+const GROUPES = ["récapitulatif", "adversaires", "résultats", "rencontres", "effectif", "classement virtuel"];
+const TITRES_GROUPES = { "récapitulatif": "Récapitulatif de la journée (à compléter avec la photo)",
+  "adversaires": "Adversaires", "résultats": "Résultats des joueurs", "rencontres": "Feuilles de match",
   "effectif": "Effectif et brûlages", "classement virtuel": "Classement virtuel" };
 const TYPES = { html: "text/html;charset=utf-8", png: "image/png",
   xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" };
@@ -158,6 +159,7 @@ const docs = D.documents.slice().sort((a, b) => (a.ordre ?? 99) - (b.ordre ?? 99
 const pages = docs.filter((d) => d.type !== "image");
 const images = docs.filter((d) => d.type === "image")
   .sort((a, b) => GROUPES.indexOf(a.groupe) - GROUPES.indexOf(b.groupe) || a.ordre - b.ordre);
+const recaps = images.filter((d) => d.groupe === "récapitulatif");  // aussi en tuile sur l'accueil
 let cle = null;
 const cacheClair = new Map();  // fichier -> Blob déchiffré
 let courant = null, urlCourante = null;
@@ -238,9 +240,10 @@ function construireMenu() {
 function accueil() {
   return `<div class="accueil"><h1>Espace club</h1>
     <p>Choisis une page, l'Excel ou une image : tu peux la regarder ici puis la télécharger.</p>
-    <div class="tuiles">${pages.map((d) => `<a class="tuile" href="#${encodeURIComponent(d.fichier)}">
+    <div class="tuiles">${[...recaps, ...pages].map((d) => `<a class="tuile" href="#${encodeURIComponent(d.fichier)}">
       <span class="icone ${d.type}" style="background: var(--${d.type})">${ICONES[d.type]}</span><b>${esc(d.titre)}</b>
-      <span>${esc(d.description)}</span>${d.verification ? `<span class="etat ${classe(d.verification)}">${esc(d.verification)}</span>` : ""}
+      <span>${esc(d.type === "image" ? "L'image de la journée, à compléter avec la photo et les logos" : d.description)}</span>
+      ${d.verification ? `<span class="etat ${classe(d.verification)}">${esc(d.verification)}</span>` : ""}
     </a>`).join("")}</div></div>`;
 }
 async function route() {

@@ -154,7 +154,7 @@ def publier_images(page, date, sortie, site, etat, cle_):
     (leur nombre et leurs noms peuvent changer d'une fois à l'autre : J3 puis J4...)."""
     if page["resume"].startswith("PAGE NON GÉNÉRÉE"):
         return  # on garde les images de la fois précédente
-    for publie in [n for n, i in etat["images"].items() if i.get("groupe") == page["nom"]]:
+    for publie in [n for n, i in etat["images"].items() if i.get("page", i.get("groupe")) == page["nom"]]:
         (site / publie).unlink(missing_ok=True)
         del etat["images"][publie]
     for ordre, image in enumerate(page.get("images", [])):
@@ -162,8 +162,10 @@ def publier_images(page, date, sortie, site, etat, cle_):
         publie = f"images/{Path(nom).name}.chiffre"
         (site / publie).parent.mkdir(parents=True, exist_ok=True)
         (site / publie).write_bytes(chiffrer((sortie / nom).read_bytes(), cle_))
-        etat["images"][publie] = {"titre": image["titre"], "groupe": page["nom"], "ordre": ordre, "date": date,
-                                  "nom_telecharge": Path(nom).name}
+        # Le récapitulatif de la journée a sa propre section, en tête des images
+        groupe = "récapitulatif" if Path(nom).name.startswith("recap_") else page["nom"]
+        etat["images"][publie] = {"titre": image["titre"], "groupe": groupe, "page": page["nom"], "ordre": ordre,
+                                  "date": date, "nom_telecharge": Path(nom).name}
     if page.get("images"):
         print(f"Publié (chiffré) : {len(page['images'])} image(s) « {page['nom']} »")
 

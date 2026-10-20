@@ -90,3 +90,23 @@ def test_images_publiees_et_remplacees_a_chaque_lancement(tmp_path):
     assert publier.dechiffrer((site / "images" / "resultats_J4.png.chiffre").read_bytes(), publier.cle("secret")) \
         == b"\x89PNGresultats_J4.png"
     assert etat["images"]["images/resultats_cumul.png.chiffre"]["nom_telecharge"] == "resultats_cumul.png"
+
+
+def test_recapitulatif_dans_sa_propre_section_et_remplace(tmp_path):
+    _crypto()
+    sortie, site = tmp_path / "sortie", tmp_path / "site"
+    (sortie / "images").mkdir(parents=True)
+
+    def lancer(noms, fin):
+        for n in noms:
+            (sortie / "images" / n).write_bytes(b"\x89PNG")
+        (sortie / "bilan.json").write_text(json.dumps({"debut": fin, "fin": fin, "pages": [
+            {"nom": "rencontres", "resume": "ok", "fichiers": [],
+             "images": [{"fichier": f"images/{n}", "titre": n} for n in noms]}]}))
+        return publier.publier(sortie, site, "secret")
+
+    etat = lancer(["recap_J3.png", "rencontres_J3_V1.png"], "2026-10-18T09:00")
+    assert etat["images"]["images/recap_J3.png.chiffre"]["groupe"] == "récapitulatif"
+    assert etat["images"]["images/rencontres_J3_V1.png.chiffre"]["groupe"] == "rencontres"
+    etat = lancer(["recap_J4.png", "rencontres_J4_V1.png"], "2026-11-08T09:00")  # journée suivante
+    assert sorted(etat["images"]) == ["images/recap_J4.png.chiffre", "images/rencontres_J4_V1.png.chiffre"]
