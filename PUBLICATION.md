@@ -92,12 +92,41 @@ Sans données du PC (lien pas encore réglé), la mise à jour en ligne fonction
 sans pingpocket ni dossier `import` : effectifs limités aux joueurs alignés en championnat, sans
 meilleurs classements (les pages le signalent). D'où l'option 7.
 
+## Copie de secours sur Netlify (ggping.netlify.app)
+
+À chaque mise à jour du site GitHub (lancée du PC, du téléphone ou automatique), une copie part
+aussi sur Netlify :
+
+- **https://ggping.netlify.app/** : la page des adversaires (`vaires.html`), **sans mot de passe**,
+  pour tout le club. Elle n'est pas référencée par les moteurs de recherche (robots.txt et en-tête
+  `X-Robots-Tag: noindex`), mais toute personne qui a l'adresse peut la lire : elle contient les
+  noms, classements et catégories d'âge des joueurs (dont des mineurs) de Vaires et des clubs adverses.
+- **https://ggping.netlify.app/gg/** : la copie exacte du site GitHub (accueil, toutes les pages,
+  l'Excel, les images, « Tout télécharger »), chiffrée : il faut le mot de passe du site
+  (`MOT_DE_PASSE_SITE`), à donner aux capitaines.
+
+Mise en place, une seule fois :
+
+1. Sur Netlify (compte qui possède le site ggping) : avatar → *User settings* → *Applications* →
+   *Personal access tokens* → *New access token* (https://app.netlify.com/user/applications#personal-access-tokens).
+   Nom : `ggping`, expiration la plus longue proposée. Copier le jeton.
+2. Sur GitHub : dépôt → *Settings* → *Secrets and variables* → *Actions* → *New repository secret* :
+   nom `NETLIFY_AUTH_TOKEN`, valeur : le jeton.
+3. Si le site Netlify ne s'appelle pas `ggping` : onglet *Variables* → *New repository variable*
+   `NETLIFY_SITE` = `nom.netlify.app`.
+4. Lancer une mise à jour : le journal de l'étape « Copie de secours sur Netlify » affiche l'adresse.
+
+Sans le secret, l'étape ne fait rien. Si Netlify refuse l'envoi, un avertissement s'affiche dans le
+journal de la mise à jour, mais le site GitHub est publié quand même. La copie part même si GitHub
+Pages est en panne, dès que le site est prêt.
+
 ## Sécurité
 
 - Chaque page, l'Excel et les données envoyées par le PC sont chiffrés en AES-256-GCM avec une clé
   tirée du mot de passe (PBKDF2-SHA256, 310 000 itérations) ; le déchiffrement se fait dans le
   navigateur (pages) ou dans la mise à jour en ligne (données du PC). Rien n'est publié ni envoyé
-  en clair.
+  en clair, sauf la page des adversaires à l'accueil de la copie Netlify (choix du club, voir
+  ci-dessus).
 - Le mot de passe est stocké en secret GitHub (illisible, même par le propriétaire), dans le
   fichier `publication.local.json` du PC (avec le jeton ; jamais envoyé sur GitHub) et, si on le
   demande, sous forme de clé dans le navigateur de l'appareil.

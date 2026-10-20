@@ -181,7 +181,10 @@ serveurs et les publie, chiffrées par un mot de passe, sur **https://ggman23.gi
 (bouton « Lancer la mise à jour » sur la page d'accueil, Excel téléchargeable, mises à jour
 automatiques les lendemains de journée). Pour que le site donne exactement les mêmes pages que le PC,
 le PC y envoie, chiffrés, son dossier `import` et ses pages de pingpocket.fr après chaque lancement
-(option 7 du menu pour le réglage). Mise en place : [PUBLICATION.md](PUBLICATION.md).
+(option 7 du menu pour le réglage). Copie de secours sur **https://ggping.netlify.app/** après
+chaque mise à jour : la page des adversaires pour tout le club, et dans **/gg/** toutes les pages,
+l'Excel et les images avec le mot de passe (pour les capitaines). Mise en place :
+[PUBLICATION.md](PUBLICATION.md).
 
 ## Installation (Windows)
 

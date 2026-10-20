@@ -8,4 +8,5 @@ sortie/
 import/*
 !import/LISEZ-MOI.txt
 site/
+site-netlify/
 publication.local.json

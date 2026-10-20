@@ -1,7 +1,8 @@
 # Mise à jour du site depuis un téléphone : récupère les données (API FFTT, plus les données
 # envoyées par le PC : dossier import et pages de pingpocket.fr), chiffre les pages avec le mot
 # de passe du club et les publie sur GitHub Pages. Le PC lance aussi ce workflow après chaque
-# lancement de lancer.bat (si le lien avec le téléphone est réglé : option 7).
+# lancement de lancer.bat (si le lien avec le téléphone est réglé : option 7). Une copie part
+# aussi sur Netlify (ggping.netlify.app) si le secret NETLIFY_AUTH_TOKEN existe.
 # Lancement : bouton « Mettre à jour » de la page d'accueil du site, ou GitHub (appli ou site) :
 # Actions > Mise à jour du site > Run workflow. Mise en place : voir PUBLICATION.md.
 name: Mise à jour du site
@@ -90,6 +91,7 @@ jobs:
         run: python -m ttvaires.publier --recuperer "${{ steps.pages.outputs.base_url }}"
 
       - name: Chiffrement des pages et page d'accueil
+        id: chiffrement
         env:
           MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
         run: python -m ttvaires.publier
@@ -101,3 +103,14 @@ jobs:
       - name: Publication
         id: deploiement
         uses: actions/deploy-pages@v4
+
+      # Copie de secours sur Netlify : accueil public (adversaires) et /gg/ (copie chiffrée du site).
+      # Faite même si GitHub Pages est en panne, dès que le site est prêt. Sans le secret
+      # NETLIFY_AUTH_TOKEN, cette étape ne fait rien (voir PUBLICATION.md).
+      - name: Copie de secours sur Netlify
+        if: ${{ !cancelled() && steps.chiffrement.outcome == 'success' }}
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE: ${{ vars.NETLIFY_SITE }}
+          MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
+        run: python -m ttvaires.netlify

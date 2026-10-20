@@ -242,6 +242,12 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
     manches, bilan des joueurs).
   - adversaires : la fiche de chaque équipe prend la largeur de son contenu (720 points au moins,
     sans colonne vide) ; un sous-titre trop long (adresse) passe sur 2 lignes.
+- Copie de secours sur Netlify (https://ggping.netlify.app/) après chaque mise à jour du site
+  GitHub : accueil = page des adversaires en clair (demande du club : visible par tous ; non
+  référencée : robots.txt, X-Robots-Tag noindex) ; /gg/ = copie exacte du site GitHub chiffré
+  (mot de passe du site, pour les capitaines). Envoi par l'API Netlify (archive zip) depuis le
+  workflow, secret NETLIFY_AUTH_TOKEN ; sans jeton, rien n'est fait ; un échec n'empêche pas la
+  publication GitHub.
 - Récapitulatif de la journée (`recap_J3.png`, avec les feuilles de match) : copie exacte de l'image
   du club (faite avec Excalidraw) : polices Lilita One et Excalifont (SIL OFL, fournies), palette
   Excalidraw (rouge #e03131, vert #2f9e44, orange #f08c00, jaune #ffec99, texte #1e1e1e), mise en
