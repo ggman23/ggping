@@ -104,8 +104,8 @@ jobs:
         id: deploiement
         uses: actions/deploy-pages@v4
 
-      # Copie de secours sur Netlify : accueil public (adversaires) et /gg/ (copie du site re-chiffrée
-      # avec son propre mot de passe, secret MOT_DE_PASSE_GG).
+      # Copie de secours sur Netlify : accueil public (adversaires), /club/ (espace club, secret
+      # MOT_DE_PASSE_CLUB) et /gg/ (copie du site re-chiffrée, secret MOT_DE_PASSE_GG).
       # Faite même si GitHub Pages est en panne, dès que le site est prêt. Sans le secret
       # NETLIFY_AUTH_TOKEN, cette étape ne fait rien (voir PUBLICATION.md).
       - name: Copie de secours sur Netlify
@@ -115,4 +115,5 @@ jobs:
           NETLIFY_SITE: ${{ vars.NETLIFY_SITE }}
           MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
           MOT_DE_PASSE_GG: ${{ secrets.MOT_DE_PASSE_GG }}
+          MOT_DE_PASSE_CLUB: ${{ secrets.MOT_DE_PASSE_CLUB }}
         run: python -m ttvaires.netlify

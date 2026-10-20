@@ -101,6 +101,12 @@ aussi sur Netlify :
   pour tout le club. Elle n'est pas référencée par les moteurs de recherche (robots.txt et en-tête
   `X-Robots-Tag: noindex`), mais toute personne qui a l'adresse peut la lire : elle contient les
   noms, classements et catégories d'âge des joueurs (dont des mineurs) de Vaires et des clubs adverses.
+- **https://ggping.netlify.app/club/** : l'**espace club**, avec son propre mot de passe (secret
+  `MOT_DE_PASSE_CLUB`) : un menu des pages, de l'Excel et des images (à gauche sur un ordinateur,
+  en plein écran sur un téléphone) ; chaque document s'affiche dans la page, avec un bouton
+  « Télécharger » (et « Partager » pour les images), puis « Menu » pour revenir ; « Tout
+  télécharger » en bas du menu. On ne peut pas y lancer de mise à jour. Le mot de passe est
+  demandé une fois par appareil (« Se souvenir sur cet appareil »).
 - **https://ggping.netlify.app/gg/** : la copie du site GitHub (accueil, toutes les pages, l'Excel,
   les images, « Tout télécharger »), re-chiffrée avec **son propre mot de passe** (secret
   `MOT_DE_PASSE_GG`), à donner aux capitaines. Le mot de passe du site GitHub ne sert pas sur
@@ -113,8 +119,9 @@ Mise en place, une seule fois :
    Nom : `ggping`, expiration la plus longue proposée. Copier le jeton.
 2. Sur GitHub : dépôt → *Settings* → *Secrets and variables* → *Actions* → *New repository secret* :
    nom `NETLIFY_AUTH_TOKEN`, valeur : le jeton.
-3. Même endroit, second secret : nom `MOT_DE_PASSE_GG`, valeur : le mot de passe de /gg/ (celui
-   des capitaines ; il n'est écrit nulle part dans le dépôt, qui est public).
+3. Même endroit, deux autres secrets : `MOT_DE_PASSE_CLUB` (le mot de passe de /club/) et
+   `MOT_DE_PASSE_GG` (celui de /gg/). Ils ne sont écrits nulle part dans le dépôt, qui est public ;
+   sans l'un d'eux, la partie correspondante n'est pas publiée.
 4. Si le site Netlify ne s'appelle pas `ggping` : onglet *Variables* → *New repository variable*
    `NETLIFY_SITE` = `nom.netlify.app`.
 5. Lancer une mise à jour : le journal de l'étape « Copie de secours sur Netlify » affiche l'adresse.

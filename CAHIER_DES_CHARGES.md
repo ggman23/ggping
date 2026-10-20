@@ -246,7 +246,11 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
   GitHub : accueil = page des adversaires en clair (demande du club : visible par tous ; non
   référencée : robots.txt, X-Robots-Tag noindex) ; /gg/ = copie du site GitHub re-chiffrée avec un
   mot de passe propre (secret MOT_DE_PASSE_GG, pour les capitaines ; celui du site GitHub reste
-  secret ; sans ce secret, /gg/ n'est pas publié). Envoi par l'API Netlify (archive zip) depuis le
+  secret ; sans ce secret, /gg/ n'est pas publié). /club/ = espace club (secret MOT_DE_PASSE_CLUB) :
+  menu des pages, de l'Excel et des images (barre latérale sur ordinateur, plein écran sur
+  téléphone), affichage dans la page (cadre pour les pages, image, fiche de téléchargement pour
+  l'Excel), Télécharger / Partager / Menu / Tout télécharger, sans lancement de mise à jour ;
+  fichiers re-chiffrés avec la clé du club sous leur nom d'origine, clé mémorisée à part de /gg/. Envoi par l'API Netlify (archive zip) depuis le
   workflow, secret NETLIFY_AUTH_TOKEN ; sans jeton, rien n'est fait ; un échec n'empêche pas la
   publication GitHub.
 - Récapitulatif de la journée (`recap_J3.png`, avec les feuilles de match) : copie exacte de l'image

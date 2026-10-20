@@ -106,3 +106,30 @@ def test_sans_mot_de_passe_gg_seul_l_accueil_est_publie(tmp_path):
     _crypto()
     dossier = netlify.construire(_site(tmp_path), tmp_path / "netlify", "secret", "")
     assert (dossier / "index.html").exists() and not (dossier / "gg").exists()
+
+
+def test_espace_club_avec_son_propre_mot_de_passe(tmp_path):
+    _crypto()
+    site = _site(tmp_path)
+    (site / "images").mkdir()
+    (site / "images" / "recap_J3.png.chiffre").write_bytes(publier.chiffrer(b"\x89PNG", publier.cle("secret")))
+    etat = json.loads((site / "etat.json").read_text(encoding="utf-8"))
+    etat["images"]["images/recap_J3.png.chiffre"] = {"titre": "Récapitulatif J3", "groupe": "rencontres", "ordre": 0,
+                                                     "date": "2026-10-20T08:05", "nom_telecharge": "recap_J3.png"}
+    (site / "etat.json").write_text(json.dumps(etat), encoding="utf-8")
+    dossier = netlify.construire(site, tmp_path / "netlify", "secret", "", "mdp-du-club")
+    club = dossier / "club"
+    cle = publier.cle("mdp-du-club")
+    lire = lambda nom: publier.dechiffrer((club / "fichiers" / f"{nom}.chiffre").read_bytes(), cle)  # noqa: E731
+    assert lire("resultats_vaires.html") == b"<p>DELOBELLE 780</p>"   # pages sous leur nom d'origine
+    assert lire("vaires.html").startswith(b"<!doctype html>") and lire("recap_J3.png") == b"\x89PNG"
+    assert lire("verif") == netlify.VERIF_CLUB
+    with pytest.raises(Exception):
+        publier.dechiffrer((club / "fichiers" / "vaires.html.chiffre").read_bytes(), publier.cle("secret"))
+    page = (club / "index.html").read_text(encoding="utf-8")
+    assert "DELOBELLE" not in page and "LOGNES" not in page            # la liste ne contient aucun nom de joueur
+    donnees = json.loads(page.split('<script id="donnees" type="application/json">')[1].split("</script>")[0])
+    assert [(d["fichier"], d["type"]) for d in donnees["documents"]] == [
+        ("vaires.html", "page"), ("resultats_vaires.html", "page"), ("recap_J3.png", "image")]
+    assert "dispatches" not in page and "jeton" not in page.lower()     # pas de lancement de mise à jour
+    assert not (dossier / "gg").exists()                               # pas de secret pour /gg/ : non publié
