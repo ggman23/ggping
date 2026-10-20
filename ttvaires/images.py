@@ -434,6 +434,8 @@ def _nettoyer(dossier, prefixe):
 
 
 def _genere(donnees):
+    if donnees.get("date_reference"):  # archive : l'état à cette date
+        return "archive, état au " + date.fromisoformat(donnees["date_reference"]).strftime("%d/%m/%Y")
     try:
         return datetime.fromisoformat(donnees["genere_le"]).strftime("%d/%m/%Y %H:%M")
     except (KeyError, ValueError):

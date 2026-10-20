@@ -128,7 +128,8 @@ const CLUBS = D.clubs || {};
 const EQUIPES = D.equipes || [];
 const VERIF = D.verification || null;
 const MANQUANTS = VERIF ? VERIF.clubs.reduce((n, c) => n + c.manquantes + (c.erreur ? 1 : 0), 0) : 0;
-const AUJOURDHUI = new Date().toISOString().slice(0, 10);
+// Archive : la page se place à sa date (veille de la journée suivante), pas au jour où on la regarde
+const AUJOURDHUI = D.date_reference || new Date().toISOString().slice(0, 10);
 const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
@@ -444,7 +445,7 @@ function tableEquipes(club, ch, idx) {
 
 /* ---------- Démarrage ---------- */
 document.getElementById("sous-titre").textContent =
-  `${D.club.nom} · phase ${D.phase ?? "?"} ${D.saison ?? ""} · données du ${D.genere_le ? new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "?"}`;
+  `${D.club.nom} · phase ${D.phase ?? "?"} ${D.saison ?? ""} · ${D.date_reference ? "archive, état au " + new Date(D.date_reference + "T12:00").toLocaleDateString("fr-FR") : "données du " + (D.genere_le ? new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "?")}`;
 if (D.demo) document.getElementById("bandeau").innerHTML = '<div class="demo">Données de démonstration (fictives)</div>';
 window.addEventListener("hashchange", route);
 route();

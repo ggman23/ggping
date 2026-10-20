@@ -68,13 +68,19 @@ a { color: var(--accent); }
   <p id="maj"></p>
 </header>
 <main>
+  <div id="bandeau-archive" hidden></div>
   <h2>Pages</h2>
   <div id="pages"></div>
 
   <h2>Images à partager</h2>
   <div id="images" class="images"></div>
 
-  <h2>Mettre à jour maintenant</h2>
+  <div id="bloc-archives" hidden>
+    <h2>Archives des journées passées</h2>
+    <div id="archives"></div>
+  </div>
+
+  <h2 id="titre-maj">Mettre à jour maintenant</h2>
   <div class="carte" id="mise-a-jour">
     <label for="choix" class="petit">Pages à mettre à jour</label>
     <select id="choix">
@@ -353,6 +359,27 @@ async function reprendreSuivi() {
   } catch (e) { /* suivi impossible : la page reste utilisable */ }
 }
 
+/* ---------- Archives : un petit site par journée passée (archives/<saison>-P<phase>-J<n>/) ---------- */
+const jour = (iso) => new Date(iso + "T12:00").toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" });
+function afficherArchives() {
+  const liste = Object.values(E.archives || {}).sort((a, b) =>
+    `${b.saison}-${b.phase}`.localeCompare(`${a.saison}-${a.phase}`) || b.journee - a.journee);
+  if (liste.length) {
+    document.getElementById("bloc-archives").hidden = false;
+    document.getElementById("archives").innerHTML = liste.map((a) => `<a class="carte" href="${esc(a.dossier)}">
+      <b>${esc(a.titre)}</b><span class="date">phase ${esc(a.phase)} ${esc(a.saison)}</span>
+      <span class="desc">Pages, Excel et images telles qu'au ${esc(jour(a.date_reference))} (veille de la journée suivante)</span></a>`).join("");
+  }
+  if (E.archive) {
+    const b = document.getElementById("bandeau-archive");
+    b.hidden = false;
+    b.innerHTML = `<div class="carte"><b>Archive : ${esc(E.archive.titre)}</b><span class="date">phase ${esc(E.archive.phase)} ${esc(E.archive.saison)}</span>
+      <span class="desc">Les pages, l'Excel et les images telles qu'au ${esc(jour(E.archive.date_reference))}.</span>
+      <div class="ligne"><a class="bouton" href="${esc(E.archive.retour)}">← Journée en cours</a></div></div>`;
+    document.querySelector("header h1").textContent = `CVTT Vaires · archive ${E.archive.titre}`;
+  }
+}
+
 /* ---------- Réglages ---------- */
 function afficherJeton() {
   document.getElementById("info-jeton").textContent = lire(JETON) ? `Jeton enregistré sur cet appareil, pour ${location.host}.` : `Aucun jeton enregistré pour ${location.host} sur cet appareil.`;
@@ -366,9 +393,13 @@ document.getElementById("oublier-mdp").addEventListener("click", (ev) => { ecrir
 document.getElementById("lancer").addEventListener("click", lancer);
 document.getElementById("nom-depot").textContent = E.depot || "le dépôt de l'outil";
 document.getElementById("lien-actions").href = `https://github.com/${E.depot}/actions/workflows/${E.workflow}`;
-if (!E.depot) document.getElementById("mise-a-jour").style.display = "none";
+if (!E.depot) {
+  document.getElementById("mise-a-jour").style.display = "none";
+  document.getElementById("titre-maj").style.display = "none";
+}
 afficherPages();
 afficherImages();
+afficherArchives();
 afficherJeton();
 reprendreSuivi();
 </script>

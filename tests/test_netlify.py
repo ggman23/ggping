@@ -1,8 +1,6 @@
 """Copie du site sur Netlify : accueil public (adversaires), /gg/ chiffré, envoi par l'API Netlify."""
 
-import io
 import json
-import zipfile
 
 import pytest
 
@@ -54,8 +52,12 @@ def test_accueil_public_et_gg_avec_son_propre_mot_de_passe(tmp_path):
     assert (dossier / "gg" / "etat.json").exists()
     assert (dossier / "robots.txt").read_text().endswith("Disallow: /\n")
     assert "X-Robots-Tag: noindex" in (dossier / "_headers").read_text()
-    noms = zipfile.ZipFile(io.BytesIO(netlify.archive(dossier))).namelist()
-    assert "index.html" in noms and "gg/resultats.html" in noms and "_headers" in noms
+    noms = {f.relative_to(dossier).as_posix() for f in dossier.rglob("*") if f.is_file()}
+    assert {"index.html", "gg/resultats.html", "_headers"} <= noms
+    # Re-chiffrement stable : refaire la copie ne change pas les fichiers (Netlify ne les renvoie pas)
+    avant = page.read_bytes()
+    netlify.construire(site, tmp_path / "netlify", "secret", "mdp-des-capitaines")
+    assert page.read_bytes() == avant
 
 
 class _Reponse:
@@ -67,24 +69,32 @@ class _Reponse:
         return self._contenu
 
 
-def test_envoi_et_erreurs(monkeypatch, tmp_path):
+def test_envoi_par_empreintes_seuls_les_fichiers_changes(monkeypatch, tmp_path):
+    import hashlib
     dossier = tmp_path / "netlify"
-    dossier.mkdir()
-    (dossier / "index.html").write_text("ok")
-    appels = []
+    (dossier / "club" / "archives").mkdir(parents=True)
+    (dossier / "index.html").write_text("nouvelle page")
+    (dossier / "club" / "archives" / "J1.chiffre").write_bytes(b"archive")
+    envois = []
 
-    def post(url, data=None, headers=None, timeout=None):
-        appels.append(url)
-        assert headers["Authorization"] == "Bearer jeton" and headers["Content-Type"] == "application/zip"
-        assert zipfile.ZipFile(io.BytesIO(data)).namelist() == ["index.html"]
-        return _Reponse(200, {"id": "d1", "state": "uploaded"})
+    def post(url, json=None, headers=None, timeout=None):
+        assert url == "https://api.netlify.com/api/v1/sites/ggping.netlify.app/deploys"
+        assert headers["Authorization"] == "Bearer jeton"
+        assert set(json["files"]) == {"/index.html", "/club/archives/J1.chiffre"}
+        # Netlify a déjà l'archive : il ne demande que la nouvelle page
+        return _Reponse(200, {"id": "d1", "state": "uploading", "required": [hashlib.sha1(b"nouvelle page").hexdigest()]})
+
+    def put(url, data=None, headers=None, timeout=None):
+        envois.append((url, data))
+        return _Reponse(200, {})
 
     monkeypatch.setattr(netlify.requests, "post", post)
+    monkeypatch.setattr(netlify.requests, "put", put)
     monkeypatch.setattr(netlify.requests, "get", lambda url, **o: _Reponse(200, {"id": "d1", "state": "ready",
                                                                                "ssl_url": "https://ggping.netlify.app"}))
     monkeypatch.setattr(netlify.time, "sleep", lambda s: None)
     assert netlify.deployer(dossier, "jeton") == "https://ggping.netlify.app"
-    assert appels == ["https://api.netlify.com/api/v1/sites/ggping.netlify.app/deploys"]
+    assert envois == [("https://api.netlify.com/api/v1/deploys/d1/files/index.html", b"nouvelle page")]
 
     monkeypatch.setattr(netlify.requests, "post", lambda *a, **o: _Reponse(401))
     with pytest.raises(netlify.ErreurNetlify, match="jeton Netlify refusé"):
@@ -133,3 +143,42 @@ def test_espace_club_avec_son_propre_mot_de_passe(tmp_path):
         ("vaires.html", "page"), ("resultats_vaires.html", "page"), ("recap_J3.png", "image")]
     assert "dispatches" not in page and "jeton" not in page.lower()     # pas de lancement de mise à jour
     assert not (dossier / "gg").exists()                               # pas de secret pour /gg/ : non publié
+
+
+def test_espace_club_avec_les_archives(tmp_path):
+    _crypto()
+    from ttvaires import archives
+    site = _site(tmp_path)
+    # une archive : un petit site complet sous archives/<clé>/
+    sortie_j1 = tmp_path / "sortie_j1"
+    sortie_j1.mkdir()
+    (sortie_j1 / "resultats_vaires.html").write_text("<p>J1 : DELOBELLE 780</p>", encoding="utf-8")
+    (sortie_j1 / "bilan.json").write_text(json.dumps({"debut": "2026-10-01T08:00", "fin": "2026-10-01T08:05", "pages": [
+        {"nom": "résultats", "resume": "ok", "fichiers": ["resultats_vaires.html"]}]}))
+    infos = {"titre": "Journée 1", "journee": 1, "phase": 1, "saison": "2026-2027", "date_reference": "2026-10-01"}
+    publier.publier(sortie_j1, site / "archives" / "2026-2027-P1-J1", "secret", archive={**infos, "retour": "../../"})
+    etat = json.loads((site / "etat.json").read_text(encoding="utf-8"))
+    etat["archives"] = {"2026-2027-P1-J1": {**infos, "dossier": "archives/2026-2027-P1-J1/",
+                        "fichiers": [f"archives/2026-2027-P1-J1/{f.relative_to(site / 'archives' / '2026-2027-P1-J1').as_posix()}"
+                                     for f in (site / "archives" / "2026-2027-P1-J1").rglob("*") if f.is_file()]}}
+    etat = publier.ecrire_etat(site, etat)
+    assert "archives/2026-2027-P1-J1/resultats.html" in etat["fichiers"]   # repris à chaque mise à jour
+    dossier = netlify.construire(site, tmp_path / "netlify", "secret", "", "mdp-du-club")
+    page = (dossier / "club" / "index.html").read_text(encoding="utf-8")
+    donnees = json.loads(page.split('<script id="donnees" type="application/json">')[1].split("</script>")[0])
+    [archive] = donnees["archives"]
+    assert archive["titre"] == "Journée 1" and archive["date_reference"] == "2026-10-01"
+    [doc] = archive["documents"]
+    assert doc["chemin"] == "archives/2026-2027-P1-J1/fichiers/resultats_vaires.html.chiffre"
+    assert publier.dechiffrer((dossier / "club" / doc["chemin"]).read_bytes(), publier.cle("mdp-du-club")) == "<p>J1 : DELOBELLE 780</p>".encode()
+    assert "DELOBELLE" not in page
+
+
+def test_journees_a_archiver():
+    from datetime import date
+    from ttvaires.archives import a_archiver
+    journees = [(1, "2026-09-25"), (2, "2026-10-02"), (3, "2026-10-16"), (4, "2026-11-06")]
+    assert a_archiver(journees, date(2026, 10, 20)) == [(1, date(2026, 10, 1)), (2, date(2026, 10, 15))]
+    # la J4 a commencé : la J3 passe en archive, datée de la veille de la J4
+    assert a_archiver(journees, date(2026, 11, 6))[-1] == (3, date(2026, 11, 5))
+    assert a_archiver(journees, date(2026, 9, 1)) == []

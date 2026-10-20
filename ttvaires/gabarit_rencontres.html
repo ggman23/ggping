@@ -162,7 +162,7 @@ function route() {
   afficher();
 }
 document.getElementById("sous-titre").textContent =
-  `${D.club.nom} · phase ${D.phase} ${D.saison} · données du ${new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`;
+  `${D.club.nom} · phase ${D.phase} ${D.saison} · ${D.date_reference ? "archive, état au " + new Date(D.date_reference + "T12:00").toLocaleDateString("fr-FR") : "données du " + new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`;
 window.addEventListener("hashchange", route);
 route();
 </script>

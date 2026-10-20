@@ -28,11 +28,26 @@ IMAGES = SORTIE / "images"  # images PNG des tableaux, à partager depuis un té
 _titres_images = {}
 
 
-def faire_images(nom_fonction, *args):
+class Contexte:
+    """Où écrire les pages, et à quelle date se placer. Pour une archive, la date est celle de la
+    veille de la journée suivante : les pages sont refaites telles qu'elles étaient ce jour-là."""
+
+    def __init__(self, sortie=SORTIE, aujourdhui=None):
+        self.sortie, self.aujourdhui = Path(sortie), aujourdhui
+        self.images = self.sortie / "images"
+        self.archive = aujourdhui is not None
+
+    def donnees(self, donnees):
+        if self.archive:  # les pages d'une archive se placent à cette date (et non au jour où on les regarde)
+            donnees["date_reference"] = self.aujourdhui.isoformat()
+        return donnees
+
+
+def faire_images(nom_fonction, *args, dossier=IMAGES, **options):
     """Images PNG d'une page. Un problème de dessin ne doit jamais empêcher les pages : il est signalé."""
     try:
         from . import images
-        resultat = getattr(images, nom_fonction)(*args, IMAGES)
+        resultat = getattr(images, nom_fonction)(*args, dossier, **options)
     except ImportError:
         print("  ! images non générées : bibliothèque Pillow absente (relancer lancer.bat pour l'installer)")
         return []
@@ -41,59 +56,96 @@ def faire_images(nom_fonction, *args):
         return []
     for chemin, titre in resultat:
         _titres_images[str(chemin)] = titre
-    print(f"Images : {len(resultat)} dans {IMAGES}")
+    print(f"Images : {len(resultat)} dans {dossier}")
     return [chemin for chemin, _ in resultat]
 
 
-def page_adversaires(client, club, tous_les_historiques=False):
+def page_adversaires(client, club, ctx, tous_les_historiques=False):
     print("=== Adversaires : API FFTT + compléments pingpocket.fr (le premier lancement peut être long :")
     print("pingpocket sature vite ; les suivants sont beaucoup plus rapides grâce au cache).", flush=True)
-    donnees = recuperer(client, club, dossier_import=IMPORT, tous_les_historiques=tous_les_historiques)
+    donnees = recuperer(client, club, aujourdhui=ctx.aujourdhui, dossier_import=IMPORT,
+                        tous_les_historiques=tous_les_historiques)
     enrichir(donnees)
-    (SORTIE / "donnees.json").write_text(json.dumps(donnees, ensure_ascii=False, indent=1), encoding="utf-8")
+    ctx.donnees(donnees)
+    (ctx.sortie / "donnees.json").write_text(json.dumps(donnees, ensure_ascii=False, indent=1), encoding="utf-8")
     resume = verifications.afficher_adversaires(donnees["verification"]["journees"], donnees["verification"]["clubs"])
     restants = donnees["sources"].get("historiques_restants")
     if restants:
         resume += f" ; {restants} meilleurs classements pas encore lus (option 8 pour tout lire)"
-    html = generer_html(donnees, SORTIE / "vaires.html")
-    return [html, *faire_images("images_adversaires", donnees)], resume
+    html = generer_html(donnees, ctx.sortie / "vaires.html")
+    return [html, *faire_images("images_adversaires", donnees, dossier=ctx.images, aujourdhui=ctx.aujourdhui)], resume
 
 
-def page_resultats(client, club):
+def page_resultats(client, club, ctx):
     print("=== Résultats des joueurs de Vaires", flush=True)
-    resultats = recuperer_parties(client, club)
-    html = generer_html(donnees_page(resultats), SORTIE / "resultats_vaires.html", GABARIT_RESULTATS)
-    xlsx = ecrire_xlsx(resultats, SORTIE / "resultats_vaires.xlsx")
+    resultats = recuperer_parties(client, club, ctx.aujourdhui)
+    donnees = ctx.donnees(donnees_page(resultats))
+    html = generer_html(donnees, ctx.sortie / "resultats_vaires.html", GABARIT_RESULTATS)
+    xlsx = ecrire_xlsx(resultats, ctx.sortie / "resultats_vaires.xlsx")
     print(f"Classeur Excel : {xlsx}")
-    pngs = faire_images("images_resultats", donnees_page(resultats))
+    pngs = faire_images("images_resultats", donnees, dossier=ctx.images)
     return [html, xlsx, *pngs], verifications.afficher_club(resultats["verification"], "résultats des équipes de Vaires")
 
 
-def page_rencontres(client, club):
+def page_rencontres(client, club, ctx):
     print("=== Feuilles de match des équipes de Vaires : parties et scores des manches", flush=True)
-    donnees = recuperer_rencontres(client, club)
+    donnees = ctx.donnees(recuperer_rencontres(client, club, ctx.aujourdhui))
     resume = verifications.afficher_club(donnees["verification"], "feuilles de match des équipes de Vaires")
-    html = generer_html(donnees, SORTIE / "rencontres_vaires.html", GABARIT_RENCONTRES)
-    return [html, *faire_images("image_recap", donnees, IMPORT), *faire_images("images_rencontres", donnees)], resume
+    html = generer_html(donnees, ctx.sortie / "rencontres_vaires.html", GABARIT_RENCONTRES)
+    return [html, *faire_images("image_recap", donnees, IMPORT, dossier=ctx.images),
+            *faire_images("images_rencontres", donnees, dossier=ctx.images)], resume
 
 
-def page_effectif(client, club):
+def page_effectif(client, club, ctx):
     print("=== Effectif de Vaires : équipes jouées et brûlages", flush=True)
-    donnees = recuperer_effectif(client, club, fichier_etat=CACHE / f"effectif_{club}.json", dossier_import=IMPORT)
+    # Une archive ne touche pas à l'état des « nouveaux » joueurs (celui du lancement du jour)
+    etat = None if ctx.archive else CACHE / f"effectif_{club}.json"
+    donnees = ctx.donnees(recuperer_effectif(client, club, aujourdhui=ctx.aujourdhui, fichier_etat=etat, dossier_import=IMPORT))
     resume = verifications.afficher_club(donnees["verification"], "feuilles de match des équipes de Vaires")
     if not donnees["source"]["liste"]:
         resume += " ; liste des licenciés indisponible (voir import/LISEZ-MOI.txt)"
-    html = generer_html(donnees, SORTIE / "effectif_vaires.html", GABARIT_EFFECTIF)
-    return [html, *faire_images("images_effectif", donnees)], resume
+    html = generer_html(donnees, ctx.sortie / "effectif_vaires.html", GABARIT_EFFECTIF)
+    return [html, *faire_images("images_effectif", donnees, dossier=ctx.images)], resume
 
 
-def page_virtuel(client, club):
+def page_virtuel(client, club, ctx):
     print("=== Classement virtuel : toutes les compétitions (championnat, critérium, tournois...)", flush=True)
-    donnees = recuperer_virtuel(client, club, dossier_import=IMPORT)
+    donnees = ctx.donnees(recuperer_virtuel(client, club, aujourdhui=ctx.aujourdhui, dossier_import=IMPORT))
     resume = verifications.afficher_club(donnees["verification"], "feuilles de match des équipes de Vaires")
     resume = " ; ".join([resume] + verifications.afficher_controle_parties(donnees["controle"]))
-    html = generer_html(donnees, SORTIE / "classement_virtuel.html", GABARIT_VIRTUEL)
-    return [html, *faire_images("images_virtuel", donnees)], resume
+    html = generer_html(donnees, ctx.sortie / "classement_virtuel.html", GABARIT_VIRTUEL)
+    return [html, *faire_images("images_virtuel", donnees, dossier=ctx.images)], resume
+
+
+def generer_pages(client, club, ctx, a_faire):
+    """Fait les pages demandées [(nom, fonction)] dans ctx.sortie. Renvoie (fichiers, bilans)."""
+    ctx.sortie.mkdir(parents=True, exist_ok=True)
+    pages, bilans = [], []
+    for nom, fonction in a_faire:
+        try:
+            nouvelles, resume = fonction(client, club, ctx)
+            pages += nouvelles
+            bilans.append((nom, resume, [Path(f).relative_to(ctx.sortie).as_posix() for f in nouvelles]))
+        except ErreurReseau as e:
+            print(f"\n!!! Page {nom} non générée : {e}\n")
+            bilans.append((nom, f"PAGE NON GÉNÉRÉE ({e})", []))
+    return pages, bilans
+
+
+TOUTES_LES_PAGES = [("résultats", page_resultats), ("rencontres", page_rencontres), ("effectif", page_effectif),
+                    ("classement virtuel", page_virtuel), ("adversaires", page_adversaires)]
+
+
+def ecrire_bilan(ctx, debut, bilans):
+    """Bilan lu par la publication du site (python -m ttvaires.publier)."""
+    (ctx.sortie / "bilan.json").write_text(json.dumps({
+        "debut": datetime.fromtimestamp(debut).isoformat(timespec="minutes"),
+        "fin": datetime.now().isoformat(timespec="minutes"),
+        "pages": [{"nom": nom, "resume": resume, "fichiers": [f for f in fichiers if not f.endswith(".png")],
+                   "images": [{"fichier": f, "titre": _titres_images.get(str(ctx.sortie / f), Path(f).stem)}
+                              for f in fichiers if f.endswith(".png")]}
+                  for nom, resume, fichiers in bilans],
+    }, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
 def main():
@@ -127,7 +179,6 @@ def main():
     else:
         client = Client(CACHE, paralleles=args.paralleles, hors_ligne=args.hors_ligne,
                         sites_cache_seul={"www.pingpocket.fr"} if args.pingpocket_cache else ())
-        pages, bilans = [], []
         a_faire = []
         if args.resultats:
             a_faire.append(("résultats", page_resultats))
@@ -138,15 +189,9 @@ def main():
         if args.virtuel:
             a_faire.append(("classement virtuel", page_virtuel))
         if args.adversaires or not (args.resultats or args.rencontres or args.effectif or args.virtuel):
-            a_faire.append(("adversaires", lambda c, club: page_adversaires(c, club, args.tous_les_historiques)))
-        for nom, fonction in a_faire:
-            try:
-                nouvelles, resume = fonction(client, args.club)
-                pages += nouvelles
-                bilans.append((nom, resume, [Path(f).relative_to(SORTIE).as_posix() for f in nouvelles]))
-            except ErreurReseau as e:
-                print(f"\n!!! Page {nom} non générée : {e}\n")
-                bilans.append((nom, f"PAGE NON GÉNÉRÉE ({e})", []))
+            a_faire.append(("adversaires", lambda c, club, ctx: page_adversaires(c, club, ctx, args.tous_les_historiques)))
+        ctx = Contexte()
+        pages, bilans = generer_pages(client, args.club, ctx, a_faire)
         print(f"Pages téléchargées : {client.nb_telecharges}, reprises du cache : {client.nb_cache}")
         # Hors ligne, rien n'a été lu de nouveau : rien à envoyer au site.
         envoi = None if args.sans_envoi or args.pingpocket_cache or args.hors_ligne else synchro.apres_lancement()
@@ -159,15 +204,7 @@ def main():
         if envoi:
             print(f"  site (téléphone) : {envoi}")
         print()
-        # Bilan lu par la publication du site (python -m ttvaires.publier)
-        (SORTIE / "bilan.json").write_text(json.dumps({
-            "debut": datetime.fromtimestamp(debut).isoformat(timespec="minutes"),
-            "fin": datetime.now().isoformat(timespec="minutes"),
-            "pages": [{"nom": nom, "resume": resume, "fichiers": [f for f in fichiers if not f.endswith(".png")],
-                       "images": [{"fichier": f, "titre": _titres_images.get(str(SORTIE / f), Path(f).stem)}
-                                  for f in fichiers if f.endswith(".png")]}
-                      for nom, resume, fichiers in bilans],
-        }, ensure_ascii=False, indent=1), encoding="utf-8")
+        ecrire_bilan(ctx, debut, bilans)
 
     for chemin in pages:
         if Path(chemin).suffix != ".png":

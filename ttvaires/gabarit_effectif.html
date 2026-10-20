@@ -149,7 +149,7 @@ function bandeaux() {
   if (pm || pf) p.push(`<div class="info">Prochaine journée : ${pm ? `masculin J${pm.journee} — ${fmtDate(pm.date)}${pm.heure ? " " + pm.heure : ""}` : ""}${pm && pf ? " · " : ""}${pf ? `féminin J${pf.journee} — ${fmtDate(pf.date)}${pf.heure ? " " + pf.heure : ""}` : ""}.
     Brûlage calculé avec les feuilles de match déjà saisies.</div>`);
   const src = D.source, quand = src.date ? fmtDate(src.date.slice(0, 10)) + " à " + src.date.slice(11, 16) : "";
-  const vieille = src.date && (Date.now() - new Date(src.date)) / 864e5 > 7;
+  const vieille = src.date && ((D.date_reference ? new Date(D.date_reference) : Date.now()) - new Date(src.date)) / 864e5 > 7;
   if (!src.liste) p.push(`<div class="note">Liste des licenciés indisponible (pingpocket.fr bloque les requêtes de l'outil) :
     seuls les joueurs déjà alignés cette phase apparaissent, sans les non réinscrits ni les licences loisir.</div>`);
   else if (src.origine === "import") p.push(`<div class="${vieille ? "note" : "info"}">Liste des licenciés : page(s) enregistrée(s)
@@ -283,7 +283,7 @@ function route() {
   window.scrollTo(0, 0);
 }
 document.getElementById("sous-titre").textContent =
-  `${D.club.nom} · phase ${D.phase} ${D.saison} · données du ${new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`;
+  `${D.club.nom} · phase ${D.phase} ${D.saison} · ${D.date_reference ? "archive, état au " + new Date(D.date_reference + "T12:00").toLocaleDateString("fr-FR") : "données du " + new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`;
 window.addEventListener("hashchange", route);
 route();
 </script>

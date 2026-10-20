@@ -253,6 +253,14 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
   fichiers re-chiffrés avec la clé du club sous leur nom d'origine, clé mémorisée à part de /gg/. Envoi par l'API Netlify (archive zip) depuis le
   workflow, secret NETLIFY_AUTH_TOKEN ; sans jeton, rien n'est fait ; un échec n'empêche pas la
   publication GitHub.
+- Archives des journées passées : la journée N est archivée dès que la N+1 a commencé, refaite à
+  la date de la veille de la N+1 (option date de référence du programme : résultats, feuilles de
+  match, classement virtuel s'arrêtent à cette date ; la page adversaires se place à cette date),
+  publiée une fois pour toutes dans le site (archives/<saison>-P<phase>-J<n>/, petit site chiffré
+  complet, repris à chaque mise à jour) ; archives manquantes reconstruites (J1, J2 à la mise en
+  place). Accueil GitHub et /gg/ : section Archives ; /club/ : rubrique Archives (vue par journée,
+  Retour vers l'archive, fichiers téléchargés préfixés J<n>_). Netlify : chiffrement stable (même
+  contenu, même fichier) et envoi par empreintes (seuls les fichiers modifiés partent).
 - Récapitulatif de la journée (`recap_J3.png`, avec les feuilles de match) : copie exacte de l'image
   du club (faite avec Excalidraw) : polices Lilita One et Excalifont (SIL OFL, fournies), palette
   Excalidraw (rouge #e03131, vert #2f9e44, orange #f08c00, jaune #ffec99, texte #1e1e1e), mise en

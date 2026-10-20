@@ -96,6 +96,14 @@ jobs:
           MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
         run: python -m ttvaires.publier
 
+      # Archives des journées passées (la J3 dès que la J4 a commencé ; J1, J2... si elles manquent) :
+      # refaites à la date de la veille de la journée suivante, publiées une fois pour toutes.
+      - name: Archives des journées passées
+        continue-on-error: true  # une archive ratée est refaite la fois suivante ; le site est publié quand même
+        env:
+          MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
+        run: python -m ttvaires.archives --pingpocket-cache
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

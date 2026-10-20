@@ -104,8 +104,9 @@ def recuperer(url, site):
             print(f"  ! {nom} non repris : {e}")
 
 
-def publier(sortie, site, mot_de_passe, depot="", branche=""):
-    """Chiffre les fichiers produits par le dernier lancement et écrit l'accueil et etat.json."""
+def publier(sortie, site, mot_de_passe, depot="", branche="", archive=None):
+    """Chiffre les fichiers produits par le dernier lancement et écrit l'accueil et etat.json.
+    `archive` : pour le petit site d'une journée archivée (titre, date de référence, lien de retour)."""
     if not mot_de_passe:
         raise ErreurPublication(
             "Mot de passe absent : ajoutez le secret MOT_DE_PASSE_SITE dans les réglages du dépôt GitHub "
@@ -138,9 +139,18 @@ def publier(sortie, site, mot_de_passe, depot="", branche=""):
         "depot": depot, "branche": branche, "workflow": WORKFLOW, "sel": SEL, "iterations": ITERATIONS,
         "derniere_maj": {"debut": bilan["debut"], "fin": bilan["fin"],
                          "bilans": [{"nom": p["nom"], "resume": p["resume"]} for p in bilan["pages"]]},
-        "fichiers": sorted(n for n in [*etat["pages"], *etat["images"]] if (site / n).exists()),
     })
-    fichier_etat.write_text(json.dumps(etat, ensure_ascii=False, indent=1), encoding="utf-8")
+    if archive:
+        etat["archive"] = archive
+    return ecrire_etat(site, etat)
+
+
+def ecrire_etat(site, etat):
+    """etat.json (avec la liste de tous les fichiers en ligne, archives comprises : ils sont repris
+    à chaque mise à jour) et la page d'accueil."""
+    archives = [f for a in etat.get("archives", {}).values() for f in a.get("fichiers", [])]
+    etat["fichiers"] = sorted({n for n in [*etat.get("pages", {}), *etat.get("images", {}), *archives] if (site / n).exists()})
+    (site / "etat.json").write_text(json.dumps(etat, ensure_ascii=False, indent=1), encoding="utf-8")
     js = json.dumps(etat, ensure_ascii=False).replace("<", "\\u003c")
     (site / "index.html").write_text(GABARIT_ACCUEIL.read_text(encoding="utf-8").replace("__ETAT_JSON__", js),
                                      encoding="utf-8")

@@ -184,7 +184,9 @@ le PC y envoie, chiffrés, son dossier `import` et ses pages de pingpocket.fr ap
 (option 7 du menu pour le réglage). Copie de secours sur **https://ggping.netlify.app/** après
 chaque mise à jour : la page des adversaires pour tout le club, l'**espace club** dans **/club/**
 (menu des pages, de l'Excel et des images, à regarder et télécharger, avec un mot de passe) et dans
-**/gg/** la copie du site avec un autre mot de passe (pour les capitaines). Mise en place :
+**/gg/** la copie du site avec un autre mot de passe (pour les capitaines). Les journées passées
+restent consultables dans les **archives** (pages, Excel et images telles qu'à la veille de la
+journée suivante). Mise en place :
 [PUBLICATION.md](PUBLICATION.md).
 
 ## Installation (Windows)

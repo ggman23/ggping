@@ -9,11 +9,11 @@
 :root { color-scheme: light dark; --fond: #eef1f5; --surface: #fff; --surface2: #f3f5f8; --texte: #1c2330; --doux: #5b6576;
   --bord: #dde1e7; --accent: #1f5fbf; --accent-fond: #e8f0fc; --bandeau: #173b60; --bandeau-texte: #fff;
   --ok: #1d7a46; --ok-fond: #e3f4ea; --att: #8a5a00; --att-fond: #fff4d6; --ko: #b3261e; --ko-fond: #fbe7e5;
-  --page: #1f5fbf; --excel: #1d7a46; --image: #b0306a; }
+  --page: #1f5fbf; --excel: #1d7a46; --image: #b0306a; --archive: #8a5a00; }
 @media (prefers-color-scheme: dark) { :root { --fond: #12151b; --surface: #1b2029; --surface2: #232a35; --texte: #e6e9ef;
   --doux: #9aa4b5; --bord: #313a48; --accent: #7fb0ff; --accent-fond: #1d2a40; --bandeau: #0f2236;
   --ok: #6fd39b; --ok-fond: #173323; --att: #f3cd6b; --att-fond: #3a3014; --ko: #ff8f86; --ko-fond: #3d1c1a;
-  --page: #7fb0ff; --excel: #6fd39b; --image: #f28dbd; } }
+  --page: #7fb0ff; --excel: #6fd39b; --image: #f28dbd; --archive: #d9a441; } }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 body { margin: 0; background: var(--fond); color: var(--texte); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
@@ -57,6 +57,7 @@ button { font: inherit; cursor: pointer; }
 .doc .icone { flex: none; width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; color: #fff; }
 .doc .icone svg { width: 19px; height: 19px; }
 .icone.page { background: var(--page); } .icone.excel { background: var(--excel); } .icone.image { background: var(--image); }
+.icone.archive { background: var(--archive); }
 .doc .texte { min-width: 0; flex: 1 1 auto; }
 .doc .texte b { display: block; font-size: 15px; font-weight: 600; }
 .doc .texte span { display: block; font-size: 12.5px; color: var(--doux); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -91,6 +92,12 @@ button { font: inherit; cursor: pointer; }
 .carte-excel h2 { margin: 0 0 4px; font-size: 20px; }
 .carte-excel p { color: var(--doux); margin: 0 0 18px; }
 .message { padding: 40px 20px; text-align: center; color: var(--doux); }
+.titre-section { font-size: 14px; text-transform: uppercase; letter-spacing: .05em; color: var(--doux); margin: 28px 0 10px; }
+.etiquette { font-size: 13px; font-weight: 600; vertical-align: middle; color: var(--archive); border: 1px solid var(--archive);
+  border-radius: 6px; padding: 1px 7px; }
+.liste-images { background: var(--surface); border: 1px solid var(--bord); border-radius: 14px; padding: 4px 8px 8px; }
+.liste-images h3 { font-size: 13.5px; color: var(--doux); margin: 12px 8px 2px; font-weight: 600; }
+.ligne-bas { margin-top: 16px; }
 
 /* Téléphone : le menu, puis le document en plein écran (bouton Retour ou retour du téléphone) */
 @media (max-width: 860px) {
@@ -146,6 +153,7 @@ const ICONES = {
   page: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>',
   excel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16"/></svg>',
   image: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 9"/></svg>',
+  archive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/></svg>',
 };
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const lire = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -155,14 +163,28 @@ const octets = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 const b64 = (o) => btoa(String.fromCharCode(...o));
 const classe = (r) => /NON GÉNÉRÉE|manquant|non lues|non récupéré/.test(r || "") ? "ko" : /indisponible|pas encore/.test(r || "") ? "att" : "ok";
 
-const docs = D.documents.slice().sort((a, b) => (a.ordre ?? 99) - (b.ordre ?? 99));
-const pages = docs.filter((d) => d.type !== "image");
-const images = docs.filter((d) => d.type === "image")
-  .sort((a, b) => GROUPES.indexOf(a.groupe) - GROUPES.indexOf(b.groupe) || a.ordre - b.ordre);
+/* Documents : ceux de la journée en cours, et ceux de chaque archive (journées passées). */
+function preparer(liste, archive = null) {
+  return liste.slice().sort((a, b) => (a.ordre ?? 99) - (b.ordre ?? 99)).map((d) => ({
+    ...d, archive,
+    id: archive ? `${archive.cle}/${d.fichier}` : d.fichier,
+    chemin: d.chemin || `fichiers/${d.fichier}.chiffre`,
+    // Fichier d'une archive : nommé avec sa journée (J2_resultats_vaires.html), sauf s'il l'est déjà (recap_J2.png)
+    nom: archive && !d.fichier.includes(`J${archive.journee}`) ? `J${archive.journee}_${d.fichier}` : d.fichier,
+  }));
+}
+const triImages = (a, b) => GROUPES.indexOf(a.groupe) - GROUPES.indexOf(b.groupe) || a.ordre - b.ordre;
+const pagesDe = (liste) => liste.filter((d) => d.type !== "image");
+const imagesDe = (liste) => liste.filter((d) => d.type === "image").sort(triImages);
+const docs = preparer(D.documents);
+const archives = (D.archives || []).map((a) => ({ ...a, docs: preparer(a.documents, a) }));
+const parId = new Map([...docs, ...archives.flatMap((a) => a.docs)].map((d) => [d.id, d]));
+const pages = pagesDe(docs), images = imagesDe(docs);
 const recaps = images.filter((d) => d.groupe === "récapitulatif");  // aussi en tuile sur l'accueil
+const jour = (iso) => iso ? new Date(iso + "T12:00").toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }) : "";
 let cle = null;
-const cacheClair = new Map();  // fichier -> Blob déchiffré
-let courant = null, urlCourante = null;
+const cacheClair = new Map();  // id -> Blob déchiffré
+let courant = null, urlCourante = null, retourVers = "";
 
 /* ---------- Déchiffrement (mêmes réglages que le site GitHub) ---------- */
 async function deriver(mdp) {
@@ -170,23 +192,25 @@ async function deriver(mdp) {
   return new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256",
     salt: new TextEncoder().encode(D.sel), iterations: D.iterations }, base, 256));
 }
-async function dechiffrer(nom, k = cle) {
-  const r = await fetch(`fichiers/${encodeURIComponent(nom)}.chiffre?v=${encodeURIComponent(D.maj || "")}`);
+async function dechiffrer(chemin, k = cle, type = "application/octet-stream") {
+  const r = await fetch(`${chemin.split("/").map(encodeURIComponent).join("/")}?v=${encodeURIComponent(D.maj || "")}`);
   if (!r.ok) throw new Error(`fichier introuvable (${r.status})`);
   const brut = new Uint8Array(await r.arrayBuffer());
   const cleAes = await crypto.subtle.importKey("raw", k, "AES-GCM", false, ["decrypt"]);
   const clair = await crypto.subtle.decrypt({ name: "AES-GCM", iv: brut.slice(0, 12) }, cleAes, brut.slice(12));
   const blob = await new Response(new Blob([clair]).stream().pipeThrough(new DecompressionStream("gzip"))).blob();
-  return new Blob([blob], { type: TYPES[nom.split(".").pop()] || "application/octet-stream" });
+  return new Blob([blob], { type });
 }
 async function contenu(doc) {
-  if (!cacheClair.has(doc.fichier)) cacheClair.set(doc.fichier, await dechiffrer(doc.fichier));
-  return cacheClair.get(doc.fichier);
+  if (!cacheClair.has(doc.id)) {
+    cacheClair.set(doc.id, await dechiffrer(doc.chemin, cle, TYPES[doc.fichier.split(".").pop()] || "application/octet-stream"));
+  }
+  return cacheClair.get(doc.id);
 }
 
 /* ---------- Connexion ---------- */
 async function entrer(k) {
-  const verif = await (await dechiffrer("verif", k)).text();  // lève une erreur si la clé est fausse
+  const verif = await (await dechiffrer("fichiers/verif.chiffre", k)).text();  // lève une erreur si la clé est fausse
   if (verif !== "cvtt-vaires-club") throw new Error("vérification");
   cle = k;
   document.getElementById("connexion").hidden = true;
@@ -217,49 +241,92 @@ function quitter() {
 /* ---------- Menu ---------- */
 function ligne(d, classeEnPlus = "") {
   const sous = d.type === "image" ? "" : `<span>${esc(d.type === "excel" ? "Classeur Excel" : d.description)}</span>`;
-  return `<a class="doc ${classeEnPlus}" href="#${encodeURIComponent(d.fichier)}" data-fichier="${esc(d.fichier)}">
+  return `<a class="doc ${classeEnPlus}" href="#${encodeURIComponent(d.id)}" data-id="${esc(d.id)}">
     <span class="icone ${d.type}">${ICONES[d.type]}</span><span class="texte"><b>${esc(d.titre)}</b>${sous}</span></a>`;
 }
+function listeImages(liste) {
+  const groupes = [...new Set(liste.map((i) => i.groupe))];
+  return groupes.map((g) => `<h3>${esc(TITRES_GROUPES[g] || g)}</h3>`
+    + liste.filter((i) => i.groupe === g).map((d) => ligne(d, "image-doc")).join("")).join("");
+}
 function construireMenu() {
-  const groupes = [...new Set(images.map((i) => i.groupe))];
   document.getElementById("menu").innerHTML =
     `<h2>Pages et Excel</h2>${pages.map((d) => ligne(d)).join("")}`
-    + (images.length ? `<h2>Images à partager</h2>` + groupes.map((g) => `<h3>${esc(TITRES_GROUPES[g] || g)}</h3>`
-        + images.filter((i) => i.groupe === g).map((d) => ligne(d, "image-doc")).join("")).join("") : "")
+    + (images.length ? `<h2>Images à partager</h2>${listeImages(images)}` : "")
+    + (archives.length ? `<h2>Archives des journées passées</h2>` + archives.map((a) =>
+        `<a class="doc" href="#archives/${encodeURIComponent(a.cle)}" data-id="archives/${esc(a.cle)}">
+          <span class="icone archive">${ICONES.archive}</span><span class="texte"><b>${esc(a.titre)}</b>
+          <span>Phase ${esc(a.phase)} · état au ${esc(jour(a.date_reference))}</span></span></a>`).join("") : "")
     + `<div class="pied-menu">
         <button class="second" id="tout">Tout télécharger (${docs.length} fichiers)</button>
         <p class="petit">Mise à jour : ${esc(quand(D.maj))}. Fichiers lisibles sans connexion : à garder dans le club.</p>
         <button class="lien" id="quitter">Oublier le mot de passe sur cet appareil</button>
       </div>`;
-  document.getElementById("tout").addEventListener("click", toutTelecharger);
+  document.getElementById("tout").addEventListener("click", (ev) => toutTelecharger(docs, ev.target));
   document.getElementById("quitter").addEventListener("click", quitter);
   document.getElementById("sous-titre").textContent = `Mise à jour : ${quand(D.maj)}`;
 }
 
-/* ---------- Affichage d'un document ---------- */
+/* ---------- Vues : accueil, archive d'une journée, document ---------- */
+function tuile(d) {
+  return `<a class="tuile" href="#${encodeURIComponent(d.id)}">
+    <span class="icone ${d.type}" style="background: var(--${d.type})">${ICONES[d.type]}</span><b>${esc(d.titre)}</b>
+    <span>${esc(d.type === "image" ? "L'image de la journée, à compléter avec la photo et les logos" : d.description)}</span>
+    ${d.verification ? `<span class="etat ${classe(d.verification)}">${esc(d.verification)}</span>` : ""}</a>`;
+}
 function accueil() {
   return `<div class="accueil"><h1>Espace club</h1>
     <p>Choisis une page, l'Excel ou une image : tu peux la regarder ici puis la télécharger.</p>
-    <div class="tuiles">${[...recaps, ...pages].map((d) => `<a class="tuile" href="#${encodeURIComponent(d.fichier)}">
-      <span class="icone ${d.type}" style="background: var(--${d.type})">${ICONES[d.type]}</span><b>${esc(d.titre)}</b>
-      <span>${esc(d.type === "image" ? "L'image de la journée, à compléter avec la photo et les logos" : d.description)}</span>
-      ${d.verification ? `<span class="etat ${classe(d.verification)}">${esc(d.verification)}</span>` : ""}
-    </a>`).join("")}</div></div>`;
+    <div class="tuiles">${[...recaps, ...pages].map(tuile).join("")}</div>
+    ${archives.length ? `<h2 class="titre-section">Archives des journées passées</h2><div class="tuiles">${archives.map((a) =>
+      `<a class="tuile" href="#archives/${encodeURIComponent(a.cle)}"><span class="icone archive">${ICONES.archive}</span>
+        <b>${esc(a.titre)}</b><span>Phase ${esc(a.phase)} ${esc(a.saison)} · état au ${esc(jour(a.date_reference))}</span></a>`).join("")}</div>` : ""}
+  </div>`;
+}
+function vueArchive(a) {
+  const imgs = imagesDe(a.docs);
+  return `<div class="accueil"><h1>${esc(a.titre)} <span class="etiquette">archive</span></h1>
+    <p>Phase ${esc(a.phase)} ${esc(a.saison)} : les pages, l'Excel et les images telles qu'au ${esc(jour(a.date_reference))}
+      (veille de la journée suivante).</p>
+    <div class="tuiles">${[...imgs.filter((d) => d.groupe === "récapitulatif"), ...pagesDe(a.docs)].map(tuile).join("")}</div>
+    ${imgs.length ? `<h2 class="titre-section">Images</h2><div class="liste-images">${listeImages(imgs)}</div>` : ""}
+    <div class="ligne-bas"><button class="second" id="tout-archive">Tout télécharger (${a.docs.length} fichiers)</button></div>
+  </div>`;
 }
 async function route() {
   if (!cle) return;
-  const fichier = decodeURIComponent(location.hash.slice(1));
-  const doc = docs.find((d) => d.fichier === fichier);
+  const h = decodeURIComponent(location.hash.slice(1));
+  const archive = h.startsWith("archives/") ? archives.find((a) => a.cle === h.slice(9)) || null : null;
+  const doc = archive ? null : parId.get(h) || null;
   const appli = document.getElementById("appli"), vue = document.getElementById("vue");
-  document.querySelectorAll(".doc").forEach((a) => a.classList.toggle("actif", a.dataset.fichier === fichier));
+  const actif = doc?.archive ? `archives/${doc.archive.cle}` : h;
+  document.querySelectorAll("#menu .doc").forEach((a) => a.classList.toggle("actif", a.dataset.id === actif));
   if (urlCourante) { URL.revokeObjectURL(urlCourante); urlCourante = null; }
-  courant = doc || null;
-  appli.classList.toggle("document", !!doc);
+  courant = doc;
+  retourVers = doc?.archive ? `archives/${doc.archive.cle}` : "";
+  document.querySelector("#retour span").textContent = retourVers ? "Archive" : "Menu";
+  appli.classList.toggle("document", !!(doc || archive));
   document.getElementById("telecharger").hidden = !doc;
   document.getElementById("partager").hidden = true;
-  document.getElementById("titre").textContent = doc ? doc.titre : "CVTT Vaires · espace club";
-  document.getElementById("sous-titre").textContent = doc ? (doc.type === "image" ? TITRES_GROUPES[doc.groupe] || "" : quand(doc.date)) : `Mise à jour : ${quand(D.maj)}`;
-  if (!doc) { vue.innerHTML = accueil(); vue.scrollTop = 0; return; }
+  const titre = document.getElementById("titre"), sous = document.getElementById("sous-titre");
+  if (archive) {
+    titre.textContent = `${archive.titre} · archive`;
+    sous.textContent = `Phase ${archive.phase} · état au ${jour(archive.date_reference)}`;
+    vue.innerHTML = vueArchive(archive);
+    document.getElementById("tout-archive").addEventListener("click", (ev) => toutTelecharger(archive.docs, ev.target));
+    vue.scrollTop = 0;
+    return;
+  }
+  if (!doc) {
+    titre.textContent = "CVTT Vaires · espace club";
+    sous.textContent = `Mise à jour : ${quand(D.maj)}`;
+    vue.innerHTML = accueil();
+    vue.scrollTop = 0;
+    return;
+  }
+  titre.textContent = doc.archive ? `${doc.archive.titre} · ${doc.titre}` : doc.titre;
+  sous.textContent = doc.archive ? `Archive · état au ${jour(doc.archive.date_reference)}`
+    : doc.type === "image" ? TITRES_GROUPES[doc.groupe] || "" : quand(doc.date);
   vue.innerHTML = '<p class="message">Ouverture…</p>';
   try {
     const blob = await contenu(doc);
@@ -270,13 +337,13 @@ async function route() {
     } else if (doc.type === "image") {
       urlCourante = URL.createObjectURL(blob);
       vue.innerHTML = `<div class="image-vue"><img src="${urlCourante}" alt="${esc(doc.titre)}"></div>`;
-      const fichier = new File([blob], doc.fichier, { type: "image/png" });
+      const fichier = new File([blob], doc.nom, { type: "image/png" });
       document.getElementById("partager").hidden = !(navigator.canShare && navigator.canShare({ files: [fichier] }));
     } else {
       vue.innerHTML = `<div class="carte-excel"><div class="icone">${ICONES.excel}</div><h2>${esc(doc.titre)}</h2>
         <p>${esc(doc.description)}<br>S'ouvre avec Excel, LibreOffice ou Google Sheets.</p>
-        <button class="principal" id="telecharger-excel">Télécharger ${esc(doc.fichier)}</button></div>`;
-      document.getElementById("telecharger-excel").addEventListener("click", () => enregistrer(blob, doc.fichier));
+        <button class="principal" id="telecharger-excel">Télécharger ${esc(doc.nom)}</button></div>`;
+      document.getElementById("telecharger-excel").addEventListener("click", () => enregistrer(blob, doc.nom));
     }
     vue.scrollTop = 0;
   } catch (e) {
@@ -292,30 +359,30 @@ function enregistrer(blob, nom) {
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
 }
 document.getElementById("telecharger").addEventListener("click", async () => {
-  if (courant) enregistrer(await contenu(courant), courant.fichier);
+  if (courant) enregistrer(await contenu(courant), courant.nom);
 });
 document.getElementById("partager").addEventListener("click", async () => {
   if (!courant) return;
-  try { await navigator.share({ files: [new File([await contenu(courant)], courant.fichier, { type: "image/png" })] }); }
+  try { await navigator.share({ files: [new File([await contenu(courant)], courant.nom, { type: "image/png" })] }); }
   catch (e) { /* partage annulé */ }
 });
-/* Retour au menu. (Pas history.back() : les onglets d'une page affichée, J1, J2, Cumul..., ajoutent
-   eux aussi des étapes à l'historique ; le bouton retour du téléphone les parcourt, puis revient au menu.) */
-document.getElementById("retour").addEventListener("click", () => { location.hash = ""; });
-async function toutTelecharger(ev) {
-  const bouton = ev.target;
+/* Retour : d'un document d'archive vers son archive, sinon vers le menu. (Pas history.back() : les
+   onglets d'une page affichée, J1, J2, Cumul..., ajoutent eux aussi des étapes à l'historique.) */
+document.getElementById("retour").addEventListener("click", () => { location.hash = retourVers; });
+async function toutTelecharger(liste, bouton) {
+  const libelle = bouton.textContent;
   bouton.disabled = true;
   try {
-    for (const [i, d] of docs.entries()) {
-      bouton.textContent = `Téléchargement ${i + 1}/${docs.length}…`;
-      enregistrer(await contenu(d), d.fichier);
+    for (const [i, d] of liste.entries()) {
+      bouton.textContent = `Téléchargement ${i + 1}/${liste.length}…`;
+      enregistrer(await contenu(d), d.nom);
       await new Promise((ok) => setTimeout(ok, 600));  // le navigateur enchaîne mieux les téléchargements
     }
   } catch (e) {
     alert("Téléchargement interrompu : " + e.message);
   } finally {
     bouton.disabled = false;
-    bouton.textContent = `Tout télécharger (${docs.length} fichiers)`;
+    bouton.textContent = libelle;
   }
 }
 window.addEventListener("hashchange", route);

@@ -130,6 +130,22 @@ Sans le secret, l'étape ne fait rien. Si Netlify refuse l'envoi, un avertisseme
 journal de la mise à jour, mais le site GitHub est publié quand même. La copie part même si GitHub
 Pages est en panne, dès que le site est prêt.
 
+## Archives des journées passées
+
+Après chaque mise à jour, les journées terminées sont archivées : la J3 passe en archive dès que la
+J4 a commencé. Une archive contient les pages, l'Excel et les images **telles qu'elles étaient la
+veille de la journée suivante** (résultats, feuilles de match, classement virtuel, brûlages et
+prochaine journée de ce jour-là) : elle est refaite à cette date, puis publiée une fois pour toutes
+(étape « Archives des journées passées » du workflow). Les archives qui manquent, par exemple J1 et
+J2 à la mise en place, sont reconstruites de la même façon.
+
+- Site GitHub et /gg/ : section « Archives des journées passées » en bas de l'accueil ; chaque
+  archive est un petit site (même mot de passe), avec un lien « ← Journée en cours ».
+- /club/ : rubrique « Archives » dans le menu (et en tuiles sur l'accueil) ; chaque journée
+  s'ouvre comme la journée en cours (pages, Excel, images, « Tout télécharger ») ; les fichiers
+  téléchargés portent la journée dans leur nom (J2_resultats_vaires.html).
+- Netlify ne reçoit que les fichiers qui ont changé : une archive n'est envoyée qu'une fois.
+
 ## Sécurité
 
 - Chaque page, l'Excel et les données envoyées par le PC sont chiffrés en AES-256-GCM avec une clé

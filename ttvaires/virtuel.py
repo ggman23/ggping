@@ -182,6 +182,7 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
     aujourdhui = aujourdhui or date.today()
     phase, saison = fftt.phase_et_saison(aujourdhui)
     debut, fin = fftt.bornes_phase(aujourdhui)
+    fin = min(fin, aujourdhui.isoformat())  # rien après ce jour (archives : la veille de la journée suivante)
 
     print(f"1/3 Équipes et feuilles de match du club {numero_club} (phase {phase} {saison}, API FFTT)", flush=True)
     feuilles = feuilles_du_club(client, numero_club, aujourdhui)

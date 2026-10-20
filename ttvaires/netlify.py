@@ -20,15 +20,17 @@ MOT_DE_PASSE_GG (celui de /gg/), MOT_DE_PASSE_CLUB (celui de /club/).
 
 import argparse
 import base64
-import io
+import gzip
+import hashlib
+import hmac
 import json
 import os
 import re
 import shutil
 import sys
 import time
-import zipfile
 from pathlib import Path
+from urllib.parse import quote
 
 import requests
 
@@ -47,6 +49,16 @@ ORDRE_CLUB = ["vaires.html", "resultats_vaires.html", "resultats_vaires.xlsx", "
 
 class ErreurNetlify(Exception):
     pass
+
+
+def chiffrer_stable(donnees, cle):
+    """Comme publier.chiffrer, mais un même contenu donne toujours le même fichier (vecteur
+    d'initialisation tiré du contenu) : une archive, qui ne change plus, n'est pas renvoyée à
+    Netlify à chaque mise à jour. Seule l'égalité de deux contenus identiques se voit."""
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    iv = hmac.new(cle, donnees, hashlib.sha256).digest()[:12]
+    return iv + AESGCM(cle).encrypt(iv, gzip.compress(donnees, mtime=0), None)
 
 
 def page_publique(site, mot_de_passe):
@@ -71,13 +83,13 @@ def copie_rechiffree(site, gg, cle_site, cle_gg):
         cible = gg / f.relative_to(site)
         cible.parent.mkdir(parents=True, exist_ok=True)
         if f.suffix == ".chiffre":
-            cible.write_bytes(publier.chiffrer(publier.dechiffrer(f.read_bytes(), cle_site), cle_gg))
+            cible.write_bytes(chiffrer_stable(publier.dechiffrer(f.read_bytes(), cle_site), cle_gg))
             continue
         texte = f.read_text(encoding="utf-8") if f.suffix == ".html" else None
         m = CHIFFRE.search(texte) if texte else None
         if m:  # page verrouillée : seul le contenu chiffré change
             donnees = publier.dechiffrer(base64.b64decode(m[1]), cle_site)
-            nouveau = base64.b64encode(publier.chiffrer(donnees, cle_gg)).decode("ascii")
+            nouveau = base64.b64encode(chiffrer_stable(donnees, cle_gg)).decode("ascii")
             cible.write_text(texte[:m.start(1)] + nouveau + texte[m.end(1):], encoding="utf-8")
         else:
             shutil.copy2(f, cible)
@@ -90,35 +102,53 @@ def _clair(fichier, cle):
     return publier.dechiffrer(base64.b64decode(CHIFFRE.search(fichier.read_text(encoding="utf-8"))[1]), cle)
 
 
-def espace_club(site, club, cle_site, cle_club):
-    """/club/ : chaque page, l'Excel et chaque image, re-chiffrés avec la clé du club sous leur nom
-    d'origine (fichiers/vaires.html.chiffre...), et la page de navigation (gabarit_club.html) qui
-    les déchiffre dans le navigateur. La liste des documents (titres, dates) ne contient aucun nom de joueur."""
-    fichier_etat = site / "etat.json"
-    etat = json.loads(fichier_etat.read_text(encoding="utf-8")) if fichier_etat.exists() else {}
-    fichiers = club / "fichiers"
-    fichiers.mkdir(parents=True)
+def _documents_club(site, etat, fichiers, prefixe, cle_site, cle_club):
+    """Re-chiffre pour /club/ les pages, l'Excel et les images d'un site (celui du jour ou une archive)
+    dans `fichiers`, sous leur nom d'origine ; renvoie leur liste (chemin : prefixe + nom.chiffre)."""
+    fichiers.mkdir(parents=True, exist_ok=True)
     documents = []
     for publie, info in etat.get("pages", {}).items():
         if not (site / publie).exists():
             continue
         nom = info.get("nom_telecharge") or publie.removesuffix(".chiffre")
-        (fichiers / f"{nom}.chiffre").write_bytes(publier.chiffrer(_clair(site / publie, cle_site), cle_club))
+        (fichiers / f"{nom}.chiffre").write_bytes(chiffrer_stable(_clair(site / publie, cle_site), cle_club))
         excel = nom.endswith(".xlsx")
-        documents.append({"fichier": nom, "type": "excel" if excel else "page", "titre": info.get("titre", nom),
-                          "description": info.get("description", ""), "date": info.get("date"),
+        documents.append({"fichier": nom, "chemin": f"{prefixe}{nom}.chiffre", "type": "excel" if excel else "page",
+                          "titre": info.get("titre", nom), "description": info.get("description", ""), "date": info.get("date"),
                           "verification": "" if excel else info.get("verification", ""),
                           "ordre": ORDRE_CLUB.index(nom) if nom in ORDRE_CLUB else len(ORDRE_CLUB)})
     for publie, info in etat.get("images", {}).items():
         if not (site / publie).exists():
             continue
         nom = info.get("nom_telecharge") or Path(publie).name.removesuffix(".chiffre")
-        (fichiers / f"{nom}.chiffre").write_bytes(publier.chiffrer(_clair(site / publie, cle_site), cle_club))
-        documents.append({"fichier": nom, "type": "image", "titre": info.get("titre", nom), "groupe": info.get("groupe"),
-                          "ordre": info.get("ordre", 0), "date": info.get("date")})
-    (fichiers / "verif.chiffre").write_bytes(publier.chiffrer(VERIF_CLUB, cle_club))
+        (fichiers / f"{nom}.chiffre").write_bytes(chiffrer_stable(_clair(site / publie, cle_site), cle_club))
+        documents.append({"fichier": nom, "chemin": f"{prefixe}{nom}.chiffre", "type": "image", "titre": info.get("titre", nom),
+                          "groupe": info.get("groupe"), "ordre": info.get("ordre", 0), "date": info.get("date")})
+    return documents
+
+
+def espace_club(site, club, cle_site, cle_club):
+    """/club/ : chaque page, l'Excel et chaque image (du jour, et de chaque journée archivée),
+    re-chiffrés avec la clé du club sous leur nom d'origine, et la page de navigation
+    (gabarit_club.html) qui les déchiffre dans le navigateur. La liste des documents (titres,
+    dates) ne contient aucun nom de joueur."""
+    fichier_etat = site / "etat.json"
+    etat = json.loads(fichier_etat.read_text(encoding="utf-8")) if fichier_etat.exists() else {}
+    documents = _documents_club(site, etat, club / "fichiers", "fichiers/", cle_site, cle_club)
+    archives = []
+    for cle_archive, a in sorted(etat.get("archives", {}).items(),
+                                 key=lambda x: (x[1].get("saison", ""), x[1].get("phase", 0), x[1].get("journee", 0)), reverse=True):
+        dossier = site / a["dossier"]
+        if not (dossier / "etat.json").exists():
+            continue
+        etat_archive = json.loads((dossier / "etat.json").read_text(encoding="utf-8"))
+        archives.append({"cle": cle_archive, "titre": a["titre"], "journee": a.get("journee"), "phase": a.get("phase"),
+                         "saison": a.get("saison"), "date_reference": a.get("date_reference"),
+                         "documents": _documents_club(dossier, etat_archive, club / "archives" / cle_archive / "fichiers",
+                                                      f"archives/{cle_archive}/fichiers/", cle_site, cle_club)})
+    (club / "fichiers" / "verif.chiffre").write_bytes(chiffrer_stable(VERIF_CLUB, cle_club))
     donnees = {"maj": (etat.get("derniere_maj") or {}).get("fin"), "sel": publier.SEL, "iterations": publier.ITERATIONS,
-               "documents": documents}
+               "documents": documents, "archives": archives}
     js = json.dumps(donnees, ensure_ascii=False).replace("<", "\\u003c")
     (club / "index.html").write_text(GABARIT_CLUB.read_text(encoding="utf-8").replace("__DONNEES_JSON__", js), encoding="utf-8")
 
@@ -142,20 +172,14 @@ def construire(site, dossier, mot_de_passe, mot_de_passe_gg, mot_de_passe_club="
     return dossier
 
 
-def archive(dossier):
-    tampon = io.BytesIO()
-    with zipfile.ZipFile(tampon, "w", zipfile.ZIP_DEFLATED) as z:
-        for f in sorted(dossier.rglob("*")):
-            if f.is_file():
-                z.write(f, f.relative_to(dossier).as_posix())
-    return tampon.getvalue()
-
-
-def deployer(dossier, jeton, site=SITE_PAR_DEFAUT, attente=120):
-    """Envoie le site (archive zip) sur Netlify et attend qu'il soit en ligne. Renvoie l'adresse."""
+def deployer(dossier, jeton, site=SITE_PAR_DEFAUT, attente=180):
+    """Envoie le site sur Netlify par empreintes : Netlify ne demande que les fichiers qu'il n'a pas
+    déjà (les archives, qui ne changent plus, ne repartent pas à chaque fois). Attend qu'il soit en
+    ligne et renvoie son adresse."""
     entetes = {"Authorization": f"Bearer {jeton}"}
-    r = requests.post(f"{API}/sites/{site}/deploys", data=archive(dossier), timeout=300,
-                      headers={**entetes, "Content-Type": "application/zip"})
+    fichiers = {"/" + f.relative_to(dossier).as_posix(): f for f in sorted(dossier.rglob("*")) if f.is_file()}
+    empreintes = {chemin: hashlib.sha1(f.read_bytes()).hexdigest() for chemin, f in fichiers.items()}
+    r = requests.post(f"{API}/sites/{site}/deploys", json={"files": empreintes}, headers=entetes, timeout=120)
     if r.status_code == 401:
         raise ErreurNetlify("jeton Netlify refusé (expiré ou mal copié) : refaire le secret NETLIFY_AUTH_TOKEN")
     if r.status_code in (403, 404):
@@ -164,6 +188,17 @@ def deployer(dossier, jeton, site=SITE_PAR_DEFAUT, attente=120):
     if not r.ok:
         raise ErreurNetlify(f"Netlify a répondu {r.status_code} : {r.text[:300]}")
     deploiement = r.json()
+    demandes, envoyes = set(deploiement.get("required") or []), 0
+    for chemin, f in fichiers.items():
+        if empreintes[chemin] not in demandes:
+            continue
+        demandes.discard(empreintes[chemin])  # deux fichiers identiques : un seul envoi
+        rf = requests.put(f"{API}/deploys/{deploiement['id']}/files{quote(chemin)}", data=f.read_bytes(), timeout=300,
+                          headers={**entetes, "Content-Type": "application/octet-stream"})
+        if not rf.ok:
+            raise ErreurNetlify(f"envoi de {chemin} refusé par Netlify ({rf.status_code})")
+        envoyes += 1
+    print(f"Netlify : {envoyes} fichier(s) envoyé(s) sur {len(fichiers)} (les autres n'ont pas changé)", flush=True)
     fin = time.time() + attente
     while deploiement.get("state") not in ("ready", "error") and time.time() < fin:
         time.sleep(3)
