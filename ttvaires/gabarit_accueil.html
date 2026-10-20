@@ -87,9 +87,9 @@ a { color: var(--accent); }
     <div class="ligne"><button id="lancer">Lancer la mise à jour</button></div>
     <div id="statut" role="status"></div>
     <details id="reglage">
-      <summary>Réglage du bouton (une seule fois par téléphone)</summary>
+      <summary>Réglage du bouton (une fois par appareil et par adresse du site)</summary>
       <p class="petit">Le bouton demande à GitHub de lancer la mise à jour. Il lui faut une « clé » (jeton) que tu crées
-        une fois, et qui reste uniquement sur ce téléphone :</p>
+        une fois, et qui reste uniquement sur cet appareil :</p>
       <ol>
         <li>Ouvre <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Fine-grained tokens → Generate new token</a>
           (connecté avec ton compte GitHub).</li>
@@ -99,7 +99,7 @@ a { color: var(--accent); }
         <li>« Generate token », copie le jeton (il commence par <code>github_pat_</code>) et colle-le ici :</li>
       </ol>
       <input type="password" id="jeton" placeholder="github_pat_…" autocomplete="off" aria-label="Jeton GitHub">
-      <div class="ligne"><button id="garder-jeton" class="second">Enregistrer sur ce téléphone</button>
+      <div class="ligne"><button id="garder-jeton" class="second">Enregistrer sur cet appareil</button>
         <button id="oublier-jeton" class="second">Effacer</button></div>
       <p class="petit" id="info-jeton"></p>
     </details>
@@ -354,7 +354,7 @@ async function reprendreSuivi() {
 
 /* ---------- Réglages ---------- */
 function afficherJeton() {
-  document.getElementById("info-jeton").textContent = lire(JETON) ? "Jeton enregistré sur ce téléphone." : "Aucun jeton enregistré.";
+  document.getElementById("info-jeton").textContent = lire(JETON) ? `Jeton enregistré sur cet appareil, pour ${location.host}.` : `Aucun jeton enregistré pour ${location.host} sur cet appareil.`;
 }
 document.getElementById("garder-jeton").addEventListener("click", () => {
   const v = document.getElementById("jeton").value.trim();
