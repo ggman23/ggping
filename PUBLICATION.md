@@ -175,14 +175,29 @@ Ce que l'on voit sur le tableau de bord :
   `club/telechargement/<fichier>`, `club/partage/<fichier>`, `club/tout-telecharger` ; sur /gg/ :
   `gg/ouverture/<page>`, `gg/telechargement/<fichier>`, `gg/image/<fichier>`, `gg/partage/<fichier>`,
   `gg/tout-telecharger`, `gg/mise-a-jour` ;
-- le nombre de **visiteurs** (sans cookie), les navigateurs, téléphone ou PC, tailles d'écran, pays,
-  et d'où viennent les visites (WhatsApp, e-mail...).
+- les **appareils différents** (taper `appareils` dans *Filter paths*) : chaque téléphone ou
+  navigateur de PC se signale une seule fois par jour, par semaine et par mois, d'où :
+  `appareils/jour` (vu par jour : combien d'appareils différents chaque jour), `appareils/semaine`,
+  `appareils/mois` (sur le mois choisi en haut : combien d'appareils différents dans le mois),
+  `appareils/nouveaux` (venus pour la première fois), et les mêmes par espace :
+  `appareils/club/mois`, `appareils/gg/semaine`, `appareils/accueil/jour`... C'est le nombre de
+  personnes différentes, à peu près : une personne qui vient avec son téléphone et son PC compte
+  pour deux, et un navigateur vidé ou en navigation privée revient comme un nouvel appareil ;
+- les navigateurs, téléphone ou PC, tailles d'écran, pays, et d'où viennent les visites.
+
+Les « visits » de GoatCounter (ligne *Totals* et colonne de chaque page) comptent chaque page vue
+et chaque action, pas les personnes : une personne qui ouvre 6 documents compte 6. Les adresses IP
+ne sont ni gardées ni affichées (par choix de GoatCounter, et ce sont des données personnelles) ;
+elles ne donneraient d'ailleurs pas le nombre de personnes : un téléphone en 4G change d'adresse
+sans arrêt, et tout un foyer partage la même en wifi.
 
 Pour ne pas compter ses propres visites : ouvrir une fois **https://ggping.netlify.app/#toggle-goatcounter**
 sur chacun de ses appareils (un message confirme ; le refaire pour réactiver).
 
 Vie privée : GoatCounter ne pose pas de cookie et ne garde pas les adresses IP ; il ne reçoit que
-des noms de fichiers, jamais un nom de joueur ni un mot de passe. Le script est figé (version et
+des noms de fichiers, jamais un nom de joueur ni un mot de passe. Pour les appareils différents,
+le navigateur garde seulement les dates de ses derniers signalements (aucun identifiant n'est
+créé ni envoyé). Le script est figé (version et
 empreinte vérifiées par le navigateur). Sans la variable, rien n'est ajouté aux pages.
 Autre possibilité, payante : Netlify Analytics (compté par le serveur de Netlify, sans script,
 mais sans les téléchargements ni les partages).

@@ -274,7 +274,10 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
   compte gratuit goatcounter.com) : accueil public (une page vue par chargement), /club/ (accueil,
   écran de connexion, chaque document et archive ouverts ; événements connexion, connexion refusée,
   téléchargement, partage, tout télécharger) et accueils de /gg/ (ouverture, téléchargement, image
-  vue, partage, tout télécharger, mise à jour lancée). Sans cookie ; noms de fichiers seulement ;
+  vue, partage, tout télécharger, mise à jour lancée). Appareils différents : chaque appareil se
+  signale une fois par jour, semaine et mois (et à sa première visite), au total et par espace
+  (événements appareils/<période>, appareils/<espace>/<période>, appareils/nouveaux), grâce à un
+  mémo local de dates, sans identifiant. Pas d'adresse IP. Sans cookie ; noms de fichiers seulement ;
   script count.v5.js figé et vérifié (integrity SRI). Site GitHub jamais compté.
 - Classements des poules (avec la page adversaires, mêmes données : classements calculés à partir
   des feuilles de match) : page `classements_vaires.html` (publiée sous classements.html) et image

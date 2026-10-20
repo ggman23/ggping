@@ -170,6 +170,34 @@ def code_goatcounter(valeur):
     return m[1] if m else ""
 
 
+# Visiteurs différents, sans cookie, sans adresse IP et sans identifiant : chaque appareil se signale
+# une seule fois par jour, par semaine et par mois (et la première fois qu'il vient), grâce à un
+# simple mémo dans son navigateur (dates des derniers signalements, rien d'autre). Événements
+# « appareils/jour », « appareils/semaine », « appareils/mois », « appareils/nouveaux », et les mêmes
+# par espace : « appareils/club/mois »... Un appareil = un téléphone ou un navigateur de PC.
+VISITEURS_JS = """window.compteurVisiteurs = function () {
+  const gc = window.goatcounter;
+  if (!gc || !gc.count) return;
+  let memo;
+  try { memo = JSON.parse(localStorage.getItem("cvtt-stats-vu") || "{}"); } catch (e) { return; }
+  const d = new Date(), date = (x) => x.toLocaleDateString("sv");  // AAAA-MM-JJ, heure locale
+  const lundi = new Date(d.getFullYear(), d.getMonth(), d.getDate() - (d.getDay() + 6) % 7);
+  const espace = /^\\/club\\b/.test(location.pathname) ? "club" : /^\\/gg\\b/.test(location.pathname) ? "gg" : "accueil";
+  const NOMS = { jour: "aujourd'hui", semaine: "cette semaine", mois: "ce mois-ci" };
+  const envois = memo.premier ? [] : [["appareils/nouveaux", "Appareils venus pour la première fois"]];
+  for (const [periode, valeur] of [["jour", date(d)], ["semaine", date(lundi)], ["mois", date(d).slice(0, 7)]]) {
+    for (const [cle, chemin, ou] of [[periode, `appareils/${periode}`, ""],
+                                     [`${espace}-${periode}`, `appareils/${espace}/${periode}`, ` (${espace})`]]) {
+      if (memo[cle] !== valeur) envois.push([chemin, `Appareils différents ${NOMS[periode]}${ou}`]);
+      memo[cle] = valeur;
+    }
+  }
+  memo.premier = memo.premier || date(d);
+  try { localStorage.setItem("cvtt-stats-vu", JSON.stringify(memo)); } catch (e) { return; }
+  envois.forEach(([chemin, titre]) => gc.count({ path: chemin, title: titre, event: true }));
+};"""
+
+
 def avec_compteur(html, code, manuel=False):
     """Ajoute le compteur de visites GoatCounter avant </head>. `manuel` : la page compte elle-même
     ce qu'on y fait (fonction compter() de l'espace club et de l'accueil) ; sinon une page vue par
@@ -177,9 +205,10 @@ def avec_compteur(html, code, manuel=False):
     if not code:
         return html
     reglages = """ data-goatcounter-settings='{"no_onload": true}'""" if manuel else ""
-    script = ('<script>window.goatcounter = { path: (p) => p.split("?")[0] || "/" };</script>\n'
+    script = (f'<script>window.goatcounter = {{ path: (p) => p.split("?")[0] || "/" }};\n{VISITEURS_JS}</script>\n'
               f'<script data-goatcounter="https://{code}.goatcounter.com/count"{reglages} async src="{GOATCOUNTER_JS}"'
-              f' integrity="{GOATCOUNTER_SRI}" crossorigin="anonymous" onload="window.compteurPret && compteurPret()"></script>\n')
+              f' integrity="{GOATCOUNTER_SRI}" crossorigin="anonymous"'
+              ' onload="window.compteurPret && compteurPret(); window.compteurVisiteurs && compteurVisiteurs()"></script>\n')
     return html.replace("</head>", script + "</head>", 1)
 
 

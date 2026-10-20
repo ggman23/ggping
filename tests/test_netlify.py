@@ -210,6 +210,7 @@ def test_compteur_de_visites_seulement_s_il_est_regle(tmp_path):
     accueil = (avec / "index.html").read_text(encoding="utf-8")
     assert 'data-goatcounter="https://cvtt-vaires.goatcounter.com/count"' in accueil
     assert f'integrity="{netlify.GOATCOUNTER_SRI}"' in accueil and "no_onload" not in accueil  # une vue par chargement
+    assert "compteurVisiteurs()" in accueil and "appareils/" in accueil  # appareils différents, sans identifiant
     for page in (avec / "club" / "index.html", avec / "gg" / "index.html"):
         texte = page.read_text(encoding="utf-8")
         assert '"no_onload": true' in texte and "function compter(" in texte  # la page compte elle-même
