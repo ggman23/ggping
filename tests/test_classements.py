@@ -64,6 +64,10 @@ def test_image_deux_par_rangee_la_ligne_de_vaires_en_rouge(tmp_path):
     [(chemin, _)] = classements.image_classements(_donnees(5), None, tmp_path)
     with Image.open(chemin) as img:
         assert img.size[1] > hauteur
+    # Logo fourni avec l'outil (rouge), remplacé par celui du dossier import s'il existe
+    with Image.open(chemin) as img:
+        r, g, b = img.getpixel((165, 60))[:3]
+        assert r > 180 and g < 80
     # Logo du club pris dans le dossier import
     imports = tmp_path / "import"
     imports.mkdir()

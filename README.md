@@ -140,8 +140,8 @@ téléphone et partagées dans les groupes du club (dossier `sortie\images\` sur
   l'outil la complète : voir `import\LISEZ-MOI.txt` (et `surnoms.txt` pour les noms affichés) ;
 - **classements des poules** (`classements_poules.png`, avec la page adversaires) : la poule de
   chaque équipe de Vaires (# ÉQUIPE PTS J V N D, la ligne de Vaires en rouge), deux cartes par
-  rangée sur fond sombre, « après la journée 03 » ; le logo du club est pris dans
-  `import\logo_club.png` (sinon `logo_gauche.png`, sinon un écusson CVTT) ;
+  rangée sur fond sombre, « après la journée 03 » ; le logo du club est fourni avec l'outil
+  (`import\logo_club.png` le remplace s'il existe) ;
 - **effectif** : tout le club (équipes jouées à chaque journée, coche verte = peut jouer,
   flamme = brûlé) et, pour chaque équipe masculine de la 2 à la 6, ses joueurs brûlés ;
 - **classement virtuel** : le classement complet.

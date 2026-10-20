@@ -283,7 +283,8 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
   PHASE 1 • 2026–2027 », une carte par équipe (bandeau rouge « VAIRES 1 », « CLASSEMENT DE LA
   POULE », division et poule ; colonnes # ÉQUIPE PTS J V N D ; ligne de Vaires en rouge), deux par
   rangée, la dernière seule si leur nombre est impair, légende en bas. Police DejaVu Sans
-  (fournie). Logo : `import/logo_club.png`, sinon `logo_gauche.png`, sinon écusson CVTT dessiné.
+  (fournie). Logo : celui du club, fourni (ttvaires/logo_club.png, découpé dans l'image du club) ;
+  `import/logo_club.png` (sinon `logo_gauche.png`) le remplace.
   Section d'images « Classements des poules » à part (après le récapitulatif) sur le site, /gg/ et
   /club/ (en tuile sur l'accueil de /club/). Aucun nom de joueur dans la page.
 - Page « Feuilles de match » (avec l'option 2 du menu, sans téléchargement en plus : mêmes feuilles

@@ -44,9 +44,9 @@ avec le mot de passe du club part sur GitHub pour la mise à jour du site (optio
 CLASSEMENTS DES POULES (image classements_poules.png, avec l'option 1, 5 ou 9)
 ==========================================================================
 
-Le logo du club en haut à gauche : logo_club.png dans CE dossier (sinon
-logo_gauche.png, sinon un écusson CVTT est dessiné). Un fond transparent (png)
-est conseillé.
+Le logo du club en haut à gauche est fourni avec l'outil. Pour en mettre un
+autre : logo_club.png dans CE dossier (sinon logo_gauche.png). Un fond
+transparent (png) est conseillé.
 
 
 RÉCAPITULATIF DE LA JOURNÉE (image recap_J3.png, avec l'option 2, 5 ou 9)

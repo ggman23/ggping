@@ -4,8 +4,8 @@ Sur le modèle de l'image proposée par le club : fond sombre, bandeau en haut (
 et balle), « CLASSEMENTS DES POULES » et « APRÈS LA JOURNÉE 03 • PHASE 1 • 2026–2027 », puis une
 carte par équipe (bandeau rouge « VAIRES 1 », colonnes # ÉQUIPE PTS J V N D, la ligne de Vaires en
 rouge), deux par rangée, et la légende en bas. Police DejaVu Sans (fournie avec l'outil, licence
-libre). Le logo du club est pris dans le dossier import (logo_club.png, sinon logo_gauche.png) ;
-sans logo, un écusson « CVTT » le remplace.
+libre). Le logo du club est celui fourni avec l'outil (logo_club.png, découpé dans l'image du club) ;
+import/logo_club.png le remplace s'il existe (sinon import/logo_gauche.png).
 
 Les classements sont ceux de la page des adversaires : calculés à partir des feuilles de match
 (points de rencontre de la FFTT, puis parties gagnées / perdues en cas d'égalité).
@@ -27,6 +27,7 @@ MARGE, ECART = 36, 22     # bords de l'image, espace entre deux cartes
 HAUT_BANDEAU = 236
 HAUT_TETE, HAUT_COLONNES, HAUT_LIGNE = 38, 28, 28
 EXTENSIONS_IMAGES = (".jpg", ".jpeg", ".png", ".webp")
+LOGO_FOURNI = Path(__file__).with_name("logo_club.png")
 
 FOND = (13, 14, 17)
 CARTE, CARTE_ALT, BORD = (22, 23, 28), (28, 29, 35), (52, 54, 62)
@@ -146,23 +147,23 @@ def _raquette(img, cx, cy, r, angle):
     img.paste(calque, (round(cx * F - calque.width / 2), round(cy * F - calque.height / 2)), calque)
 
 
-def _logo_du_dossier(dossier_import):
-    if not dossier_import or not Path(dossier_import).is_dir():
-        return None
-    for debut in ("logo_club", "logo_gauche"):
-        for f in sorted(Path(dossier_import).iterdir()):
-            if (f.is_file() and f.suffix.lower() in EXTENSIONS_IMAGES
-                    and re.fullmatch(re.escape(debut) + r"(\D.*)?", f.stem.lower())):
-                try:
-                    with Image.open(f) as im:
-                        return ImageOps.exif_transpose(im).convert("RGBA")
-                except OSError:
-                    print(f"  ! image illisible : {f.name}")
+def _logo(dossier_import):
+    """Logo du dossier import (logo_club, sinon logo_gauche), sinon celui fourni avec l'outil."""
+    fichiers = sorted(Path(dossier_import).iterdir()) if dossier_import and Path(dossier_import).is_dir() else []
+    candidats = [f for debut in ("logo_club", "logo_gauche") for f in fichiers
+                 if f.is_file() and f.suffix.lower() in EXTENSIONS_IMAGES
+                 and re.fullmatch(re.escape(debut) + r"(\D.*)?", f.stem.lower())]
+    for f in [*candidats, LOGO_FOURNI]:
+        try:
+            with Image.open(f) as im:
+                return ImageOps.exif_transpose(im).convert("RGBA")
+        except OSError:
+            print(f"  ! image illisible : {f.name}")
     return None
 
 
 def _ecusson(img, d, cx, cy, r):
-    """Sans logo dans le dossier import : un écusson rouge « CVTT »."""
+    """Sans aucun logo lisible : un écusson rouge « CVTT »."""
     halo = Image.new("L", img.size, 0)
     ImageDraw.Draw(halo).ellipse([(cx - r * 1.25) * F, (cy - r * 1.25) * F, (cx + r * 1.25) * F, (cy + r * 1.25) * F], fill=150)
     img.paste(Image.new("RGB", img.size, (230, 20, 40)), (0, 0), halo.filter(ImageFilter.GaussianBlur(r * F * 0.35)))
@@ -183,7 +184,7 @@ def _bandeau(img, d, dossier_import):
     fondu = Image.linear_gradient("L").resize((w, round(70 * F)))
     fond.paste(Image.new("RGB", (w, fondu.height), FOND), (0, hb - fondu.height), fondu)
     img.paste(fond, (0, 0))
-    logo = _logo_du_dossier(dossier_import)
+    logo = _logo(dossier_import)
     cx, cy, r = 165, 116, 98
     if logo:
         logo.thumbnail((round(2 * r * F), round(2 * r * F)), Image.LANCZOS)
