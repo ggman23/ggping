@@ -280,6 +280,9 @@ def main():
           + (f", {base}/gg/ (mot de passe de /gg/)" if mot_de_passe_gg else ""))
     if goatcounter:
         print(f"Statistiques de visite : https://{goatcounter}.goatcounter.com")
+    else:
+        print("Statistiques de visite : désactivées (pas de variable ni de secret GOATCOUNTER dans Settings > "
+              "Secrets and variables > Actions).")
 
 
 if __name__ == "__main__":

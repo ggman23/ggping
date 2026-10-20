@@ -162,7 +162,8 @@ visiteurs, documents ouverts, téléchargés et partagés. Seule la copie Netlif
    une adresse e-mail et un mot de passe.
 2. Sur github.com : dépôt → *Settings* → *Secrets and variables* → *Actions* → onglet
    **Variables** → *New repository variable* : *Name* `GOATCOUNTER`, *Value* le code
-   (`cvtt-vaires`).
+   (`cvtt-vaires`). Un secret du même nom (onglet *Secrets*) convient aussi. Pas dans
+   *Codespaces* ni *Dependabot* : ceux-là ne sont pas lus par la mise à jour.
 3. À la mise à jour suivante, le journal affiche « Statistiques de visite : https://cvtt-vaires.goatcounter.com ».
 
 Ce que l'on voit sur le tableau de bord :

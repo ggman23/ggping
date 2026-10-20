@@ -127,5 +127,6 @@ jobs:
           MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
           MOT_DE_PASSE_GG: ${{ secrets.MOT_DE_PASSE_GG }}
           MOT_DE_PASSE_CLUB: ${{ secrets.MOT_DE_PASSE_CLUB }}
-          GOATCOUNTER: ${{ vars.GOATCOUNTER }}  # statistiques de visite (facultatif, voir PUBLICATION.md)
+          # Statistiques de visite (facultatif, voir PUBLICATION.md) : variable GOATCOUNTER, ou secret du même nom
+          GOATCOUNTER: ${{ vars.GOATCOUNTER || secrets.GOATCOUNTER }}
         run: python -m ttvaires.netlify
