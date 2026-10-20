@@ -1,6 +1,6 @@
 """Calcul des points virtuels et synthèse par journée (cas réel de la J1 de Vaires 3, noms fictifs)."""
 
-from ttvaires.resultats import points_partie, synthese
+from ttvaires.resultats import feuille_de_match, points_partie, synthese
 
 
 def test_bareme_fftt():
@@ -64,3 +64,32 @@ def test_meilleure_victoire_est_le_mieux_classe_des_joueurs_battus():
                _partie("GUITTON", 1410, "C", 806, True), _partie("GUITTON", 1410, "D", 1500, False)]
     (ligne,), _ = synthese(parties)
     assert (ligne["meilleure"], ligne["meilleure_adv"]) == (-560, 850)
+
+
+def _licence(identifiant, nom, prenom, points):
+    return {"identifier": identifiant, "points": points, "person": {"familyName": nom, "givenName": prenom}}
+
+
+def test_feuille_de_match_vue_de_vaires_a_l_exterieur():
+    """Vaires joue à l'extérieur : ses joueurs et ses manches passent en premier."""
+    vaires, adv = _licence("1", "GUITTON", "Marc", 1410), _licence("9", "PRIEM", "Mickaël", 932)
+    vaires2, adv2 = _licence("2", "LARDE", "Jerome", 889), _licence("8", "ALLIAUME", "Jeremy", 1000)
+    d = {"homeSheetMatches": [{"identifier": "A", "player": adv}, {"identifier": "B", "player": adv2}],
+         "awaySheetMatches": [{"identifier": "W", "player": vaires}, {"identifier": "X", "player": vaires2}],
+         "games": [
+             {"homePlayer": adv, "awayPlayer": vaires, "winner": "away", "doubleOpposition": False,
+              "sets": [{"homeScore": 8, "awayScore": 11}, {"homeScore": 11, "awayScore": 9}, {"homeScore": 7, "awayScore": 11},
+                       {"homeScore": 9, "awayScore": 11}]},
+             {"homePlayer": adv2, "homeTeammatePlayer": adv, "awayPlayer": vaires2, "awayTeammatePlayer": vaires,
+              "winner": "home", "doubleOpposition": True, "sets": [{"homeScore": 11, "awayScore": 5}] * 3},
+             {"homePlayer": adv2, "awayPlayer": vaires2, "winner": "home", "doubleOpposition": False, "forfeit": True, "sets": []},
+         ]}
+    f = feuille_de_match(d, "away", "home")
+    assert f["score"] == [1, 2]
+    p1, double, forfait = f["parties"]
+    assert [j["nom"] for j in p1["nous"]] == ["GUITTON"] and p1["nous"][0]["lettre"] == "W"
+    assert p1["sets"] == [[11, 8], [9, 11], [11, 7], [11, 9]] and p1["gagne"] is True and p1["score"] == [1, 0]
+    assert double["double"] and [j["nom"] for j in double["nous"]] == ["LARDE", "GUITTON"] and double["gagne"] is False
+    assert forfait["forfait"] and forfait["gagne"] is False
+    # Bilan des simples joués (le double n'y compte pas)
+    assert [(b["nom"], b["v"], b["n"]) for b in f["bilan"]] == [("GUITTON", 1, 1), ("LARDE", 0, 1)]

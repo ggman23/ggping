@@ -10,7 +10,7 @@ from datetime import date, datetime
 
 from . import fftt
 from .reseau import HEURE
-from .verifications import bilan_club
+from .verifications import LIBELLES, bilan_club, statut
 
 # Barème FFTT : (écart maximum exclu, victoire normale, défaite normale, victoire anormale,
 # défaite anormale). Normal = le joueur qui a le plus de points gagne.
@@ -39,13 +39,10 @@ def points_partie(points, points_adv, victoire, coefficient=COEFFICIENT_CHAMPION
     return gain * coefficient
 
 
-def recuperer_parties(client, numero_club="08770250", aujourdhui=None):
-    """Toutes les parties de simple jouées par les joueurs du club dans la phase en cours
-    (championnats masculin et féminin), lues sur l'API publique de la FFTT."""
-    aujourdhui = aujourdhui or date.today()
-    phase, saison = fftt.phase_et_saison(aujourdhui)
+def _rencontres_jouees(client, numero_club, aujourdhui):
+    """Rencontres de championnat du club dans la phase en cours, celles déjà jouées (avec le côté
+    de Vaires) et leurs feuilles de match."""
     debut, fin = fftt.bornes_phase(aujourdhui)
-    print(f"Résultats des équipes du club {numero_club} (phase {phase} {saison}, API FFTT)", flush=True)
     id_club = fftt.id_interne_club(client, numero_club, debut)
     rencontres = fftt.rencontres_club(client, id_club, debut, fin, ttl=3 * HEURE)
 
@@ -59,18 +56,32 @@ def recuperer_parties(client, numero_club="08770250", aujourdhui=None):
                 if r["date"][:10] <= aujourdhui.isoformat():
                     jouees.append((r, c == "homeOpponent"))
     ordres = {nom: i for i, nom in enumerate(sorted(nos_equipes, key=lambda n: nos_equipes[n]))}
-
     etats = {}
     details = fftt.details(client, [r for r, _ in jouees], aujourdhui.isoformat(), etats)
+    return {"rencontres": rencontres, "nos_equipes": nos_equipes, "jouees": jouees, "ordres": ordres,
+            "etats": etats, "details": details}
+
+
+def _nom_equipe(nos_equipes, nom_api):
+    feminine, numero = nos_equipes[nom_api]
+    return f"VAIRES {numero}{' F' if feminine else ''}"
+
+
+def recuperer_parties(client, numero_club="08770250", aujourdhui=None):
+    """Toutes les parties de simple jouées par les joueurs du club dans la phase en cours
+    (championnats masculin et féminin), lues sur l'API publique de la FFTT."""
+    aujourdhui = aujourdhui or date.today()
+    phase, saison = fftt.phase_et_saison(aujourdhui)
+    print(f"Résultats des équipes du club {numero_club} (phase {phase} {saison}, API FFTT)", flush=True)
+    club = _rencontres_jouees(client, numero_club, aujourdhui)
     parties = []
-    for r, domicile in jouees:
-        d = details.get(r["id"])
+    for r, domicile in club["jouees"]:
+        d = club["details"].get(r["id"])
         if not d or not d.get("games"):
             continue
         nous, eux = ("home", "away") if domicile else ("away", "home")
         notre_equipe = d[f"{nous}Opponent"]["team"]["name"]
-        feminine, numero = nos_equipes[notre_equipe]
-        nom = f"VAIRES {numero}{' F' if feminine else ''}"
+        nom = _nom_equipe(club["nos_equipes"], notre_equipe)
         for g in d["games"]:
             if g.get("doubleOpposition") or g.get("forfeit") or g.get("notCounted") or g.get("winner") not in ("home", "away"):
                 continue
@@ -81,7 +92,7 @@ def recuperer_parties(client, numero_club="08770250", aujourdhui=None):
             victoire = g["winner"] == nous
             parties.append({
                 "journee": d["day"]["position"], "date": d["date"][:10],
-                "equipe": nom, "ordre": ordres[notre_equipe], "adversaires": d[f"{eux}Opponent"]["team"]["name"],
+                "equipe": nom, "ordre": club["ordres"][notre_equipe], "adversaires": d[f"{eux}Opponent"]["team"]["name"],
                 "licence": j["licence"], "joueur": j["nom"], "points": pts,
                 "adversaire": a["nom"], "points_adv": pts_adv,
                 "ecart": pts_adv - pts, "victoire": victoire,
@@ -92,8 +103,76 @@ def recuperer_parties(client, numero_club="08770250", aujourdhui=None):
         "genere_le": datetime.now().isoformat(timespec="minutes"), "saison": saison, "phase": phase,
         "club": {"numero": numero_club, "nom": "CVTT VAIRES" if numero_club == "08770250" else numero_club},
         "parties": parties,
-        "verification": bilan_club(rencontres, etats, aujourdhui.isoformat(), numero_club, "CVTT VAIRES"),
+        "verification": bilan_club(club["rencontres"], club["etats"], aujourdhui.isoformat(), numero_club, "CVTT VAIRES"),
     }
+
+
+# ---------------------------------------------------------------------------
+# Feuilles de match : le détail de chaque rencontre (parties, scores des manches)
+# ---------------------------------------------------------------------------
+
+def recuperer_rencontres(client, numero_club="08770250", aujourdhui=None):
+    """Chaque rencontre jouée par les équipes du club dans la phase : score, et pour chaque partie
+    les joueurs, le score des manches et le vainqueur (vu de Vaires : Vaires toujours en premier)."""
+    aujourdhui = aujourdhui or date.today()
+    phase, saison = fftt.phase_et_saison(aujourdhui)
+    print(f"Feuilles de match des équipes du club {numero_club} (phase {phase} {saison}, API FFTT)", flush=True)
+    club = _rencontres_jouees(client, numero_club, aujourdhui)
+    rencontres = []
+    for r, domicile in club["jouees"]:
+        nous, eux = ("home", "away") if domicile else ("away", "home")
+        notre, autre = fftt.equipe(r, f"{nous}Opponent"), fftt.equipe(r, f"{eux}Opponent")
+        if not autre:
+            continue  # exempte
+        etat = statut(r, club["etats"], aujourdhui.isoformat())
+        rencontre = {
+            "journee": r["day"]["position"], "date": r["date"][:10], "heure": fftt.heure(r),
+            "equipe": _nom_equipe(club["nos_equipes"], notre["name"]), "ordre": club["ordres"][notre["name"]],
+            "adversaire": autre.get("name"), "domicile": domicile, "division": fftt.libelle_division(r["division"]["name"]),
+            "etat": etat, "libelle": LIBELLES[etat], "score": None, "parties": [], "bilan": [],
+        }
+        d = club["details"].get(r["id"])
+        if d:
+            rencontre.update(feuille_de_match(d, nous, eux))
+        rencontres.append(rencontre)
+    rencontres.sort(key=lambda x: (x["journee"], x["ordre"], x["date"]))
+    return {
+        "genere_le": datetime.now().isoformat(timespec="minutes"), "saison": saison, "phase": phase,
+        "club": {"numero": numero_club, "nom": "CVTT VAIRES" if numero_club == "08770250" else numero_club},
+        "journees": sorted({x["journee"] for x in rencontres}),
+        "rencontres": rencontres,
+        "verification": bilan_club(club["rencontres"], club["etats"], aujourdhui.isoformat(), numero_club, "CVTT VAIRES"),
+    }
+
+
+def feuille_de_match(d, nous, eux):
+    """Parties d'une feuille de match (détail de l'API), vues du côté `nous` ("home" ou "away")."""
+    lettres = {s["player"].get("identifier"): s.get("identifier")
+               for c in ("home", "away") for s in d.get(f"{c}SheetMatches") or [] if s.get("player")}
+
+    def joueurs(g, cote):
+        return [{"nom": j["nom_famille"], "prenom": j["prenom"], "points": j["points"], "licence": j["licence"],
+                 "lettre": lettres.get(j["licence"])}
+                for j in (fftt.joueur(x) for x in (g.get(f"{cote}Player"), g.get(f"{cote}TeammatePlayer")) if x)]
+
+    score, parties, bilan = [0, 0], [], {}
+    for g in d.get("games") or []:
+        gagne = g["winner"] == nous if g.get("winner") in ("home", "away") else None
+        if gagne is not None:
+            score[0 if gagne else 1] += 1
+        partie = {
+            "double": bool(g.get("doubleOpposition")), "nous": joueurs(g, nous), "eux": joueurs(g, eux),
+            "sets": [[s.get(f"{nous}Score"), s.get(f"{eux}Score")] for s in g.get("sets") or []],
+            "gagne": gagne, "forfait": bool(g.get("forfeit")), "abandon": bool(g.get("abandonment")),
+            "non_compte": bool(g.get("notCounted")), "score": list(score),
+        }
+        parties.append(partie)
+        if not partie["double"] and len(partie["nous"]) == 1 and gagne is not None:
+            b = bilan.setdefault(partie["nous"][0]["licence"], {**partie["nous"][0], "v": 0, "n": 0})
+            b["v"] += gagne
+            b["n"] += 1
+    return {"score": score, "parties": parties, "forfait": bool(d.get("forfeit")),
+            "bilan": sorted(bilan.values(), key=lambda b: (b["lettre"] or "", b["nom"]))}
 
 
 def synthese(parties):

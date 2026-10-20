@@ -79,7 +79,7 @@ a { color: var(--accent); }
     <label for="choix" class="petit">Pages à mettre à jour</label>
     <select id="choix">
       <option value="tout">Tout (environ 5 minutes)</option>
-      <option value="resultats">Résultats des joueurs (1 à 2 minutes)</option>
+      <option value="resultats">Résultats et feuilles de match (1 à 2 minutes)</option>
       <option value="effectif">Effectif et brûlages</option>
       <option value="virtuel">Classement virtuel</option>
       <option value="adversaires">Adversaires</option>
@@ -123,7 +123,7 @@ a { color: var(--accent); }
 "use strict";
 const E = JSON.parse(document.getElementById("etat").textContent);
 const CLE = "cvtt-vaires-cle", JETON = "cvtt-vaires-jeton-github";
-const ORDRE = ["adversaires.html", "resultats.html", "resultats_vaires.xlsx.chiffre", "effectif.html", "classement_virtuel.html"];
+const ORDRE = ["adversaires.html", "resultats.html", "resultats_vaires.xlsx.chiffre", "rencontres.html", "effectif.html", "classement_virtuel.html"];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const lire = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const ecrire = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) { /* navigation privée */ } };
@@ -226,8 +226,9 @@ async function telecharger(boutons) {
 }
 
 /* ---------- Images à partager ---------- */
-const GROUPES = ["adversaires", "résultats", "effectif", "classement virtuel"];
-const TITRES_GROUPES = { "adversaires": "Adversaires", "résultats": "Résultats des joueurs", "effectif": "Effectif et brûlages",
+const GROUPES = ["adversaires", "résultats", "rencontres", "effectif", "classement virtuel"];
+const TITRES_GROUPES = { "adversaires": "Adversaires", "résultats": "Résultats des joueurs", "rencontres": "Feuilles de match",
+  "effectif": "Effectif et brûlages",
   "classement virtuel": "Classement virtuel" };
 function afficherImages() {
   const zone = document.getElementById("images");

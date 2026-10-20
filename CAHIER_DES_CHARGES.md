@@ -238,6 +238,14 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
     sur deux lignes) ; le cumul trié par points gagnés au total ;
   - effectif : vue du club (équipes jouées, coche = peut jouer, flamme = brûlé) ; pour chaque
     équipe masculine 2 à 6, ses joueurs brûlés.
+  - feuilles de match : une image par rencontre de la dernière journée (parties, score des
+    manches, bilan des joueurs).
+  - adversaires : la fiche de chaque équipe prend la largeur de son contenu (720 points au moins,
+    sans colonne vide) ; un sous-titre trop long (adresse) passe sur 2 lignes.
+- Page « Feuilles de match » (avec l'option 2 du menu, sans téléchargement en plus : mêmes feuilles
+  que les résultats) : chaque rencontre de Vaires, journée par journée, avec chaque partie, les
+  joueurs (lettres de la feuille, points), le score de chaque manche vu de Vaires, le score de la
+  rencontre après chaque partie et le bilan des joueurs. Publiée sur le site (rencontres.html).
 - Lisibilité : largeur 1080 points, texte 26 points, nom abrégé « NOM P. » si besoin, 25 lignes au
   plus par image (au-delà, plusieurs images numérotées : une image très haute serait réduite par
   les messageries). En plus, et sans rien changer aux images numérotées, chaque tableau découpé est

@@ -50,7 +50,7 @@ echo  ==================================================
 echo    CVTT Vaires - championnat par equipes
 echo  ==================================================
 echo    1. Adversaires : effectifs, brulages, calendrier
-echo    2. Resultats des joueurs de Vaires : page + Excel
+echo    2. Resultats des joueurs de Vaires : page + Excel + feuilles de match
 echo    3. Effectif de Vaires : brulages par joueur et par equipe
 echo    4. Classement virtuel du club : toutes competitions
 echo    5. Tout : les quatre pages

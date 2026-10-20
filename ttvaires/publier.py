@@ -35,6 +35,7 @@ PUBLIES = {
     "vaires.html": ("adversaires.html", "Adversaires", "Effectifs, brûlages et compositions probables des adversaires, calendrier, vérifications"),
     "resultats_vaires.html": ("resultats.html", "Résultats des joueurs", "Points gagnés ou perdus à chaque journée de championnat"),
     "resultats_vaires.xlsx": ("resultats_vaires.xlsx.chiffre", "Résultats (Excel)", "Classeur à télécharger"),
+    "rencontres_vaires.html": ("rencontres.html", "Feuilles de match", "Chaque rencontre de Vaires : parties, joueurs et scores des manches"),
     "effectif_vaires.html": ("effectif.html", "Effectif et brûlages", "Joueurs de Vaires : équipes jouées, brûlés et possibles par équipe"),
     "classement_virtuel.html": ("classement_virtuel.html", "Classement virtuel", "Toutes compétitions, meilleures perfs et pires contres"),
 }

@@ -5,10 +5,11 @@ Les pages sont générées sur les serveurs de GitHub (GitHub Actions) et publi�
 
 **https://ggman23.github.io/ggping/**
 
-- La page d'accueil liste les pages (adversaires, résultats, Excel, effectif, classement virtuel)
+- La page d'accueil liste les pages (adversaires, résultats, Excel, feuilles de match, effectif,
+  classement virtuel)
   avec leur date et le bilan des vérifications, et propose un bouton **« Lancer la mise à jour »**.
 - Chaque page s'**ouvre** dans le navigateur ou se **télécharge** ; « Tout télécharger » récupère
-  les quatre pages HTML, l'Excel et toutes les images dans « Téléchargements » : ce sont exactement
+  les pages HTML, l'Excel et toutes les images dans « Téléchargements » : ce sont exactement
   les fichiers du dossier `sortie` du PC (mêmes noms), lisibles sans connexion et sans mot de passe.
 - Section **« Images à partager »** : chaque image se voit en grand (« Voir »), se télécharge, et
   peut être envoyée directement depuis le téléphone (« Partager » : WhatsApp, SMS…).

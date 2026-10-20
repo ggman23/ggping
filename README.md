@@ -22,6 +22,13 @@ de laquelle tout est calculé par formules). Les équipes masculines (vendredi) 
 féminine (samedi) sont prises en compte : une joueuse qui a joué les deux rencontres d'une même
 journée apparaît dans les deux équipes, et ses points se cumulent.
 
+Avec elle, la page **Feuilles de match** (`sortie\rencontres_vaires.html`) détaille chaque
+rencontre des équipes de Vaires, journée par journée : le score, puis chaque partie dans l'ordre
+de la feuille (lettres A, B, C, D / W, X, Y, Z), les joueurs et leurs points, le score de chaque
+manche (11-7, 8-11…, Vaires toujours en premier, vert = manche gagnée), le score de la rencontre
+après chaque partie et le bilan de chaque joueur. Sur un téléphone, les manches passent sous la
+partie ; des boutons filtrent une équipe.
+
 Les résultats viennent de l'**API publique de la FFTT** (celle des pages de consultation de
 monclub.fftt.com, lisible sans identifiant) : quelques secondes suffisent.
 
@@ -114,6 +121,8 @@ téléphone et partagées dans les groupes du club (dossier `sortie\images\` sur
   les 8 mieux classés qui n'ont pas encore joué ;
 - **résultats** : la dernière journée (triée par points gagnés sur la journée) et le cumul (trié
   par points gagnés au total) ;
+- **feuilles de match** : une image par rencontre de la dernière journée (chaque partie, le score
+  des manches, le bilan des joueurs) ;
 - **effectif** : tout le club (équipes jouées à chaque journée, coche verte = peut jouer,
   flamme = brûlé) et, pour chaque équipe masculine de la 2 à la 6, ses joueurs brûlés ;
 - **classement virtuel** : le classement complet.
@@ -175,7 +184,7 @@ le PC y envoie, chiffrés, son dossier `import` et ses pages de pingpocket.fr ap
 3. Double-cliquer sur **`lancer.bat`** : le premier lancement installe tout, puis un menu
    propose :
    1. Adversaires (effectifs, brûlages, calendrier) ;
-   2. Résultats des joueurs de Vaires (page + Excel) — rapide, moins d'une minute ;
+   2. Résultats des joueurs de Vaires (page + Excel) et feuilles de match — rapide, moins d'une minute ;
    3. Effectif de Vaires : brûlages par joueur et par équipe — rapide ;
    4. Classement virtuel du club, toutes compétitions — rapide ;
    5. tout : les quatre pages ;
@@ -238,6 +247,7 @@ ttvaires/
   rendu.py       Génération de la page HTML (un seul fichier)
   gabarit.html   Mise en page de la page adversaires (HTML/CSS/JavaScript)
   gabarit_resultats.html  Mise en page de la page résultats
+  gabarit_rencontres.html Mise en page de la page feuilles de match
   gabarit_effectif.html   Mise en page de la page effectif
   gabarit_virtuel.html    Mise en page de la page classement virtuel
   demo.py        Données fictives pour tester sans Internet

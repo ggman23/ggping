@@ -1,4 +1,4 @@
-"""Point d'entrée : python -m ttvaires [--adversaires] [--resultats] [--effectif] [--virtuel] [--demo] [--hors-ligne] [--pas-de-navigateur]."""
+"""Point d'entrée : python -m ttvaires [--adversaires] [--resultats] [--rencontres] [--effectif] [--virtuel] [--demo] [--hors-ligne] [--pas-de-navigateur]."""
 
 import argparse
 import json
@@ -11,9 +11,9 @@ from .brulage import enrichir
 from .demo import donnees_demo
 from .adversaires import recuperer
 from .effectif import recuperer_effectif
-from .rendu import GABARIT_EFFECTIF, GABARIT_RESULTATS, GABARIT_VIRTUEL, generer_html
+from .rendu import GABARIT_EFFECTIF, GABARIT_RENCONTRES, GABARIT_RESULTATS, GABARIT_VIRTUEL, generer_html
 from .reseau import Client, ErreurReseau
-from .resultats import donnees_page, ecrire_xlsx, recuperer_parties
+from .resultats import donnees_page, ecrire_xlsx, recuperer_parties, recuperer_rencontres
 from .virtuel import recuperer_virtuel
 from . import synchro, verifications
 
@@ -69,6 +69,14 @@ def page_resultats(client, club):
     return [html, xlsx, *pngs], verifications.afficher_club(resultats["verification"], "résultats des équipes de Vaires")
 
 
+def page_rencontres(client, club):
+    print("=== Feuilles de match des équipes de Vaires : parties et scores des manches", flush=True)
+    donnees = recuperer_rencontres(client, club)
+    resume = verifications.afficher_club(donnees["verification"], "feuilles de match des équipes de Vaires")
+    html = generer_html(donnees, SORTIE / "rencontres_vaires.html", GABARIT_RENCONTRES)
+    return [html, *faire_images("images_rencontres", donnees)], resume
+
+
 def page_effectif(client, club):
     print("=== Effectif de Vaires : équipes jouées et brûlages", flush=True)
     donnees = recuperer_effectif(client, club, fichier_etat=CACHE / f"effectif_{club}.json", dossier_import=IMPORT)
@@ -91,7 +99,9 @@ def page_virtuel(client, club):
 def main():
     parser = argparse.ArgumentParser(description="Outils du CVTT Vaires (championnat par équipes)")
     parser.add_argument("--adversaires", action="store_true", help="page des adversaires (choix par défaut)")
-    parser.add_argument("--resultats", action="store_true", help="résultats des joueurs de Vaires (page + Excel)")
+    parser.add_argument("--resultats", action="store_true",
+                        help="résultats des joueurs de Vaires (page + Excel) et feuilles de match des rencontres")
+    parser.add_argument("--rencontres", action="store_true", help="feuilles de match des rencontres de Vaires seulement")
     parser.add_argument("--effectif", action="store_true", help="effectif de Vaires : brûlages par joueur et par équipe")
     parser.add_argument("--virtuel", action="store_true", help="classement virtuel du club, toutes compétitions")
     parser.add_argument("--demo", action="store_true", help="page des adversaires avec des données fictives")
@@ -121,11 +131,13 @@ def main():
         a_faire = []
         if args.resultats:
             a_faire.append(("résultats", page_resultats))
+        if args.resultats or args.rencontres:
+            a_faire.append(("rencontres", page_rencontres))
         if args.effectif:
             a_faire.append(("effectif", page_effectif))
         if args.virtuel:
             a_faire.append(("classement virtuel", page_virtuel))
-        if args.adversaires or not (args.resultats or args.effectif or args.virtuel):
+        if args.adversaires or not (args.resultats or args.rencontres or args.effectif or args.virtuel):
             a_faire.append(("adversaires", lambda c, club: page_adversaires(c, club, args.tous_les_historiques)))
         for nom, fonction in a_faire:
             try:

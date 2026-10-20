@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Feuilles de match Vaires</title>
+<style>
+:root { color-scheme: light; --texte: #1c2330; --doux: #5b6576; --bord: #d5d9df; --fond: #f4f5f7;
+  --entete: #f8cbad; --accent: #1f5fbf; --pos: #c6efce; --pos-t: #006100; --neg: #ffc7ce; --neg-t: #9c0006; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte);
+  font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+header { background: #fff; border-bottom: 1px solid #dde1e7; padding: 10px 16px 0; position: sticky; top: 0; z-index: 2; }
+h1 { font-size: 18px; margin: 0 0 2px; }
+header p { margin: 0 0 6px; color: var(--doux); font-size: 13px; }
+nav { display: flex; gap: 4px; overflow-x: auto; }
+nav a { flex: none; padding: 8px 14px; text-decoration: none; color: var(--doux); font-weight: 600;
+  border-bottom: 3px solid transparent; }
+nav a.actif { color: var(--accent); border-bottom-color: var(--accent); }
+.filtres { display: flex; gap: 6px; overflow-x: auto; padding: 8px 0; }
+.filtres button { flex: none; border: 1px solid var(--bord); background: #fff; color: var(--texte); border-radius: 16px;
+  padding: 4px 12px; font: inherit; font-size: 14px; cursor: pointer; }
+.filtres button.actif { background: var(--accent); border-color: var(--accent); color: #fff; }
+main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+.carte { background: #fff; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.tete { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-bottom: 8px; }
+.tete h2 { font-size: 18px; margin: 0; }
+.tete .info { flex-basis: 100%; color: var(--doux); font-size: 14px; }
+.res { font-weight: 700; border-radius: 6px; padding: 1px 8px; font-size: 15px; }
+.res.v { background: var(--pos); color: var(--pos-t); }
+.res.d { background: var(--neg); color: var(--neg-t); }
+.res.n { background: #eef0f3; color: var(--texte); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th { background: var(--entete); font-weight: 600; text-align: center; padding: 5px 6px; font-size: 13.5px; }
+td { border-bottom: 1px solid var(--bord); padding: 6px; text-align: center; vertical-align: middle;
+  font-variant-numeric: tabular-nums; }
+th.g, td.g { text-align: left; }
+td.b { font-weight: 700; }
+td.n, td.cour { color: var(--doux); font-size: 13px; width: 1%; white-space: nowrap; }
+.l { display: inline-block; min-width: 1.3em; color: var(--doux); font-size: 12px; font-weight: 600; }
+small.pts { color: var(--doux); font-weight: 400; }
+.pr { display: inline-block; min-width: 2.6em; border-radius: 6px; padding: 2px 6px; font-weight: 700; white-space: nowrap; }
+.pr.g { background: var(--pos); color: var(--pos-t); }
+.pr.p { background: var(--neg); color: var(--neg-t); }
+.set { display: inline-block; border-radius: 5px; padding: 1px 6px; margin: 1px; font-weight: 600; font-size: 14px; white-space: nowrap; }
+.set.g { background: var(--pos); color: var(--pos-t); }
+.set.p { background: var(--neg); color: var(--neg-t); }
+.nc { color: var(--neg-t); font-size: 12px; }
+tr.m { display: none; }
+tr.m td { padding-top: 0; text-align: left; }
+tr.avec-m td { border-bottom: 0; }
+.bilan { margin: 8px 0 0; font-size: 14px; color: var(--doux); }
+.bilan b { color: var(--texte); }
+.vide { color: var(--doux); padding: 10px 0; margin: 0; }
+.verif-ok { background: #e3f4ea; color: #1d7a46; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 14px; }
+.verif-ko { background: #fbe7e5; color: #b3261e; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 14px; }
+.verif-ko ul { margin: 4px 0; padding-left: 20px; }
+.note { color: var(--doux); font-size: 13px; }
+/* Téléphone : les manches passent sous la partie. */
+@media (max-width: 700px) {
+  main { padding: 8px; }
+  .carte { padding: 10px; }
+  table { font-size: 14px; }
+  th.manches, td.manches, th.cour, td.cour { display: none; }
+  tr.m { display: table-row; }
+  tr.avec-m td { border-bottom: 0; padding-bottom: 2px; }
+}
+@media print { header { position: static; } nav, .filtres { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Feuilles de match de Vaires</h1>
+  <p id="sous-titre"></p>
+  <nav id="onglets"></nav>
+</header>
+<main id="contenu"></main>
+<script id="donnees" type="application/json">__DONNEES_JSON__</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("donnees").textContent);
+const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function fmtDate(iso) { const d = new Date(iso + "T12:00:00"); return `${JOURS[d.getDay()]} ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`; }
+const nomEquipe = (e) => e.replace("VAIRES", "Vaires");
+const points = (x) => x == null ? "" : x.toLocaleString("fr-FR");
+
+/* Vérification : les feuilles de match de toutes les équipes de Vaires ont-elles été récupérées ? */
+function bandeauVerif(V) {
+  if (!V) return "";
+  const res = V.journees.map((j) => `J${j.journee} ${j.completes}/${j.attendues + j.du_jour}`).join(" · ");
+  const ms = V.journees.flatMap((j) => j.manquantes);
+  if (!ms.length) return `<div class="verif-ok">✓ Feuilles de match de toutes les équipes de Vaires récupérées (${res}).</div>`;
+  const adv = (m) => m.equipe === m.domicile ? m.exterieur : m.domicile;
+  return `<div class="verif-ko">⚠ ${ms.length} feuille(s) de match pas encore disponible(s) :
+    <ul>${ms.map((m) => `<li>J${m.journee} · ${esc(m.equipe)} contre ${esc(adv(m))} (${fmtDate(m.date)}) : ${esc(m.libelle)}</li>`).join("")}</ul>
+    Relancer plus tard : les résultats sont en général saisis dans les 48 h après la rencontre.</div>`;
+}
+
+let journee = null, equipe = "toutes";
+
+function joueurs(js) {
+  if (!js.length) return "—";
+  if (js.length > 1) return js.map((j) => `<span class="l">${esc(j.lettre || "")}</span>${esc(j.nom)}`).join(" / ");
+  const j = js[0];
+  return `<span class="l">${esc(j.lettre || "")}</span>${esc(j.nom)} ${esc(j.prenom)} <small class="pts">${points(j.points)}</small>`;
+}
+function manches(p) {
+  const sets = p.sets.filter((s) => s[0] != null && s[1] != null);
+  const html = sets.map(([a, b]) => `<span class="set ${a > b ? "g" : "p"}">${a}-${b}</span>`).join("");
+  return (html || (p.forfait ? "forfait" : "")) + (p.non_compte ? ' <span class="nc">non comptée</span>' : "")
+    + (p.abandon ? ' <span class="nc">abandon</span>' : "");
+}
+function resultat(p) {
+  const sets = p.sets.filter((s) => s[0] != null && s[1] != null);
+  const txt = sets.length ? `${sets.filter(([a, b]) => a > b).length}-${sets.filter(([a, b]) => b > a).length}` : p.forfait ? "forf." : "—";
+  return `<span class="pr ${p.gagne ? "g" : p.gagne === false ? "p" : ""}">${txt}</span>`;
+}
+function carte(r) {
+  const [n, e] = r.score || [];
+  const issue = !r.score ? "" : n > e ? "v" : n < e ? "d" : "n";
+  const tete = `<div class="tete"><h2>${esc(nomEquipe(r.equipe))}</h2>
+    ${r.score && r.parties.length ? `<span class="res ${issue}">${{ v: "Victoire", d: "Défaite", n: "Nul" }[issue]} ${n}-${e}</span>` : ""}
+    <div class="info">${r.domicile ? "reçoit" : "se déplace à"} <b>${esc(r.adversaire)}</b> · ${fmtDate(r.date)}${r.heure ? " " + esc(r.heure) : ""}
+      · ${esc(r.division)}</div></div>`;
+  if (!r.parties.length) return `<section class="carte">${tete}<p class="vide">${esc(r.forfait ? "Rencontre perdue ou gagnée par forfait" : r.libelle)}</p></section>`;
+  const lignes = r.parties.map((p, i) => `
+    <tr class="avec-m">
+      <td class="n">${i + 1}</td>
+      <td class="g ${p.gagne ? "b" : ""}">${joueurs(p.nous)}</td>
+      <td>${resultat(p)}</td>
+      <td class="g ${p.gagne === false ? "b" : ""}">${joueurs(p.eux)}</td>
+      <td class="manches">${manches(p)}</td>
+      <td class="cour" title="score de la rencontre après cette partie">${p.score[0]}-${p.score[1]}</td>
+    </tr>
+    <tr class="m"><td></td><td colspan="3">${manches(p)}</td></tr>`).join("");
+  const bilan = r.bilan.length ? `<p class="bilan">Bilan : ${r.bilan.map((b) => `<b>${esc(b.nom)} ${esc((b.prenom || "")[0] || "")}.</b> ${b.v}/${b.n}`).join(" · ")}</p>` : "";
+  return `<section class="carte">${tete}<table>
+    <thead><tr><th>#</th><th class="g">Vaires</th><th></th><th class="g">Adversaire</th><th class="manches">Manches</th><th class="cour">Score</th></tr></thead>
+    <tbody>${lignes}</tbody></table>${bilan}</section>`;
+}
+
+function afficher() {
+  const main = document.getElementById("contenu");
+  const verif = bandeauVerif(D.verification);
+  if (!D.journees.length) { main.innerHTML = verif + '<p class="vide">Aucune rencontre jouée pour le moment.</p>'; return; }
+  document.getElementById("onglets").innerHTML = D.journees.map((j) => `<a href="#J${j}" class="${journee === j ? "actif" : ""}">J${j}</a>`).join("");
+  const duJour = D.rencontres.filter((r) => r.journee === journee);
+  const equipes = [...new Set(duJour.map((r) => r.equipe))];
+  if (equipe !== "toutes" && !equipes.includes(equipe)) equipe = "toutes";
+  const filtres = `<div class="filtres">${["toutes", ...equipes].map((e) =>
+    `<button data-equipe="${esc(e)}" class="${e === equipe ? "actif" : ""}">${e === "toutes" ? "Toutes" : esc(nomEquipe(e).replace("Vaires ", "V"))}</button>`).join("")}</div>`;
+  const cartes = duJour.filter((r) => equipe === "toutes" || r.equipe === equipe).map(carte).join("");
+  main.innerHTML = verif + filtres + cartes + `<p class="note">Manches dans l'ordre, score de Vaires en premier (vert : manche gagnée
+    par Vaires). En gras : le vainqueur de la partie. A, B, C, D / W, X, Y, Z : lettres de la feuille de match.</p>`;
+  main.querySelectorAll("[data-equipe]").forEach((b) => b.addEventListener("click", () => { equipe = b.dataset.equipe; afficher(); }));
+}
+function route() {
+  const j = Number(location.hash.replace("#J", ""));
+  journee = D.journees.includes(j) ? j : D.journees[D.journees.length - 1];
+  afficher();
+}
+document.getElementById("sous-titre").textContent =
+  `${D.club.nom} · phase ${D.phase} ${D.saison} · données du ${new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`;
+window.addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>

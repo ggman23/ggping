@@ -8,7 +8,8 @@ dossier polices/) : le PC et la mise à jour en ligne produisent les mêmes imag
   messageries ; un long tableau donne plusieurs images numérotées (1/3, 2/3...), plus une
   version en une seule image verticale (..._complet.png) pour qui préfère faire défiler.
 
-Une fonction par page : images_virtuel, images_resultats, images_effectif, images_adversaires.
+Une fonction par page : images_virtuel, images_resultats, images_rencontres, images_effectif,
+images_adversaires.
 Chacune écrit ses images dans le dossier donné et renvoie [(chemin, titre)].
 """
 
@@ -70,10 +71,10 @@ class C:
     """Une cellule : texte principal, couleurs, texte secondaire (sous ou après), pictogramme, puces."""
 
     def __init__(self, texte="", fond=None, couleur=None, gras=False, sous=None, apres=None, icone=None,
-                 puces=None, alternatives=(), align=None):
+                 puces=None, alternatives=(), align=None, taille_puces=18):
         self.texte, self.fond, self.couleur, self.gras = str(texte if texte is not None else ""), fond, couleur, gras
         self.sous, self.apres, self.icone, self.puces = sous, apres, icone, puces or []
-        self.alternatives, self.align = alternatives, align
+        self.alternatives, self.align, self.taille_puces = alternatives, align, taille_puces
 
 
 class Col:
@@ -101,7 +102,8 @@ def largeur_naturelle(cel):
     if cel.icone in ("ok", "flamme"):
         return 40
     if cel.puces:
-        return sum(max(34, largeur_texte(t, 18, True) + 14) for t, _, _ in cel.puces) + 4 * (len(cel.puces) - 1) + 8
+        return (sum(max(round(cel.taille_puces * 1.9), largeur_texte(t, cel.taille_puces, True) + 14) for t, _, _ in cel.puces)
+                + 4 * (len(cel.puces) - 1) + 8)
     largeur = largeur_texte(cel.texte, TAILLE, cel.gras) + 14 + (16 if cel.icone else 0)
     if cel.apres:
         largeur += largeur_texte(f" {cel.apres}", TAILLE_PETIT - 1)
@@ -271,7 +273,7 @@ def _cellule(d, img, cel, col, x, y, h):
         _icone(img, cel.icone, x + col.largeur / 2, y + h / 2, 30)
         return
     if cel.puces:
-        _puces(d, cel.puces, x, col.largeur, y + h / 2)
+        _puces(d, cel.puces, x, col.largeur, y + h / 2, cel.taille_puces)
         return
     taille, tp = TAILLE, TAILLE_PETIT - 1
     dispo = col.largeur - 14 - (16 if cel.icone else 0)
@@ -299,14 +301,15 @@ def _cellule(d, img, cel, col, x, y, h):
         _texte_aligne(d, s, ts, False, x, col.largeur, y + 40, align, DOUX)
 
 
-def _puces(d, puces, x, largeur, cy):
-    """Petites étiquettes arrondies (numéros d'équipes jouées, DOM/EXT...)."""
-    tailles = [max(34, largeur_texte(t, 18, True) + 14) for t, _, _ in puces]
+def _puces(d, puces, x, largeur, cy, taille=18):
+    """Petites étiquettes arrondies (numéros d'équipes jouées, DOM/EXT, scores des manches...)."""
+    tailles = [max(round(taille * 1.9), largeur_texte(t, taille, True) + 14) for t, _, _ in puces]
     total = sum(tailles) + 4 * (len(puces) - 1)
     x0 = x + (largeur - total) / 2
+    demi = taille * 0.83
     for (texte, fond, couleur), w in zip(puces, tailles):
-        d.rounded_rectangle([x0 * S, (cy - 15) * S, (x0 + w) * S, (cy + 15) * S], radius=7 * S, fill=fond)
-        _texte_aligne(d, texte, 18, True, x0, w, cy - 10.5, "c", couleur)
+        d.rounded_rectangle([x0 * S, (cy - demi) * S, (x0 + w) * S, (cy + demi) * S], radius=7 * S, fill=fond)
+        _texte_aligne(d, texte, taille, True, x0, w, cy - taille * 0.583, "c", couleur)
         x0 += w + 4
 
 
@@ -563,6 +566,59 @@ def images_resultats(donnees, dossier):
     sorties += _tableau_pagine(
         dossier, "resultats_cumul", f"Cumul J1 à J{js[-1]}", f"{sous_base} · championnat par équipes · {_genere(donnees)}",
         colonnes, lignes, "Trié par points gagnés au total depuis la J1. Virt. = points officiels + total.", "Résultats : cumul")
+    return sorties
+
+
+# ---------------------------------------------------------------------------
+# Feuilles de match : une image par rencontre de la dernière journée
+# ---------------------------------------------------------------------------
+
+def _cel_joueurs(joueurs, gras=False):
+    """Joueur d'une partie (avec ses points), ou les deux joueurs d'un double."""
+    if len(joueurs) == 1:
+        j = joueurs[0]
+        return cel_nom(j["nom"], j["prenom"], apres=fmt(j["points"]) if j.get("points") else None, gras=gras)
+    noms = [j["nom"] for j in joueurs]
+    return C(" / ".join(noms) or "—", align="g", gras=gras, alternatives=[" / ".join(n.split()[0] for n in noms if n)])
+
+
+def images_rencontres(donnees, dossier):
+    _nettoyer(dossier, "rencontres_")
+    sorties = []
+    if not donnees.get("journees"):
+        return sorties
+    j = donnees["journees"][-1]
+    colonnes = colonnes_egales([Col("Vaires", None, "g"), Col("", 92), Col("Adversaire", None, "g"), Col("Manches", 372)],
+                               LARGEUR - 2 * MARGE)
+    for r in [x for x in donnees["rencontres"] if x["journee"] == j and x["parties"]]:
+        lignes = []
+        for p in r["parties"]:
+            sets = [s for s in p["sets"] if None not in s]
+            g = p["gagne"]
+            fond, couleur = (POS_FOND, POS_TEXTE) if g else (NEG_FOND, NEG_TEXTE) if g is False else (PUCE_FOND, DOUX)
+            resultat = (f"{sum(a > b for a, b in sets)}-{sum(b > a for a, b in sets)}" if sets
+                        else "forf." if p["forfait"] else "—")
+            manches = (C(puces=[(f"{a}-{b}", POS_FOND if a > b else NEG_FOND, POS_TEXTE if a > b else NEG_TEXTE)
+                                for a, b in sets], taille_puces=21) if sets
+                       else C("forfait" if p["forfait"] else "", couleur=DOUX))
+            lignes.append([_cel_joueurs(p["nous"], gras=g is True), C(puces=[(resultat, fond, couleur)], taille_puces=21),
+                           _cel_joueurs(p["eux"], gras=g is False), manches])
+        nous, eux = r["score"]
+        issue = "victoire" if nous > eux else "défaite" if nous < eux else "nul"
+        equipe = r["equipe"].replace("VAIRES", "Vaires")
+        img = Rendu()
+        img.titre(f"{equipe} · {issue} {nous}-{eux}",
+                  f"J{j} · {jour_fr(r['date'])} · {'reçoit' if r['domicile'] else 'se déplace à'} {r['adversaire']} · {r['division']}")
+        img.espace(10)
+        img.tableau(colonnes, lignes)
+        if r["bilan"]:
+            img.espace(4)
+            img.texte("Bilan : " + " · ".join(f"{nom_alternatives(b['nom'], b['prenom'])[1][0]} {b['v']}/{b['n']}"
+                                              for b in r["bilan"]), 19, NOIR)
+        img.pied("Manches dans l'ordre, score de Vaires en premier (vert : manche gagnée par Vaires). "
+                 "En gras : le vainqueur de la partie.")
+        nom = f"rencontres_J{j}_{equipe_courte(r['equipe'])}.png"
+        sorties.append((_enregistrer(img.image(), dossier, nom), f"{equipe} : feuille de match J{j}"))
     return sorties
 
 

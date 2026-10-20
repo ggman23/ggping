@@ -110,3 +110,18 @@ def test_ajustement_du_texte():
     assert texte in ("MARTIMORT C.", "MARTIMORT") or texte.endswith("…")
     assert images.largeur_texte(texte, taille) <= 120
     assert images.paginer(list(range(40))) == [list(range(20)), list(range(20, 40))]
+
+
+def test_feuilles_de_match_de_la_derniere_journee(tmp_path):
+    def partie(gagne, sets, double=False):
+        nous = [{"nom": "GUITTON", "prenom": "Marc", "points": 1410}] + ([{"nom": "LARDE", "prenom": "J", "points": 889}] if double else [])
+        eux = [{"nom": "PRIEM", "prenom": "Mickaël", "points": 932}] + ([{"nom": "ALLIAUME", "prenom": "J", "points": 1000}] if double else [])
+        return {"double": double, "nous": nous, "eux": eux, "sets": sets, "gagne": gagne, "forfait": False, "abandon": False,
+                "non_compte": False, "score": [0, 0]}
+    rencontre = {"journee": 3, "date": "2026-10-16", "equipe": "VAIRES 1", "adversaire": "BRIE ASTT 2", "domicile": False,
+                 "division": "Départementale 1", "score": [8, 6], "bilan": [{"nom": "GUITTON", "prenom": "Marc", "v": 3, "n": 3}],
+                 "parties": [partie(True, [[11, 8], [9, 11], [11, 7], [13, 11]]), partie(False, [[4, 11]] * 3, double=True)]}
+    sans_feuille = {**rencontre, "equipe": "VAIRES 2", "parties": [], "score": None, "bilan": []}
+    ancienne = {**rencontre, "journee": 2}
+    sorties = images.images_rencontres({**CLUB, "journees": [2, 3], "rencontres": [ancienne, rencontre, sans_feuille]}, tmp_path)
+    assert [(c.name, t) for c, t in sorties] == [("rencontres_J3_V1.png", "Vaires 1 : feuille de match J3")]
