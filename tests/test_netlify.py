@@ -29,13 +29,29 @@ def _site(tmp_path):
     return site
 
 
-def test_accueil_public_et_gg_chiffre(tmp_path):
+def _contenu(page, mot_de_passe):
+    import base64
+    chiffre = netlify.CHIFFRE.search(page.read_text(encoding="utf-8"))[1]
+    return publier.dechiffrer(base64.b64decode(chiffre), publier.cle(mot_de_passe)).decode("utf-8")
+
+
+def test_accueil_public_et_gg_avec_son_propre_mot_de_passe(tmp_path):
     _crypto()
-    dossier = netlify.construire(_site(tmp_path), tmp_path / "netlify", "secret")
+    site = _site(tmp_path)
+    (site / "images").mkdir()
+    (site / "images" / "recap_J3.png.chiffre").write_bytes(publier.chiffrer(b"\x89PNG", publier.cle("secret")))
+    dossier = netlify.construire(site, tmp_path / "netlify", "secret", "mdp-des-capitaines")
     accueil = (dossier / "index.html").read_text(encoding="utf-8")
     assert "LOGNES 21" in accueil and netlify.NOINDEX in accueil          # adversaires, en clair, non référencé
-    assert "DELOBELLE" not in (dossier / "gg" / "resultats.html").read_text(encoding="utf-8")  # /gg/ reste chiffré
-    assert (dossier / "gg" / "index.html").exists() and (dossier / "gg" / "etat.json").exists()
+    page = dossier / "gg" / "resultats.html"
+    assert "DELOBELLE" not in page.read_text(encoding="utf-8")            # /gg/ reste chiffré...
+    assert _contenu(page, "mdp-des-capitaines") == "<p>DELOBELLE 780</p>"             # ... avec le mot de passe de /gg/
+    with pytest.raises(Exception):
+        _contenu(page, "secret")                                           # pas avec celui du site GitHub
+    image = (dossier / "gg" / "images" / "recap_J3.png.chiffre").read_bytes()
+    assert publier.dechiffrer(image, publier.cle("mdp-des-capitaines")) == b"\x89PNG"
+    assert (dossier / "gg" / "index.html").read_bytes() == (site / "index.html").read_bytes()
+    assert (dossier / "gg" / "etat.json").exists()
     assert (dossier / "robots.txt").read_text().endswith("Disallow: /\n")
     assert "X-Robots-Tag: noindex" in (dossier / "_headers").read_text()
     noms = zipfile.ZipFile(io.BytesIO(netlify.archive(dossier))).namelist()
@@ -84,3 +100,9 @@ def test_sans_jeton_rien_n_est_envoye(monkeypatch, capsys):
     monkeypatch.setattr("sys.argv", ["netlify"])
     netlify.main()
     assert "pas de jeton" in capsys.readouterr().out
+
+
+def test_sans_mot_de_passe_gg_seul_l_accueil_est_publie(tmp_path):
+    _crypto()
+    dossier = netlify.construire(_site(tmp_path), tmp_path / "netlify", "secret", "")
+    assert (dossier / "index.html").exists() and not (dossier / "gg").exists()

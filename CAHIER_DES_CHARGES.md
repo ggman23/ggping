@@ -244,8 +244,9 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
     sans colonne vide) ; un sous-titre trop long (adresse) passe sur 2 lignes.
 - Copie de secours sur Netlify (https://ggping.netlify.app/) après chaque mise à jour du site
   GitHub : accueil = page des adversaires en clair (demande du club : visible par tous ; non
-  référencée : robots.txt, X-Robots-Tag noindex) ; /gg/ = copie exacte du site GitHub chiffré
-  (mot de passe du site, pour les capitaines). Envoi par l'API Netlify (archive zip) depuis le
+  référencée : robots.txt, X-Robots-Tag noindex) ; /gg/ = copie du site GitHub re-chiffrée avec un
+  mot de passe propre (secret MOT_DE_PASSE_GG, pour les capitaines ; celui du site GitHub reste
+  secret ; sans ce secret, /gg/ n'est pas publié). Envoi par l'API Netlify (archive zip) depuis le
   workflow, secret NETLIFY_AUTH_TOKEN ; sans jeton, rien n'est fait ; un échec n'empêche pas la
   publication GitHub.
 - Récapitulatif de la journée (`recap_J3.png`, avec les feuilles de match) : copie exacte de l'image

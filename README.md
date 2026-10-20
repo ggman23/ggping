@@ -183,7 +183,7 @@ automatiques les lendemains de journée). Pour que le site donne exactement les 
 le PC y envoie, chiffrés, son dossier `import` et ses pages de pingpocket.fr après chaque lancement
 (option 7 du menu pour le réglage). Copie de secours sur **https://ggping.netlify.app/** après
 chaque mise à jour : la page des adversaires pour tout le club, et dans **/gg/** toutes les pages,
-l'Excel et les images avec le mot de passe (pour les capitaines). Mise en place :
+l'Excel et les images avec un mot de passe à part (pour les capitaines). Mise en place :
 [PUBLICATION.md](PUBLICATION.md).
 
 ## Installation (Windows)
