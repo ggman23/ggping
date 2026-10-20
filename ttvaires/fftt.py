@@ -52,6 +52,18 @@ def libelle_division(txt):
     return txt
 
 
+def division_courte(txt):
+    """Abréviation d'une division : 'DEP 1 Ph1' -> 'D1', 'D1 Championnat Feminin 77/94' -> 'D1',
+    'L08_R2' -> 'R2', 'PRE-REG' -> 'PR', 'Nationale 1' -> 'N1'. Vide si inconnue."""
+    t = " ".join((txt or "").replace("FED_", "").upper().split())
+    for motif, forme in ((r"^(?:DEP|D)\s*(\d+)\b", "D{}"), (r"^L\d+_R(\d+)", "R{}"), (r"^R(?:EGIONALE|ÉGIONALE)?\s*(\d+)\b", "R{}"),
+                         (r"^PRE-?REG", "PR"), (r"^PRE-?NAT", "PN"), (r"^N(?:ATIONALE)?\s*(\d+)\b", "N{}")):
+        m = re.search(motif, t)
+        if m:
+            return forme.format(*m.groups())
+    return ""
+
+
 def jour_habituel(dates):
     jours = [date.fromisoformat(d).weekday() for d in dates if d]
     return JOURS[max(set(jours), key=jours.count)] if jours else None

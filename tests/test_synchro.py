@@ -30,9 +30,13 @@ def test_paquet_puis_deballage_avec_les_dates(tmp_path):
     _ecrire(pc / "cache" / "b2.html", '{"@context": "API FFTT"}')          # relu en ligne : non envoyé
     _ecrire(pc / "cache" / "effectif_08770250.json", '{"date": "pc"}')
 
+    _ecrire(pc / "import" / "surnoms.txt", "GUITTON Marc = Marc G")          # récapitulatif de la journée
+    (pc / "import" / "photo_J3.jpg").write_bytes(b"photo")
+    (pc / "import" / "vacances.jpg").write_bytes(b"autre")                   # pas une photo de récapitulatif
     archive, nb = synchro.paquet(pc)
-    assert nb == 3
-    assert synchro.deballer(archive, en_ligne) == 3
+    assert nb == 5
+    assert synchro.deballer(archive, en_ligne) == 5
+    assert (en_ligne / "import" / "photo_J3.jpg").read_bytes() == b"photo" and not (en_ligne / "import" / "vacances.jpg").exists()
     assert (en_ligne / "import" / "vaires.mhtml").read_text() == "liste"
     assert abs((en_ligne / "cache" / "a1.html").stat().st_mtime - IL_Y_A_3_JOURS) < 2  # date d'origine gardée
     assert not (en_ligne / "cache" / "b2.html").exists() and not (en_ligne / "import" / "LISEZ-MOI.txt").exists()
@@ -143,3 +147,14 @@ def test_message_clair_si_le_jeton_n_a_pas_le_droit_contents(monkeypatch, tmp_pa
     monkeypatch.setattr(synchro.requests, "request", requete)
     with pytest.raises(synchro.ErreurSynchro, match="Contents : Read and write"):
         synchro.envoyer({"depot": "d/r", "jeton": "jeton", "mot_de_passe": "secret"})
+
+
+def test_grosse_photo_reduite_avant_l_envoi(tmp_path, monkeypatch):
+    Image = pytest.importorskip("PIL.Image")
+    monkeypatch.setattr(synchro, "TAILLE_MAX_IMAGE", 1000)
+    (tmp_path / "import").mkdir()
+    Image.effect_noise((3000, 2000), 80).convert("RGB").save(tmp_path / "import" / "photo_J4.jpg", quality=95)
+    archive, nb = synchro.paquet(tmp_path)
+    assert synchro.deballer(archive, tmp_path / "en_ligne") == 1
+    with Image.open(tmp_path / "en_ligne" / "import" / "photo_J4.jpg") as photo:
+        assert max(photo.size) == 2000

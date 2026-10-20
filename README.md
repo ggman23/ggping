@@ -123,6 +123,13 @@ téléphone et partagées dans les groupes du club (dossier `sortie\images\` sur
   par points gagnés au total) ;
 - **feuilles de match** : une image par rencontre de la dernière journée (chaque partie, le score
   des manches, le bilan des joueurs) ;
+- **récapitulatif de la journée** (`recap_J3.png`) : la copie de l'image du club faite avec
+  Excalidraw (mêmes polices Lilita One et Excalifont, mêmes couleurs, même mise en page) : pour
+  chaque équipe, le résultat et le score en points-parties (domicile – extérieur), les victoires et
+  défaites de chaque joueur (astérisque orange = perf : victoire contre un joueur qui a plus de
+  points) et des doubles ; le top 5 des perfs ; la place de la photo en haut. Déposer
+  `import\photo_J3.jpg` (et une fois pour toutes `logo_gauche.png`, `logo_droite.png`) pour que
+  l'outil la complète : voir `import\LISEZ-MOI.txt` (et `surnoms.txt` pour les noms affichés) ;
 - **effectif** : tout le club (équipes jouées à chaque journée, coche verte = peut jouer,
   flamme = brûlé) et, pour chaque équipe masculine de la 2 à la 6, ses joueurs brûlés ;
 - **classement virtuel** : le classement complet.

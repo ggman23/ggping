@@ -74,7 +74,7 @@ def page_rencontres(client, club):
     donnees = recuperer_rencontres(client, club)
     resume = verifications.afficher_club(donnees["verification"], "feuilles de match des équipes de Vaires")
     html = generer_html(donnees, SORTIE / "rencontres_vaires.html", GABARIT_RENCONTRES)
-    return [html, *faire_images("images_rencontres", donnees)], resume
+    return [html, *faire_images("image_recap", donnees, IMPORT), *faire_images("images_rencontres", donnees)], resume
 
 
 def page_effectif(client, club):

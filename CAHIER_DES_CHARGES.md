@@ -242,6 +242,15 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
     manches, bilan des joueurs).
   - adversaires : la fiche de chaque équipe prend la largeur de son contenu (720 points au moins,
     sans colonne vide) ; un sous-titre trop long (adresse) passe sur 2 lignes.
+- Récapitulatif de la journée (`recap_J3.png`, avec les feuilles de match) : copie exacte de l'image
+  du club (faite avec Excalidraw) : polices Lilita One et Excalifont (SIL OFL, fournies), palette
+  Excalidraw (rouge #e03131, vert #2f9e44, orange #f08c00, jaune #ffec99, texte #1e1e1e), mise en
+  page mesurée sur le modèle (1280 x 987 pour 7 équipes ; rangées de 3 blocs en plus au-delà).
+  Résultat en points-parties domicile – extérieur ; Victoire en vert, Défaite en rouge, Égalité en
+  orange ; astérisque orange pour une perf ; top 5 des perfs (plus grand écart de points, points
+  des joueurs battus). Photo `import/photo_J<n>.jpg` et logos `import/logo_gauche|droite.png`
+  collés s'ils existent (envoyés au site avec les données du PC, photo réduite si lourde) ; noms
+  affichés : prénom (+ initiales du nom si prénom partagé dans l'image) ou `import/surnoms.txt`.
 - Page « Feuilles de match » (avec l'option 2 du menu, sans téléchargement en plus : mêmes feuilles
   que les résultats) : chaque rencontre de Vaires, journée par journée, avec chaque partie, les
   joueurs (lettres de la feuille, points), le score de chaque manche vu de Vaires, le score de la

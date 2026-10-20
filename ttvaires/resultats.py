@@ -125,10 +125,13 @@ def recuperer_rencontres(client, numero_club="08770250", aujourdhui=None):
         if not autre:
             continue  # exempte
         etat = statut(r, club["etats"], aujourdhui.isoformat())
+        feminine, numero = club["nos_equipes"][notre["name"]]
         rencontre = {
             "journee": r["day"]["position"], "date": r["date"][:10], "heure": fftt.heure(r),
             "equipe": _nom_equipe(club["nos_equipes"], notre["name"]), "ordre": club["ordres"][notre["name"]],
+            "numero": numero, "feminine": feminine,
             "adversaire": autre.get("name"), "domicile": domicile, "division": fftt.libelle_division(r["division"]["name"]),
+            "division_courte": fftt.division_courte(r["division"]["name"]),
             "etat": etat, "libelle": LIBELLES[etat], "score": None, "parties": [], "bilan": [],
         }
         d = club["details"].get(r["id"])
@@ -172,6 +175,7 @@ def feuille_de_match(d, nous, eux):
             b["v"] += gagne
             b["n"] += 1
     return {"score": score, "parties": parties, "forfait": bool(d.get("forfeit")),
+            "points_partie": [d.get(f"{nous}GamePoints"), d.get(f"{eux}GamePoints")],
             "bilan": sorted(bilan.values(), key=lambda b: (b["lettre"] or "", b["nom"]))}
 
 

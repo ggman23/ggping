@@ -26,11 +26,13 @@ pingpocket.fr refuse les serveurs de GitHub, et le dossier `import` n'existe que
 que la mise à jour en ligne produise **exactement les mêmes pages** que `lancer.bat`, le PC envoie
 ses données sur GitHub après chaque lancement :
 
-- les fichiers du dossier `import` (listes des licenciés enregistrées depuis le navigateur) ;
+- les fichiers du dossier `import` (listes des licenciés enregistrées depuis le navigateur ; pour le
+  récapitulatif de la journée : photos `photo_J*.jpg`, logos `logo_*.png` et `surnoms.txt`, une photo
+  lourde étant réduite) ;
 - les pages de pingpocket.fr gardées en cache (effectifs complets des clubs, catégories, salles,
   historiques des classements) et l'état de la page effectif (joueurs « nouveaux ») ;
 
-le tout **chiffré avec le mot de passe du site** (un seul fichier d'environ 2 Mo, remplacé à
+le tout **chiffré avec le mot de passe du site** (un seul fichier d'environ 2 Mo, plus les photos, remplacé à
 chaque envoi, déposé dans la version « Données du PC » du dépôt). Puis il lance la mise à jour du
 site : 5 à 10 minutes plus tard, le site affiche les mêmes pages que le PC.
 

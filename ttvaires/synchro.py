@@ -38,6 +38,8 @@ ETIQUETTE = "donnees-pc"
 FICHIER = "donnees-pc.chiffre"
 API = "https://api.github.com"
 EXTENSIONS_IMPORT = (".html", ".htm", ".mhtml", ".mht")
+EXTENSIONS_IMAGES = (".jpg", ".jpeg", ".png", ".webp")
+TAILLE_MAX_IMAGE = 1_500_000  # une photo plus lourde est réduite avant l'envoi
 
 
 class ErreurSynchro(Exception):
@@ -47,6 +49,42 @@ class ErreurSynchro(Exception):
 # ---------------------------------------------------------------------------
 # Paquet de données (archive tar.gz chiffrée)
 # ---------------------------------------------------------------------------
+
+def _fichier_import(fichier):
+    """Listes de licenciés enregistrées, et pour le récapitulatif de la journée : surnoms, photos, logos."""
+    nom, extension = fichier.name.lower(), fichier.suffix.lower()
+    return (extension in EXTENSIONS_IMPORT or nom == "surnoms.txt"
+            or (extension in EXTENSIONS_IMAGES and nom.startswith(("photo_", "logo_"))))
+
+
+def _image_reduite(fichier):
+    """Photo de téléphone (plusieurs Mo) réduite à 2000 points : bien assez pour le récapitulatif."""
+    try:
+        from PIL import Image, ImageOps
+
+        with Image.open(fichier) as im:
+            im = ImageOps.exif_transpose(im)
+            im.thumbnail((2000, 2000))
+            tampon = io.BytesIO()
+            if fichier.suffix.lower() in (".jpg", ".jpeg"):
+                im.convert("RGB").save(tampon, "JPEG", quality=90)
+            else:
+                im.save(tampon, "WEBP" if fichier.suffix.lower() == ".webp" else "PNG")
+            return tampon.getvalue()
+    except Exception:  # noqa: BLE001 - Pillow absent ou image illisible : envoyée telle quelle
+        return None
+
+
+def _ajouter(tar, fichier, nom):
+    if fichier.suffix.lower() in EXTENSIONS_IMAGES and fichier.stat().st_size > TAILLE_MAX_IMAGE:
+        donnees = _image_reduite(fichier)
+        if donnees:
+            info = tar.gettarinfo(str(fichier), arcname=nom)  # date d'origine gardée
+            info.size = len(donnees)
+            tar.addfile(info, io.BytesIO(donnees))
+            return
+    tar.add(fichier, arcname=nom, recursive=False)
+
 
 def _page_pingpocket(fichier):
     """Pages de pingpocket (fragments HTML) et état de l'effectif ; les réponses JSON de l'API
@@ -62,13 +100,13 @@ def paquet(racine=RACINE):
     tampon = io.BytesIO()
     nb = 0
     with tarfile.open(fileobj=tampon, mode="w:gz", compresslevel=9) as tar:
-        for dossier, garder in (("import", lambda f: f.suffix.lower() in EXTENSIONS_IMPORT), ("cache", _page_pingpocket)):
+        for dossier, garder in (("import", _fichier_import), ("cache", _page_pingpocket)):
             base = racine / dossier
             if not base.is_dir():
                 continue
             for f in sorted(base.iterdir()):
                 if f.is_file() and garder(f):
-                    tar.add(f, arcname=f"{dossier}/{f.name}", recursive=False)
+                    _ajouter(tar, f, f"{dossier}/{f.name}")
                     nb += 1
     return tampon.getvalue(), nb
 

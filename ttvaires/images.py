@@ -622,6 +622,12 @@ def images_rencontres(donnees, dossier):
     return sorties
 
 
+def image_recap(donnees, dossier_import, dossier):
+    """Récapitulatif de la journée sur le modèle de l'image du club (voir recap.py)."""
+    from .recap import image_recap as dessiner
+    return dessiner(donnees, dossier_import, dossier)
+
+
 def _nom_prenom(complet):
     """'DELOBELLE Jérôme' -> ('DELOBELLE', 'Jérôme')."""
     mots = (complet or "").split()
