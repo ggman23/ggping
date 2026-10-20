@@ -181,7 +181,7 @@ class Client:
                 return chemin, self.get(chemin, ttl, **options)
             except ErreurReseau as e:
                 site = self.site(chemin)
-                if self.disponible(site) and site not in self.sites_cache_seul:
+                if self.disponible(site) and site not in self.sites_cache_seul and not self.hors_ligne:
                     print(f"  ! {e}")
                 else:
                     abandons.append(chemin)  # site abandonné ou non interrogé : un seul message à la fin
@@ -193,7 +193,9 @@ class Client:
                 if message and (i % 25 == 0 or i == len(chemins)):
                     print(f"  {message} : {i}/{len(chemins)}", flush=True)
         if abandons:
-            if all(self.site(c) in self.sites_cache_seul for c in abandons):
+            if self.hors_ligne:
+                print(f"  ! {len(abandons)} pages absentes du cache (lancement sans téléchargement)")
+            elif all(self.site(c) in self.sites_cache_seul for c in abandons):
                 print(f"  ! {len(abandons)} pages absentes des données envoyées par le PC")
             else:
                 print(f"  ! {len(abandons)} pages non récupérées : site abandonné pour ce lancement (trop d'erreurs)")

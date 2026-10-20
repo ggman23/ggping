@@ -28,6 +28,7 @@ TAILLE_PETIT = 18       # texte secondaire
 TAILLE_ENTETE = 19
 HAUTEUR_LIGNE, HAUTEUR_LIGNE_DOUBLE = 50, 68
 NOM_MIN = 230           # largeur minimale de la colonne du nom (l'image s'élargit au besoin)
+FICHE_MIN = 720         # largeur minimale d'une image ajustée à son contenu (fiche d'un adversaire)
 JOURS = ["lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim."]
 
 # Couleurs (celles des pages HTML)
@@ -95,6 +96,20 @@ def largeur_image(colonnes):
     return max(LARGEUR, round(sum(c.largeur for c in colonnes) + 2 * MARGE))
 
 
+def largeur_naturelle(cel):
+    """Largeur (points) qu'il faut à une cellule pour s'afficher sans être réduite (voir _cellule)."""
+    if cel.icone in ("ok", "flamme"):
+        return 40
+    if cel.puces:
+        return sum(max(34, largeur_texte(t, 18, True) + 14) for t, _, _ in cel.puces) + 4 * (len(cel.puces) - 1) + 8
+    largeur = largeur_texte(cel.texte, TAILLE, cel.gras) + 14 + (16 if cel.icone else 0)
+    if cel.apres:
+        largeur += largeur_texte(f" {cel.apres}", TAILLE_PETIT - 1)
+    if cel.sous:
+        largeur = max(largeur, largeur_texte(cel.sous, TAILLE_PETIT) + 16)
+    return largeur
+
+
 class Rendu:
     """Construit une image : bandeau de titre, sections, tableaux, notes. Mesure puis dessine."""
 
@@ -104,15 +119,16 @@ class Rendu:
 
     # -- éléments -------------------------------------------------------
     def titre(self, texte, sous_titre=None):
-        h = 64 + (30 if sous_titre else 0)
+        lignes = lignes_sous_titre(sous_titre, self.largeur - 2 * MARGE) if sous_titre else []
+        h = 64 + (30 + 25 * (len(lignes) - 1) if lignes else 0)
 
         def dessiner(d, img, y):
             d.rectangle([0, y * S, self.largeur * S, (y + h) * S], fill=TITRE_FOND)
             t, taille = ajuster(texte, self.largeur - 2 * MARGE, 32, True)
             d.text((MARGE * S, (y + 16) * S), t, font=police(taille, True), fill=TITRE_TEXTE)
-            if sous_titre:
-                t, taille = ajuster(sous_titre, self.largeur - 2 * MARGE, 19)
-                d.text((MARGE * S, (y + 58) * S), t, font=police(taille), fill=TITRE_DOUX)
+            for i, ligne in enumerate(lignes):
+                t, taille = ajuster(ligne, self.largeur - 2 * MARGE, 19)
+                d.text((MARGE * S, (y + 58 + 25 * i) * S), t, font=police(taille), fill=TITRE_DOUX)
         self.elements.append((h, dessiner))
 
     def section(self, texte, detail=None):
@@ -220,6 +236,19 @@ def couper(texte, largeur, taille, gras=False):
     if courante:
         lignes.append(courante)
     return lignes or [""]
+
+
+def lignes_sous_titre(texte, largeur, taille=19, maxi=3):
+    """Sous-titre sur une ligne s'il tient, sinon coupé aux « · » (puis entre les mots) : 3 lignes au plus."""
+    if largeur_texte(texte, taille) <= largeur:
+        return [texte]
+    lignes = []
+    for morceau in texte.split(" · "):
+        if lignes and largeur_texte(f"{lignes[-1]} · {morceau}", taille) <= largeur:
+            lignes[-1] += f" · {morceau}"
+        else:
+            lignes += couper(morceau, largeur, taille)
+    return lignes if len(lignes) <= maxi else lignes[:maxi - 1] + [" ".join(lignes[maxi - 1:])]
 
 
 def _texte_aligne(d, texte, taille, gras, x, largeur, y, align, couleur):
@@ -692,22 +721,21 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
     r_.tableau(colonnes, lignes)
     sorties.append((_enregistrer(r_.image(), dossier, "adversaires_prochaine_journee.png"), "Prochaine journée"))
 
-    # 2. Le prochain adversaire de chaque équipe : composition probable, renforts, pas encore joué
+    # 2. Le prochain adversaire de chaque équipe : composition probable, renforts, pas encore joué.
+    # L'image prend la largeur de son contenu (pas de colonne vide) : plus lisible sur un téléphone.
     for e, r in prochaines:
         a = r.get("analyse")
         club = donnees["clubs"].get(r["adversaire"]["club"]) or {}
         par_id = {j["id"]: j for j in club.get("joueurs", [])}
         dom = r["vaires_domicile"]
-        img = Rendu()
-        img.titre(f"{e['nom_court']} · J{r['journee']} · {jour_fr(_date_renc(r))} {r.get('heure') or ''}".strip(),
-                  f"{'reçoit' if dom else 'se déplace à'} {r['adversaire']['libelle']} · {_salle(donnees, r)}")
-        img.espace(6)
+        titre = f"{e['nom_court']} · J{r['journee']} · {jour_fr(_date_renc(r))} {r.get('heure') or ''}".strip()
+        sous_titre = f"{'reçoit' if dom else 'se déplace à'} {r['adversaire']['libelle']} · {_salle(donnees, r)}"
         if not a:
+            img = Rendu()
+            img.titre(titre, sous_titre)
+            img.espace(6)
             img.texte("Effectif de l'adversaire inconnu (club absent des données).", 20, NOIR)
         else:
-            colonnes = colonnes_egales([Col("Joueur", None, "g"), Col("Clt", 70), Col("Pts", 90), Col("Cat.", 80),
-                                        Col("", 300, "g")], LARGEUR - 2 * MARGE)
-
             def lignes_joueurs(ids, info=None):
                 sortie = []
                 for jid in ids:
@@ -721,18 +749,35 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                     ])
                 return sortie
 
-            img.section("Composition probable", "estimation")
-            img.tableau(colonnes, lignes_joueurs(a["probable"]) or [[C("—"), C(), C(), C(), C()]])
+            def ou_aucun(lignes, texte="aucun"):
+                return lignes or [[C(texte, couleur=DOUX, align="g"), C(), C(), C(), C()]]
+
             renforts = {x["id"]: "a joué en " + ", ".join(str(n) for n in x["equipes"]) for x in a.get("renforts", [])}
-            img.section("Renforts possibles", "joueurs d'équipes plus fortes, non brûlés")
-            img.tableau(colonnes, lignes_joueurs([x["id"] for x in a.get("renforts", [])][:8], renforts)
-                        or [[C("aucun", couleur=DOUX, align="g"), C(), C(), C(), C()]])
             pas_joue = [jid for jid in a.get("non_alignes", []) if jid not in a["probable"]]
-            img.section("Pas encore joué cette phase", f"les 8 mieux classés sur {len(pas_joue)}" if len(pas_joue) > 8 else None)
-            img.tableau(colonnes, lignes_joueurs(pas_joue[:8]) or [[C("aucun", couleur=DOUX, align="g"), C(), C(), C(), C()]])
+            tableaux = [
+                ("Composition probable", "estimation", ou_aucun(lignes_joueurs(a["probable"]), "—")),
+                ("Renforts possibles", "joueurs d'équipes plus fortes, non brûlés",
+                 ou_aucun(lignes_joueurs([x["id"] for x in a.get("renforts", [])][:8], renforts))),
+                ("Pas encore joué cette phase", f"les 8 mieux classés sur {len(pas_joue)}" if len(pas_joue) > 8 else None,
+                 ou_aucun(lignes_joueurs(pas_joue[:8]))),
+            ]
+            toutes = [l for _, _, lignes in tableaux for l in lignes]
+            info = max((largeur_naturelle(l[4]) for l in toutes if l[4].texte), default=0)
+            if not info:  # aucune information : la colonne disparaît
+                tableaux = [(t_, d_, [l[:4] for l in lignes]) for t_, d_, lignes in tableaux]
+            fixes = [Col("Clt", 70), Col("Pts", 90), Col("Cat.", 80)] + ([Col("", info + 10, "g")] if info else [])
+            nom = max(NOM_MIN, max(largeur_naturelle(l[0]) for l in toutes) + 6)
+            largeur = min(LARGEUR, max(FICHE_MIN, round(nom + sum(c.largeur for c in fixes) + 2 * MARGE)))
+            colonnes = colonnes_egales([Col("Joueur", None, "g")] + fixes, largeur - 2 * MARGE)
+            img = Rendu(largeur)
+            img.titre(titre, sous_titre)
+            img.espace(6)
+            for t_, d_, lignes in tableaux:
+                img.section(t_, d_)
+                img.tableau(colonnes, lignes)
             if a.get("brules"):
                 img.texte(f"{len(a['brules'])} joueur(s) brûlé(s) ou indisponible(s) pour cette rencontre : détail sur la page.", 17)
         img.pied("Composition probable : estimation à partir des rencontres déjà jouées par le club adverse.")
-        nom = f"adversaires_{e['id'].upper()}.png"
-        sorties.append((_enregistrer(img.image(), dossier, nom), f"{e['nom_court']} : prochain adversaire"))
+        nom_fichier = f"adversaires_{e['id'].upper()}.png"
+        sorties.append((_enregistrer(img.image(), dossier, nom_fichier), f"{e['nom_court']} : prochain adversaire"))
     return sorties

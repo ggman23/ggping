@@ -91,6 +91,18 @@ def test_adversaires_prochaine_journee_et_prochain_adversaire(tmp_path):
     sorties = images.images_adversaires(donnees, tmp_path, date(2026, 10, 19))
     assert [c.name for c, _ in sorties] == ["adversaires_prochaine_journee.png", "adversaires_V1.png"]
     assert images._salle(donnees, rencontre) == "Gymnase, 1 rue X, 77000 MELUN"
+    assert _ouvrir(sorties[0][0])[0] == 1080
+    assert _ouvrir(sorties[1][0])[0] == images.FICHE_MIN  # fiche à la largeur de son contenu : pas de place perdue
+
+
+def test_sous_titre_long_sur_deux_lignes():
+    court = "reçoit CHARENTON TT 1 · C.O.S.E.C"
+    assert images.lignes_sous_titre(court, 684) == [court]
+    long_ = ("se déplace à LAGNY SUR MARNE TENNIS DE TABLE 11 · Gymnase des Hauts de Lagny, "
+             "12 avenue du Général de Gaulle, 77400 LAGNY-SUR-MARNE")
+    lignes = images.lignes_sous_titre(long_, 684)
+    assert lignes[0] == "se déplace à LAGNY SUR MARNE TENNIS DE TABLE 11"  # coupé au « · »
+    assert 2 <= len(lignes) <= 3 and all(images.largeur_texte(l, 19) <= 684 for l in lignes)
 
 
 def test_ajustement_du_texte():

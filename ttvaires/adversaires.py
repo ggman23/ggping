@@ -265,7 +265,7 @@ def completer_avec_pingpocket(client, donnees, dossier_import=None, tous_les_his
     if not pages:
         print("  ! aucune page de pingpocket.fr disponible : meilleurs classements non récupérés.")
         return
-    muet = not client.disponible(SITE_PINGPOCKET) or SITE_PINGPOCKET in client.sites_cache_seul
+    muet = not client.disponible(SITE_PINGPOCKET) or SITE_PINGPOCKET in client.sites_cache_seul or client.hors_ligne
 
     # 5. Meilleur classement : historique des joueurs (gardé en cache toute la phase). Les joueurs restés à
     # 500 points qui n'ont pas joué n'ont en pratique jamais été mieux classés : on épargne ces pages.
