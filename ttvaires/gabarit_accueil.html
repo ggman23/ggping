@@ -260,6 +260,7 @@ async function voir(bouton) {
     if (imageOuverte) URL.revokeObjectURL(imageOuverte.url);
     imageOuverte = { url: URL.createObjectURL(blob), blob, nom: bouton.dataset.nom };
     document.getElementById("image-vue").src = imageOuverte.url;
+    document.querySelector("#visionneuse .cadre").scrollTop = 0;  // image haute : on repart du début
     const fichier = new File([blob], imageOuverte.nom, { type: "image/png" });
     document.getElementById("partager-image").style.display =
       navigator.canShare && navigator.canShare({ files: [fichier] }) ? "" : "none";

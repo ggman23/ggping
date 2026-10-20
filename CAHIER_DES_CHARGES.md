@@ -237,7 +237,8 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
     équipe masculine 2 à 6, ses joueurs brûlés.
 - Lisibilité : largeur 1080 points, texte 26 points, nom abrégé « NOM P. » si besoin, 25 lignes au
   plus par image (au-delà, plusieurs images numérotées : une image très haute serait réduite par
-  les messageries).
+  les messageries). En plus, et sans rien changer aux images numérotées, chaque tableau découpé est
+  aussi donné en une seule image verticale (titres des colonnes répétés aux mêmes coupures).
 - Pages HTML : en-têtes « Autre » et « Virt. » et colonnes de même largeur dans le classement
   virtuel ; « Meilleure victoire » sur deux lignes dans les résultats.
 - Site : images chiffrées comme les pages ; section « Images à partager » (voir, télécharger,

@@ -106,8 +106,11 @@ téléphone et partagées dans les groupes du club (dossier `sortie\images\` sur
 
 Largeur 1080 points, texte agrandi, colonnes de même largeur (le nom est abrégé « NOM P. » s'il est
 trop long), 25 lignes au plus par image (un long tableau donne plusieurs images 1/2, 2/2) pour
-qu'elles restent nettes une fois envoyées par une messagerie. Mêmes images sur le PC et en ligne
-(police fournie avec l'outil : Liberation Sans, licence SIL OFL).
+qu'elles restent nettes une fois envoyées par une messagerie. Un tableau découpé est aussi donné en
+plus en une seule image verticale (`..._complet.png`, « image unique » sur le site), avec les titres
+des colonnes répétés aux mêmes endroits. Elle se lit très bien sur le site en faisant défiler ; une
+messagerie peut la réduire : l'envoyer plutôt comme document (ou en HD). Mêmes images sur le PC et
+en ligne (police fournie avec l'outil : Liberation Sans, licence SIL OFL).
 
 ## Vérifications : tous les résultats ont-ils été récupérés ?
 

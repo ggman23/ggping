@@ -5,7 +5,8 @@ dossier polices/) : le PC et la mise à jour en ligne produisent les mêmes imag
 - largeur 1080 points (pleine largeur d'un téléphone), dessinées en double résolution puis
   réduites : texte et pictogrammes lissés ;
 - 25 lignes au plus par image : une image très haute serait réduite (illisible) par les
-  messageries ; un long tableau donne plusieurs images numérotées (1/3, 2/3...).
+  messageries ; un long tableau donne plusieurs images numérotées (1/3, 2/3...), plus une
+  version en une seule image verticale (..._complet.png) pour qui préfère faire défiler.
 
 Une fonction par page : images_virtuel, images_resultats, images_effectif, images_adversaires.
 Chacune écrit ses images dans le dossier donné et renvoie [(chemin, titre)].
@@ -408,10 +409,10 @@ def _genere(donnees):
 
 
 def _tableau_pagine(dossier, prefixe, titre, sous_titre, colonnes, lignes, pied, titre_court):
-    """Un tableau découpé en plusieurs images si besoin. Renvoie [(chemin, titre)]."""
+    """Un tableau découpé en plusieurs images si besoin. Renvoie [(chemin, titre)].
+    S'il est découpé, il est aussi donné en une seule image verticale (en plus des autres)."""
     paquets = paginer(lignes)
     sorties = []
-    debut = 0
     for i, paquet in enumerate(paquets, 1):
         r = Rendu(largeur_image(colonnes))
         suffixe = f" ({i}/{len(paquets)})" if len(paquets) > 1 else ""
@@ -421,7 +422,18 @@ def _tableau_pagine(dossier, prefixe, titre, sous_titre, colonnes, lignes, pied,
         r.pied(pied)
         nom = f"{prefixe}{'_' + str(i) if len(paquets) > 1 else ''}.png"
         sorties.append((_enregistrer(r.image(), dossier, nom), titre_court + suffixe))
-        debut += len(paquet)
+    if len(paquets) > 1:
+        # Les titres des colonnes sont répétés aux mêmes endroits que les coupures des images
+        # séparées : on les a toujours sous les yeux en faisant défiler.
+        r = Rendu(largeur_image(colonnes))
+        r.titre(titre, sous_titre)
+        r.espace(10)
+        for i, paquet in enumerate(paquets):
+            if i:
+                r.espace(14)
+            r.tableau(colonnes, paquet)
+        r.pied(pied)
+        sorties.append((_enregistrer(r.image(), dossier, f"{prefixe}_complet.png"), f"{titre_court} (image unique)"))
     return sorties
 
 

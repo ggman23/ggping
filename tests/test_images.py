@@ -26,11 +26,23 @@ def test_classement_virtuel_decoupe_en_images_lisibles(tmp_path):
                 "parties": [{"championnat": True}, {"championnat": False}]} for i in range(1, 31)]
     (tmp_path / "classement_virtuel_9.png").write_bytes(b"ancienne image")  # d'un lancement précédent
     sorties = images.images_virtuel({**CLUB, "joueurs": joueurs}, tmp_path)
-    assert [c.name for c, _ in sorties] == ["classement_virtuel_1.png", "classement_virtuel_2.png"]  # 15 + 15 lignes
-    assert [t for _, t in sorties] == ["Classement virtuel (1/2)", "Classement virtuel (2/2)"]
+    assert [c.name for c, _ in sorties] == ["classement_virtuel_1.png", "classement_virtuel_2.png",  # 15 + 15 lignes
+                                            "classement_virtuel_complet.png"]                     # en plus : les 30
+    assert [t for _, t in sorties] == ["Classement virtuel (1/2)", "Classement virtuel (2/2)",
+                                       "Classement virtuel (image unique)"]
     assert not (tmp_path / "classement_virtuel_9.png").exists()
     largeur, hauteur = _ouvrir(sorties[0][0])
     assert largeur == 1080 and hauteur < 1600  # pas réduite par les messageries
+    largeur_u, hauteur_u = _ouvrir(sorties[2][0])
+    assert largeur_u == 1080 and hauteur_u > hauteur + 15 * 50  # toutes les lignes, l'une sous l'autre
+
+
+def test_pas_d_image_unique_en_double_si_le_tableau_tient_en_une_image(tmp_path):
+    joueurs = [{"id": "1", "nom": "SEUL", "prenom": "Paul", "categorie": "S", "equipe": "V1", "officiels": 900,
+                "classement": 9, "championnat": 0, "autres": 0, "total": 0, "virtuels": 900, "classement_virtuel": 9,
+                "v": 0, "d": 0, "parties": []}]
+    sorties = images.images_virtuel({**CLUB, "joueurs": joueurs}, tmp_path)
+    assert [c.name for c, _ in sorties] == ["classement_virtuel.png"]
 
 
 def test_resultats_derniere_journee_et_cumul(tmp_path):
