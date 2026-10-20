@@ -29,6 +29,10 @@ manche (11-7, 8-11…, Vaires toujours en premier, vert = manche gagnée), le sc
 après chaque partie et le bilan de chaque joueur. Sur un téléphone, les manches passent sous la
 partie ; des boutons filtrent une équipe.
 
+Sur la copie Netlify, des **statistiques de visite** (pages vues, visiteurs, documents ouverts,
+téléchargés, partagés) peuvent être activées avec un compte gratuit GoatCounter : voir
+PUBLICATION.md.
+
 La page **Classements des poules** (`sortie\classements_vaires.html`, faite avec la page des
 adversaires) montre la poule de chaque équipe de Vaires (points, joués, victoires, nuls, défaites,
 parties gagnées – perdues), la ligne de Vaires en rouge, comme l'image du même nom.

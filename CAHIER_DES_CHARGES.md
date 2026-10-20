@@ -270,6 +270,12 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
   des joueurs battus). Photo `import/photo_J<n>.jpg` et logos `import/logo_gauche|droite.png`
   collés s'ils existent (envoyés au site avec les données du PC, photo réduite si lourde) ; noms
   affichés : prénom (+ initiales du nom si prénom partagé dans l'image) ou `import/surnoms.txt`.
+- Statistiques de visite de la copie Netlify (facultatif, variable GitHub GOATCOUNTER = code d'un
+  compte gratuit goatcounter.com) : accueil public (une page vue par chargement), /club/ (accueil,
+  écran de connexion, chaque document et archive ouverts ; événements connexion, connexion refusée,
+  téléchargement, partage, tout télécharger) et accueils de /gg/ (ouverture, téléchargement, image
+  vue, partage, tout télécharger, mise à jour lancée). Sans cookie ; noms de fichiers seulement ;
+  script count.v5.js figé et vérifié (integrity SRI). Site GitHub jamais compté.
 - Classements des poules (avec la page adversaires, mêmes données : classements calculés à partir
   des feuilles de match) : page `classements_vaires.html` (publiée sous classements.html) et image
   `classements_poules.png` sur le modèle proposé par le club : fond sombre, bandeau (logo du club,

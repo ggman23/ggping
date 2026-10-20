@@ -151,6 +151,41 @@ Sans le secret, l'étape ne fait rien. Si Netlify refuse l'envoi, un avertisseme
 journal de la mise à jour, mais le site GitHub est publié quand même. La copie part même si GitHub
 Pages est en panne, dès que le site est prêt.
 
+## Statistiques de visite (GoatCounter, facultatif)
+
+Pour savoir ce que font les membres du club sur la copie Netlify : nombre de pages vues et de
+visiteurs, documents ouverts, téléchargés et partagés. Seule la copie Netlify est comptée
+(accueil public, /club/, /gg/), jamais le site GitHub.
+
+1. Créer un compte gratuit (usage non commercial) sur https://www.goatcounter.com/signup : choisir
+   un **code**, par exemple `cvtt-vaires` (le tableau de bord sera https://cvtt-vaires.goatcounter.com),
+   une adresse e-mail et un mot de passe.
+2. Sur github.com : dépôt → *Settings* → *Secrets and variables* → *Actions* → onglet
+   **Variables** → *New repository variable* : *Name* `GOATCOUNTER`, *Value* le code
+   (`cvtt-vaires`).
+3. À la mise à jour suivante, le journal affiche « Statistiques de visite : https://cvtt-vaires.goatcounter.com ».
+
+Ce que l'on voit sur le tableau de bord :
+
+- **pages vues** : `/` (accueil public, adversaires), `/club/connexion` (écran du mot de passe),
+  `/club/` (accueil de l'espace club), `/club/<fichier>` pour chaque document ouvert
+  (`/club/resultats_vaires.html`, `/club/recap_J3.png`...), `/club/archives/<journée>`, `/gg/` ;
+- **événements** (onglet *Events*) : `club/connexion`, `club/connexion-refusee`,
+  `club/telechargement/<fichier>`, `club/partage/<fichier>`, `club/tout-telecharger` ; sur /gg/ :
+  `gg/ouverture/<page>`, `gg/telechargement/<fichier>`, `gg/image/<fichier>`, `gg/partage/<fichier>`,
+  `gg/tout-telecharger`, `gg/mise-a-jour` ;
+- le nombre de **visiteurs** (sans cookie), les navigateurs, téléphone ou PC, tailles d'écran, pays,
+  et d'où viennent les visites (WhatsApp, e-mail...).
+
+Pour ne pas compter ses propres visites : ouvrir une fois **https://ggping.netlify.app/#toggle-goatcounter**
+sur chacun de ses appareils (un message confirme ; le refaire pour réactiver).
+
+Vie privée : GoatCounter ne pose pas de cookie et ne garde pas les adresses IP ; il ne reçoit que
+des noms de fichiers, jamais un nom de joueur ni un mot de passe. Le script est figé (version et
+empreinte vérifiées par le navigateur). Sans la variable, rien n'est ajouté aux pages.
+Autre possibilité, payante : Netlify Analytics (compté par le serveur de Netlify, sans script,
+mais sans les téléchargements ni les partages).
+
 ## Archives des journées passées
 
 Après chaque mise à jour, les journées terminées sont archivées : la J3 passe en archive dès que la

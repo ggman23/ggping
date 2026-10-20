@@ -190,6 +190,20 @@ let cle = null;
 const cacheClair = new Map();  // id -> Blob déchiffré
 let courant = null, urlCourante = null, retourVers = "";
 
+/* ---------- Statistiques de visite ----------
+   Seulement si la copie Netlify a un compteur GoatCounter (variable GOATCOUNTER) : sinon rien.
+   Pages vues : l'accueil, chaque document et chaque archive ouverts (/club/<fichier>) ; événements :
+   connexion, téléchargement, partage, tout télécharger. Jamais de nom de joueur : des noms de fichiers. */
+const enAttente = [];
+function compter(chemin, titre, evenement = false) {
+  const gc = window.goatcounter;
+  if (gc && gc.count) gc.count({ path: chemin, title: titre, event: evenement });
+  else if (document.querySelector("script[data-goatcounter]")) enAttente.push([chemin, titre, evenement]);
+}
+window.compteurPret = () => enAttente.splice(0).forEach((a) => compter(...a));
+const nomCompte = (d) => d.archive ? `${d.archive.cle}/${d.fichier}` : d.fichier;
+const titreCompte = (d) => d.archive ? `${d.archive.titre} · ${d.titre}` : d.titre;
+
 /* ---------- Déchiffrement (mêmes réglages que le site GitHub) ---------- */
 async function deriver(mdp) {
   const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(mdp), "PBKDF2", false, ["deriveBits"]);
@@ -229,8 +243,11 @@ document.getElementById("formulaire").addEventListener("submit", async (ev) => {
   try {
     const k = await deriver(document.getElementById("mdp").value);
     await entrer(k);
-    if (document.getElementById("retenir").checked) ecrire(CLE, b64(k));
+    const retenir = document.getElementById("retenir").checked;
+    if (retenir) ecrire(CLE, b64(k));
+    compter("club/connexion", retenir ? "Connexion (mot de passe retenu)" : "Connexion", true);
   } catch (e) {
+    if (e.name === "OperationError" || e.message === "vérification") compter("club/connexion-refusee", "Mot de passe incorrect", true);
     erreur.textContent = e.name === "OperationError" || e.message === "vérification" ? "Mot de passe incorrect." : "Problème : " + e.message;
   } finally {
     bouton.disabled = false; bouton.textContent = "Entrer";
@@ -317,8 +334,9 @@ async function route() {
     titre.textContent = `${archive.titre} · archive`;
     sous.textContent = `Phase ${archive.phase} · état au ${jour(archive.date_reference)}`;
     vue.innerHTML = vueArchive(archive);
-    document.getElementById("tout-archive").addEventListener("click", (ev) => toutTelecharger(archive.docs, ev.target));
+    document.getElementById("tout-archive").addEventListener("click", (ev) => toutTelecharger(archive.docs, ev.target, archive));
     vue.scrollTop = 0;
+    compter(`/club/archives/${archive.cle}`, `Archive · ${archive.titre}`);
     return;
   }
   if (!doc) {
@@ -326,12 +344,14 @@ async function route() {
     sous.textContent = `Mise à jour : ${quand(D.maj)}`;
     vue.innerHTML = accueil();
     vue.scrollTop = 0;
+    compter("/club/", "Accueil de l'espace club");
     return;
   }
   titre.textContent = doc.archive ? `${doc.archive.titre} · ${doc.titre}` : doc.titre;
   sous.textContent = doc.archive ? `Archive · état au ${jour(doc.archive.date_reference)}`
     : doc.type === "image" ? TITRES_GROUPES[doc.groupe] || "" : quand(doc.date);
   vue.innerHTML = '<p class="message">Ouverture…</p>';
+  compter(`/club/${nomCompte(doc)}`, titreCompte(doc));
   try {
     const blob = await contenu(doc);
     if (courant !== doc) return;  // un autre document a été choisi entre-temps
@@ -347,7 +367,10 @@ async function route() {
       vue.innerHTML = `<div class="carte-excel"><div class="icone">${ICONES.excel}</div><h2>${esc(doc.titre)}</h2>
         <p>${esc(doc.description)}<br>S'ouvre avec Excel, LibreOffice ou Google Sheets.</p>
         <button class="principal" id="telecharger-excel">Télécharger ${esc(doc.nom)}</button></div>`;
-      document.getElementById("telecharger-excel").addEventListener("click", () => enregistrer(blob, doc.nom));
+      document.getElementById("telecharger-excel").addEventListener("click", () => {
+        enregistrer(blob, doc.nom);
+        compter(`club/telechargement/${nomCompte(doc)}`, `Téléchargement · ${titreCompte(doc)}`, true);
+      });
     }
     vue.scrollTop = 0;
   } catch (e) {
@@ -363,19 +386,26 @@ function enregistrer(blob, nom) {
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
 }
 document.getElementById("telecharger").addEventListener("click", async () => {
-  if (courant) enregistrer(await contenu(courant), courant.nom);
+  if (!courant) return;
+  enregistrer(await contenu(courant), courant.nom);
+  compter(`club/telechargement/${nomCompte(courant)}`, `Téléchargement · ${titreCompte(courant)}`, true);
 });
 document.getElementById("partager").addEventListener("click", async () => {
   if (!courant) return;
-  try { await navigator.share({ files: [new File([await contenu(courant)], courant.nom, { type: "image/png" })] }); }
-  catch (e) { /* partage annulé */ }
+  const doc = courant;
+  try {
+    await navigator.share({ files: [new File([await contenu(doc)], doc.nom, { type: "image/png" })] });
+    compter(`club/partage/${nomCompte(doc)}`, `Partage · ${titreCompte(doc)}`, true);
+  } catch (e) { /* partage annulé */ }
 });
 /* Retour : d'un document d'archive vers son archive, sinon vers le menu. (Pas history.back() : les
    onglets d'une page affichée, J1, J2, Cumul..., ajoutent eux aussi des étapes à l'historique.) */
 document.getElementById("retour").addEventListener("click", () => { location.hash = retourVers; });
-async function toutTelecharger(liste, bouton) {
+async function toutTelecharger(liste, bouton, archive = null) {
   const libelle = bouton.textContent;
   bouton.disabled = true;
+  compter(archive ? `club/tout-telecharger/${archive.cle}` : "club/tout-telecharger",
+          archive ? `Tout télécharger · ${archive.titre}` : "Tout télécharger", true);
   try {
     for (const [i, d] of liste.entries()) {
       bouton.textContent = `Téléchargement ${i + 1}/${liste.length}…`;
@@ -394,9 +424,9 @@ window.addEventListener("hashchange", route);
 /* Clé déjà mémorisée sur cet appareil : on entre directement. */
 (async () => {
   const memo = lire(CLE);
-  if (!memo) { document.getElementById("mdp").focus(); return; }
+  if (!memo) { document.getElementById("mdp").focus(); compter("/club/connexion", "Connexion à l'espace club"); return; }
   try { await entrer(octets(memo)); }
-  catch (e) { ecrire(CLE, null); document.getElementById("mdp").focus(); }
+  catch (e) { ecrire(CLE, null); document.getElementById("mdp").focus(); compter("/club/connexion", "Connexion à l'espace club"); }
 })();
 </script>
 </body>

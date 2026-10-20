@@ -115,7 +115,8 @@ jobs:
         uses: actions/deploy-pages@v4
 
       # Copie de secours sur Netlify : accueil public (adversaires), /club/ (espace club, secret
-      # MOT_DE_PASSE_CLUB) et /gg/ (copie du site re-chiffrée, secret MOT_DE_PASSE_GG).
+      # MOT_DE_PASSE_CLUB) et /gg/ (copie du site re-chiffrée, secret MOT_DE_PASSE_GG), avec les
+      # statistiques de visite si la variable GOATCOUNTER existe.
       # Faite même si GitHub Pages est en panne, dès que le site est prêt. Sans le secret
       # NETLIFY_AUTH_TOKEN, cette étape ne fait rien (voir PUBLICATION.md).
       - name: Copie de secours sur Netlify
@@ -126,4 +127,5 @@ jobs:
           MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
           MOT_DE_PASSE_GG: ${{ secrets.MOT_DE_PASSE_GG }}
           MOT_DE_PASSE_CLUB: ${{ secrets.MOT_DE_PASSE_CLUB }}
+          GOATCOUNTER: ${{ vars.GOATCOUNTER }}  # statistiques de visite (facultatif, voir PUBLICATION.md)
         run: python -m ttvaires.netlify

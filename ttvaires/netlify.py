@@ -10,12 +10,18 @@
   aux capitaines) : le mot de passe du site GitHub reste secret. Sans MOT_DE_PASSE_GG, /gg/ n'est
   pas publié.
 
+Statistiques de visite (facultatif) : avec la variable GOATCOUNTER (le code d'un compte gratuit
+goatcounter.com), l'accueil public, /club/ et /gg/ comptent les pages vues, les visites et, dans
+/club/ et /gg/, les documents ouverts, téléchargés et partagés. GoatCounter ne pose pas de cookie
+et ne reçoit aucun nom de joueur (seulement des noms de fichiers : resultats_vaires.xlsx...).
+Le site GitHub, lui, n'est jamais compté.
+
 Lancé par le workflow GitHub après la publication du site (dossier site/ prêt), donc après chaque
 mise à jour, qu'elle vienne du PC (option 7) ou du téléphone :
   python -m ttvaires.netlify
 Variables d'environnement : NETLIFY_AUTH_TOKEN (jeton Netlify ; sans lui, rien n'est fait),
 NETLIFY_SITE (par défaut ggping.netlify.app), MOT_DE_PASSE_SITE (pour lire le site GitHub),
-MOT_DE_PASSE_GG (celui de /gg/), MOT_DE_PASSE_CLUB (celui de /club/).
+MOT_DE_PASSE_GG (celui de /gg/), MOT_DE_PASSE_CLUB (celui de /club/), GOATCOUNTER (statistiques).
 """
 
 import argparse
@@ -43,6 +49,10 @@ NOINDEX = '<meta name="robots" content="noindex, nofollow">'
 CHIFFRE = re.compile(r'<script id="chiffre" type="text/plain">([^<]+)</script>')
 GABARIT_CLUB = Path(__file__).with_name("gabarit_club.html")
 VERIF_CLUB = b"cvtt-vaires-club"  # fichier témoin : sert à vérifier le mot de passe de /club/
+# Compteur de visites : version figée du script, vérifiée par son empreinte (integrity) : s'il
+# changeait sur le serveur de GoatCounter, le navigateur refuserait de l'exécuter.
+GOATCOUNTER_JS = "https://gc.zgo.at/count.v5.js"
+GOATCOUNTER_SRI = "sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"
 ORDRE_CLUB = ["vaires.html", "resultats_vaires.html", "resultats_vaires.xlsx", "rencontres_vaires.html",
               "classements_vaires.html", "effectif_vaires.html", "classement_virtuel.html"]
 
@@ -153,10 +163,39 @@ def espace_club(site, club, cle_site, cle_club):
     (club / "index.html").write_text(GABARIT_CLUB.read_text(encoding="utf-8").replace("__DONNEES_JSON__", js), encoding="utf-8")
 
 
-def construire(site, dossier, mot_de_passe, mot_de_passe_gg, mot_de_passe_club=""):
+def code_goatcounter(valeur):
+    """« cvtt-vaires », « cvtt-vaires.goatcounter.com » ou son adresse complète -> « cvtt-vaires » ;
+    vide si ce n'est pas un code GoatCounter."""
+    m = re.fullmatch(r"(?:https?://)?([a-z0-9][a-z0-9-]{1,62})(?:\.goatcounter\.com)?(?:/count)?/?", (valeur or "").strip().lower())
+    return m[1] if m else ""
+
+
+def avec_compteur(html, code, manuel=False):
+    """Ajoute le compteur de visites GoatCounter avant </head>. `manuel` : la page compte elle-même
+    ce qu'on y fait (fonction compter() de l'espace club et de l'accueil) ; sinon une page vue par
+    chargement. Le chemin compté ne garde pas le « ?v=... » des liens."""
+    if not code:
+        return html
+    reglages = """ data-goatcounter-settings='{"no_onload": true}'""" if manuel else ""
+    script = ('<script>window.goatcounter = { path: (p) => p.split("?")[0] || "/" };</script>\n'
+              f'<script data-goatcounter="https://{code}.goatcounter.com/count"{reglages} async src="{GOATCOUNTER_JS}"'
+              f' integrity="{GOATCOUNTER_SRI}" crossorigin="anonymous" onload="window.compteurPret && compteurPret()"></script>\n')
+    return html.replace("</head>", script + "</head>", 1)
+
+
+def _ajouter_compteur(dossier, code):
+    """Accueil public (une page vue par visite), /club/ et chaque accueil de /gg/ (archives comprises),
+    qui comptent eux-mêmes les documents ouverts, téléchargés et partagés."""
+    for page, manuel in [(dossier / "index.html", False), (dossier / "club" / "index.html", True),
+                         *((f, True) for f in sorted((dossier / "gg").rglob("index.html")))]:
+        if page.exists():
+            page.write_text(avec_compteur(page.read_text(encoding="utf-8"), code, manuel), encoding="utf-8")
+
+
+def construire(site, dossier, mot_de_passe, mot_de_passe_gg, mot_de_passe_club="", goatcounter=""):
     """Prépare dans `dossier` le site Netlify : accueil public, club/ (espace club) et gg/ (copie
     re-chiffrée du site GitHub). Sans leur propre mot de passe, club/ et gg/ ne sont pas publiés
-    (jamais avec celui du site GitHub)."""
+    (jamais avec celui du site GitHub). `goatcounter` : code du compteur de visites (facultatif)."""
     if dossier.exists():
         shutil.rmtree(dossier)
     dossier.mkdir(parents=True)
@@ -169,6 +208,7 @@ def construire(site, dossier, mot_de_passe, mot_de_passe_gg, mot_de_passe_club="
     (dossier / "robots.txt").write_text("User-agent: *\nDisallow: /\n", encoding="utf-8")
     # En-têtes Netlify : pas de référencement, et des pages toujours à jour (pas de vieille copie en cache)
     (dossier / "_headers").write_text("/*\n  X-Robots-Tag: noindex, nofollow\n  Cache-Control: no-cache\n", encoding="utf-8")
+    _ajouter_compteur(dossier, goatcounter)
     return dossier
 
 
@@ -223,9 +263,12 @@ def main():
     for secret, valeur, partie in (("MOT_DE_PASSE_CLUB", mot_de_passe_club, "/club/"), ("MOT_DE_PASSE_GG", mot_de_passe_gg, "/gg/")):
         if not valeur:
             print(f"::warning::Pas de secret {secret} : {partie} n'est pas publié sur Netlify.")
+    goatcounter = code_goatcounter(os.environ.get("GOATCOUNTER", ""))
+    if os.environ.get("GOATCOUNTER", "").strip() and not goatcounter:
+        print("::warning::Variable GOATCOUNTER illisible (attendu : le code du compte, par exemple cvtt-vaires) : pas de statistiques.")
     try:
         dossier = construire(Path(args.site), Path(args.dossier), os.environ.get("MOT_DE_PASSE_SITE", ""),
-                             mot_de_passe_gg, mot_de_passe_club)
+                             mot_de_passe_gg, mot_de_passe_club, goatcounter)
         adresse = deployer(dossier, jeton, nom)
     except (ErreurNetlify, requests.RequestException, ValueError) as e:
         # Le site GitHub est déjà publié : la copie Netlify en échec est signalée sans tout faire échouer.
@@ -235,6 +278,8 @@ def main():
     print(f"Copie Netlify publiée : {base}/ (accueil public)"
           + (f", {base}/club/ (mot de passe du club)" if mot_de_passe_club else "")
           + (f", {base}/gg/ (mot de passe de /gg/)" if mot_de_passe_gg else ""))
+    if goatcounter:
+        print(f"Statistiques de visite : https://{goatcounter}.goatcounter.com")
 
 
 if __name__ == "__main__":

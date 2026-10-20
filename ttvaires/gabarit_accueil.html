@@ -142,6 +142,20 @@ function classe(resume) {
   return "ok";
 }
 
+/* ---------- Statistiques de visite ----------
+   Seulement sur la copie Netlify (/gg/) si elle a un compteur GoatCounter : sur le site GitHub,
+   rien n'est chargé et compter() ne fait rien. Événements : pages ouvertes, téléchargements,
+   images vues et partagées, mise à jour lancée (noms de fichiers, jamais de nom de joueur). */
+const enAttente = [];
+function compter(chemin, titre, evenement = false) {
+  const gc = window.goatcounter;
+  if (gc && gc.count) gc.count({ path: chemin, title: titre, event: evenement });
+  else if (document.querySelector("script[data-goatcounter]")) enAttente.push([chemin, titre, evenement]);
+}
+window.compteurPret = () => enAttente.splice(0).forEach((a) => compter(...a));
+const ICI = location.pathname.replace(/index\.html$/, "").replace(/^\/|\/$/g, "") || "site";  // gg, gg/archives/<clé>
+const evenement = (quoi, nom, titre) => compter(`${ICI}/${quoi}/${nom}`, titre, true);
+
 /* ---------- Pages publiées ---------- */
 function afficherPages() {
   const noms = Object.keys(E.pages || {}).sort((a, b) => ORDRE.indexOf(a) - ORDRE.indexOf(b));
@@ -154,15 +168,18 @@ function afficherPages() {
     return p.telechargement
       ? `<div class="carte"><b>${esc(p.titre)}</b><span class="date">${quand(p.date)}</span><span class="desc">${esc(p.description)}</span>
           <div class="ligne">${bouton}</div></div>`
-      : `<div class="carte"><a class="titre" href="${lien}"><b>${esc(p.titre)}</b></a><span class="date">${quand(p.date)}</span>
+      : `<div class="carte"><a class="titre" href="${lien}" data-ouvrir="${esc(n)}"><b>${esc(p.titre)}</b></a><span class="date">${quand(p.date)}</span>
           <span class="desc">${esc(p.description)}</span>${etat}
-          <div class="ligne"><a class="bouton" href="${lien}">Ouvrir</a>${bouton}</div></div>`;
+          <div class="ligne"><a class="bouton" href="${lien}" data-ouvrir="${esc(n)}">Ouvrir</a>${bouton}</div></div>`;
   }).join("") + `<div class="ligne"><button class="second" id="tout-telecharger">Tout télécharger (pages, Excel et images)</button></div>
     <p class="petit">Les fichiers téléchargés vont dans « Téléchargements » : ce sont les mêmes que ceux du dossier sortie
       du PC, lisibles sans connexion et sans mot de passe (à ne pas diffuser en dehors du club).</p>`
     : '<p class="petit">Aucune page publiée pour le moment : lance une mise à jour.</p>';
   document.querySelectorAll("[data-telecharger]").forEach((b) => b.addEventListener("click", () => telecharger([b])));
+  document.querySelectorAll("[data-ouvrir]").forEach((a) => a.addEventListener("click", () =>
+    evenement("ouverture", a.dataset.ouvrir, `Ouverture · ${E.pages[a.dataset.ouvrir]?.titre || a.dataset.ouvrir}`)));
   document.getElementById("tout-telecharger")?.addEventListener("click", (ev) => {
+    compter(`${ICI}/tout-telecharger`, "Tout télécharger", true);
     ev.target.disabled = true;
     telecharger([...document.querySelectorAll("[data-telecharger]")]);
   });
@@ -220,6 +237,7 @@ async function telecharger(boutons) {
       }
       ecrire(CLE, b64(cle));
       enregistrer(contenu, b.dataset.nom);
+      evenement("telechargement", b.dataset.nom, `Téléchargement · ${b.dataset.nom}`);
       await new Promise((ok) => setTimeout(ok, 700));  // le navigateur enchaîne mieux les téléchargements
     }
   } catch (e) {
@@ -274,6 +292,7 @@ async function voir(bouton) {
     document.getElementById("partager-image").style.display =
       navigator.canShare && navigator.canShare({ files: [fichier] }) ? "" : "none";
     document.getElementById("visionneuse").classList.add("ouverte");
+    evenement("image", bouton.dataset.nom, `Image vue · ${bouton.dataset.nom}`);
   } catch (e) {
     alert("Image impossible à afficher : " + e.message);
   } finally {
@@ -281,11 +300,18 @@ async function voir(bouton) {
   }
 }
 document.getElementById("fermer-image").addEventListener("click", () => document.getElementById("visionneuse").classList.remove("ouverte"));
-document.getElementById("telecharger-image").addEventListener("click", () => imageOuverte && enregistrer(imageOuverte.blob, imageOuverte.nom));
+document.getElementById("telecharger-image").addEventListener("click", () => {
+  if (!imageOuverte) return;
+  enregistrer(imageOuverte.blob, imageOuverte.nom);
+  evenement("telechargement", imageOuverte.nom, `Téléchargement · ${imageOuverte.nom}`);
+});
 document.getElementById("partager-image").addEventListener("click", async () => {
   if (!imageOuverte) return;
-  try { await navigator.share({ files: [new File([imageOuverte.blob], imageOuverte.nom, { type: "image/png" })] }); }
-  catch (e) { /* partage annulé */ }
+  const { blob, nom } = imageOuverte;
+  try {
+    await navigator.share({ files: [new File([blob], nom, { type: "image/png" })] });
+    evenement("partage", nom, `Partage · ${nom}`);
+  } catch (e) { /* partage annulé */ }
 });
 
 /* ---------- Mise à jour depuis le téléphone (API GitHub) ---------- */
@@ -301,6 +327,7 @@ async function lancer() {
   if (!lire(JETON)) { document.getElementById("reglage").open = true; statut('<span class="etat att">Fais d\'abord le réglage ci-dessous.</span>'); return; }
   const bouton = document.getElementById("lancer");
   bouton.disabled = true;
+  compter(`${ICI}/mise-a-jour`, "Mise à jour lancée", true);
   const depuis = Date.now();
   try {
     await github(`/repos/${E.depot}/actions/workflows/${E.workflow}/dispatches`, { method: "POST",
@@ -403,6 +430,7 @@ afficherImages();
 afficherArchives();
 afficherJeton();
 reprendreSuivi();
+compter(`/${ICI === "site" ? "" : ICI + "/"}`, E.archive ? `Archive · ${E.archive.titre}` : "Accueil");
 </script>
 </body>
 </html>

@@ -199,3 +199,21 @@ def test_archive_refaite_si_surnoms_photo_ou_logos_changent(tmp_path, monkeypatc
     (imports / "photo_J2.jpg").write_bytes(b"photo de la J2")
     assert signature("secret", 2, imports) != avec_surnom
     assert signature("autre mot de passe", 2, imports) != signature("secret", 2, imports)
+
+
+def test_compteur_de_visites_seulement_s_il_est_regle(tmp_path):
+    _crypto()
+    site = _site(tmp_path)
+    sans = netlify.construire(site, tmp_path / "sans", "secret", "mdp-gg", "mdp-club")
+    assert not [f for f in sans.rglob("*.html") if "goatcounter.com" in f.read_text(encoding="utf-8")]
+    avec = netlify.construire(site, tmp_path / "avec", "secret", "mdp-gg", "mdp-club", "cvtt-vaires")
+    accueil = (avec / "index.html").read_text(encoding="utf-8")
+    assert 'data-goatcounter="https://cvtt-vaires.goatcounter.com/count"' in accueil
+    assert f'integrity="{netlify.GOATCOUNTER_SRI}"' in accueil and "no_onload" not in accueil  # une vue par chargement
+    for page in (avec / "club" / "index.html", avec / "gg" / "index.html"):
+        texte = page.read_text(encoding="utf-8")
+        assert '"no_onload": true' in texte and "function compter(" in texte  # la page compte elle-même
+    assert "goatcounter.com" not in (avec / "gg" / "resultats.html").read_text(encoding="utf-8")
+    # Seul le code du compte est accepté (pas une autre adresse)
+    assert netlify.code_goatcounter("https://CVTT-Vaires.goatcounter.com/count") == "cvtt-vaires"
+    assert netlify.code_goatcounter("https://exemple.com/x") == "" and netlify.code_goatcounter("") == ""
