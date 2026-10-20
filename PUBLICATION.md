@@ -92,6 +92,27 @@ Sans données du PC (lien pas encore réglé), la mise à jour en ligne fonction
 sans pingpocket ni dossier `import` : effectifs limités aux joueurs alignés en championnat, sans
 meilleurs classements (les pages le signalent). D'où l'option 7.
 
+## Surnoms du récapitulatif sans le PC (secret SURNOMS)
+
+Le fichier `import\surnoms.txt` n'existe que sur le PC (il part en ligne avec les autres données
+du PC, une fois envoyé il y reste). Pour une mise à jour lancée depuis le site, sans passer par le
+PC, les mêmes lignes peuvent être mises dans un secret GitHub :
+
+1. Sur github.com (le navigateur du téléphone convient) : dépôt → *Settings* → *Secrets and
+   variables* → *Actions* → *New repository secret*.
+2. *Name* : `SURNOMS` ; *Secret* : une ligne par joueur, `NOM Prénom = nom affiché`, par exemple
+
+       GUITTON Marc = Marc G
+       LE CERF Christian = Christian LC
+
+   (sur une seule ligne, séparer par des `;` convient aussi). Majuscules et accents indifférents.
+3. *Add secret*. Pour le modifier : *Update* sur le secret, et recopier **toute** la liste
+   (GitHub ne la ré-affiche pas : la garder dans une note).
+
+C'est un secret plutôt qu'une variable parce que les journaux des mises à jour sont publics : un
+secret n'y apparaît jamais. Il l'emporte sur `surnoms.txt` pour un même joueur. Les archives des
+journées passées sont refaites à la mise à jour suivante pour en tenir compte.
+
 ## Copie de secours sur Netlify (ggping.netlify.app)
 
 À chaque mise à jour du site GitHub (lancée du PC, du téléphone ou automatique), une copie part
@@ -137,7 +158,8 @@ J4 a commencé. Une archive contient les pages, l'Excel et les images **telles q
 veille de la journée suivante** (résultats, feuilles de match, classement virtuel, brûlages et
 prochaine journée de ce jour-là) : elle est refaite à cette date, puis publiée une fois pour toutes
 (étape « Archives des journées passées » du workflow). Les archives qui manquent, par exemple J1 et
-J2 à la mise en place, sont reconstruites de la même façon.
+J2 à la mise en place, sont reconstruites de la même façon. Une archive est aussi refaite quand son
+récapitulatif changerait : surnoms modifiés, photo de la journée ou logos ajoutés après coup.
 
 - Site GitHub et /gg/ : section « Archives des journées passées » en bas de l'accueil ; chaque
   archive est un petit site (même mot de passe), avec un lien « ← Journée en cours ».

@@ -59,7 +59,9 @@ Pour que l'outil la complète tout seul, dépose dans CE dossier :
       GUITTON Marc = Marc G
       LE CERF Christian = Christian LC
   Sans surnom : le prénom, suivi des initiales du nom si deux joueurs de l'image
-  ont le même prénom (Jérôme D, Jérôme L).
+  ont le même prénom (Jérôme D, Jérôme L). Mise à jour lancée depuis le site sans
+  passer par le PC : mettre les mêmes lignes dans le secret GitHub SURNOMS (voir
+  PUBLICATION.md).
 
 Puis option 9 (30 secondes, sans rien télécharger) : l'image est refaite avec la
 photo. Ces fichiers sont envoyés au site avec les autres (chiffrés ; une grosse

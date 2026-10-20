@@ -74,6 +74,7 @@ jobs:
       - name: Récupération des données
         env:
           CHOIX: ${{ inputs.pages || 'tout' }}
+          SURNOMS: ${{ secrets.SURNOMS }}  # noms affichés sur le récapitulatif (facultatif, voir PUBLICATION.md)
         run: |
           case "$CHOIX" in
             tout) ARGS="--resultats --effectif --virtuel --adversaires" ;;
@@ -102,6 +103,7 @@ jobs:
         continue-on-error: true  # une archive ratée est refaite la fois suivante ; le site est publié quand même
         env:
           MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
+          SURNOMS: ${{ secrets.SURNOMS }}
         run: python -m ttvaires.archives --pingpocket-cache
 
       - uses: actions/upload-pages-artifact@v3

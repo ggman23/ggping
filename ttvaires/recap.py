@@ -9,7 +9,8 @@ et logo_droite.png ; sinon la place reste libre pour la coller soi-même.
 
 Les noms : le prénom, suivi des initiales du nom quand deux joueurs de l'image ont le même prénom
 (« Jérôme D », « Jérôme L »). Le fichier import/surnoms.txt peut imposer un nom affiché, une
-ligne par joueur : « GUITTON Marc = Marc G ».
+ligne par joueur : « GUITTON Marc = Marc G ». Pour la mise à jour lancée depuis le site, les mêmes
+lignes peuvent aussi être mises dans le secret GitHub SURNOMS (il l'emporte sur le fichier).
 
 Le modèle a été fait avec Excalidraw : mêmes polices (fournies avec l'outil, licence SIL OFL),
 Lilita One pour les titres et Excalifont pour l'écriture à la main, et mêmes couleurs (palette
@@ -17,6 +18,7 @@ d'Excalidraw). Image de 1280 points de large, dessinée en double résolution.
 """
 
 import math
+import os
 import re
 import unicodedata
 from collections import defaultdict
@@ -75,18 +77,26 @@ def _cle(texte):
     return " ".join("".join(c for c in t if not unicodedata.combining(c)).upper().split())
 
 
+def _surnoms(texte):
+    """« NOM Prénom = nom affiché », une ligne par joueur (ou séparés par des « ; »), # pour un commentaire."""
+    surnoms = {}
+    for ligne in re.split(r"[\r\n;]+", texte or ""):
+        ligne = ligne.split("#", 1)[0]
+        if "=" in ligne:
+            qui, affiche = (x.strip() for x in ligne.split("=", 1))
+            if qui and affiche:
+                surnoms[_cle(qui)] = affiche
+    return surnoms
+
+
 def lire_surnoms(dossier_import):
-    """import/surnoms.txt : « NOM Prénom = nom affiché », une ligne par joueur (# pour un commentaire)."""
+    """import/surnoms.txt, complété par le secret GitHub SURNOMS (variable d'environnement), qui
+    l'emporte : la mise à jour lancée depuis le site n'a pas le fichier si le PC ne l'a pas envoyé."""
     fichier = Path(dossier_import or ".") / "surnoms.txt"
     surnoms = {}
     if dossier_import and fichier.is_file():
-        for ligne in fichier.read_text(encoding="utf-8-sig", errors="replace").splitlines():
-            ligne = ligne.split("#", 1)[0]
-            if "=" in ligne:
-                qui, affiche = (x.strip() for x in ligne.split("=", 1))
-                if qui and affiche:
-                    surnoms[_cle(qui)] = affiche
-    return surnoms
+        surnoms = _surnoms(fichier.read_text(encoding="utf-8-sig", errors="replace"))
+    return {**surnoms, **_surnoms(os.environ.get("SURNOMS"))}
 
 
 def noms_affiches(joueurs, surnoms=None):
@@ -288,11 +298,25 @@ def _perfs_vertical(img, d):
     _asterisque(d, 1214, 451, 9.5)
 
 
+def _image_nommee(fichier, debut):
+    """photo_J1.jpg, photo_J1-equipe.png... pour la J1, mais pas photo_J10.jpg."""
+    return (fichier.suffix.lower() in EXTENSIONS_IMAGES
+            and re.fullmatch(re.escape(debut) + r"(\D.*)?", fichier.stem.lower()) is not None)
+
+
+def images_du_recap(dossier_import, journee):
+    """Fichiers du dossier import utilisés par le récapitulatif de la journée (photo, logos)."""
+    if not dossier_import or not Path(dossier_import).is_dir():
+        return []
+    return [f for f in sorted(Path(dossier_import).iterdir()) if f.is_file()
+            and any(_image_nommee(f, debut) for debut in (f"photo_j{journee}", *(f"logo_{c}" for c in LOGOS)))]
+
+
 def _image_du_dossier(dossier_import, debut):
     if not dossier_import or not Path(dossier_import).is_dir():
         return None
     for f in sorted(Path(dossier_import).iterdir()):
-        if f.is_file() and f.name.lower().startswith(debut) and f.suffix.lower() in EXTENSIONS_IMAGES:
+        if f.is_file() and _image_nommee(f, debut):
             try:
                 with Image.open(f) as im:
                     return ImageOps.exif_transpose(im).convert("RGBA")  # photo de téléphone : bien orientée

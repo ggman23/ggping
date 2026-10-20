@@ -5,7 +5,8 @@ Une archive est refaite avec la date de ce jour-là (résultats, feuilles de mat
 virtuel, brûlages, prochaine journée : tout s'arrête à cette date), puis publiée une fois pour
 toutes dans le site, chiffrée comme le reste : archives/<saison>-P<phase>-J<n>/ est un petit site
 complet (accueil, pages, Excel, images), repris à chaque mise à jour. Les archives qui manquent
-(par exemple J1 et J2 à la mise en place) sont reconstruites de la même façon.
+(par exemple J1 et J2 à la mise en place) sont reconstruites de la même façon, ainsi que celles
+dont le récapitulatif changerait : surnoms, photo de la journée ou logos ajoutés après coup.
 
 Lancé par le workflow GitHub après la publication du site :
   python -m ttvaires.archives --pingpocket-cache
@@ -13,6 +14,7 @@ Le mot de passe est lu dans la variable d'environnement MOT_DE_PASSE_SITE.
 """
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -22,7 +24,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from . import __main__ as programme
-from . import fftt, publier
+from . import fftt, publier, recap
 from .reseau import HEURE, Client
 
 RACINE = Path(__file__).resolve().parent.parent
@@ -50,6 +52,16 @@ def a_archiver(journees, aujourdhui):
             for j, _ in journees if j < derniere]
 
 
+def signature(mot_de_passe, journee, dossier_import=programme.IMPORT):
+    """Empreinte de ce qui change une archive sans changer les résultats : surnoms, photo de la
+    journée et logos du récapitulatif, mot de passe du site (chiffrement). Elle ne révèle rien."""
+    h = hashlib.sha256(mot_de_passe.encode())
+    h.update(json.dumps(sorted(recap.lire_surnoms(dossier_import).items())).encode())
+    for f in recap.images_du_recap(dossier_import, journee):
+        h.update(f.name.lower().encode() + b"\0" + f.read_bytes())
+    return h.hexdigest()[:20]
+
+
 def construire_manquantes(client, site, mot_de_passe, numero_club=programme.CLUB_VAIRES, travail=None, aujourdhui=None):
     """Construit et publie dans `site` les archives qui manquent. Renvoie leurs clés."""
     aujourdhui = aujourdhui or date.today()
@@ -60,9 +72,12 @@ def construire_manquantes(client, site, mot_de_passe, numero_club=programme.CLUB
     nouvelles = []
     for j, veille in a_archiver(journees_de_la_phase(client, numero_club, aujourdhui), aujourdhui):
         cle = f"{saison}-P{phase}-J{j}"
-        if cle in archives and all((site / f).exists() for f in archives[cle].get("fichiers", [])):
+        empreinte = signature(mot_de_passe, j)
+        deja = archives.get(cle)
+        if deja and deja.get("signature") == empreinte and all((site / f).exists() for f in deja.get("fichiers", [])):
             continue  # déjà publiée (si un fichier manque, elle est refaite)
-        print(f"\n=== Archive de la J{j} : pages et images telles qu'au {veille:%d/%m/%Y} (veille de la J{j + 1})", flush=True)
+        print(f"\n=== Archive de la J{j} : pages et images telles qu'au {veille:%d/%m/%Y} (veille de la J{j + 1})"
+              + (" - refaite : surnoms, photo ou logos changés" if deja and deja.get("signature") != empreinte else ""), flush=True)
         sortie = travail / cle
         if sortie.exists():
             shutil.rmtree(sortie)
@@ -83,6 +98,7 @@ def construire_manquantes(client, site, mot_de_passe, numero_club=programme.CLUB
             print(f"  ! archive de la J{j} non publiée ({e}) : nouvel essai à la prochaine mise à jour")
             continue
         archives[cle] = {**infos, "dossier": f"archives/{cle}/", "cree_le": datetime.now().isoformat(timespec="minutes"),
+                         "signature": empreinte,
                          "fichiers": sorted(f"archives/{cle}/{f.relative_to(dossier).as_posix()}"
                                             for f in dossier.rglob("*") if f.is_file())}
         nouvelles.append(cle)

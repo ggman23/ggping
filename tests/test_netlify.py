@@ -182,3 +182,20 @@ def test_journees_a_archiver():
     # la J4 a commencé : la J3 passe en archive, datée de la veille de la J4
     assert a_archiver(journees, date(2026, 11, 6))[-1] == (3, date(2026, 11, 5))
     assert a_archiver(journees, date(2026, 9, 1)) == []
+
+
+def test_archive_refaite_si_surnoms_photo_ou_logos_changent(tmp_path, monkeypatch):
+    from ttvaires.archives import signature
+    monkeypatch.delenv("SURNOMS", raising=False)
+    imports = tmp_path / "import"
+    imports.mkdir()
+    avant = signature("secret", 2, imports)
+    assert signature("secret", 2, imports) == avant
+    (imports / "photo_J3.jpg").write_bytes(b"photo d'une autre journee")
+    assert signature("secret", 2, imports) == avant
+    monkeypatch.setenv("SURNOMS", "GUITTON Marc = Marc G")
+    avec_surnom = signature("secret", 2, imports)
+    assert avec_surnom != avant and "Marc" not in avec_surnom
+    (imports / "photo_J2.jpg").write_bytes(b"photo de la J2")
+    assert signature("secret", 2, imports) != avec_surnom
+    assert signature("autre mot de passe", 2, imports) != signature("secret", 2, imports)
