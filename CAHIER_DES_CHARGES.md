@@ -279,6 +279,11 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
   (événements appareils/<période>, appareils/<espace>/<période>, appareils/nouveaux), grâce à un
   mémo local de dates, sans identifiant. Pas d'adresse IP. Sans cookie ; noms de fichiers seulement ;
   script count.v5.js figé et vérifié (integrity SRI). Site GitHub jamais compté.
+- Crédits Netlify (gratuit : 300/mois, 15 par mise en ligne) : la copie n'est envoyée que si son
+  contenu a changé. Empreinte (HMAC avec la clé du site, publiée dans signature.txt) des pages
+  déchiffrées sans genere_le, des bilans, des noms de fichiers, des archives, des surnoms et images
+  du dossier import, du code de l'outil et des réglages ; identique à celle en ligne : pas d'envoi.
+  Option du workflow « forcer_netlify » pour envoyer quand même.
 - Umami Cloud en plus (identifiant du site dans le workflow, variable UMAMI pour le changer) : mêmes
   pages vues et actions (événements nommés par l'action, détail espace et fichier), visiteurs,
   temps passé, parcours, retour des visiteurs, vitesse de l'accueil. Script servi par le site (copie

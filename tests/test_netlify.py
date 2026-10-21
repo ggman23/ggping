@@ -234,3 +234,46 @@ def test_compteur_de_visites_seulement_s_il_est_regle(tmp_path):
     # Seul le code du compte est accepté (pas une autre adresse)
     assert netlify.code_goatcounter("https://CVTT-Vaires.goatcounter.com/count") == "cvtt-vaires"
     assert netlify.code_goatcounter("https://exemple.com/x") == "" and netlify.code_goatcounter("") == ""
+
+
+def test_copie_identique_pas_renvoyee(tmp_path, monkeypatch):
+    """15 crédits Netlify par envoi : une mise à jour sans rien de nouveau (seule la date de
+    génération change) ne renvoie pas la copie ; un résultat nouveau, si."""
+    _crypto()
+    monkeypatch.delenv("SURNOMS", raising=False)
+
+    def site_avec(resultat, genere_le, dossier):
+        sortie, site = tmp_path / f"sortie_{dossier}", tmp_path / dossier
+        sortie.mkdir()
+        (sortie / "resultats_vaires.html").write_text(
+            f'<script id="donnees">{{"genere_le": "{genere_le}", "score": "{resultat}"}}</script>', encoding="utf-8")
+        (sortie / "bilan.json").write_text(json.dumps({"debut": genere_le, "fin": genere_le, "pages": [
+            {"nom": "résultats", "resume": "ok", "fichiers": ["resultats_vaires.html"]}]}))
+        publier.publier(sortie, site, "secret")
+        return netlify.signature_contenu(site, "secret", ("mdp-gg", "mdp-club", "", ""))
+
+    lundi = site_avec("19-23", "2026-10-19T08:07", "lundi")
+    assert site_avec("19-23", "2026-10-20T08:07", "mardi") == lundi                 # seule la date change
+    assert site_avec("20-22", "2026-10-20T08:07", "corrige") != lundi              # un résultat change
+    site = tmp_path / "lundi"
+    assert netlify.signature_contenu(site, "secret", ("autre-mdp-gg", "mdp-club", "", "")) != lundi  # réglage changé
+    assert "19-23" not in lundi and len(lundi) == 64                               # publiée sans rien révéler
+
+    envois = []
+    monkeypatch.setattr(netlify, "deployer", lambda dossier, jeton, nom: envois.append(dossier) or "https://ggping.netlify.app")
+    monkeypatch.setattr("sys.argv", ["netlify", "--site", str(site), "--dossier", str(tmp_path / "netlify")])
+    for nom, valeur in {"NETLIFY_AUTH_TOKEN": "jeton", "MOT_DE_PASSE_SITE": "secret", "MOT_DE_PASSE_GG": "mdp-gg",
+                        "MOT_DE_PASSE_CLUB": "mdp-club"}.items():
+        monkeypatch.setenv(nom, valeur)
+    for nom in ("GOATCOUNTER", "UMAMI", "FORCER_NETLIFY", "NETLIFY_SITE"):
+        monkeypatch.delenv(nom, raising=False)
+    monkeypatch.setattr(netlify, "signature_en_ligne", lambda nom: lundi)
+    netlify.main()
+    assert envois == []                                                            # identique : rien n'est envoyé
+    monkeypatch.setenv("FORCER_NETLIFY", "true")
+    netlify.main()
+    assert len(envois) == 1 and (envois[0] / netlify.SIGNATURE).read_text().strip() == lundi
+    monkeypatch.delenv("FORCER_NETLIFY")
+    monkeypatch.setattr(netlify, "signature_en_ligne", lambda nom: None)           # copie en ligne illisible
+    netlify.main()
+    assert len(envois) == 2

@@ -151,6 +151,22 @@ Sans le secret, l'étape ne fait rien. Si Netlify refuse l'envoi, un avertisseme
 journal de la mise à jour, mais le site GitHub est publié quand même. La copie part même si GitHub
 Pages est en panne, dès que le site est prêt.
 
+### Crédits Netlify (offre gratuite : 300 par mois)
+
+Netlify décompte **15 crédits par mise en ligne**, quelle que soit sa taille : 300 crédits font
+20 envois par mois. La taille du site compte peu (le trafic : 20 crédits par Go servi aux visiteurs,
+soit environ 1 crédit pour 50 Mo). Les crédits repartent à zéro à chaque cycle (le 6 du mois pour ce
+compte). Crédits épuisés : le site reste visible, mais plus aucune mise à jour n'y part jusqu'au
+cycle suivant.
+
+Pour économiser : **une copie identique à celle en ligne n'est pas renvoyée**. L'outil calcule une
+empreinte de ce que montre la copie (pages sans leur date de génération, bilans, archives, surnoms et
+photos, code de l'outil, réglages) et la compare à celle de la copie en ligne (`signature.txt`,
+chiffrée). Sans résultat nouveau, le journal affiche « rien de nouveau depuis la copie en ligne : pas
+d'envoi » et rien n'est décompté : les mises à jour automatiques entre deux journées ne coûtent rien.
+Le site GitHub, lui, est toujours mis à jour (gratuit). Pour forcer l'envoi : *Actions* → *Mise à
+jour du site* → *Run workflow* → cocher « Envoyer la copie Netlify même si rien n'a changé ».
+
 ## Statistiques de visite (GoatCounter, facultatif)
 
 Pour savoir ce que font les membres du club sur la copie Netlify : nombre de pages vues et de

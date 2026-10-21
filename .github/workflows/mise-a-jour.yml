@@ -15,6 +15,10 @@ on:
         type: choice
         options: [tout, resultats, effectif, virtuel, adversaires]
         default: tout
+      forcer_netlify:
+        description: Envoyer la copie Netlify même si rien n'a changé (15 crédits Netlify)
+        type: boolean
+        default: false
   schedule:
     # Lendemains de journée (vendredi masculin, samedi féminin) : samedi, dimanche, lundi et
     # mardi vers 8 h, heure de Paris (6 h 07 UTC).
@@ -129,6 +133,9 @@ jobs:
           MOT_DE_PASSE_CLUB: ${{ secrets.MOT_DE_PASSE_CLUB }}
           # Statistiques de visite (facultatif, voir PUBLICATION.md) : variable GOATCOUNTER, ou secret du même nom
           GOATCOUNTER: ${{ vars.GOATCOUNTER || secrets.GOATCOUNTER }}
+          SURNOMS: ${{ secrets.SURNOMS }}  # dans l'empreinte du contenu : un surnom changé refait la copie
+          # Une copie identique à celle en ligne n'est pas renvoyée (15 crédits Netlify par envoi), sauf si on force
+          FORCER_NETLIFY: ${{ inputs.forcer_netlify }}
           # Umami Cloud : identifiant du site (public : il figure dans les pages) ; une variable UMAMI le remplace
           UMAMI: ${{ vars.UMAMI || secrets.UMAMI || '23cfef06-9803-4df0-b7e7-6631a2490f82' }}
         run: python -m ttvaires.netlify

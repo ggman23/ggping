@@ -314,6 +314,51 @@ def construire(site, dossier, mot_de_passe, mot_de_passe_gg, mot_de_passe_club="
     return dossier
 
 
+# Empreinte du contenu publié, sans les dates de génération : une copie identique n'est pas renvoyée.
+# Netlify (offre gratuite) décompte 15 crédits par mise en ligne, quel que soit ce qui a changé ;
+# les mises à jour automatiques sans résultat nouveau ne coûtent donc plus rien.
+SIGNATURE = "signature.txt"
+GENERE_LE = re.compile(r'"genere_le": "[^"]*"')
+
+
+def signature_contenu(site, mot_de_passe, reglages=()):
+    """Empreinte de ce que montre la copie Netlify : pages déchiffrées (sans leur date de génération),
+    bilans des vérifications, noms des fichiers, archives, surnoms et images du dossier import, code
+    de l'outil et réglages (mots de passe, compteurs). Deux mises à jour sans rien de nouveau donnent
+    la même empreinte. Les images et l'Excel ne sont pas lus : ils découlent des mêmes données."""
+    h = hashlib.sha256()
+    cle_site = publier.cle(mot_de_passe)
+    etat = json.loads((site / "etat.json").read_text(encoding="utf-8"))
+    for nom in etat.get("fichiers", []):
+        h.update(nom.encode("utf-8") + b"\0")
+    for nom, page in sorted(etat.get("pages", {}).items()):
+        h.update(f"{nom}\0{page.get('verification', '')}\0".encode("utf-8"))
+        m = CHIFFRE.search((site / nom).read_text(encoding="utf-8")) if nom.endswith(".html") and (site / nom).exists() else None
+        if m:
+            h.update(GENERE_LE.sub("", publier.dechiffrer(base64.b64decode(m[1]), cle_site).decode("utf-8")).encode("utf-8"))
+    archives = {cle: a.get("signature") or a.get("cree_le") for cle, a in etat.get("archives", {}).items()}
+    h.update(json.dumps(archives, sort_keys=True).encode("utf-8"))
+    h.update(os.environ.get("SURNOMS", "").encode("utf-8"))
+    for dossier, garder in ((RACINE / "import", lambda f: f.name.lower().startswith(("photo_", "logo_", "surnoms"))),
+                            (Path(__file__).parent, lambda f: "__pycache__" not in f.parts)):
+        for f in sorted(dossier.rglob("*")) if dossier.is_dir() else []:
+            if f.is_file() and garder(f):
+                h.update(f.name.encode("utf-8") + b"\0" + f.read_bytes())
+    for r in reglages:
+        h.update(hashlib.sha256((r or "").encode("utf-8")).digest())
+    # Publiée sur le site : chiffrée avec la clé du site (rien ne se devine à partir d'elle)
+    return hmac.new(cle_site, h.digest(), hashlib.sha256).hexdigest()
+
+
+def signature_en_ligne(site_netlify):
+    """Empreinte de la copie actuellement en ligne ; None si on ne peut pas la lire."""
+    try:
+        r = requests.get(f"https://{site_netlify}/{SIGNATURE}", params={"t": int(time.time())}, timeout=30)
+        return r.text.strip() if r.ok else None
+    except requests.RequestException:
+        return None
+
+
 def deployer(dossier, jeton, site=SITE_PAR_DEFAUT, attente=180):
     """Envoie le site sur Netlify par empreintes : Netlify ne demande que les fichiers qu'il n'a pas
     déjà (les archives, qui ne changent plus, ne repartent pas à chaque fois). Attend qu'il soit en
@@ -371,9 +416,18 @@ def main():
     umami = code_umami(os.environ.get("UMAMI", ""))
     if os.environ.get("UMAMI", "").strip() and not umami:
         print("::warning::Variable UMAMI illisible (attendu : l'identifiant du site, data-website-id) : pas de statistiques Umami.")
+    mot_de_passe = os.environ.get("MOT_DE_PASSE_SITE", "")
     try:
-        dossier = construire(Path(args.site), Path(args.dossier), os.environ.get("MOT_DE_PASSE_SITE", ""),
+        dossier = construire(Path(args.site), Path(args.dossier), mot_de_passe,
                              mot_de_passe_gg, mot_de_passe_club, goatcounter, umami)
+        signature = signature_contenu(Path(args.site), mot_de_passe,
+                                      (mot_de_passe_gg, mot_de_passe_club, goatcounter, umami))
+        forcer = os.environ.get("FORCER_NETLIFY", "").lower() in ("1", "true", "oui")
+        if not forcer and signature_en_ligne(nom) == signature:
+            print("Netlify : rien de nouveau depuis la copie en ligne (mêmes résultats, mêmes pages) : "
+                  "pas d'envoi, 15 crédits Netlify économisés.")
+            return
+        (dossier / SIGNATURE).write_text(signature + "\n", encoding="utf-8")
         adresse = deployer(dossier, jeton, nom)
     except (ErreurNetlify, requests.RequestException, ValueError) as e:
         # Le site GitHub est déjà publié : la copie Netlify en échec est signalée sans tout faire échouer.
