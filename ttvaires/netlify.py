@@ -57,6 +57,9 @@ GOATCOUNTER_SRI = "sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6Em
 # Umami : copie figée de son script, servie par le site (stats/umami.js), qui envoie à Umami Cloud.
 UMAMI_JS = Path(__file__).with_name("umami.js")
 UMAMI_PUBLIE = "stats/umami.js"
+# Envoi direct à Umami Cloud : par son relais (gateway.umami.is, réglage par défaut du script), tous
+# les visiteurs apparaissaient aux États-Unis (pays du relais et non du visiteur).
+UMAMI_HOTE = "https://cloud.umami.is"
 ORDRE_CLUB = ["vaires.html", "resultats_vaires.html", "resultats_vaires.xlsx", "rencontres_vaires.html",
               "classements_vaires.html", "effectif_vaires.html", "classement_virtuel.html"]
 
@@ -268,7 +271,7 @@ def avec_compteurs(html, goatcounter="", umami="", manuel=False):
     if umami:
         reglages = ' data-auto-track="false"' if manuel else ' data-performance="true"'
         balises.append(f'<script defer src="/{UMAMI_PUBLIE}" data-website-id="{umami}"{reglages} data-exclude-search="true"'
-                       """ onload="window.compteurPret && compteurPret('umami')"></script>""")
+                       f' data-host-url="{UMAMI_HOTE}" onload="window.compteurPret && compteurPret(\'umami\')"></script>')
     script = "<script>\n" + "\n".join(js) + "\n</script>\n" + "".join(b + "\n" for b in balises)
     return html.replace("</head>", script + "</head>", 1)
 

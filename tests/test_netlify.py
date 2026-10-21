@@ -223,6 +223,7 @@ def test_compteur_de_visites_seulement_s_il_est_regle(tmp_path):
     accueil, club = ((deux / f).read_text(encoding="utf-8") for f in ("index.html", "club/index.html"))
     assert f'src="/stats/umami.js" data-website-id="{uuid}" data-performance="true"' in accueil
     assert f'data-website-id="{uuid}" data-auto-track="false"' in club and 'const ACTIFS = ["goatcounter", "umami"]' in club
+    assert 'data-host-url="https://cloud.umami.is"' in club  # envoi direct, pas par le relais
     seul = netlify.construire(site, tmp_path / "seul", "secret", "", "mdp-club", "", uuid)
     club = (seul / "club" / "index.html").read_text(encoding="utf-8")
     assert 'const ACTIFS = ["umami"]' in club and "goatcounter.com" not in club
