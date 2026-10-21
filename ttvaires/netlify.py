@@ -195,6 +195,8 @@ COMPTEURS_JS = """(() => {
       window.umami.track(morceaux[i], { espace: morceaux.slice(0, i).join("/") || "accueil", ...(fichier && { fichier }) });
     },
   };
+  // Navigateur piloté par un programme (robot) : Umami ne sait pas l'écarter lui-même (GoatCounter le signale)
+  window.umamiAvantEnvoi = (type, mesure) => (navigator.webdriver ? null : mesure);
   const etat = Object.fromEntries(ACTIFS.map((nom) => [nom, { pret: false, attente: [] }]));
   const envoyer = (nom, args) => { try { ENVOIS[nom](...args); } catch (e) { /* compteur indisponible */ } };
   window.compteur = (chemin, titre, evenement = false) => ACTIFS.forEach((nom) =>
@@ -271,7 +273,8 @@ def avec_compteurs(html, goatcounter="", umami="", manuel=False):
     if umami:
         reglages = ' data-auto-track="false"' if manuel else ' data-performance="true"'
         balises.append(f'<script defer src="/{UMAMI_PUBLIE}" data-website-id="{umami}"{reglages} data-exclude-search="true"'
-                       f' data-host-url="{UMAMI_HOTE}" onload="window.compteurPret && compteurPret(\'umami\')"></script>')
+                       f' data-host-url="{UMAMI_HOTE}" data-before-send="umamiAvantEnvoi"'
+                       ' onload="window.compteurPret && compteurPret(\'umami\')"></script>')
     script = "<script>\n" + "\n".join(js) + "\n</script>\n" + "".join(b + "\n" for b in balises)
     return html.replace("</head>", script + "</head>", 1)
 
