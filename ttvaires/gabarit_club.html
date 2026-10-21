@@ -191,16 +191,11 @@ const cacheClair = new Map();  // id -> Blob déchiffré
 let courant = null, urlCourante = null, retourVers = "";
 
 /* ---------- Statistiques de visite ----------
-   Seulement si la copie Netlify a un compteur GoatCounter (variable GOATCOUNTER) : sinon rien.
-   Pages vues : l'accueil, chaque document et chaque archive ouverts (/club/<fichier>) ; événements :
-   connexion, téléchargement, partage, tout télécharger. Jamais de nom de joueur : des noms de fichiers. */
-const enAttente = [];
-function compter(chemin, titre, evenement = false) {
-  const gc = window.goatcounter;
-  if (gc && gc.count) gc.count({ path: chemin, title: titre, event: evenement });
-  else if (document.querySelector("script[data-goatcounter]")) enAttente.push([chemin, titre, evenement]);
-}
-window.compteurPret = () => enAttente.splice(0).forEach((a) => compter(...a));
+   Seulement si la copie Netlify a des compteurs (GoatCounter, Umami : window.compteur, voir
+   netlify.py) : sinon rien. Pages vues : l'accueil, chaque document et chaque archive ouverts
+   (/club/<fichier>) ; événements : connexion, téléchargement, partage, tout télécharger. Jamais de
+   nom de joueur : des noms de fichiers. */
+const compter = (chemin, titre, evenement = false) => window.compteur && window.compteur(chemin, titre, evenement);
 const nomCompte = (d) => d.archive ? `${d.archive.cle}/${d.fichier}` : d.fichier;
 const titreCompte = (d) => d.archive ? `${d.archive.titre} · ${d.titre}` : d.titre;
 

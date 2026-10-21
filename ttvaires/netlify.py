@@ -11,17 +11,18 @@
   pas publié.
 
 Statistiques de visite (facultatif) : avec la variable GOATCOUNTER (le code d'un compte gratuit
-goatcounter.com), l'accueil public, /club/ et /gg/ comptent les pages vues, les visites et, dans
-/club/ et /gg/, les documents ouverts, téléchargés et partagés. GoatCounter ne pose pas de cookie
-et ne reçoit aucun nom de joueur (seulement des noms de fichiers : resultats_vaires.xlsx...).
-Le site GitHub, lui, n'est jamais compté.
+goatcounter.com) et/ou UMAMI (l'identifiant d'un site Umami Cloud), l'accueil public, /club/ et /gg/
+comptent les pages vues, les visiteurs et, dans /club/ et /gg/, les documents ouverts, téléchargés
+et partagés. Ni GoatCounter ni Umami ne posent de cookie, et ils ne reçoivent aucun nom de joueur
+(seulement des noms de fichiers : resultats_vaires.xlsx...). Umami donne en plus le temps passé,
+les parcours et le retour des visiteurs. Le site GitHub, lui, n'est jamais compté.
 
 Lancé par le workflow GitHub après la publication du site (dossier site/ prêt), donc après chaque
 mise à jour, qu'elle vienne du PC (option 7) ou du téléphone :
   python -m ttvaires.netlify
 Variables d'environnement : NETLIFY_AUTH_TOKEN (jeton Netlify ; sans lui, rien n'est fait),
 NETLIFY_SITE (par défaut ggping.netlify.app), MOT_DE_PASSE_SITE (pour lire le site GitHub),
-MOT_DE_PASSE_GG (celui de /gg/), MOT_DE_PASSE_CLUB (celui de /club/), GOATCOUNTER (statistiques).
+MOT_DE_PASSE_GG (celui de /gg/), MOT_DE_PASSE_CLUB (celui de /club/), GOATCOUNTER et UMAMI (statistiques).
 """
 
 import argparse
@@ -53,6 +54,9 @@ VERIF_CLUB = b"cvtt-vaires-club"  # fichier témoin : sert à vérifier le mot d
 # changeait sur le serveur de GoatCounter, le navigateur refuserait de l'exécuter.
 GOATCOUNTER_JS = "https://gc.zgo.at/count.v5.js"
 GOATCOUNTER_SRI = "sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ"
+# Umami : copie figée de son script, servie par le site (stats/umami.js), qui envoie à Umami Cloud.
+UMAMI_JS = Path(__file__).with_name("umami.js")
+UMAMI_PUBLIE = "stats/umami.js"
 ORDRE_CLUB = ["vaires.html", "resultats_vaires.html", "resultats_vaires.xlsx", "rencontres_vaires.html",
               "classements_vaires.html", "effectif_vaires.html", "classement_virtuel.html"]
 
@@ -170,11 +174,53 @@ def code_goatcounter(valeur):
     return m[1] if m else ""
 
 
-# Visiteurs différents, sans cookie, sans adresse IP et sans identifiant : chaque appareil se signale
-# une seule fois par jour, par semaine et par mois (et la première fois qu'il vient), grâce à un
-# simple mémo dans son navigateur (dates des derniers signalements, rien d'autre). Événements
-# « appareils/jour », « appareils/semaine », « appareils/mois », « appareils/nouveaux », et les mêmes
-# par espace : « appareils/club/mois »... Un appareil = un téléphone ou un navigateur de PC.
+# Envoi aux compteurs configurés (GoatCounter, Umami) : window.compteur(chemin, titre, evenement),
+# appelé par l'espace club et les accueils de /gg/ ; ce qui arrive avant le chargement d'un compteur
+# attend. Pour Umami, un événement est nommé par son action (telechargement, partage...), avec
+# l'espace et le fichier en détail. « #toggle-goatcounter » coupe (ou rétablit) aussi Umami.
+COMPTEURS_JS = """(() => {
+  const ACTIFS = __ACTIFS__;
+  const ACTIONS = ["connexion", "connexion-refusee", "telechargement", "partage", "tout-telecharger", "ouverture",
+                   "image", "mise-a-jour"];
+  const ENVOIS = {
+    goatcounter: (chemin, titre, evenement) => window.goatcounter.count({ path: chemin, title: titre, event: evenement }),
+    umami: (chemin, titre, evenement) => {
+      if (!evenement) return window.umami.track((p) => ({ ...p, url: chemin, title: titre }));
+      const morceaux = chemin.split("/"), i = morceaux.findIndex((m) => ACTIONS.includes(m));
+      if (i < 0) return window.umami.track(chemin);
+      const fichier = morceaux.slice(i + 1).join("/");
+      window.umami.track(morceaux[i], { espace: morceaux.slice(0, i).join("/") || "accueil", ...(fichier && { fichier }) });
+    },
+  };
+  const etat = Object.fromEntries(ACTIFS.map((nom) => [nom, { pret: false, attente: [] }]));
+  const envoyer = (nom, args) => { try { ENVOIS[nom](...args); } catch (e) { /* compteur indisponible */ } };
+  window.compteur = (chemin, titre, evenement = false) => ACTIFS.forEach((nom) =>
+    etat[nom].pret ? envoyer(nom, [chemin, titre, evenement]) : etat[nom].attente.push([chemin, titre, evenement]));
+  window.compteurPret = (nom) => {
+    if (!etat[nom] || etat[nom].pret) return;
+    etat[nom].pret = true;
+    etat[nom].attente.splice(0).forEach((args) => envoyer(nom, args));
+    if (nom === "goatcounter" && window.compteurVisiteurs) window.compteurVisiteurs();
+  };
+  try {  // ses propres visites : #toggle-goatcounter (GoatCounter s'en occupe s'il est là)
+    let couper = localStorage.getItem("skipgc") === "t";
+    if (location.hash === "#toggle-goatcounter") {
+      couper = !couper;
+      if (!ACTIFS.includes("goatcounter")) {
+        couper ? localStorage.setItem("skipgc", "t") : localStorage.removeItem("skipgc");
+        alert(couper ? "Statistiques : cet appareil n'est plus compté." : "Statistiques : cet appareil est de nouveau compté.");
+      }
+    }
+    couper ? localStorage.setItem("umami.disabled", "1") : localStorage.removeItem("umami.disabled");
+  } catch (e) { /* navigation privée */ }
+})();"""
+
+# Visiteurs différents (GoatCounter), sans cookie, sans adresse IP et sans identifiant : chaque
+# appareil se signale une seule fois par jour, par semaine et par mois (et la première fois qu'il
+# vient), grâce à un simple mémo dans son navigateur (dates des derniers signalements, rien d'autre).
+# Événements « appareils/jour », « appareils/semaine », « appareils/mois », « appareils/nouveaux », et
+# les mêmes par espace : « appareils/club/mois »... Un appareil = un téléphone ou un navigateur de PC.
+# (Umami compte lui-même les visiteurs différents.)
 VISITEURS_JS = """window.compteurVisiteurs = function () {
   const gc = window.goatcounter;
   if (!gc || !gc.count) return;
@@ -198,33 +244,52 @@ VISITEURS_JS = """window.compteurVisiteurs = function () {
 };"""
 
 
-def avec_compteur(html, code, manuel=False):
-    """Ajoute le compteur de visites GoatCounter avant </head>. `manuel` : la page compte elle-même
-    ce qu'on y fait (fonction compter() de l'espace club et de l'accueil) ; sinon une page vue par
-    chargement. Le chemin compté ne garde pas le « ?v=... » des liens."""
-    if not code:
+def code_umami(valeur):
+    """Identifiant d'un site Umami (data-website-id, de la forme 23cfef06-9803-...) ; vide sinon."""
+    m = re.search(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", (valeur or "").strip().lower())
+    return m[0] if m else ""
+
+
+def avec_compteurs(html, goatcounter="", umami="", manuel=False):
+    """Ajoute les compteurs de visites configurés avant </head>. `manuel` : la page compte elle-même
+    ce qu'on y fait (compter() de l'espace club et des accueils) ; sinon une page vue par chargement.
+    Le chemin compté ne garde pas le « ?v=... » des liens."""
+    actifs = [nom for nom, code in (("goatcounter", goatcounter), ("umami", umami)) if code]
+    if not actifs:
         return html
-    reglages = """ data-goatcounter-settings='{"no_onload": true}'""" if manuel else ""
-    script = (f'<script>window.goatcounter = {{ path: (p) => p.split("?")[0] || "/" }};\n{VISITEURS_JS}</script>\n'
-              f'<script data-goatcounter="https://{code}.goatcounter.com/count"{reglages} async src="{GOATCOUNTER_JS}"'
-              f' integrity="{GOATCOUNTER_SRI}" crossorigin="anonymous"'
-              ' onload="window.compteurPret && compteurPret(); window.compteurVisiteurs && compteurVisiteurs()"></script>\n')
+    js = [COMPTEURS_JS.replace("__ACTIFS__", json.dumps(actifs))]
+    balises = []
+    if goatcounter:
+        js[:0] = ['window.goatcounter = { path: (p) => p.split("?")[0] || "/" };', VISITEURS_JS]
+        reglages = """ data-goatcounter-settings='{"no_onload": true}'""" if manuel else ""
+        balises.append(f'<script data-goatcounter="https://{goatcounter}.goatcounter.com/count"{reglages} async'
+                       f' src="{GOATCOUNTER_JS}" integrity="{GOATCOUNTER_SRI}" crossorigin="anonymous"'
+                       """ onload="window.compteurPret && compteurPret('goatcounter')"></script>""")
+    if umami:
+        reglages = ' data-auto-track="false"' if manuel else ' data-performance="true"'
+        balises.append(f'<script defer src="/{UMAMI_PUBLIE}" data-website-id="{umami}"{reglages} data-exclude-search="true"'
+                       """ onload="window.compteurPret && compteurPret('umami')"></script>""")
+    script = "<script>\n" + "\n".join(js) + "\n</script>\n" + "".join(b + "\n" for b in balises)
     return html.replace("</head>", script + "</head>", 1)
 
 
-def _ajouter_compteur(dossier, code):
+def _ajouter_compteurs(dossier, goatcounter, umami):
     """Accueil public (une page vue par visite), /club/ et chaque accueil de /gg/ (archives comprises),
-    qui comptent eux-mêmes les documents ouverts, téléchargés et partagés."""
+    qui comptent eux-mêmes les documents ouverts, téléchargés et partagés. Le script d'Umami est servi
+    par le site lui-même (copie figée)."""
+    if umami:
+        (dossier / UMAMI_PUBLIE).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(UMAMI_JS, dossier / UMAMI_PUBLIE)
     for page, manuel in [(dossier / "index.html", False), (dossier / "club" / "index.html", True),
                          *((f, True) for f in sorted((dossier / "gg").rglob("index.html")))]:
         if page.exists():
-            page.write_text(avec_compteur(page.read_text(encoding="utf-8"), code, manuel), encoding="utf-8")
+            page.write_text(avec_compteurs(page.read_text(encoding="utf-8"), goatcounter, umami, manuel), encoding="utf-8")
 
 
-def construire(site, dossier, mot_de_passe, mot_de_passe_gg, mot_de_passe_club="", goatcounter=""):
+def construire(site, dossier, mot_de_passe, mot_de_passe_gg, mot_de_passe_club="", goatcounter="", umami=""):
     """Prépare dans `dossier` le site Netlify : accueil public, club/ (espace club) et gg/ (copie
     re-chiffrée du site GitHub). Sans leur propre mot de passe, club/ et gg/ ne sont pas publiés
-    (jamais avec celui du site GitHub). `goatcounter` : code du compteur de visites (facultatif)."""
+    (jamais avec celui du site GitHub). `goatcounter`, `umami` : compteurs de visites (facultatifs)."""
     if dossier.exists():
         shutil.rmtree(dossier)
     dossier.mkdir(parents=True)
@@ -237,7 +302,7 @@ def construire(site, dossier, mot_de_passe, mot_de_passe_gg, mot_de_passe_club="
     (dossier / "robots.txt").write_text("User-agent: *\nDisallow: /\n", encoding="utf-8")
     # En-têtes Netlify : pas de référencement, et des pages toujours à jour (pas de vieille copie en cache)
     (dossier / "_headers").write_text("/*\n  X-Robots-Tag: noindex, nofollow\n  Cache-Control: no-cache\n", encoding="utf-8")
-    _ajouter_compteur(dossier, goatcounter)
+    _ajouter_compteurs(dossier, goatcounter, umami)
     return dossier
 
 
@@ -295,9 +360,12 @@ def main():
     goatcounter = code_goatcounter(os.environ.get("GOATCOUNTER", ""))
     if os.environ.get("GOATCOUNTER", "").strip() and not goatcounter:
         print("::warning::Variable GOATCOUNTER illisible (attendu : le code du compte, par exemple cvtt-vaires) : pas de statistiques.")
+    umami = code_umami(os.environ.get("UMAMI", ""))
+    if os.environ.get("UMAMI", "").strip() and not umami:
+        print("::warning::Variable UMAMI illisible (attendu : l'identifiant du site, data-website-id) : pas de statistiques Umami.")
     try:
         dossier = construire(Path(args.site), Path(args.dossier), os.environ.get("MOT_DE_PASSE_SITE", ""),
-                             mot_de_passe_gg, mot_de_passe_club, goatcounter)
+                             mot_de_passe_gg, mot_de_passe_club, goatcounter, umami)
         adresse = deployer(dossier, jeton, nom)
     except (ErreurNetlify, requests.RequestException, ValueError) as e:
         # Le site GitHub est déjà publié : la copie Netlify en échec est signalée sans tout faire échouer.
@@ -312,6 +380,8 @@ def main():
     else:
         print("Statistiques de visite : désactivées (pas de variable ni de secret GOATCOUNTER dans Settings > "
               "Secrets and variables > Actions).")
+    if umami:
+        print("Statistiques Umami : https://cloud.umami.is (site CVTT Vaires)")
 
 
 if __name__ == "__main__":

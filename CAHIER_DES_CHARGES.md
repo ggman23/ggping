@@ -279,6 +279,10 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
   (événements appareils/<période>, appareils/<espace>/<période>, appareils/nouveaux), grâce à un
   mémo local de dates, sans identifiant. Pas d'adresse IP. Sans cookie ; noms de fichiers seulement ;
   script count.v5.js figé et vérifié (integrity SRI). Site GitHub jamais compté.
+- Umami Cloud en plus (identifiant du site dans le workflow, variable UMAMI pour le changer) : mêmes
+  pages vues et actions (événements nommés par l'action, détail espace et fichier), visiteurs,
+  temps passé, parcours, retour des visiteurs, vitesse de l'accueil. Script servi par le site (copie
+  figée ttvaires/umami.js, licence MIT). #toggle-goatcounter coupe aussi Umami (umami.disabled).
 - Classements des poules (avec la page adversaires, mêmes données : classements calculés à partir
   des feuilles de match) : page `classements_vaires.html` (publiée sous classements.html) et image
   `classements_poules.png` sur le modèle proposé par le club : fond sombre, bandeau (logo du club,

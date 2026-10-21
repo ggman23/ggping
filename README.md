@@ -30,8 +30,8 @@ après chaque partie et le bilan de chaque joueur. Sur un téléphone, les manch
 partie ; des boutons filtrent une équipe.
 
 Sur la copie Netlify, des **statistiques de visite** (pages vues, visiteurs, documents ouverts,
-téléchargés, partagés) peuvent être activées avec un compte gratuit GoatCounter : voir
-PUBLICATION.md.
+téléchargés, partagés ; avec Umami : temps passé, parcours, retour des visiteurs) sont envoyées à
+GoatCounter et à Umami, gratuits et sans cookie : voir PUBLICATION.md.
 
 La page **Classements des poules** (`sortie\classements_vaires.html`, faite avec la page des
 adversaires) montre la poule de chaque équipe de Vaires (points, joués, victoires, nuls, défaites,

@@ -213,8 +213,21 @@ def test_compteur_de_visites_seulement_s_il_est_regle(tmp_path):
     assert "compteurVisiteurs()" in accueil and "appareils/" in accueil  # appareils différents, sans identifiant
     for page in (avec / "club" / "index.html", avec / "gg" / "index.html"):
         texte = page.read_text(encoding="utf-8")
-        assert '"no_onload": true' in texte and "function compter(" in texte  # la page compte elle-même
+        assert '"no_onload": true' in texte and "window.compteur(chemin" in texte  # la page compte elle-même
     assert "goatcounter.com" not in (avec / "gg" / "resultats.html").read_text(encoding="utf-8")
+    assert not (avec / "stats").exists() and "data-website-id" not in accueil
+    # Umami en plus : script servi par le site (copie figée), pages vues comptées par la page dans /club/
+    uuid = "23cfef06-9803-4df0-b7e7-6631a2490f82"
+    deux = netlify.construire(site, tmp_path / "deux", "secret", "mdp-gg", "mdp-club", "cvtt-vaires", uuid)
+    assert (deux / "stats" / "umami.js").read_bytes() == netlify.UMAMI_JS.read_bytes()
+    accueil, club = ((deux / f).read_text(encoding="utf-8") for f in ("index.html", "club/index.html"))
+    assert f'src="/stats/umami.js" data-website-id="{uuid}" data-performance="true"' in accueil
+    assert f'data-website-id="{uuid}" data-auto-track="false"' in club and 'const ACTIFS = ["goatcounter", "umami"]' in club
+    seul = netlify.construire(site, tmp_path / "seul", "secret", "", "mdp-club", "", uuid)
+    club = (seul / "club" / "index.html").read_text(encoding="utf-8")
+    assert 'const ACTIFS = ["umami"]' in club and "goatcounter.com" not in club
+    assert netlify.code_umami(f'<script defer src="https://cloud.umami.is/script.js" data-website-id="{uuid}"></script>') == uuid
+    assert netlify.code_umami("ggman23") == ""
     # Seul le code du compte est accepté (pas une autre adresse)
     assert netlify.code_goatcounter("https://CVTT-Vaires.goatcounter.com/count") == "cvtt-vaires"
     assert netlify.code_goatcounter("https://exemple.com/x") == "" and netlify.code_goatcounter("") == ""

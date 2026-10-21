@@ -192,7 +192,22 @@ elles ne donneraient d'ailleurs pas le nombre de personnes : un téléphone en 4
 sans arrêt, et tout un foyer partage la même en wifi.
 
 Pour ne pas compter ses propres visites : ouvrir une fois **https://ggping.netlify.app/#toggle-goatcounter**
-sur chacun de ses appareils (un message confirme ; le refaire pour réactiver).
+sur chacun de ses appareils (un message confirme ; le refaire pour réactiver). Cela coupe aussi Umami.
+
+### Umami (en plus de GoatCounter)
+
+Umami Cloud (gratuit, sans cookie) reçoit les mêmes pages vues et les mêmes actions, et donne en
+plus : les **visiteurs différents** (calculés par Umami), le **temps passé** et le **taux de rebond**,
+les **parcours** (*Journeys* : accueil → connexion → téléchargement...), le **retour** des visiteurs
+semaine après semaine (*Retention*), les **entonnoirs** (*Funnels*) et la vitesse de chargement de
+l'accueil public. Les actions y sont des événements nommés `connexion`, `connexion-refusee`,
+`telechargement`, `partage`, `tout-telecharger`, `ouverture`, `image`, `mise-a-jour`, avec en détail
+l'espace (club, gg...) et le fichier.
+
+Tableau de bord : https://cloud.umami.is, site « CVTT Vaires ». L'identifiant du site
+(`data-website-id`) est déjà dans le workflow ; une variable ou un secret `UMAMI` le remplace. Le
+script d'Umami est une copie figée servie par le site lui-même (`stats/umami.js`), qui envoie les
+mesures à Umami Cloud.
 
 Vie privée : GoatCounter ne pose pas de cookie et ne garde pas les adresses IP ; il ne reçoit que
 des noms de fichiers, jamais un nom de joueur ni un mot de passe. Pour les appareils différents,

@@ -129,4 +129,6 @@ jobs:
           MOT_DE_PASSE_CLUB: ${{ secrets.MOT_DE_PASSE_CLUB }}
           # Statistiques de visite (facultatif, voir PUBLICATION.md) : variable GOATCOUNTER, ou secret du même nom
           GOATCOUNTER: ${{ vars.GOATCOUNTER || secrets.GOATCOUNTER }}
+          # Umami Cloud : identifiant du site (public : il figure dans les pages) ; une variable UMAMI le remplace
+          UMAMI: ${{ vars.UMAMI || secrets.UMAMI || '23cfef06-9803-4df0-b7e7-6631a2490f82' }}
         run: python -m ttvaires.netlify

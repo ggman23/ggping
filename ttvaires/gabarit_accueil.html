@@ -143,16 +143,11 @@ function classe(resume) {
 }
 
 /* ---------- Statistiques de visite ----------
-   Seulement sur la copie Netlify (/gg/) si elle a un compteur GoatCounter : sur le site GitHub,
-   rien n'est chargé et compter() ne fait rien. Événements : pages ouvertes, téléchargements,
-   images vues et partagées, mise à jour lancée (noms de fichiers, jamais de nom de joueur). */
-const enAttente = [];
-function compter(chemin, titre, evenement = false) {
-  const gc = window.goatcounter;
-  if (gc && gc.count) gc.count({ path: chemin, title: titre, event: evenement });
-  else if (document.querySelector("script[data-goatcounter]")) enAttente.push([chemin, titre, evenement]);
-}
-window.compteurPret = () => enAttente.splice(0).forEach((a) => compter(...a));
+   Seulement sur la copie Netlify (/gg/) si elle a des compteurs (GoatCounter, Umami : window.compteur,
+   voir netlify.py) : sur le site GitHub, rien n'est chargé et compter() ne fait rien. Événements :
+   pages ouvertes, téléchargements, images vues et partagées, mise à jour lancée (noms de fichiers,
+   jamais de nom de joueur). */
+const compter = (chemin, titre, evenement = false) => window.compteur && window.compteur(chemin, titre, evenement);
 const ICI = location.pathname.replace(/index\.html$/, "").replace(/^\/|\/$/g, "") || "site";  // gg, gg/archives/<clé>
 const evenement = (quoi, nom, titre) => compter(`${ICI}/${quoi}/${nom}`, titre, true);
 
