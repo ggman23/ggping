@@ -1,0 +1,67 @@
+# Application Android (APK) : le site (mise à jour), l'espace club et les statistiques en onglets.
+# Construite à chaque modification du dossier android/ (ou à la demande : Actions > Application
+# Android > Run workflow), puis publiée dans la version « application-android » du dépôt : le lien
+# de téléchargement ne change pas (voir android/LISEZ-MOI.md).
+name: Application Android
+
+on:
+  push:
+    paths: ["android/**", ".github/workflows/application-android.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: application-android
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERSION: application-android
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Installation
+        run: |
+          pip install cryptography requests
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" > /dev/null
+
+      - name: Clé de signature (toujours la même, gardée chiffrée dans la version)
+        env:
+          MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
+          GH_TOKEN: ${{ github.token }}
+        run: python android/cle_signature.py "$RUNNER_TEMP/cle"
+
+      - name: Construction de l'APK
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NOM: "1.${{ github.run_number }}"
+        run: android/construire.sh
+
+      - name: Publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$VERSION" > /dev/null 2>&1 \
+            || gh release create "$VERSION" --title "Application Android" --latest=false --notes "Application CVTT Vaires."
+          fichiers=(android/construction/CVTT-Vaires.apk)
+          if [ -f "$RUNNER_TEMP/cle/cle-apk.chiffre" ]; then fichiers+=("$RUNNER_TEMP/cle/cle-apk.chiffre"); fi
+          gh release upload "$VERSION" "${fichiers[@]}" --clobber
+          gh release edit "$VERSION" --notes "Application CVTT Vaires, version 1.${{ github.run_number }} du $(TZ=Europe/Paris date '+%d/%m/%Y à %H:%M').
+
+          Téléchargement depuis le téléphone : https://github.com/${{ github.repository }}/releases/download/$VERSION/CVTT-Vaires.apk
+          Installation et mises à jour : voir android/LISEZ-MOI.md."
+          echo "APK : https://github.com/${{ github.repository }}/releases/download/$VERSION/CVTT-Vaires.apk"

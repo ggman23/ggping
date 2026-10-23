@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nom_appli">CVTT Vaires</string>
+    <color name="fond_icone">#0D0E11</color>
+</resources>

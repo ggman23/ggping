@@ -11,3 +11,6 @@ site/
 site-netlify/
 sortie-archives/
 publication.local.json
+
+# Application Android construite (android/construire.sh)
+android/construction/
