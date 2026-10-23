@@ -2,4 +2,6 @@
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/fond_icone" />
     <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+    <!-- Icônes à thème (Android 13 et plus) : la silhouette du logo -->
+    <monochrome android:drawable="@mipmap/ic_launcher_foreground" />
 </adaptive-icon>
