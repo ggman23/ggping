@@ -143,6 +143,12 @@ class Client:
                 with self._verrou:
                     self._echecs[site] = ECHECS_AVANT_ABANDON
                 break
+            if r.status_code == 401 and r.headers.get("www-authenticate", "").lower().startswith("bearer"):
+                # Depuis le 31/10/2026, l'API de la FFTT n'est plus ouverte sans autorisation (jeton)
+                with self._verrou:
+                    self._echecs[site] = ECHECS_AVANT_ABANDON
+                raise ErreurReseau(f"{site} demande désormais une autorisation : accès officiel à demander à la "
+                                   "FFTT (voir PUBLICATION.md, « Accès aux données de la FFTT »)")
             if r.status_code in (401, 404):
                 break
         if derniere_erreur and "HTTP 404" not in str(derniere_erreur):

@@ -102,3 +102,24 @@ def test_feuilles_recentes_relues_pour_les_corrections():
     assert list(fftt.details(client, [ancienne, recente], AUJ)) == [1, 2]
     assert client.appels == [(["1"], None, False),                       # ancienne : gardée en cache
                              (["2"], fftt.RELECTURE_TTL, True)]          # récente : relue (copie gardée si panne)
+
+
+def test_api_fftt_qui_demande_une_autorisation(tmp_path, monkeypatch):
+    """Depuis le 31/10/2026, l'API de la FFTT répond 401 (« JWT Token not found ») sans autorisation :
+    un message clair, et plus aucune requête vers elle pour ce lancement."""
+    import pytest
+    from ttvaires.reseau import Client, ErreurReseau
+
+    class Reponse:
+        status_code, text = 401, '{"code":401,"message":"JWT Token not found"}'
+        headers = {"www-authenticate": "Bearer"}
+
+    appels = []
+    client = Client(tmp_path, pause=0)
+    monkeypatch.setattr(client, "_session", lambda: type("S", (), {"get": lambda self, url, **o: appels.append(url) or Reponse()})())
+    with pytest.raises(ErreurReseau, match="apiv2.fftt.com demande désormais une autorisation"):
+        client.get("https://apiv2.fftt.com/api/sport_matches?x=1", ttl=0)
+    assert len(appels) == 1                                    # pas de nouvelles tentatives
+    with pytest.raises(ErreurReseau, match="abandonné pour ce lancement"):
+        client.get("https://apiv2.fftt.com/api/teams", ttl=0)
+    assert len(appels) == 1                                    # le site n'est plus interrogé
