@@ -60,15 +60,23 @@ def test_equipes_et_compositions():
     ]
     detail = {
         10: {"day": {"position": 1}, "date": "2026-09-25T00:00:00",
-             "homeSheetMatches": [_licence("1", "DUPONT", "Jean", 900), _licence("2", "MARTIN", "Léa", 800)]},
+             "homeSheetMatches": [{**_licence("1", "DUPONT", "Jean", 900), "identifier": "B"},
+                                  {**_licence("2", "MARTIN", "Léa", 800), "identifier": "A"}],
+             "awaySheetMatches": [{"identifier": "W"}]},
         11: {"day": {"position": 1}, "date": "2026-09-25T00:00:00", "awaySheetMatches": [_licence("3", "PETIT", "Luc", 700)]},
         20: {"day": {"position": 1}, "date": "2026-09-26T00:00:00", "homeSheetMatches": [_licence("2", "MARTIN", "Léa", 800)]},
     }
     equipes, joueurs = equipes_et_compositions("08771184", rencontres, detail, {"M"})
-    assert [(e["libelle"], e["numero"], e["compositions"]) for e in equipes] == [
+    assert [(e["libelle"], e["numero"], [{k: c[k] for k in ("journee", "date", "joueurs")} for c in e["compositions"]])
+            for e in equipes] == [
         ("LOGNES EP 12", 12, [{"journee": 1, "date": "2026-09-25", "joueurs": ["1", "2"]}]),  # J2 pas encore saisie
         ("LOGNES EP 13", 13, [{"journee": 1, "date": "2026-09-25", "joueurs": ["3"]}]),
     ]
+    # Placement choisi par le capitaine : lettres de la feuille, points du jour, adversaire
+    c = equipes[0]["compositions"][0]
+    assert (c["lettres"], c["points"], c["domicile"], c["contre"], c["format"]) == (
+        {"1": "B", "2": "A"}, {"1": 900, "2": 800}, True, "AUTRE 4", 4)
+    assert equipes[1]["compositions"][0]["domicile"] is False
     assert joueurs["1"]["classement"] == 9 and joueurs["1"]["sexe"] is None
     # Championnat féminin demandé aussi : l'équipe féminine apparaît et la joueuse est marquée F.
     equipes, joueurs = equipes_et_compositions("08771184", rencontres, detail, {"M", "F"})

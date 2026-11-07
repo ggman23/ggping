@@ -126,5 +126,6 @@ def test_enrichir_ajoute_analyse_et_composition_alignee():
     r1, r2 = donnees["equipes"][0]["rencontres"]
     assert r1["adversaire"]["numero"] == 18
     assert r1["composition_adverse"] == ["A"]
+    assert r1["lettres_adverses"] is None and r1["placements"] is None  # feuille sans lettres, rien avant la J1
     assert "analyse" not in r2
     assert club["parcours"]["A"]["M"]["matchs"] == [{"j": 1, "n": 18, "d": "2026-09-25"}]

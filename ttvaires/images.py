@@ -19,6 +19,8 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
+from .placements import resume_joueur
+
 POLICES = Path(__file__).with_name("polices")
 LARGEUR = 1080          # largeur de l'image (points)
 S = 2                   # facteur de suréchantillonnage du dessin
@@ -29,6 +31,7 @@ TAILLE_PETIT = 18       # texte secondaire
 TAILLE_ENTETE = 19
 HAUTEUR_LIGNE, HAUTEUR_LIGNE_DOUBLE = 50, 68
 NOM_MIN = 230           # largeur minimale de la colonne du nom (l'image s'élargit au besoin)
+RENC_PL = 80            # colonne « Renc. » du tableau des placements (fiche d'un adversaire)
 FICHE_MIN = 720         # largeur minimale d'une image ajustée à son contenu (fiche d'un adversaire)
 JOURS = ["lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim."]
 
@@ -822,6 +825,9 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
             img.espace(6)
             img.texte("Effectif de l'adversaire inconnu (club absent des données).", 20, NOIR)
         else:
+            pl = r.get("placements") or {}
+            places = pl.get("joueurs") or {}
+
             def lignes_joueurs(ids, info=None):
                 sortie = []
                 for jid in ids:
@@ -831,12 +837,14 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                     sortie.append([
                         cel_nom(j.get("nom"), j.get("prenom"), apres="F" if j.get("sexe") == "F" else None),
                         C(_clt(j) or "", gras=True), C(fmt(_pts(j)) if _pts(j) else "", couleur=DOUX),
-                        C(j.get("categorie") or "", couleur=DOUX), C((info or {}).get(jid, ""), couleur=DOUX, align="g"),
+                        C(j.get("categorie") or "", couleur=DOUX),
+                        C(resume_joueur(places.get(jid), pl.get("libelles")), couleur=NOIR, align="g"),
+                        C((info or {}).get(jid, ""), couleur=DOUX, align="g"),
                     ])
                 return sortie
 
             def ou_aucun(lignes, texte="aucun"):
-                return lignes or [[C(texte, couleur=DOUX, align="g"), C(), C(), C(), C()]]
+                return lignes or [[C(texte, couleur=DOUX, align="g"), C(), C(), C(), C(), C()]]
 
             renforts = {x["id"]: "a joué en " + ", ".join(str(n) for n in x["equipes"]) for x in a.get("renforts", [])}
             pas_joue = [jid for jid in a.get("non_alignes", []) if jid not in a["probable"]]
@@ -848,12 +856,27 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                  ou_aucun(lignes_joueurs(pas_joue[:8]))),
             ]
             toutes = [l for _, _, lignes in tableaux for l in lignes]
-            info = max((largeur_naturelle(l[4]) for l in toutes if l[4].texte), default=0)
-            if not info:  # aucune information : la colonne disparaît
-                tableaux = [(t_, d_, [l[:4] for l in lignes]) for t_, d_, lignes in tableaux]
-            fixes = [Col("Clt", 70), Col("Pts", 90), Col("Cat.", 80)] + ([Col("", info + 10, "g")] if info else [])
+            # Colonnes facultatives (positions déjà occupées, équipes des renforts) : retirées si vides
+            facultatives = [(4, "Placé"), (5, "")]
+            garder = [i for i, _ in facultatives if any(l[i].texte for l in toutes)]
+            larg = {i: max(largeur_naturelle(l[i]) for l in toutes if l[i].texte) for i in garder}
+            tableaux = [(t_, d_, [l[:4] + [l[i] for i in garder] for l in lignes]) for t_, d_, lignes in tableaux]
+            fixes = [Col("Clt", 70), Col("Pts", 90), Col("Cat.", 80)] + [
+                Col(titre_col, max(larg[i], largeur_texte(titre_col, 19)) + 14, "g")
+                for i, titre_col in facultatives if i in garder]
             nom = max(NOM_MIN, max(largeur_naturelle(l[0]) for l in toutes) + 6)
             largeur = min(LARGEUR, max(FICHE_MIN, round(nom + sum(c.largeur for c in fixes) + 2 * MARGE)))
+            # Où l'adversaire a placé ses joueurs à chacune de ses rencontres (position = A ou W, ...)
+            lignes_pl = []
+            for x in pl.get("rencontres") or []:
+                cellules = [C(f"J{x['journee']}", sous="dom." if x.get("domicile") else "ext.", gras=True, align="g")]
+                for jid in x["places"]:
+                    j = par_id.get(jid) if jid else None
+                    cellules.append(cel_nom(j.get("nom"), j.get("prenom")) if j else C("—" if not jid else jid, couleur=DOUX))
+                lignes_pl.append(cellules)
+            if lignes_pl:  # une colonne par position : l'image s'élargit un peu si les noms l'exigent
+                nom_pl = min(210, max(largeur_naturelle(c) for l in lignes_pl for c in l[1:]) + 10)
+                largeur = min(LARGEUR, max(largeur, round(RENC_PL + pl["format"] * nom_pl + 2 * MARGE)))
             colonnes = colonnes_egales([Col("Joueur", None, "g")] + fixes, largeur - 2 * MARGE)
             img = Rendu(largeur)
             img.titre(titre, sous_titre)
@@ -863,7 +886,17 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                 img.tableau(colonnes, lignes)
             if a.get("brules"):
                 img.texte(f"{len(a['brules'])} joueur(s) brûlé(s) ou indisponible(s) pour cette rencontre : détail sur la page.", 17)
-        img.pied("Composition probable : estimation à partir des rencontres déjà jouées par le club adverse.")
+            if lignes_pl:
+                img.section("Placement aux rencontres jouées", f"{r['adversaire']['libelle']} aura les lettres "
+                            + (("W, X, Y, Z" if pl["format"] == 4 else "X, Y, Z") if dom else
+                               ("A, B, C, D" if pl["format"] == 4 else "A, B, C")))
+                largeur_pl = (largeur - 2 * MARGE - RENC_PL) / pl["format"]
+                img.tableau([Col("Renc.", RENC_PL, "g")] + [Col(l, largeur_pl, "g") for l in pl["libelles"]], lignes_pl)
+        img.pied("Composition probable : estimation à partir des rencontres déjà jouées par le club adverse."
+                 + (" Placé : positions occupées dans cette équipe (A/W = A quand elle reçoit, W quand elle se déplace)."
+                    " A ne joue jamais Z, B jamais Y, C jamais X, D jamais W." if a and (r.get("placements") or {}).get("format") == 4
+                    else " Placé : positions occupées dans cette équipe (A/X = A quand elle reçoit, X quand elle se déplace)."
+                    if a and r.get("placements") else ""))
         nom_fichier = f"adversaires_{e['id'].upper()}.png"
         sorties.append((_enregistrer(img.image(), dossier, nom_fichier), f"{e['nom_court']} : prochain adversaire"))
     return sorties

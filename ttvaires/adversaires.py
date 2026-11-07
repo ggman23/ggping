@@ -124,16 +124,25 @@ def equipes_et_compositions(numero, rencontres, detail, championnats):
             d = detail.get(r["id"])
             if not d:
                 continue
-            ids = []
+            ids, lettres, points = [], {}, {}
             for ligne in d.get(f"{cote}SheetMatches") or []:
                 j = fftt.joueur(ligne.get("player") or {})
                 if not j["licence"]:
                     continue
                 ids.append(j["licence"])
+                if ligne.get("identifier"):
+                    lettres[j["licence"]] = ligne["identifier"]
+                points[j["licence"]] = j["points"]
                 vu = joueurs.setdefault(j["licence"], _joueur_feuille(j, ch == "F"))
                 if ch == "F":
                     vu["sexe"] = "F"
-            eq["compositions"].append({"journee": d["day"]["position"], "date": d["date"][:10], "joueurs": ids})
+            # Lettres de la feuille (A, B, C, D pour l'équipe qui reçoit, W, X, Y, Z pour l'autre ;
+            # A, B, C / X, Y, Z à trois joueurs) : le placement choisi par le capitaine.
+            toutes = {x.get("identifier") for c in ("home", "away") for x in d.get(f"{c}SheetMatches") or []}
+            autre = fftt.equipe(r, "awayOpponent" if cote == "home" else "homeOpponent")
+            eq["compositions"].append({"journee": d["day"]["position"], "date": d["date"][:10], "joueurs": ids,
+                                       "lettres": lettres, "points": points, "domicile": cote == "home",
+                                       "contre": autre.get("name"), "format": 4 if toutes & {"D", "W"} else 3})
     liste = sorted(equipes.values(), key=lambda e: (e["championnat"], e["numero"] or 0))
     return liste, joueurs
 

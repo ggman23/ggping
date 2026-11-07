@@ -15,6 +15,8 @@ Le championnat masculin ("M") et le championnat féminin ("F") sont indépendant
 from collections import defaultdict
 from datetime import date
 
+from .placements import placements
+
 TAILLE_EQUIPE_DEFAUT = 4
 
 
@@ -209,4 +211,6 @@ def enrichir(donnees):
             if equipe_adv:
                 alignee = [c for c in equipe_adv.get("compositions", []) if c.get("journee") == renc["journee"]]
                 renc["composition_adverse"] = alignee[0]["joueurs"] if alignee else None
+                renc["lettres_adverses"] = (alignee[0].get("lettres") or None) if alignee else None
+                renc["placements"] = placements(equipe_adv, renc["journee"], date_match)
     return donnees

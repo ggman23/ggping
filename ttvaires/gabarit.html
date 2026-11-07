@@ -60,6 +60,7 @@ th { color: var(--doux); font-weight: 600; font-size: 13px; white-space: nowrap;
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 td.c, th.c { text-align: center; }
 .defil { overflow-x: auto; }
+table.placements td, table.placements th { white-space: nowrap; }
 tr.vaires td { font-weight: 700; background: var(--accent-fond); }
 .badge { display: inline-block; padding: 1px 7px; border-radius: 99px; font-size: 12px;
   font-weight: 700; white-space: nowrap; }
@@ -353,9 +354,12 @@ function panneauRencontre(e, r) {
   };
 
   let bloc = "";
+  const lettres = r.lettres_adverses || {};
+  const alignes = (r.composition_adverse || []).slice().sort((x, y) => (lettres[x] || "~").localeCompare(lettres[y] || "~"));
   if (r.score && r.composition_adverse) {
     bloc = `<p><span class="score">${esc(r.domicile?.libelle ?? "")} ${r.score[0]} – ${r.score[1]} ${esc(r.exterieur?.libelle ?? "")}</span></p>
-      <h4>Joueurs alignés par ${libelleAdv(r)}</h4>${liste(r.composition_adverse, "Feuille de match non disponible.")}`;
+      <h4>Joueurs alignés par ${libelleAdv(r)}</h4>${liste(alignes, "Feuille de match non disponible.",
+        (id) => (lettres[id] ? ` <span class="badge neutre" title="lettre sur la feuille de match">${esc(lettres[id])}</span>` : ""))}`;
   } else if (r.score) {
     bloc = `<p><span class="score">${esc(r.domicile?.libelle ?? "")} ${r.score[0]} – ${r.score[1]} ${esc(r.exterieur?.libelle ?? "")}</span></p>
       <p class="petit">Feuille de match non disponible.</p>`;
@@ -369,10 +373,41 @@ function panneauRencontre(e, r) {
       <div><h5>Pas encore joué cette phase</h5>${liste(a.non_alignes, "Tous les joueurs ont déjà joué.")}</div>
     </div>
     ${a.regle_j2 ? `<p class="note"><b>Règle de la J2 :</b> ${libelleAdv(r)} ne peut aligner qu'<b>un seul</b> des joueurs marqués <span class="badge att">J1</span> (ils ont joué la J1 dans une équipe plus forte).</p>` : ""}
-    <p class="petit">Équipes de ${a.taille} joueurs. Brûlage calculé avec les matchs joués avant le ${fmtDate(a.date || dateRenc(r))}.</p>`;
+    <p class="petit">Équipes de ${a.taille} joueurs. Brûlage calculé avec les matchs joués avant le ${fmtDate(a.date || dateRenc(r))}.</p>
+    ${blocPlacements(r.placements, idx, libelleAdv(r), r)}`;
   }
 
   return `<div class="carte">${tete}${bloc}${tableEffectif(club, ch, a, N, r)}${tableEquipes(club, ch, idx)}</div>`;
+}
+
+// Placement des joueurs adverses sur les lettres de la feuille (voir ttvaires/placements.py).
+function blocPlacements(p, idx, adv, r) {
+  if (!p || !p.rencontres || !p.rencontres.length) return "";
+  const L = p.libelles;
+  const nomP = (id) => (idx[id] ? nomJoueur(idx[id]) : esc(id));
+  const ligne = (x) => `<tr><td>J${x.journee} · ${x.domicile ? "reçoit" : "à"} ${esc(x.contre || "?")}${x.par_points === false
+      ? ' <span class="badge neutre" title="joueurs pas placés dans l\'ordre de leurs points">hors ordre des points</span>' : ""}</td>`
+    + x.places.map((id, i) => `<td>${id ? `${nomP(id)}${x.points[i] ? ` <span class="petit">${x.points[i]}</span>` : ""}`
+      : '<span class="petit">—</span>'}</td>`).join("") + "</tr>";
+  const joueurs = Object.entries(p.joueurs).map(([id, n]) => ({ id, n, total: n.reduce((s, v) => s + v, 0) }))
+    .sort((a, b) => Math.max(...b.n) - Math.max(...a.n) || a.n.indexOf(Math.max(...a.n)) - b.n.indexOf(Math.max(...b.n))
+      || pts(idx[b.id] || {}) - pts(idx[a.id] || {}));
+  const recap = joueurs.map((j) => `<tr><td>${idx[j.id] ? `${nomJoueur(idx[j.id])} <span class="petit">${pts(idx[j.id]) || ""}</span>` : esc(j.id)}</td>${j.n.map((v) =>
+    `<td class="c">${v ? (v === Math.max(...j.n) ? `<b>${v}</b>` : v) : ""}</td>`).join("")}<td class="c">${j.total}</td></tr>`).join("");
+  const lettresAdv = r.vaires_domicile ? (p.format === 4 ? "W, X, Y, Z" : "X, Y, Z") : (p.format === 4 ? "A, B, C, D" : "A, B, C");
+  const regle = p.format === 4
+    ? "Ordre des parties : AW BX CY DZ AX BW DY CZ, deux doubles, AY CW DX BZ. Chaque joueur dispute 3 simples et ne rencontre jamais une position adverse : <b>A ne joue pas Z, B pas Y, C pas X, D pas W</b>."
+    : "À trois joueurs (AX BY CZ BX, double, AZ CY BZ CX AY), chacun rencontre les trois adversaires : le placement ne change que l'ordre des parties.";
+  return `<h4>Placement des joueurs de ${adv} (rencontres déjà jouées)</h4>
+    <div class="defil"><table class="placements"><thead><tr><th>Rencontre</th>${L.map((l) => `<th>${l}</th>`).join("")}</tr></thead>
+      <tbody>${p.rencontres.map(ligne).join("")}</tbody></table></div>
+    <h4>Récapitulatif des positions</h4>
+    <div class="defil"><table class="placements"><thead><tr><th>Joueur</th>${L.map((l) => `<th class="c">${l}</th>`).join("")}<th class="c">Matchs</th></tr></thead>
+      <tbody>${recap}</tbody></table></div>
+    <p class="petit">Une position a deux lettres : A, B, C, D pour l'équipe qui reçoit, ${p.format === 4 ? "W, X, Y, Z" : "X, Y, Z"} pour l'équipe qui se déplace.
+      Pour cette rencontre, ${adv} aura les lettres ${lettresAdv}. ${regle}
+      ${p.avec_points ? `Placés dans l'ordre de leurs points (le mieux classé en ${L[0]}) : ${p.par_points} rencontre(s) sur ${p.avec_points}.` : ""}
+      Points : ceux de la feuille de match.</p>`;
 }
 
 function statutJoueur(j, a, r) {

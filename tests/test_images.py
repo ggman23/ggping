@@ -115,6 +115,15 @@ def test_adversaires_prochaine_journee_et_prochain_adversaire(tmp_path):
     assert _ouvrir(sorties[0][0])[0] == 1080
     assert _ouvrir(sorties[1][0])[0] == images.FICHE_MIN  # fiche à la largeur de son contenu : pas de place perdue
 
+    # Placement des joueurs adverses aux rencontres déjà jouées : colonne « Placé » et tableau par position
+    rencontre["placements"] = {"format": 4, "libelles": ["A/W", "B/X", "C/Y", "D/Z"], "par_points": 0, "avec_points": 1,
+                               "joueurs": {"1": [0, 0, 1, 0], "2": [1, 0, 0, 0]},
+                               "rencontres": [{"journee": 3, "date": "2026-10-16", "domicile": True, "contre": "X 1",
+                                               "places": ["2", "4", "1", None], "points": [898, 896, 899, None],
+                                               "par_points": False}]}
+    sorties = images.images_adversaires(donnees, tmp_path, date(2026, 10, 19))
+    assert images.FICHE_MIN <= _ouvrir(sorties[1][0])[0] <= images.LARGEUR
+
 
 def test_sous_titre_long_sur_deux_lignes():
     court = "reçoit CHARENTON TT 1 · C.O.S.E.C"
