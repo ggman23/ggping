@@ -83,10 +83,15 @@ function bandeauVerif(V, consequence) {
 }
 let vue = null, tri = null, ouverts = new Set();
 
+// Deux rencontres la même journée (masculine le vendredi, féminine le samedi) : chaque ligne rappelle l'autre.
+const courte = (e) => String(e).toUpperCase().replace("VAIRES", "V").replace(/\s+/g, "");
+const aussi = (l) => (l.autres || []).map((a) => ` <span class="adv" title="aussi le ${fmtDate(a.date)} avec ${esc(a.equipe)}">`
+  + `+ ${esc(courte(a.equipe))} ${(a.delta > 0 ? "+" : "") + nombre(a.delta, 1)}</span>`).join("");
+
 function colonnesJournee(j) {
   return [
     { t: "Equipe", k: (l) => l.ordre, v: (l) => esc(l.equipe), c: "g" },
-    { t: "Joueur", k: (l) => l.joueur, v: (l) => esc(l.joueur), c: "g joueur" },
+    { t: "Joueur", k: (l) => l.joueur, v: (l) => esc(l.joueur) + aussi(l), c: "g joueur" },
     { t: "Points", k: (l) => l.points, v: (l) => nombre(l.points, 0) },
     { t: "Pts +/-", k: (l) => l.delta, v: (l) => nombre(l.delta, 1), cls: (l) => clsDelta(l.delta) },
     { t: "Victoires", k: (l) => l.v / l.matchs + l.matchs / 1000, v: (l) => `${l.v}/${l.matchs}`, cls: (l) => clsVict(l.v, l.matchs) },

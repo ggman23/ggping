@@ -59,6 +59,27 @@ def test_resultats_derniere_journee_et_cumul(tmp_path):
     assert images.equipe_courte("VAIRES 1 F") == "V1F" and images.equipe_courte("Vaires 3") == "V3"
 
 
+def test_deux_rencontres_la_meme_journee_chaque_ligne_rappelle_l_autre(tmp_path, monkeypatch):
+    """Une joueuse alignée avec les garçons le vendredi et avec l'équipe féminine le samedi : ses deux
+    lignes de la journée ne se suivent pas (tri par points), chacune rappelle donc l'autre."""
+    base = {"journee": 4, "ordre": 0, "joueur": "CHOLLET Emily", "licence": "7", "points": 621, "matchs": 3,
+            "meilleure": None, "meilleure_adv": None}
+    lignes = [{**base, "date": "2026-11-06", "equipe": "VAIRES 5", "delta": -24.0, "v": 0, "apres": 591.5, "total": -29.5,
+               "autres": [{"equipe": "VAIRES 1 F", "date": "2026-11-07", "delta": 1.0}]},
+              {**base, "date": "2026-11-07", "equipe": "VAIRES 1 F", "delta": 1.0, "v": 2, "apres": 592.5, "total": -28.5,
+               "autres": [{"equipe": "VAIRES 5", "date": "2026-11-06", "delta": -24.0}]}]
+    cumuls = [{"equipes": ["VAIRES 5", "VAIRES 1 F"], "joueur": "CHOLLET Emily", "licence": "7", "points": 621,
+               "journees": {4: -23.0}, "total": -23.0, "virtuels": 598, "v": 2, "matchs": 6, "ordre": 4}]
+    vus = []
+    monkeypatch.setattr(images, "_tableau_pagine", lambda dossier, prefixe, titre, st, colonnes, lignes, pied, tc:
+                        vus.append((lignes, pied)) or [])
+    images.images_resultats({**CLUB, "journees": [{"numero": 4, "dates": ["2026-11-06", "2026-11-07"]}],
+                             "lignes": lignes, "cumuls": cumuls}, tmp_path)
+    (journee, pied), _ = vus
+    assert [l[1].apres for l in journee] == ["+ V5 -24,0", "+ V1F +1,0"]
+    assert "autre ligne" in pied
+
+
 def test_effectif_club_et_brules_par_equipe(tmp_path):
     equipes = [{"id": f"v{n}", "numero": n, "championnat": "M", "nom_court": f"Vaires {n}"} for n in (1, 2, 3)]
     equipes.append({"id": "v1f", "numero": 1, "championnat": "F", "nom_court": "Vaires 1 F"})

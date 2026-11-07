@@ -528,9 +528,12 @@ def images_resultats(donnees, dossier):
     lignes = []
     for l in lignes_j:
         nom, prenom = _nom_prenom(l["joueur"])
+        # Deux rencontres la même journée (masculine le vendredi, féminine le samedi) : deux lignes, chacune
+        # rappelant l'autre, sinon la seconde passe inaperçue (elles ne se suivent pas dans le tri).
+        aussi = " · ".join(f"+ {equipe_courte(a['equipe'])} {signe(a['delta'], 1)}" for a in l.get("autres") or [])
         lignes.append([
             C(equipe_courte(l["equipe"]), couleur=DOUX),
-            cel_nom(nom, prenom),
+            cel_nom(nom, prenom, apres=aussi or None),
             C(fmt(l["points"])),
             cel_points(l["delta"], fond=True, dec=1),
             cel_victoires(l["v"], l["matchs"]),
@@ -543,7 +546,10 @@ def images_resultats(donnees, dossier):
         dossier, f"resultats_J{j}", f"Résultats de la J{j}", f"{sous_base} · {dates} · {_genere(donnees)}",
         colonnes, lignes,
         f"Trié par points gagnés sur la journée. Points J{j} = classement virtuel (points officiels + total depuis la J1). "
-        "Meilleure victoire = écart avec le mieux classé des joueurs battus (ses points).", f"Résultats J{j}")
+        "Meilleure victoire = écart avec le mieux classé des joueurs battus (ses points)."
+        + (" « + V1F … » : aussi aligné(e) dans cette équipe pour la journée (voir son autre ligne) ; "
+           "Points et Total se cumulent dans l'ordre des dates." if any(l.get("autres") for l in lignes_j) else ""),
+        f"Résultats J{j}")
 
     js = [x["numero"] for x in donnees["journees"]]
     cumuls = sorted(donnees["cumuls"], key=lambda c: (-c["total"], -c["points"], c["joueur"]))
