@@ -117,7 +117,7 @@ def test_api_fftt_qui_demande_une_autorisation(tmp_path, monkeypatch):
     appels = []
     client = Client(tmp_path, pause=0)
     monkeypatch.setattr(client, "_session", lambda: type("S", (), {"get": lambda self, url, **o: appels.append(url) or Reponse()})())
-    with pytest.raises(ErreurReseau, match="apiv2.fftt.com demande désormais une autorisation"):
+    with pytest.raises(ErreurReseau, match="apiv2.fftt.com demande une connexion"):
         client.get("https://apiv2.fftt.com/api/sport_matches?x=1", ttl=0)
     assert len(appels) == 1                                    # pas de nouvelles tentatives
     with pytest.raises(ErreurReseau, match="abandonné pour ce lancement"):

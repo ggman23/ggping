@@ -16,7 +16,7 @@ from .rendu import (GABARIT_CLASSEMENTS, GABARIT_EFFECTIF, GABARIT_RENCONTRES, G
 from .reseau import Client, ErreurReseau
 from .resultats import donnees_page, ecrire_xlsx, recuperer_parties, recuperer_rencontres
 from .virtuel import recuperer_virtuel
-from . import synchro, verifications
+from . import compte_fftt, synchro, verifications
 
 RACINE = Path(__file__).resolve().parent.parent
 SORTIE = RACINE / "sortie"
@@ -183,6 +183,7 @@ def main():
     else:
         client = Client(CACHE, paralleles=args.paralleles, hors_ligne=args.hors_ligne,
                         sites_cache_seul={"www.pingpocket.fr"} if args.pingpocket_cache else ())
+        compte_fftt.connecter(client)  # l'API de la FFTT demande une connexion (compte licencié)
         a_faire = []
         if args.resultats:
             a_faire.append(("résultats", page_resultats))

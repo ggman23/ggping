@@ -113,36 +113,31 @@ C'est un secret plutôt qu'une variable parce que les journaux des mises à jour
 secret n'y apparaît jamais. Il l'emporte sur `surnoms.txt` pour un même joueur. Les archives des
 journées passées sont refaites à la mise à jour suivante pour en tenir compte.
 
-## Accès aux données de la FFTT (depuis le 31/10/2026)
+## Accès aux données de la FFTT : compte licencié (depuis le 31/10/2026)
 
-Les résultats, feuilles de match et poules venaient de l'API qu'utilisent les pages de consultation
-de la FFTT (apiv2.fftt.com), ouverte sans identifiant jusqu'au 27/10/2026. Depuis le 31/10/2026 elle
-répond « 401 JWT Token not found » : elle demande une autorisation, et aucune page ne peut plus être
-refaite (le site garde les pages de la dernière mise à jour réussie ; l'accueil affiche « apiv2.fftt.com
-demande désormais une autorisation »). L'outil ne cherche pas à contourner cette protection.
+Les résultats, feuilles de match et poules viennent de l'API de la FFTT (apiv2.fftt.com), celle de
+l'espace licencié https://malicence.fftt.com. Jusqu'au 27/10/2026 elle répondait sans connexion ;
+depuis le 31/10/2026 elle répond « 401 JWT Token not found » sans elle. L'outil se connecte donc
+comme l'espace licencié, avec **le compte licencié du responsable de l'outil** (identifiant et mot
+de passe de malicence.fftt.com), et reçoit un jeton d'accès qu'il renouvelle au besoin
+(`ttvaires/compte_fftt.py`) :
 
-La voie prévue par la FFTT est son **API officielle (Smartping v2.0)**, gratuite, sur demande
-(https://www.fftt.com/api/) :
+- **en ligne (GitHub)** : deux secrets, *Settings* → *Secrets and variables* → *Actions* :
+  `FFTT_IDENTIFIANT` et `FFTT_MOT_DE_PASSE` ;
+- **sur le PC** : lancer.bat les demande au premier lancement et les garde dans
+  `publication.local.json` (sur le PC seulement, jamais envoyé).
 
-1. Remplir le formulaire API (lien sur cette page) : coordonnées du demandeur, club (n° 08770250,
-   correspondant, président), présentation du projet, API demandées. API utiles à l'outil :
-   `xml_equipe`, `xml_result_equ`, `xml_chp_renc`, `xml_liste_joueur_o`, `xml_licence_b`, `xml_joueur`,
-   `xml_partie_mysql`, `xml_partie`, `xml_histo_classement`, `xml_club_detail`, `xml_division`,
-   `xml_epreuve`.
-2. L'envoyer à interfaces.informatiques@fftt.email en acceptant les conditions générales
-   d'utilisation (CGU). La FFTT évalue chaque projet et peut le refuser ; aucun délai n'est annoncé.
-3. Elle fournit un identifiant et une clé, à mettre dans deux secrets GitHub (`FFTT_ID`, `FFTT_CLE`) :
-   l'outil sera alors adapté à cette API.
+Une connexion refusée n'est pas retentée dans le même lancement (pas de rafale d'essais qui
+bloquerait le compte) ; l'accueil du site affiche alors « connexion à la FFTT refusée pour le
+compte… ». Si la FFTT demande un code de vérification à la connexion (double authentification),
+l'outil ne peut pas le saisir et le dit. L'outil reste discret (pages gardées en cache, pauses
+entre les requêtes). C'est un compte personnel : la FFTT pourrait ne pas apprécier son usage par
+un programme.
 
-Points des CGU à aborder franchement dans la demande, car l'outil actuel ne les respecte pas tels quels :
-- les droits généraux visent un site **ouvert à tous** ; un site à accès réservé (espace club, /gg/)
-  demande un accord particulier ;
-- les données ne peuvent être **gardées plus de 24 h** sans autorisation expresse (archives des
-  journées passées, historiques) ;
-- elles ne doivent **pas être croisées** avec des données fédérales obtenues autrement (pages de
-  pingpocket.fr) : avec l'API officielle, pingpocket n'est plus nécessaire (licenciés, classements et
-  historiques y sont) ;
-- seuls les moyens d'accès de la documentation développeurs sont permis.
+L'autre voie, prévue par la FFTT pour les applications, est son API officielle (Smartping v2.0,
+https://www.fftt.com/api/, formulaire à envoyer à interfaces.informatiques@fftt.email), sur
+dossier et avec des conditions d'utilisation strictes (site ouvert à tous, pas de conservation
+au-delà de 24 h sans accord, pas de mélange avec d'autres sources).
 
 ## Copie de secours sur Netlify (ggping.netlify.app)
 

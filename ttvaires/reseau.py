@@ -1,4 +1,4 @@
-"""Accès à pingpocket.fr : cache disque, requêtes en parallèle limitées, nouvelles tentatives."""
+"""Accès à pingpocket.fr et à l'API de la FFTT : cache disque, requêtes en parallèle limitées, nouvelles tentatives."""
 
 import hashlib
 import threading
@@ -59,6 +59,8 @@ class Client:
         # Sites jamais interrogés : seules les pages déjà en cache servent, même anciennes
         # (mise à jour en ligne : pages de pingpocket envoyées par le PC).
         self.sites_cache_seul = set(sites_cache_seul)
+        # Site -> compte qui fournit l'en-tête d'autorisation (API de la FFTT : voir compte_fftt.py)
+        self.connexions = {}
 
     def _session(self):
         if not hasattr(self._local, "session"):
@@ -121,15 +123,21 @@ class Client:
         if self._echecs[site] >= ECHECS_AVANT_ABANDON:
             raise ErreurReseau(f"{site} ne répond pas correctement : abandonné pour ce lancement")
         derniere_erreur = None
+        compte, reconnecte = self.connexions.get(site), False
         for essai in range(self.tentatives):
             if essai:
                 time.sleep(2 ** essai)
             try:
                 self._patienter(site)
-                r = self._session().get(url, timeout=60, headers=entetes)
+                envoyes = {**(entetes or {}), **(compte.entetes() if compte else {})}
+                r = self._session().get(url, timeout=60, headers=envoyes)
             except requests.RequestException as e:
                 derniere_erreur = e
                 continue
+            except ErreurReseau:  # connexion au compte impossible : plus aucune requête vers ce site
+                with self._verrou:
+                    self._echecs[site] = ECHECS_AVANT_ABANDON
+                raise
             if r.status_code == 200 and valide(r.text):
                 fichier.write_text(r.text, encoding="utf-8")
                 with self._verrou:
@@ -144,11 +152,19 @@ class Client:
                     self._echecs[site] = ECHECS_AVANT_ABANDON
                 break
             if r.status_code == 401 and r.headers.get("www-authenticate", "").lower().startswith("bearer"):
-                # Depuis le 31/10/2026, l'API de la FFTT n'est plus ouverte sans autorisation (jeton)
+                # Depuis le 31/10/2026, l'API de la FFTT n'est plus ouverte sans connexion (jeton)
+                if compte and not reconnecte:  # jeton refusé (expiré, révoqué) : une nouvelle connexion
+                    reconnecte = True
+                    try:
+                        compte.reconnecter()
+                        continue
+                    except ErreurReseau:
+                        pass
                 with self._verrou:
                     self._echecs[site] = ECHECS_AVANT_ABANDON
-                raise ErreurReseau(f"{site} demande désormais une autorisation : accès officiel à demander à la "
-                                   "FFTT (voir PUBLICATION.md, « Accès aux données de la FFTT »)")
+                raise ErreurReseau(f"{site} refuse l'accès malgré la connexion avec le compte FFTT" if compte else
+                                   f"{site} demande une connexion : régler le compte licencié FFTT (secrets "
+                                   "FFTT_IDENTIFIANT et FFTT_MOT_DE_PASSE ; sur le PC, lancer.bat le demande)")
             if r.status_code in (401, 404):
                 break
         if derniere_erreur and "HTTP 404" not in str(derniere_erreur):

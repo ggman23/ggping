@@ -79,6 +79,9 @@ jobs:
         env:
           CHOIX: ${{ inputs.pages || 'tout' }}
           SURNOMS: ${{ secrets.SURNOMS }}  # noms affichés sur le récapitulatif (facultatif, voir PUBLICATION.md)
+          # Compte licencié FFTT : l'API de la FFTT demande une connexion depuis le 31/10/2026
+          FFTT_IDENTIFIANT: ${{ secrets.FFTT_IDENTIFIANT }}
+          FFTT_MOT_DE_PASSE: ${{ secrets.FFTT_MOT_DE_PASSE }}
         run: |
           case "$CHOIX" in
             tout) ARGS="--resultats --effectif --virtuel --adversaires" ;;
@@ -108,6 +111,8 @@ jobs:
         env:
           MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
           SURNOMS: ${{ secrets.SURNOMS }}
+          FFTT_IDENTIFIANT: ${{ secrets.FFTT_IDENTIFIANT }}
+          FFTT_MOT_DE_PASSE: ${{ secrets.FFTT_MOT_DE_PASSE }}
         run: python -m ttvaires.archives --pingpocket-cache
 
       - uses: actions/upload-pages-artifact@v3

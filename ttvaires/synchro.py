@@ -249,7 +249,11 @@ def configurer():
     if r.status_code != 200:
         print(f"Dépôt {depot} inaccessible avec ce jeton (HTTP {r.status_code}) : rien n'est enregistré.")
         return False
-    CONFIG.write_text(json.dumps(config, indent=1), encoding="utf-8")
+    try:  # les autres réglages du fichier (compte FFTT) sont gardés
+        autres = json.loads(CONFIG.read_text(encoding="utf-8")) if CONFIG.exists() else {}
+    except ValueError:
+        autres = {}
+    CONFIG.write_text(json.dumps({**autres, **config}, indent=1), encoding="utf-8")
     print(f"Réglage enregistré dans {CONFIG.name} (reste sur ce PC).")
     envoyer(config)
     return True

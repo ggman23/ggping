@@ -24,7 +24,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from . import __main__ as programme
-from . import fftt, publier, recap
+from . import compte_fftt, fftt, publier, recap
 from .reseau import HEURE, Client
 
 RACINE = Path(__file__).resolve().parent.parent
@@ -120,6 +120,7 @@ def main():
         sys.exit(1)
     client = Client(programme.CACHE, hors_ligne=args.hors_ligne,
                     sites_cache_seul={"www.pingpocket.fr"} if args.pingpocket_cache else ())
+    compte_fftt.connecter(client)  # l'API de la FFTT demande une connexion (compte licencié)
     nouvelles = construire_manquantes(client, Path(args.site), mot_de_passe, args.club)
     print(f"Archives ajoutées : {', '.join(nouvelles)}" if nouvelles else "Archives : rien de nouveau.")
 
