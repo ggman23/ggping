@@ -184,7 +184,7 @@ def test_journees_a_archiver():
     assert a_archiver(journees, date(2026, 9, 1)) == []
 
 
-def test_archive_refaite_si_surnoms_photo_ou_logos_changent(tmp_path, monkeypatch):
+def test_archive_refaite_si_presentation_surnoms_photo_ou_logos_changent(tmp_path, monkeypatch):
     from ttvaires.archives import signature
     monkeypatch.delenv("SURNOMS", raising=False)
     imports = tmp_path / "import"
@@ -199,6 +199,9 @@ def test_archive_refaite_si_surnoms_photo_ou_logos_changent(tmp_path, monkeypatc
     (imports / "photo_J2.jpg").write_bytes(b"photo de la J2")
     assert signature("secret", 2, imports) != avec_surnom
     assert signature("autre mot de passe", 2, imports) != signature("secret", 2, imports)
+    actuelle = signature("secret", 2, imports)
+    monkeypatch.setattr("ttvaires.archives.FORMAT", 99)  # nouvelle présentation : archives refaites une fois
+    assert signature("secret", 2, imports) != actuelle
 
 
 def test_compteur_de_visites_seulement_s_il_est_regle(tmp_path):

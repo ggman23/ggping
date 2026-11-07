@@ -176,7 +176,23 @@ def feuille_de_match(d, nous, eux):
             b["n"] += 1
     return {"score": score, "parties": parties, "forfait": bool(d.get("forfeit")),
             "points_partie": [d.get(f"{nous}GamePoints"), d.get(f"{eux}GamePoints")],
-            "bilan": sorted(bilan.values(), key=lambda b: (b["lettre"] or "", b["nom"]))}
+            "bilan": sorted(bilan.values(), key=lambda b: (b["lettre"] or "", b["nom"])),
+            "totaux": totaux_manches(parties), "totaux_doubles": totaux_manches([p for p in parties if p["double"]])}
+
+
+def totaux_manches(parties):
+    """Manches gagnées et perdues, points marqués et encaissés (somme des scores des manches), vus de
+    Vaires, et le nombre de parties jouées dont les manches n'ont pas été saisies."""
+    manches, points, sans_detail = [0, 0], [0, 0], 0
+    for p in parties:
+        sets = [s for s in p["sets"] if None not in s]
+        if not sets and p["gagne"] is not None and not p["forfait"]:
+            sans_detail += 1
+        for a, b in sets:
+            manches[0 if a > b else 1] += a != b
+            points[0] += a
+            points[1] += b
+    return {"manches": manches, "points": points, "sans_detail": sans_detail}
 
 
 def synthese(parties):

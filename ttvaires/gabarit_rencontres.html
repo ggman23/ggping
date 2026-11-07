@@ -138,7 +138,19 @@ function carte(r) {
   const bilan = r.bilan.length ? `<p class="bilan">Bilan : ${r.bilan.map((b) => `<b>${esc(b.nom)} ${esc((b.prenom || "")[0] || "")}.</b> ${b.v}/${b.n}`).join(" · ")}</p>` : "";
   return `<section class="carte">${tete}<table>
     <thead><tr><th>#</th><th class="g">Vaires</th><th></th><th class="g">Adversaire</th><th class="manches">Manches</th><th class="cour">Score</th></tr></thead>
-    <tbody>${lignes}</tbody></table>${bilan}</section>`;
+    <tbody>${lignes}</tbody></table>${bilan}${totaux(r)}</section>`;
+}
+
+/* Manches gagnées et points marqués sur toute la rencontre, et dans les doubles (vus de Vaires) */
+function totaux(r) {
+  const t = r.totaux, d = r.totaux_doubles;
+  if (!t || !(t.manches[0] + t.manches[1])) return "";
+  const adv = esc(r.adversaire);
+  const doubles = d && d.manches[0] + d.manches[1]
+    ? ` · doubles : manches ${d.manches[0]}-${d.manches[1]}, points ${d.points[0]}-${d.points[1]}` : "";
+  const manque = t.sans_detail ? ` <span class="nc">(${t.sans_detail} partie${t.sans_detail > 1 ? "s" : ""} sans le détail des manches)</span>` : "";
+  return `<p class="bilan totaux">Manches gagnées : <b>Vaires ${t.manches[0]}</b> – <b>${t.manches[1]} ${adv}</b>
+    · Points marqués : <b>${t.points[0]}</b> – <b>${t.points[1]}</b>${doubles}${manque}</p>`;
 }
 
 function afficher() {

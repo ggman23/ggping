@@ -52,10 +52,17 @@ def a_archiver(journees, aujourdhui):
             for j, _ in journees if j < derniere]
 
 
+# À augmenter quand la présentation des pages ou images archivées change : les archives déjà
+# publiées sont alors refaites une fois (2 : totaux des manches et colonnes PG/PP, SG/SP, PM/PE).
+FORMAT = 2
+
+
 def signature(mot_de_passe, journee, dossier_import=programme.IMPORT):
-    """Empreinte de ce qui change une archive sans changer les résultats : surnoms, photo de la
-    journée et logos du récapitulatif, mot de passe du site (chiffrement). Elle ne révèle rien."""
+    """Empreinte de ce qui change une archive sans changer les résultats : présentation (FORMAT),
+    surnoms, photo de la journée et logos du récapitulatif, mot de passe du site (chiffrement).
+    Elle ne révèle rien."""
     h = hashlib.sha256(mot_de_passe.encode())
+    h.update(f"format {FORMAT}\0".encode())
     h.update(json.dumps(sorted(recap.lire_surnoms(dossier_import).items())).encode())
     for f in recap.images_du_recap(dossier_import, journee):
         h.update(f.name.lower().encode() + b"\0" + f.read_bytes())
@@ -77,7 +84,7 @@ def construire_manquantes(client, site, mot_de_passe, numero_club=programme.CLUB
         if deja and deja.get("signature") == empreinte and all((site / f).exists() for f in deja.get("fichiers", [])):
             continue  # déjà publiée (si un fichier manque, elle est refaite)
         print(f"\n=== Archive de la J{j} : pages et images telles qu'au {veille:%d/%m/%Y} (veille de la J{j + 1})"
-              + (" - refaite : surnoms, photo ou logos changés" if deja and deja.get("signature") != empreinte else ""), flush=True)
+              + (" - refaite : présentation, surnoms, photo ou logos changés" if deja and deja.get("signature") != empreinte else ""), flush=True)
         sortie = travail / cle
         if sortie.exists():
             shutil.rmtree(sortie)

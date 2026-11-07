@@ -22,7 +22,7 @@ from .adversaires import donnees_classements
 POLICES = Path(__file__).with_name("polices")
 NORMAL, GRAS = "DejaVuSans.ttf", "DejaVuSans-Bold.ttf"
 F = 2                     # suréchantillonnage du dessin
-LARGEUR = 1080
+LARGEUR = 1320  # deux cartes par rangée, avec toutes les colonnes
 MARGE, ECART = 36, 22     # bords de l'image, espace entre deux cartes
 HAUT_BANDEAU = 236
 HAUT_TETE, HAUT_COLONNES, HAUT_LIGNE = 38, 28, 28
@@ -33,7 +33,11 @@ FOND = (13, 14, 17)
 CARTE, CARTE_ALT, BORD = (22, 23, 28), (28, 29, 35), (52, 54, 62)
 ROUGE, ROUGE_FONCE, ROUGE_VIF = (204, 16, 40), (150, 10, 28), (255, 46, 64)
 BLANC, GRIS, GRIS_CLAIR = (241, 243, 245), (150, 156, 166), (196, 200, 206)
-LEGENDE = "J : joués   •   V : victoires   •   N : nuls   •   D : défaites   •   PTS : points"
+LEGENDE = ("J : joués  •  V : victoires  •  N : nuls  •  D : défaites  •  PTS : points  •  PG / PP : points gagnés / perdus"
+           " (scores des rencontres)  •  SG / SP : sets gagnés / perdus  •  PM / PE : points marqués / encaissés dans les sets")
+# Colonnes chiffrées, de gauche à droite : (titre, clé des données, largeur)
+COLONNES = [("PTS", "points", 34), ("J", "joues", 28), ("V", "v", 28), ("N", "n", 28), ("D", "d", 28),
+            ("PG", "pg", 36), ("PP", "pp", 36), ("SG", "sg", 36), ("SP", "sp", 36), ("PM", "pm", 46), ("PE", "pe", 46)]
 
 _polices = {}
 
@@ -198,9 +202,12 @@ def _bandeau(img, d, dossier_import):
 # ---------------------------------------------------------------------------
 
 def _colonnes(x, w):
-    """Abscisses : centre de #, début du nom, centres de PTS J V N D."""
-    return {"#": x + 22, "équipe": x + 48, "PTS": x + w - 152, "J": x + w - 117, "V": x + w - 86,
-            "N": x + w - 55, "D": x + w - 24}
+    """Abscisses : centre de #, début du nom, puis centre de chaque colonne chiffrée (calées à droite)."""
+    col, droite = {"#": x + 22, "équipe": x + 48}, x + w - 10
+    for titre, _, largeur in reversed(COLONNES):
+        col[titre] = droite - largeur / 2
+        droite -= largeur
+    return col
 
 
 def _carte(img, d, x, y, w, h, poule):
@@ -219,9 +226,13 @@ def _carte(img, d, x, y, w, h, poule):
     yc = y + HAUT_TETE + HAUT_COLONNES - 9
     ecrire(d, col["#"], yc, "#", GRAS, 10.5, GRIS, "ms")
     ecrire(d, col["équipe"], yc, "ÉQUIPE", GRAS, 10.5, GRIS)
-    for c in ("PTS", "J", "V", "N", "D"):
+    for c, _, _ in COLONNES:
         ecrire(d, col[c], yc, c, GRAS, 10.5, GRIS, "ms")
-    place_nom = col["PTS"] - 22 - col["équipe"]
+    place_nom = col["PTS"] - 24 - col["équipe"]
+    largeurs = {titre: largeur for titre, _, largeur in COLONNES}
+    for debut_groupe in ("PG", "SG", "PM"):  # séparation des groupes : rencontres, points de rencontre, sets, points
+        xs = col[debut_groupe] - largeurs[debut_groupe] / 2
+        d.line([xs * F, (y + HAUT_TETE + 6) * F, xs * F, (y + h - 8) * F], fill=(44, 46, 54), width=F)
     for i, l in enumerate(poule["lignes"]):
         y0 = y + HAUT_TETE + HAUT_COLONNES + i * HAUT_LIGNE
         if l["nous"]:
@@ -236,9 +247,9 @@ def _carte(img, d, x, y, w, h, poule):
         couleur = BLANC if l["nous"] else GRIS_CLAIR
         ecrire(d, col["#"], yt, str(l["rang"]), gras, 13, BLANC, "ms")
         ecrire(d, col["équipe"], yt, raccourcir(l["libelle"], gras, 13, place_nom), gras, 13, BLANC)
-        ecrire(d, col["PTS"], yt, str(l["points"]), GRAS, 13, BLANC, "ms")
-        for c, cle in (("J", "joues"), ("V", "v"), ("N", "n"), ("D", "d")):
-            ecrire(d, col[c], yt, str(l[cle]), gras, 13, couleur if not l["nous"] else BLANC, "ms")
+        for c, cle, _ in COLONNES:
+            valeur = str(l.get(cle, 0)) + ("*" if cle == "sg" and l.get("sans_detail") else "")
+            ecrire(d, col[c], yt, valeur, GRAS if c == "PTS" else gras, 13, BLANC if c == "PTS" or l["nous"] else couleur, "ms")
 
 
 def image_classements(donnees, dossier_import, dossier):
@@ -253,7 +264,8 @@ def image_classements(donnees, dossier_import, dossier):
     h_carte = HAUT_TETE + HAUT_COLONNES + lignes_max * HAUT_LIGNE + 10
     haut_cartes = 338
     rangees = (len(c["poules"]) + 1) // 2
-    hauteur = round(haut_cartes + rangees * (h_carte + 20) + 40)
+    incomplet = any(l.get("sans_detail") for p in c["poules"] for l in p["lignes"])
+    hauteur = round(haut_cartes + rangees * (h_carte + 20) + 40 + (18 if incomplet else 0))
     img = Image.new("RGB", (LARGEUR * F, hauteur * F), FOND)
     # Fumée en bas, dans la place libre à côté de la dernière carte si elle est seule
     seule = len(c["poules"]) % 2 == 1
@@ -269,7 +281,10 @@ def image_classements(donnees, dossier_import, dossier):
         x = MARGE + (i % 2) * (w_carte + ECART)
         y = haut_cartes + (i // 2) * (h_carte + 20)
         _carte(img, d, x, y, w_carte, h_carte, poule)
-    ecrire(d, MARGE + 16, hauteur - 14, LEGENDE, NORMAL, 11, GRIS_CLAIR)
+    ecrire(d, MARGE + 16, hauteur - 14 - (18 if incomplet else 0), LEGENDE, NORMAL, 11, GRIS_CLAIR)
+    if incomplet:
+        ecrire(d, MARGE + 16, hauteur - 14, "* sets incomplets : certaines parties ont été saisies sans le détail des sets",
+               NORMAL, 11, GRIS_CLAIR)
     chemin = Path(dossier) / "classements_poules.png"
     chemin.parent.mkdir(parents=True, exist_ok=True)
     img.resize((LARGEUR, hauteur), Image.LANCZOS).save(chemin, optimize=True)

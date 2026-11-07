@@ -21,14 +21,18 @@ MAX_HISTORIQUES = 150  # historiques téléchargés au plus par lancement (≈ 1
 
 def classement_poule(poule, rencontres, detail):
     """Classement d'une poule calculé à partir des résultats saisis (points de rencontre de la FFTT,
-    puis rapport parties gagnées / parties perdues en cas d'égalité)."""
+    puis rapport PG / PP en cas d'égalité). PG / PP : points gagnés / perdus, c'est-à-dire le cumul
+    des scores des rencontres (21-21...), comme sur le site de la FFTT. En plus, d'après les feuilles
+    de match : manches gagnées / perdues (sg / sp) et points marqués / encaissés dans les manches
+    (pm / pe) ; sans_detail compte les parties jouées dont les manches n'ont pas été saisies."""
     equipes = {}
     for po in poule.get("poolOpponents", []):
         t = (po.get("opponent") or {}).get("team") or {}
         if t.get("name"):
             equipes[t["name"]] = {"libelle": t["name"], "club": fftt.club_de(t)[0],
                                   "numero": t.get("position") or fftt.numero_equipe(t["name"]),
-                                  "points": 0, "joues": 0, "v": 0, "n": 0, "d": 0, "pg": 0, "pp": 0}
+                                  "points": 0, "joues": 0, "v": 0, "n": 0, "d": 0, "pg": 0, "pp": 0,
+                                  "sg": 0, "sp": 0, "pm": 0, "pe": 0, "sans_detail": 0}
     for r in rencontres:
         d = detail.get(r["id"])
         if not d:
@@ -43,6 +47,16 @@ def classement_poule(poule, rencontres, detail):
             e["pg"] += pour
             e["pp"] += contre
             e["v" if pour > contre else "n" if pour == contre else "d"] += 1
+            for g in d.get("games") or []:
+                sets = [(s.get(f"{cote}Score"), s.get(f"{autre}Score")) for s in g.get("sets") or []]
+                sets = [(a, b) for a, b in sets if a is not None and b is not None]
+                if not sets and g.get("winner") in ("home", "away") and not g.get("forfeit"):
+                    e["sans_detail"] += 1
+                for a, b in sets:
+                    e["sg"] += a > b
+                    e["sp"] += b > a
+                    e["pm"] += a
+                    e["pe"] += b
     ordre = sorted(equipes.values(), key=lambda e: (-e["points"], -(e["pg"] / e["pp"] if e["pp"] else e["pg"] * 1000)))
     precedent, rang = None, 0
     for i, e in enumerate(ordre, 1):
@@ -70,6 +84,7 @@ def donnees_classements(donnees):
             "poule": e.get("poule") or "", "championnat": e.get("championnat"),
             "lignes": [{"rang": c["rang"], "libelle": c["libelle"], "points": c["points"], "joues": c["joues"],
                         "v": c["v"], "n": c["n"], "d": c["d"], "pg": c.get("pg", 0), "pp": c.get("pp", 0),
+                        **{k: c.get(k, 0) for k in ("sg", "sp", "pm", "pe", "sans_detail")},
                         "nous": c.get("club") == club}
                        for c in e["classement"]],
         })

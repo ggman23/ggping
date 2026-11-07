@@ -617,6 +617,16 @@ def images_rencontres(donnees, dossier):
             img.espace(4)
             img.texte("Bilan : " + " · ".join(f"{nom_alternatives(b['nom'], b['prenom'])[1][0]} {b['v']}/{b['n']}"
                                               for b in r["bilan"]), 19, NOIR)
+        t, d = r.get("totaux"), r.get("totaux_doubles")
+        if t and sum(t["manches"]):
+            img.texte(f"Manches gagnées : Vaires {t['manches'][0]} – {t['manches'][1]} {r['adversaire']} · "
+                      f"Points marqués : {t['points'][0]} – {t['points'][1]}", 19, NOIR)
+            precisions = ([f"Doubles : manches {d['manches'][0]}-{d['manches'][1]}, points {d['points'][0]}-{d['points'][1]}"]
+                          if d and sum(d["manches"]) else [])
+            if t["sans_detail"]:
+                precisions.append(f"{t['sans_detail']} partie(s) sans le détail des manches")
+            if precisions:
+                img.texte(" · ".join(precisions), 17, DOUX)
         img.pied("Manches dans l'ordre, score de Vaires en premier (vert : manche gagnée par Vaires). "
                  "En gras : le vainqueur de la partie.")
         nom = f"rencontres_J{j}_{equipe_courte(r['equipe'])}.png"
