@@ -276,6 +276,25 @@ récapitulatif changerait : surnoms modifiés, photo de la journée ou logos ajo
   téléchargés portent la journée dans leur nom (J2_resultats_vaires.html).
 - Netlify ne reçoit que les fichiers qui ont changé : une archive n'est envoyée qu'une fois.
 
+## Rubriques de l'espace club : Matériel, Prépa mentale
+
+Après les archives, le menu de /club/ (et l'accueil, en tuiles) a des rubriques permanentes faites
+de documents fournis, publiés tels quels : une page HTML (Matériel : forums et communautés sur le
+matériel) et des PDF (Prépa mentale). Sur ordinateur, un PDF s'affiche dans la page ; sur téléphone
+(et dans l'application), « Ouvrir le PDF » le donne au lecteur PDF de l'appareil. Une page HTML
+fournie s'affiche isolée de l'espace club (elle n'a accès ni au mot de passe ni aux autres documents).
+
+Les documents sont dans le dossier `ressources/` du dépôt, **chiffrés avec le mot de passe du club**
+(le dépôt est public, eux ne le sont pas) ; `ressources/ressources.json` donne l'ordre des rubriques,
+les titres et les descriptions. Pour ajouter ou remplacer un document, sur le PC :
+
+    python -m ttvaires.ressources ajouter "Prépa mentale" "C:\chemin\guide.pdf" --titre "Guide du joueur" --description "26 pages"
+
+(le mot de passe du club est demandé), puis envoyer le dossier `ressources/` sur GitHub. Une
+nouvelle rubrique est créée à la fin si son nom n'existe pas. Si le mot de passe du club change,
+ces documents ne s'ouvrent plus avec la nouvelle clé : la mise à jour le signale dans son journal et
+ne les publie pas ; il faut alors les ajouter de nouveau.
+
 ## Sécurité
 
 - Chaque page, l'Excel et les données envoyées par le PC sont chiffrés en AES-256-GCM avec une clé

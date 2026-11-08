@@ -1,0 +1,46 @@
+{
+ "rubriques": [
+  {
+   "nom": "Matériel",
+   "description": "",
+   "documents": [
+    {
+     "fichier": "forums-materiel-tt.html",
+     "titre": "Forums et communautés matériel",
+     "description": "Forums, groupes et bases d'avis sur les revêtements et les bois, dans le monde entier : filtres par zone, langue et activité",
+     "taille": 112015
+    }
+   ]
+  },
+  {
+   "nom": "Prépa mentale",
+   "description": "",
+   "documents": [
+    {
+     "fichier": "guide-du-joueur.pdf",
+     "titre": "Guide du joueur : mon mental de compétiteur",
+     "description": "Stress, émotions, peur de perdre ou de gagner, outils avant, pendant et après le match (26 pages)",
+     "taille": 675692
+    },
+    {
+     "fichier": "guide-mental-jeunes.pdf",
+     "titre": "Préparation mentale : guide des jeunes (11-15 ans)",
+     "description": "Carnet pratique : mieux vivre les matchs et jouer avec la pression, exercices (28 pages)",
+     "taille": 111113
+    },
+    {
+     "fichier": "manuel-du-competiteur.pdf",
+     "titre": "Manuel du compétiteur (12-15 ans)",
+     "description": "Deviens le patron de ton cerveau : comprendre le stress et les émotions, modules d'entraînement mental (11 pages)",
+     "taille": 197082
+    },
+    {
+     "fichier": "sources-parents-entraineurs.pdf",
+     "titre": "Sources pour parents et entraîneurs",
+     "description": "36 références : guides, vidéos, livres, formations et recherches sur l'accompagnement des jeunes (18 pages)",
+     "taille": 101422
+    }
+   ]
+  }
+ ]
+}

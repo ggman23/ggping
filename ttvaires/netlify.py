@@ -41,7 +41,7 @@ from urllib.parse import quote
 
 import requests
 
-from . import publier
+from . import publier, ressources
 
 RACINE = Path(__file__).resolve().parent.parent
 API = "https://api.netlify.com/api/v1"
@@ -164,8 +164,10 @@ def espace_club(site, club, cle_site, cle_club):
                          "documents": _documents_club(dossier, etat_archive, club / "archives" / cle_archive / "fichiers",
                                                       f"archives/{cle_archive}/fichiers/", cle_site, cle_club)})
     (club / "fichiers" / "verif.chiffre").write_bytes(chiffrer_stable(VERIF_CLUB, cle_club))
+    # Rubriques permanentes après les archives (Matériel, Prépa mentale...) : documents fournis, voir ressources.py
+    rubriques = ressources.publier_dans(club, cle_club)
     donnees = {"maj": (etat.get("derniere_maj") or {}).get("fin"), "sel": publier.SEL, "iterations": publier.ITERATIONS,
-               "documents": documents, "archives": archives}
+               "documents": documents, "archives": archives, "ressources": rubriques}
     js = json.dumps(donnees, ensure_ascii=False).replace("<", "\\u003c")
     (club / "index.html").write_text(GABARIT_CLUB.read_text(encoding="utf-8").replace("__DONNEES_JSON__", js), encoding="utf-8")
 
@@ -323,7 +325,8 @@ GENERE_LE = re.compile(r'"genere_le": "[^"]*"')
 
 def signature_contenu(site, mot_de_passe, reglages=()):
     """Empreinte de ce que montre la copie Netlify : pages déchiffrées (sans leur date de génération),
-    bilans des vérifications, noms des fichiers, archives, surnoms et images du dossier import, code
+    bilans des vérifications, noms des fichiers, archives, surnoms et images du dossier import, rubriques
+    de l'espace club (dossier ressources), code
     de l'outil et réglages (mots de passe, compteurs). Deux mises à jour sans rien de nouveau donnent
     la même empreinte. Les images et l'Excel ne sont pas lus : ils découlent des mêmes données."""
     h = hashlib.sha256()
@@ -340,7 +343,8 @@ def signature_contenu(site, mot_de_passe, reglages=()):
     h.update(json.dumps(archives, sort_keys=True).encode("utf-8"))
     h.update(os.environ.get("SURNOMS", "").encode("utf-8"))
     for dossier, garder in ((RACINE / "import", lambda f: f.name.lower().startswith(("photo_", "logo_", "surnoms"))),
-                            (Path(__file__).parent, lambda f: "__pycache__" not in f.parts)):
+                            (Path(__file__).parent, lambda f: "__pycache__" not in f.parts),
+                            (ressources.DOSSIER, lambda f: True)):
         for f in sorted(dossier.rglob("*")) if dossier.is_dir() else []:
             if f.is_file() and garder(f):
                 h.update(f.name.encode("utf-8") + b"\0" + f.read_bytes())
