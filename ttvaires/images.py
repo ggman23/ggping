@@ -905,11 +905,16 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
             def ou_aucun(lignes, texte="aucun"):
                 return lignes or [[C(texte, couleur=DOUX, align="g"), C(), C(), C(), C(), C()]]
 
-            renforts = {x["id"]: "a joué en " + ", ".join(str(n) for n in x["equipes"]) for x in a.get("renforts", [])}
+            num = r["adversaire"].get("numero")
+            renforts = {x["id"]: "a joué en " + ", ".join(str(n) for n in x["equipes"])
+                        + (f" · {x['dans_equipe']}× en {num}" if x.get("dans_equipe") else "") for x in a.get("renforts", [])}
             pas_joue = [jid for jid in a.get("non_alignes", []) if jid not in a["probable"]]
+            autres = a.get("autres_habitues") or []
             tableaux = [
                 ("Composition probable", "estimation", ou_aucun(lignes_joueurs(a["probable"]), "—")),
-                ("Renforts possibles", "joueurs d'équipes plus fortes, non brûlés",
+                *([(f"Aussi alignés en équipe {num}", "hors composition probable", lignes_joueurs(autres[:8]))]
+                  if autres else []),
+                ("Renforts possibles", "ont joué en équipe plus forte, non brûlés",
                  ou_aucun(lignes_joueurs([x["id"] for x in a.get("renforts", [])][:8], renforts))),
                 ("Pas encore joué cette phase", f"les 8 mieux classés sur {len(pas_joue)}" if len(pas_joue) > 8 else None,
                  ou_aucun(lignes_joueurs(pas_joue[:8]))),

@@ -50,6 +50,7 @@ h4 { font-size: 15px; margin: 18px 0 8px; }
 @media (max-width: 900px) { .grille2, .grille4 { grid-template-columns: 1fr; } }
 .grille4 > div { background: var(--surface2); border-radius: 8px; padding: 10px; }
 .grille4 h5 { margin: 0 0 6px; font-size: 14px; }
+.grille4 h6 { margin: 12px 0 4px; font-size: 13px; color: var(--doux); }
 .grille4 ul { list-style: none; margin: 0; padding: 0; }
 .grille4 li { padding: 3px 0; border-bottom: 1px dashed var(--bord); font-size: 14px; }
 .grille4 li:last-child { border-bottom: 0; }
@@ -366,9 +367,11 @@ function panneauRencontre(e, r) {
   } else if (a) {
     const renf = a.renforts.map((x) => ({ ...x }));
     bloc = `<div class="grille4">
-      <div><h5>Composition probable <span class="badge att">estimation</span></h5>${liste(a.probable, "Pas assez de données.")}</div>
+      <div><h5>Composition probable <span class="badge att">estimation</span></h5>${liste(a.probable, "Pas assez de données.")}
+        ${(a.autres_habitues || []).length ? `<h6>Aussi alignés en équipe ${N}</h6>${liste(a.autres_habitues, "",
+          (id) => ` <span class="petit">(${(a.habitues.find((h) => h.id === id) || {}).nb || 1}× en ${N})</span>`)}` : ""}</div>
       <div><h5>Renforts possibles</h5>${liste(renf, "Aucun joueur d'une équipe plus forte n'est disponible.",
-        (x) => ` <span class="petit">(a joué en ${x.equipes.join(", ")})</span>${x.j1_plus_forte ? ' <span class="badge att">J1</span>' : ""}`)}</div>
+        (x) => ` <span class="petit">(a joué en ${x.equipes.join(", ")}${x.dans_equipe ? ` et ${x.dans_equipe}× en ${N}` : ""})</span>${x.j1_plus_forte ? ' <span class="badge att">J1</span>' : ""}`)}</div>
       <div><h5>Brûlés / indisponibles</h5>${liste(a.brules, "Aucun joueur brûlé pour cette équipe.", (x) => ` <span class="badge brule" title="${esc(x.raison)}">${x.raison.startsWith("2 matchs") ? "éq. " + x.equipes.join(" + ") : "déjà joué la J" + r.journee}</span>`)}</div>
       <div><h5>Pas encore joué cette phase</h5>${liste(a.non_alignes, "Tous les joueurs ont déjà joué.")}</div>
     </div>

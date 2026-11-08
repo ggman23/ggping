@@ -129,3 +129,25 @@ def test_enrichir_ajoute_analyse_et_composition_alignee():
     assert r1["lettres_adverses"] is None and r1["placements"] is None  # feuille sans lettres, rien avant la J1
     assert "analyse" not in r2
     assert club["parcours"]["A"]["M"]["matchs"] == [{"j": 1, "n": 18, "d": "2026-09-25"}]
+
+
+def test_habitue_passe_en_equipe_plus_forte_reste_un_renfort_possible():
+    """Cas réel (Chelles 9, J5) : BESANA joue la J1 en 9 puis la J2 en 3. Pas brûlé pour la 9, il n'est
+    pas dans la composition probable (d'autres y ont joué plus souvent) : il doit être un renfort possible."""
+    joueurs = [_joueur(x, p) for x, p in [("BESANA", 1066), ("BRIN", 966), ("ROB", 854), ("HEN", 765), ("MOR", 753),
+                                         ("SEG", 601), ("X3", 1200)]]
+    club = _club(joueurs, {
+        3: [(2, "2026-10-02", ["BESANA", "X3"])],
+        9: [(1, "2026-09-25", ["BRIN", "ROB", "BESANA", "HEN"]), (2, "2026-10-02", ["HEN", "ROB", "BRIN", "MOR"]),
+            (3, "2026-10-16", ["ROB", "HEN", "BRIN", "MOR"]), (4, "2026-11-06", ["MOR", "BRIN", "SEG", "HEN"])],
+    })
+    a = analyse_rencontre(club, "M", 9, 5, "2026-11-20")
+    assert a["probable"] == ["BRIN", "HEN", "ROB", "MOR"]
+    # Renforts par points : X3 (seulement en 3) et BESANA (en 3, et 1 fois en 9)
+    assert [(r["id"], r["equipes"], r["dans_equipe"]) for r in a["renforts"]] == [("X3", [3], 0), ("BESANA", [3], 1)]
+    assert a["autres_habitues"] == ["SEG"]  # aussi aligné en 9, hors composition probable
+    # Dans la composition probable, il n'est pas répété dans les renforts
+    club["equipes"][1]["compositions"][3]["joueurs"] = ["BESANA", "BRIN", "SEG", "HEN"]
+    club["equipes"][1]["compositions"][2]["joueurs"] = ["BESANA", "HEN", "BRIN", "MOR"]
+    a = analyse_rencontre(club, "M", 9, 5, "2026-11-20")
+    assert "BESANA" in a["probable"] and [r["id"] for r in a["renforts"]] == ["X3"]

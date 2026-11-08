@@ -65,8 +65,8 @@ def placements(equipe, journee, date_match=None):
 
 
 def resume_joueur(compte, libelles):
-    """« A/W ×2 · B/X ×1 » : les positions d'un joueur, la plus fréquente d'abord."""
+    """« A/W ×2 · B/X » : les positions d'un joueur, la plus fréquente d'abord (×1 sous-entendu)."""
     if not compte:
         return ""
     ordre = sorted((i for i, n in enumerate(compte) if n), key=lambda i: (-compte[i], i))
-    return " · ".join(f"{libelles[i]} ×{compte[i]}" for i in ordre)
+    return " · ".join(libelles[i] + (f" ×{compte[i]}" if compte[i] > 1 else "") for i in ordre)

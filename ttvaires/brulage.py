@@ -107,7 +107,10 @@ def analyse_rencontre(club, championnat, numero, journee, date_match=None):
 
     - probable    : composition probable (estimation) ;
     - habitues    : joueurs ayant déjà joué dans cette équipe ;
-    - renforts    : joueurs d'équipes plus fortes, non brûlés ;
+    - renforts    : joueurs non brûlés qui ont joué dans une équipe plus forte, hors composition
+                    probable (même s'ils ont aussi joué dans cette équipe : « dans_equipe » matchs) ;
+    - autres_habitues : joueurs déjà alignés dans cette équipe, hors composition probable et
+                    hors renforts (identifiants) ;
     - remplacants : joueurs d'équipes plus faibles ;
     - non_alignes : joueurs qui n'ont encore joué dans aucune équipe cette phase ;
     - brules      : joueurs qui ne peuvent pas jouer, avec la raison.
@@ -132,15 +135,17 @@ def analyse_rencontre(club, championnat, numero, journee, date_match=None):
         elif deja:
             brules.append({"id": jid, "equipes": [deja[0]["numero"]],
                            "raison": f"a déjà joué la J{journee} en équipe {deja[0]['numero']}"})
-        elif any(p["numero"] == numero for p in avant):
+        elif plus_fortes or any(p["numero"] == numero for p in avant):
             nb = sum(p["numero"] == numero for p in avant)
-            habitues.append({"id": jid, "nb": nb})
-        elif plus_fortes:
-            renforts.append({
-                "id": jid,
-                "equipes": sorted({p["numero"] for p in plus_fortes}),
-                "j1_plus_forte": journee == 2 and any(p.get("journee") == 1 for p in plus_fortes),
-            })
+            if nb:
+                habitues.append({"id": jid, "nb": nb})
+            if plus_fortes:  # renfort possible (retiré plus bas s'il est dans la composition probable)
+                renforts.append({
+                    "id": jid,
+                    "equipes": sorted({p["numero"] for p in plus_fortes}),
+                    "j1_plus_forte": journee == 2 and any(p.get("journee") == 1 for p in plus_fortes),
+                    "dans_equipe": nb,
+                })
         elif avant:
             remplacants.append({"id": jid, "equipes": sorted({p["numero"] for p in avant})})
         else:
@@ -158,6 +163,11 @@ def analyse_rencontre(club, championnat, numero, journee, date_match=None):
         if len(probable) >= taille:
             break
         probable.append(jid)
+    # Un habitué qui a aussi joué en équipe plus forte (ex. J1 en 9 puis J2 en 3) reste un renfort
+    # possible s'il n'est pas dans la composition probable : sinon il n'apparaîtrait nulle part.
+    renforts = [r for r in renforts if r["id"] not in probable]
+    en_renfort = {r["id"] for r in renforts}
+    autres_habitues = [h["id"] for h in habitues if h["id"] not in probable and h["id"] not in en_renfort]
 
     return {
         "championnat": championnat,
@@ -168,6 +178,7 @@ def analyse_rencontre(club, championnat, numero, journee, date_match=None):
         "probable": probable,
         "habitues": habitues,
         "renforts": renforts,
+        "autres_habitues": autres_habitues,
         "remplacants": remplacants,
         "non_alignes": non_alignes,
         "brules": brules,

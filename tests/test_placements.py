@@ -32,8 +32,8 @@ def test_placements_des_rencontres_jouees_avant():
     assert [(r["journee"], r["domicile"], r["contre"], r["par_points"]) for r in p["rencontres"]] == [
         (1, True, "X 1", True), (2, False, "Y 2", False)]
     assert p["joueurs"]["a"] == [1, 0, 1, 0] and (p["par_points"], p["avec_points"]) == (1, 2)
-    assert resume_joueur(p["joueurs"]["a"], p["libelles"]) == "A/W ×1 · C/Y ×1"
-    assert resume_joueur([0, 2, 1, 0], p["libelles"]) == "B/X ×2 · C/Y ×1"
+    assert resume_joueur(p["joueurs"]["a"], p["libelles"]) == "A/W · C/Y"
+    assert resume_joueur([0, 2, 1, 0], p["libelles"]) == "B/X ×2 · C/Y"
     assert placements(equipe, 1, "2026-09-25") is None and placements(None, 2) is None
 
 
