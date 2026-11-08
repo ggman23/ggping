@@ -181,9 +181,10 @@ Pages est en panne, dès que le site est prêt.
 
 Netlify décompte **15 crédits par mise en ligne**, quelle que soit sa taille : 300 crédits font
 20 envois par mois. La taille du site compte peu (le trafic : 20 crédits par Go servi aux visiteurs,
-soit environ 1 crédit pour 50 Mo). Les crédits repartent à zéro à chaque cycle (le 6 du mois pour ce
-compte). Crédits épuisés : le site reste visible, mais plus aucune mise à jour n'y part jusqu'au
-cycle suivant.
+soit environ 1 crédit pour 50 Mo ; les requêtes : 2 crédits pour 10 000). Les crédits repartent à zéro à chaque cycle (le 6 du mois pour ce
+compte). **Crédits épuisés (offre gratuite) : Netlify met le site en pause** jusqu'au cycle suivant,
+les visiteurs voient « Site not available » (documentation Netlify, « How credits work ») : garder
+de la marge. Le site GitHub, lui, n'est pas concerné.
 
 Pour économiser : **une copie identique à celle en ligne n'est pas renvoyée**. L'outil calcule une
 empreinte de ce que montre la copie (pages sans leur date de génération, bilans, archives, surnoms et
