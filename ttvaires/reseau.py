@@ -84,6 +84,13 @@ class Client:
         fichier = self._fichier(chemin)
         return fichier.stat().st_mtime if fichier.exists() else None
 
+    def lu_en_cache(self, chemin):
+        """(texte, horodatage) de la copie en cache, sans aucune requête ; (None, None) si absente."""
+        fichier = self._fichier(chemin)
+        if not fichier.exists():
+            return None, None
+        return fichier.read_text(encoding="utf-8"), fichier.stat().st_mtime
+
     def en_cache(self, chemin, ttl):
         """Vrai si la page est en cache et encore valable (aucune requête ne sera faite)."""
         date = self.date(chemin)

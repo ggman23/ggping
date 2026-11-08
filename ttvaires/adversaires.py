@@ -265,6 +265,28 @@ def verification(numero_club, nom_club, rencontres_poules, suivies, clubs_adv, e
             "clubs": clubs}
 
 
+def _memoriser_listes_en_cache(client, clubs, liens, etats):
+    """Club adverse sans liste mémorisée (premier lancement de ce suivi) : la liste déjà en cache,
+    celle du lancement précédent, sert de référence avant d'être relue. Les inscrits arrivés depuis
+    sont ainsi « nouveaux » dès ce lancement. Renvoie True si l'état a changé."""
+    lire = getattr(client, "lu_en_cache", None)
+    if etats is None or lire is None:
+        return False
+    change = False
+    for num in clubs:
+        if num in etats:
+            continue
+        lues = {t: lire(liens[num][t]) for t in TRIS}
+        listes = {t: texte for t, (texte, _) in lues.items() if texte}
+        if not ("categories" in listes and "etat" in listes):
+            continue
+        actuels = sorted(j["id"] for j in pingpocket.effectif(listes, {t: t for t in TRIS}) if j.get("renouvele"))
+        date_liste = datetime.fromtimestamp(min(d for _, d in lues.values() if d)).isoformat(timespec="minutes")
+        etats[num] = {"date": date_liste, "renouveles": actuels, "avant": None}
+        change = True
+    return change
+
+
 def completer_avec_pingpocket(client, donnees, dossier_import=None, tous_les_historiques=False, fichier_etat=None):
     """Effectifs complets, catégories, meilleur classement et adresses des salles (pingpocket.fr).
 
@@ -281,6 +303,9 @@ def completer_avec_pingpocket(client, donnees, dossier_import=None, tous_les_his
         print(f"  ! import : aucune liste de licenciés dans « {nom} » (enregistrer en « Page Web, complète »)")
     liens = {num: {"salle": f"/app/fftt/clubs/{num}/coordonnees",
                    **{t: f"/app/fftt/clubs/{num}/licencies?SORT={tri}" for t, tri in TRIS.items()}} for num in clubs}
+    fichier = Path(fichier_etat) if fichier_etat else None
+    etats = (json.loads(fichier.read_text(encoding="utf-8")) if fichier.exists() else {}) if fichier else None
+    change = _memoriser_listes_en_cache(client, clubs, liens, etats)
     try:
         donnees["club"]["salle"] = pingpocket.lire_salle(
             client.get(f"/app/fftt/clubs/{numero_club}/coordonnees", 30 * JOUR, perime_si_erreur=True))
@@ -293,9 +318,6 @@ def completer_avec_pingpocket(client, donnees, dossier_import=None, tous_les_his
         pages = client.get_plusieurs([u for l in liens.values() for u in l.values()], ttl=JOUR, message="pages clubs",
                                      perime_si_erreur=True)
     complets = importes = 0
-    fichier = Path(fichier_etat) if fichier_etat else None
-    etats = (json.loads(fichier.read_text(encoding="utf-8")) if fichier.exists() else {}) if fichier else None
-    change = False
     for num, club in clubs.items():
         l = liens[num]
         if pages.get(l["salle"]):

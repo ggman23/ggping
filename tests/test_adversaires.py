@@ -193,3 +193,24 @@ def test_nouveaux_inscrits_des_clubs_adverses(tmp_path):
     # Liste suivante sans changement d'inscrits après une autre arrivée : seul le dernier arrivé est nouveau
     club, nouveaux = lancement([("1", "1210"), ("2", "900"), ("7", "1500"), ("8", "500")], debut + 30 * 86400)
     assert nouveaux == ["8"]
+
+
+def test_premier_suivi_part_de_la_liste_deja_en_cache(tmp_path):
+    """Premier lancement après la mise en place du suivi : la liste du lancement précédent (en cache,
+    pas encore relue) sert de référence, donc un inscrit arrivé depuis est « nouveau » tout de suite."""
+    base = f"/app/fftt/clubs/{MEAUX}/licencies?SORT="
+
+    def ecrans(joueurs):
+        return {base + "CATEGORY": _ecran("par catégorie d'âge", [("Sénior", [(i, f"NOM{i} P", p) for i, p in joueurs])]),
+                base + "LICENCE_STATE": _ecran("par licences à jour", [("Licences à jour", [(i, "", "") for i, _ in joueurs])])}
+
+    anciennes = ecrans([("1", "1210"), ("2", "900")])  # celles du 19/10, dans le cache du PC
+    client = FauxPingpocket(en_ligne=True, pages=ecrans([("1", "1210"), ("2", "900"), ("7", "1500")]),
+                            en_cache=[f"/app/fftt/licencies/{i}/graphiques/historique-classement" for i in "127"])
+    client.lu_en_cache = lambda chemin: (anciennes.get(chemin), 1_792_400_000 if chemin in anciennes else None)
+    client.date = lambda chemin: 1_794_200_000
+    donnees = _donnees()
+    completer_avec_pingpocket(client, donnees, tmp_path / "import", fichier_etat=tmp_path / "effectif_adversaires.json")
+    club = donnees["clubs"][MEAUX]
+    assert [j["id"] for j in club["joueurs"] if j.get("nouveau")] == ["7"]
+    assert club["reference_nouveaux"] < club["date_effectif"]
