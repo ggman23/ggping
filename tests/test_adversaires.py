@@ -163,3 +163,33 @@ def test_historiques_limites_par_lancement(tmp_path, monkeypatch):
     completer_avec_pingpocket(client, donnees, tmp_path, tous_les_historiques=True)
     assert sorted(client.demandes[-1]) == sorted(historique.format(n) for n in ("1", "2", "4"))
     assert donnees["sources"]["historiques_restants"] == 0
+
+
+def test_nouveaux_inscrits_des_clubs_adverses(tmp_path):
+    """Un joueur qui apparaît dans la liste des licenciés d'un club adverse (inscription, mutation,
+    réinscription) est marqué « nouveau » jusqu'au changement suivant de la liste."""
+    base = f"/app/fftt/clubs/{MEAUX}/licencies?SORT="
+
+    def lancement(joueurs, horodatage):
+        pages = {base + "CATEGORY": _ecran("par catégorie d'âge", [("Sénior", [(i, f"NOM{i} P", p) for i, p in joueurs])]),
+                 base + "LICENCE_STATE": _ecran("par licences à jour", [("Licences à jour", [(i, "", "") for i, _ in joueurs])])}
+        client = FauxPingpocket(en_ligne=True, pages=pages, en_cache=[f"/app/fftt/licencies/{i}/graphiques/historique-classement"
+                                                                      for i, _ in joueurs + [("1", 0)]])
+        client.date = lambda chemin: horodatage
+        donnees = _donnees()
+        completer_avec_pingpocket(client, donnees, tmp_path / "import", fichier_etat=tmp_path / "cache" / "effectif_adversaires.json")
+        club = donnees["clubs"][MEAUX]
+        return club, sorted(j["id"] for j in club["joueurs"] if j.get("nouveau"))
+
+    debut = 1_790_000_000  # 2026-09-21
+    club, nouveaux = lancement([("1", "1210"), ("2", "900")], debut)
+    club_debut_date = club["date_effectif"][:10]
+    assert club_debut_date.startswith("2026-09-2") and nouveaux == [] and "reference_nouveaux" not in club
+    # Un 1500 s'inscrit : il est nouveau, sur cette liste et tant qu'elle ne change pas
+    club, nouveaux = lancement([("1", "1210"), ("2", "900"), ("7", "1500")], debut + 15 * 86400)
+    assert nouveaux == ["7"] and club["reference_nouveaux"][:10] == club_debut_date
+    club, nouveaux = lancement([("1", "1210"), ("2", "900"), ("7", "1500")], debut + 15 * 86400)
+    assert nouveaux == ["7"]
+    # Liste suivante sans changement d'inscrits après une autre arrivée : seul le dernier arrivé est nouveau
+    club, nouveaux = lancement([("1", "1210"), ("2", "900"), ("7", "1500"), ("8", "500")], debut + 30 * 86400)
+    assert nouveaux == ["8"]

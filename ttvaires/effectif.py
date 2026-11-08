@@ -217,14 +217,28 @@ def _nouveaux(joueurs, fichier_etat, source):
     fichier = Path(fichier_etat)
     precedent = json.loads(fichier.read_text(encoding="utf-8")) if fichier.exists() else None
     actuels = sorted(j["id"] for j in joueurs.values() if j["renouvele"] and not j["loisir"])
-    inchangee = precedent is not None and set(precedent["renouveles"]) == set(actuels)
-    reference = precedent.get("avant") if inchangee else precedent
+    nouveaux, etat, reference = suivre_inscrits(precedent, actuels, source["date"])
     if reference:
-        nouveaux = set(actuels) - set(reference["renouveles"])
         for j in joueurs.values():
             j["nouveau"] = j["id"] in nouveaux
-    if not inchangee and (precedent is None or source["date"] > precedent["date"]):  # liste plus récente
+    if etat:
         fichier.parent.mkdir(parents=True, exist_ok=True)
+        fichier.write_text(json.dumps(etat), encoding="utf-8")
+    return reference
+
+
+def suivre_inscrits(precedent, actuels, date_liste):
+    """Joueurs inscrits ou réinscrits depuis la liste précédente d'un club (Vaires ou un adversaire).
+
+    `precedent` : état mémorisé {"date", "renouveles", "avant"} ou None ; `actuels` : identifiants
+    des licenciés de la liste lue, datée `date_liste`. Tant que la liste ne change pas, la référence
+    reste l'avant-dernière : les mêmes joueurs restent « nouveaux ». Renvoie (nouveaux, état à
+    mémoriser ou None, date de la liste de référence ou None)."""
+    inchangee = precedent is not None and set(precedent["renouveles"]) == set(actuels)
+    reference = precedent.get("avant") if inchangee else precedent
+    nouveaux = set(actuels) - set(reference["renouveles"]) if reference else set()
+    etat = None
+    if not inchangee and (precedent is None or date_liste > precedent["date"]):  # liste plus récente
         avant = {"date": precedent["date"], "renouveles": precedent["renouveles"]} if precedent else None
-        fichier.write_text(json.dumps({"date": source["date"], "renouveles": actuels, "avant": avant}), encoding="utf-8")
-    return reference["date"] if reference else None
+        etat = {"date": date_liste, "renouveles": list(actuels), "avant": avant}
+    return nouveaux, etat, (reference["date"] if reference else None)

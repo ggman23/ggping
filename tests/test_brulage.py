@@ -151,3 +151,12 @@ def test_habitue_passe_en_equipe_plus_forte_reste_un_renfort_possible():
     club["equipes"][1]["compositions"][2]["joueurs"] = ["BESANA", "HEN", "BRIN", "MOR"]
     a = analyse_rencontre(club, "M", 9, 5, "2026-11-20")
     assert "BESANA" in a["probable"] and [r["id"] for r in a["renforts"]] == ["X3"]
+
+
+def test_joueurs_des_equipes_plus_faibles_qui_peuvent_monter():
+    joueurs = [_joueur(x, p) for x, p in [("FORT10", 1100), ("A", 900), ("B", 850), ("C", 800), ("D", 750), ("PETIT10", 600)]]
+    club = _club(joueurs, {9: [(1, "2026-09-25", ["A", "B", "C", "D"])], 10: [(1, "2026-09-25", ["FORT10", "PETIT10"])]})
+    a = analyse_rencontre(club, "M", 9, 2, "2026-10-02")
+    assert a["probable"] == ["A", "B", "C", "D"]
+    # Hors composition probable, les joueurs de la 10 peuvent monter en 9 : listés par points
+    assert [(m["id"], m["equipes"]) for m in a["montees"]] == [("FORT10", [10]), ("PETIT10", [10])]

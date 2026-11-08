@@ -7,11 +7,13 @@
   déjà alignés cette phase, avec leurs points officiels.
 """
 
+import json
 import time
 from datetime import date, datetime
+from pathlib import Path
 
 from . import fftt, pingpocket
-from .effectif import TRIS
+from .effectif import TRIS, suivre_inscrits
 from .reseau import HEURE, JOUR, ErreurReseau
 from .verifications import bilan_club, bilan_rencontres
 
@@ -147,7 +149,8 @@ def equipes_et_compositions(numero, rencontres, detail, championnats):
     return liste, joueurs
 
 
-def recuperer(client, numero_club="08770250", aujourdhui=None, dossier_import=None, tous_les_historiques=False):
+def recuperer(client, numero_club="08770250", aujourdhui=None, dossier_import=None, tous_les_historiques=False,
+              fichier_etat=None):
     aujourdhui = aujourdhui or date.today()
     auj = aujourdhui.isoformat()
     phase, saison = fftt.phase_et_saison(aujourdhui)
@@ -245,7 +248,7 @@ def recuperer(client, numero_club="08770250", aujourdhui=None, dossier_import=No
         "equipes": equipes, "clubs": clubs, "sources": {"pingpocket": False},
         "verification": verification(numero_club, nom_club, rencontres_poules, suivies, clubs_adv, etats, erreurs, auj),
     }
-    completer_avec_pingpocket(client, donnees, dossier_import, tous_les_historiques)
+    completer_avec_pingpocket(client, donnees, dossier_import, tous_les_historiques, fichier_etat)
     return donnees
 
 
@@ -262,11 +265,14 @@ def verification(numero_club, nom_club, rencontres_poules, suivies, clubs_adv, e
             "clubs": clubs}
 
 
-def completer_avec_pingpocket(client, donnees, dossier_import=None, tous_les_historiques=False):
+def completer_avec_pingpocket(client, donnees, dossier_import=None, tous_les_historiques=False, fichier_etat=None):
     """Effectifs complets, catégories, meilleur classement et adresses des salles (pingpocket.fr).
 
     Les listes de licenciés enregistrées depuis un navigateur dans le dossier import complètent
-    (ou remplacent, si elles sont plus récentes) celles du site."""
+    (ou remplacent, si elles sont plus récentes) celles du site. Chaque club reçoit la date de sa
+    liste (date_effectif) ; avec `fichier_etat` (état mémorisé, envoyé par le PC comme celui de la
+    page effectif), les joueurs inscrits ou réinscrits depuis la liste précédente du club sont
+    marqués « nouveau » (reference_nouveaux : date de cette liste précédente)."""
     print("4/5 Compléments pingpocket.fr : effectifs complets, catégories, adresses des salles", flush=True)
     numero_club = donnees["club"]["numero"]
     clubs = donnees["clubs"]
@@ -287,14 +293,19 @@ def completer_avec_pingpocket(client, donnees, dossier_import=None, tous_les_his
         pages = client.get_plusieurs([u for l in liens.values() for u in l.values()], ttl=JOUR, message="pages clubs",
                                      perime_si_erreur=True)
     complets = importes = 0
+    fichier = Path(fichier_etat) if fichier_etat else None
+    etats = (json.loads(fichier.read_text(encoding="utf-8")) if fichier.exists() else {}) if fichier else None
+    change = False
     for num, club in clubs.items():
         l = liens[num]
         if pages.get(l["salle"]):
             club["salle"] = pingpocket.lire_salle(pages[l["salle"]])
         listes = {t: pages[l[t]] for t in TRIS if pages.get(l[t])}
+        dates = {t: client.date(l[t]) for t in listes}
         for t, imp in importees.get(num, {}).items():
             if t not in listes or imp["date"] > (client.date(l[t]) or 0):
                 listes[t] = imp["html"]
+                dates[t] = imp["date"]
                 club["import"] = imp["fichier"]
         if not ("categories" in listes and "etat" in listes):
             continue
@@ -309,7 +320,24 @@ def completer_avec_pingpocket(client, donnees, dossier_import=None, tous_les_his
                 j["sexe"] = j["sexe"] or vus[j["id"]]["sexe"]
         connus = {j["id"] for j in effectif}
         club["joueurs"] = effectif + [j for j in club["joueurs"] if j["id"] not in connus]
+        connues = [d for d in dates.values() if d]
+        club["date_effectif"] = datetime.fromtimestamp(min(connues)).isoformat(timespec="minutes") if connues else None
+        if etats is not None and club["date_effectif"]:
+            actuels = sorted(j["id"] for j in effectif if j.get("renouvele"))
+            nouveaux, etat, reference = suivre_inscrits(etats.get(num), actuels, club["date_effectif"])
+            if reference:
+                club["reference_nouveaux"] = reference
+                for j in club["joueurs"]:
+                    j["nouveau"] = j["id"] in nouveaux
+            if etat:
+                etats[num], change = etat, True
     donnees["sources"]["pingpocket"] = complets > 0
+    if change:
+        fichier.parent.mkdir(parents=True, exist_ok=True)
+        fichier.write_text(json.dumps(etats), encoding="utf-8")
+    nb_nouveaux = sum(1 for c in clubs.values() for j in c["joueurs"] if j.get("nouveau"))
+    if nb_nouveaux:
+        print(f"  nouveaux inscrits dans les clubs adverses (depuis leur liste précédente) : {nb_nouveaux}", flush=True)
     print(f"  effectifs complets : {complets}/{len(clubs)} clubs" + (f" (dont {importes} par le dossier import)" if importes else ""),
           flush=True)
     if complets < len(clubs):

@@ -689,7 +689,7 @@ def _images_disponibles(equipe, joueurs, sous_base, dossier):
                          FILLE_FOND if feminine else PUCE_FOND, FILLE_TEXTE if feminine else NOIR)
                         for k, c in sorted(compte.items())][:4]) if compte else C(
             "pas encore alignée" if feminine else "pas encore aligné", couleur=DOUX)
-        remarques, alerte = [], False
+        remarques, alerte = (["nouvel inscrit"] if j.get("nouveau") else []), False
         if feminine:
             masculin = Counter(m["n"] for m in j.get("matchs", []) if m["ch"] == "M")
             if masculin:
@@ -826,6 +826,21 @@ def _clt(j):
     return max(5, p // 100) if p else None
 
 
+def _note_liste(club, donnees):
+    """Date de la liste des licenciés du club adverse (les inscriptions plus récentes n'y sont pas)."""
+    if not club.get("date_effectif"):
+        return ""
+    quand = datetime.fromisoformat(club["date_effectif"])
+    try:
+        age = (datetime.fromisoformat(donnees["genere_le"]) - quand).days
+    except (KeyError, ValueError):
+        age = 0
+    nb = sum(1 for j in club.get("joueurs", []) if j.get("nouveau"))
+    return (f" Liste des licenciés du club du {quand:%d/%m}"
+            + (f" (il y a {age} jours : relancer la mise à jour depuis le PC pour voir les nouveaux inscrits)" if age > 10 else "")
+            + (f" ; « nouvel inscrit » : inscrit ou réinscrit depuis la liste précédente ({nb})" if nb else "") + ".")
+
+
 def images_adversaires(donnees, dossier, aujourdhui=None):
     _nettoyer(dossier, "adversaires_")
     auj = (aujourdhui or date.today()).isoformat()
@@ -893,12 +908,14 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                     j = par_id.get(jid)
                     if not j:
                         continue
+                    # Nouvel inscrit du club (depuis sa liste précédente) : en vert dans la dernière colonne
+                    texte = " · ".join(t for t in ("nouvel inscrit" if j.get("nouveau") else "", (info or {}).get(jid, "")) if t)
                     sortie.append([
                         cel_nom(j.get("nom"), j.get("prenom"), apres="F" if j.get("sexe") == "F" else None),
                         C(_clt(j) or "", gras=True), C(fmt(_pts(j)) if _pts(j) else "", couleur=DOUX),
                         C(j.get("categorie") or "", couleur=DOUX),
                         C(resume_joueur(places.get(jid), pl.get("libelles")), couleur=NOIR, align="g"),
-                        C((info or {}).get(jid, ""), couleur=DOUX, align="g"),
+                        C(texte, couleur=OK_TEXTE if j.get("nouveau") else DOUX, gras=bool(j.get("nouveau")), align="g"),
                     ])
                 return sortie
 
@@ -910,12 +927,18 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                         + (f" · {x['dans_equipe']}× en {num}" if x.get("dans_equipe") else "") for x in a.get("renforts", [])}
             pas_joue = [jid for jid in a.get("non_alignes", []) if jid not in a["probable"]]
             autres = a.get("autres_habitues") or []
+            montees = a.get("montees") or []
             tableaux = [
                 ("Composition probable", "estimation", ou_aucun(lignes_joueurs(a["probable"]), "—")),
                 *([(f"Aussi alignés en équipe {num}", "hors composition probable", lignes_joueurs(autres[:8]))]
                   if autres else []),
                 ("Renforts possibles", "ont joué en équipe plus forte, non brûlés",
                  ou_aucun(lignes_joueurs([x["id"] for x in a.get("renforts", [])][:8], renforts))),
+                *([("Peuvent monter des équipes du dessous",
+                    f"les 5 mieux classés sur {len(montees)}" if len(montees) > 5 else None,
+                    lignes_joueurs([x["id"] for x in montees][:5],
+                                   {x["id"]: "joue en " + ", ".join(str(n) for n in x["equipes"]) for x in montees}))]
+                  if montees else []),
                 ("Pas encore joué cette phase", f"les 8 mieux classés sur {len(pas_joue)}" if len(pas_joue) > 8 else None,
                  ou_aucun(lignes_joueurs(pas_joue[:8]))),
             ]
@@ -957,6 +980,7 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                 largeur_pl = (largeur - 2 * MARGE - RENC_PL) / pl["format"]
                 img.tableau([Col("Renc.", RENC_PL, "g")] + [Col(l, largeur_pl, "g") for l in pl["libelles"]], lignes_pl)
         img.pied("Composition probable : estimation à partir des rencontres déjà jouées par le club adverse."
+                 + _note_liste(club, donnees)
                  + (" Placé : positions occupées dans cette équipe (A/W = A quand elle reçoit, W quand elle se déplace)."
                     " A ne joue jamais Z, B jamais Y, C jamais X, D jamais W." if a and (r.get("placements") or {}).get("format") == 4
                     else " Placé : positions occupées dans cette équipe (A/X = A quand elle reçoit, X quand elle se déplace)."

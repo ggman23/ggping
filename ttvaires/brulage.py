@@ -112,6 +112,7 @@ def analyse_rencontre(club, championnat, numero, journee, date_match=None):
     - autres_habitues : joueurs déjà alignés dans cette équipe, hors composition probable et
                     hors renforts (identifiants) ;
     - remplacants : joueurs d'équipes plus faibles ;
+    - montees     : ceux d'entre eux hors composition probable (peuvent monter), par points ;
     - non_alignes : joueurs qui n'ont encore joué dans aucune équipe cette phase ;
     - brules      : joueurs qui ne peuvent pas jouer, avec la raison.
     """
@@ -168,6 +169,7 @@ def analyse_rencontre(club, championnat, numero, journee, date_match=None):
     renforts = [r for r in renforts if r["id"] not in probable]
     en_renfort = {r["id"] for r in renforts}
     autres_habitues = [h["id"] for h in habitues if h["id"] not in probable and h["id"] not in en_renfort]
+    montees = [r for r in remplacants if r["id"] not in probable]
 
     return {
         "championnat": championnat,
@@ -180,6 +182,7 @@ def analyse_rencontre(club, championnat, numero, journee, date_match=None):
         "renforts": renforts,
         "autres_habitues": autres_habitues,
         "remplacants": remplacants,
+        "montees": montees,
         "non_alignes": non_alignes,
         "brules": brules,
         "regle_j2": journee == 2 and any(r["j1_plus_forte"] for r in renforts),

@@ -64,8 +64,10 @@ def faire_images(nom_fonction, *args, dossier=IMAGES, **options):
 def page_adversaires(client, club, ctx, tous_les_historiques=False):
     print("=== Adversaires : API FFTT + compléments pingpocket.fr (le premier lancement peut être long :")
     print("pingpocket sature vite ; les suivants sont beaucoup plus rapides grâce au cache).", flush=True)
+    # Nouveaux inscrits des clubs adverses : état mémorisé comme celui de la page effectif (pas pour une archive)
     donnees = recuperer(client, club, aujourdhui=ctx.aujourdhui, dossier_import=IMPORT,
-                        tous_les_historiques=tous_les_historiques)
+                        tous_les_historiques=tous_les_historiques,
+                        fichier_etat=None if ctx.archive else CACHE / "effectif_adversaires.json")
     enrichir(donnees)
     ctx.donnees(donnees)
     (ctx.sortie / "donnees.json").write_text(json.dumps(donnees, ensure_ascii=False, indent=1), encoding="utf-8")
