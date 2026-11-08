@@ -80,7 +80,7 @@ def test_deux_rencontres_la_meme_journee_chaque_ligne_rappelle_l_autre(tmp_path,
     assert "autre ligne" in pied
 
 
-def test_effectif_club_et_brules_par_equipe(tmp_path):
+def test_effectif_club_disponibles_et_brules_par_equipe(tmp_path, monkeypatch):
     equipes = [{"id": f"v{n}", "numero": n, "championnat": "M", "nom_court": f"Vaires {n}"} for n in (1, 2, 3)]
     equipes.append({"id": "v1f", "numero": 1, "championnat": "F", "nom_court": "Vaires 1 F"})
     joueurs = [
@@ -92,9 +92,23 @@ def test_effectif_club_et_brules_par_equipe(tmp_path):
          "brulage": {1: {"brule": False}, 2: {"brule": False}, 3: {"brule": False}}},
         {"nom": "LOISIR", "prenom": "Jean", "points": 500, "renouvele": True, "loisir": True, "matchs": [], "brulage": {}},
     ]
+    vus, original = [], images._tableau_pagine
+
+    def espion(dossier, prefixe, titre, sous_titre, colonnes, lignes, pied, titre_court):
+        vus.append((prefixe, [l[0].texte for l in lignes]))
+        return original(dossier, prefixe, titre, sous_titre, colonnes, lignes, pied, titre_court)
+
+    monkeypatch.setattr(images, "_tableau_pagine", espion)
     sorties = images.images_effectif({**CLUB, "equipes": equipes, "joueurs": joueurs}, tmp_path)
-    assert [c.name for c, _ in sorties] == ["effectif_club.png", "effectif_brules_V2.png", "effectif_brules_V3.png"]
-    assert [t for _, t in sorties][1] == "Vaires 2 : joueurs brûlés"
+    # Pour chaque équipe (sauf la 1) : les joueurs disponibles, triés par points, puis les brûlés ;
+    # l'équipe féminine : toutes les joueuses.
+    assert [c.name for c, _ in sorties] == ["effectif_club.png", "effectif_disponibles_V2.png", "effectif_brules_V2.png",
+                                           "effectif_disponibles_V3.png", "effectif_brules_V3.png",
+                                           "effectif_disponibles_V1F.png"]
+    assert [t for _, t in sorties][1:3] == ["Vaires 2 : joueurs disponibles", "Vaires 2 : joueurs brûlés"]
+    disponibles = {prefixe: noms for prefixe, noms in vus if "disponibles" in prefixe}
+    assert disponibles == {"effectif_disponibles_V2": ["JEUNE Léa"], "effectif_disponibles_V3": ["JEUNE Léa"],
+                           "effectif_disponibles_V1F": ["JEUNE Léa"]}
 
 
 def test_adversaires_prochaine_journee_et_prochain_adversaire(tmp_path):

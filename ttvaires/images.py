@@ -14,6 +14,7 @@ Chacune écrit ses images dans le dossier donné et renvoie [(chemin, titre)].
 """
 
 import math
+from collections import Counter
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -50,6 +51,7 @@ OK_FOND, OK_TEXTE = "#e3f4ea", "#1d7a46"
 DOM_FOND, DOM_TEXTE = "#e3f4ea", "#1d7a46"
 EXT_FOND, EXT_TEXTE = "#fbeedd", "#a45a00"
 PUCE_FOND, FILLE_FOND, FILLE_TEXTE = "#eef0f3", "#fde4ef", "#b0306a"
+ATT_TEXTE = "#a45a00"   # alerte (joueur bientôt brûlé)
 
 _polices = {}
 
@@ -673,6 +675,57 @@ def _brulage(j, n):
     return b.get(n) or b.get(str(n)) or {}
 
 
+def _images_disponibles(equipe, joueurs, sous_base, dossier):
+    """Joueurs qui peuvent jouer dans l'équipe, triés par points : déjà joué où, et remarque."""
+    n, feminine = equipe["numero"], equipe["championnat"] == "F"
+    court = equipe["nom_court"].replace("Vaires ", "V").replace(" ", "")
+    colonnes = colonnes_egales([Col("Joueur", None, "g"), Col("Clt", 64), Col("Pts", 86), Col("A joué", 230),
+                                Col("Remarque", 330, "g")], LARGEUR - 2 * MARGE)
+    lignes = []
+    for j in joueurs:
+        matchs = [m for m in j.get("matchs", []) if (m["ch"] == "F") == feminine]
+        compte = Counter(m["n"] for m in matchs)
+        joue = C(puces=[(f"V{k}{'F' if feminine else ''}" + (f" ×{c}" if c > 1 else ""),
+                         FILLE_FOND if feminine else PUCE_FOND, FILLE_TEXTE if feminine else NOIR)
+                        for k, c in sorted(compte.items())][:4]) if compte else C(
+            "pas encore alignée" if feminine else "pas encore aligné", couleur=DOUX)
+        remarques, alerte = [], False
+        if feminine:
+            masculin = Counter(m["n"] for m in j.get("matchs", []) if m["ch"] == "M")
+            if masculin:
+                remarques.append("aussi en masculin : " + ", ".join(f"V{k}" + (f" ×{c}" if c > 1 else "")
+                                                                    for k, c in sorted(masculin.items())))
+        else:
+            fortes = _brulage(j, n).get("plus_fortes") or []
+            if len(fortes) == 1:
+                remarques.append(f"1 match en V{fortes[0]} : plus qu'1")
+                alerte = True
+            hab = j.get("habituelle")
+            if hab and hab < n:
+                remarques.append(f"renfort (habituellement V{hab})")
+            elif hab and hab > n:
+                remarques.append(f"habituellement V{hab}")
+        lignes.append([
+            cel_nom(j.get("nom"), j.get("prenom"), apres=j.get("categorie")),
+            C(_clt(j) or "", gras=True), C(fmt(_pts(j)) if _pts(j) else "", couleur=DOUX), joue,
+            # L'alerte « plus qu'1 » d'abord ; une seconde remarque passe en petit dessous
+            C(remarques[0] if remarques else "", couleur=ATT_TEXTE if alerte else DOUX, gras=alerte, align="g",
+              sous=" · ".join(remarques[1:]) or None),
+        ])
+    qui = "joueuses" if feminine else "joueurs"
+    titre = f"{equipe['nom_court']} : {qui} disponibles"
+    sous_titre = f"{len(lignes)} {qui} · {sous_base}"
+    pied = ("Toutes les joueuses du club peuvent jouer en équipe féminine (pas de brûlage en championnat féminin), "
+            "du mieux classée à la moins bien classée. A joué : rencontres de la phase en équipe féminine."
+            if feminine else
+            f"Joueurs non brûlés pour la {n}, du mieux classé au moins bien classé. A joué : équipes et nombre de "
+            f"rencontres cette phase. « Plus qu'1 match » : un match de plus dans une équipe plus forte que la {n} "
+            f"et le joueur sera brûlé pour {equipe['nom_court']}.")
+    if not lignes:
+        return []
+    return _tableau_pagine(dossier, f"effectif_disponibles_{court}", titre, sous_titre, colonnes, lignes, pied, titre)
+
+
 def images_effectif(donnees, dossier):
     _nettoyer(dossier, "effectif_")
     sorties = []
@@ -707,9 +760,11 @@ def images_effectif(donnees, dossier):
         "flamme = brûlé (2 matchs en équipes plus fortes). Les matchs en équipe féminine ne comptent pas pour le "
         "brûlage masculin.", "Effectif : club")
 
-    # Une image par équipe masculine (sauf la 1) : les joueurs brûlés pour cette équipe
+    # Une image par équipe masculine (sauf la 1, où tout le monde peut jouer) : les joueurs disponibles,
+    # du mieux classé au moins bien classé, puis les joueurs brûlés
     for e in masc[1:]:
         n = e["numero"]
+        sorties += _images_disponibles(e, [j for j in actifs if not _brulage(j, n).get("brule")], sous_base, dossier)
         brules = [j for j in actifs if _brulage(j, n).get("brule")]
         colonnes = colonnes_egales([Col("Joueur", None, "g"), Col("Pts", 88), Col("Matchs en équipes\nplus fortes", 290),
                                     Col("Peut encore\njouer en", 230)], LARGEUR - 2 * MARGE)
@@ -736,7 +791,11 @@ def images_effectif(donnees, dossier):
             dossier, f"effectif_brules_V{n}", titre, sous_base, colonnes, lignes,
             f"Ces joueurs ont joué 2 matchs dans des équipes plus fortes que la {n} : ils ne peuvent plus jouer en "
             f"{e['nom_court']} cette phase.", titre)
+    # Équipe féminine : toutes les joueuses (pas de brûlage en championnat féminin)
+    for e in fem:
+        sorties += _images_disponibles(e, [j for j in actifs if j.get("sexe") == "F"], sous_base, dossier)
     return sorties
+
 
 
 # ---------------------------------------------------------------------------
