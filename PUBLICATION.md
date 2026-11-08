@@ -16,8 +16,8 @@ Les pages sont générées sur les serveurs de GitHub (GitHub Actions) et publi�
 - Les pages sont **chiffrées** : il faut le mot de passe du club pour les lire (cochez « Se
   souvenir sur cet appareil » pour ne le taper qu'une fois). Le site est public, mais sans le mot
   de passe on n'y voit aucun nom de joueur ; il n'est pas référencé par les moteurs de recherche.
-- Mises à jour automatiques : samedi, dimanche, lundi et mardi vers 8 h (lendemains de journée),
-  et après chaque lancement de `lancer.bat` sur le PC.
+- Mise à jour automatique : le lundi vers 7 h, seulement si une équipe de Vaires a joué le week-end
+  (vendredi, samedi ou dimanche) ; et après chaque lancement de `lancer.bat` sur le PC.
 - Gratuit (dépôt public : GitHub Actions et GitHub Pages sans frais).
 
 ## Même résultat sur le PC et sur le téléphone
@@ -189,7 +189,12 @@ Pour économiser : **une copie identique à celle en ligne n'est pas renvoyée**
 empreinte de ce que montre la copie (pages sans leur date de génération, bilans, archives, surnoms et
 photos, code de l'outil, réglages) et la compare à celle de la copie en ligne (`signature.txt`,
 chiffrée). Sans résultat nouveau, le journal affiche « rien de nouveau depuis la copie en ligne : pas
-d'envoi » et rien n'est décompté : les mises à jour automatiques entre deux journées ne coûtent rien.
+d'envoi » et rien n'est décompté.
+
+La mise à jour automatique n'a lieu que le **lundi qui suit un week-end de championnat** : le lundi
+matin, le workflow regarde d'abord dans le calendrier de la FFTT si une équipe de Vaires a joué du
+vendredi au dimanche (`python -m ttvaires.calendrier`) ; sinon il s'arrête sans rien faire. Les mises
+à jour lancées à la main (site, téléphone, `lancer.bat`) ne sont pas concernées.
 Le site GitHub, lui, est toujours mis à jour (gratuit). Pour forcer l'envoi : *Actions* → *Mise à
 jour du site* → *Run workflow* → cocher « Envoyer la copie Netlify même si rien n'a changé ».
 
