@@ -199,6 +199,44 @@ vendredi au dimanche (`python -m ttvaires.calendrier`) ; sinon il s'arrête sans
 Le site GitHub, lui, est toujours mis à jour (gratuit). Pour forcer l'envoi : *Actions* → *Mise à
 jour du site* → *Run workflow* → cocher « Envoyer la copie Netlify même si rien n'a changé ».
 
+**Garde-fou** : avant chaque envoi, l'outil compte les mises en ligne Netlify du cycle en cours
+(depuis le 6 du mois). À partir de **18** (270 crédits ; la marge couvre le trafic), il n'envoie plus
+rien sur Netlify jusqu'au cycle suivant : le journal l'indique (« Plus d'envoi jusqu'au 6 du mois
+prochain »), la copie Netlify reste en ligne telle quelle, et l'espace club reste à jour sur le site
+GitHub et sur Cloudflare Pages. Un envoi forcé passe encore une fois (19, soit 285 crédits), jamais
+au-delà. Réglages dans `ttvaires/netlify.py` (JOUR_CYCLE, LIMITE_ENVOIS, PLAFOND_ENVOIS).
+
+## Espace club sur le site GitHub (gratuit, sans limite de mises à jour)
+
+À chaque mise à jour, l'espace club est aussi publié sur le site GitHub, à l'adresse
+**https://ggman23.github.io/ggping/club/**, avec le même mot de passe (secret `MOT_DE_PASSE_CLUB`) et
+le même contenu que sur Netlify (pages, Excel, images, archives, Matériel, Prépa mentale). GitHub
+Pages ne compte pas les mises en ligne : cette adresse est toujours à jour, même quand le garde-fou
+Netlify a arrêté les envois. Les statistiques de visite y fonctionnent aussi.
+
+## Copie sur Cloudflare Pages (gratuit : 500 mises en ligne par mois)
+
+La même copie que Netlify (accueil public, /club/, /gg/) part aussi sur Cloudflare Pages, à une
+adresse du type **https://ggping.pages.dev/** (club : https://ggping.pages.dev/club/, mêmes mots de
+passe). Mise en place, une fois :
+
+1. Sur https://dash.cloudflare.com : icône du profil (en haut à droite) → **Profil** → **Jetons d'API**
+   (*API Tokens*) → **Créer un jeton** → **Créer un jeton personnalisé** (*Create Custom Token*).
+   Nom : `ggping` ; Autorisations : **Compte** → **Cloudflare Pages** → **Modifier** (*Edit*) ;
+   Ressources du compte : **Inclure** → ton compte. Continuer → Créer le jeton → copier le jeton
+   (il n'est affiché qu'une fois).
+2. L'identifiant du compte (*Account ID*) : sur la page d'accueil du tableau de bord, menu « ⋯ » du
+   compte → *Copy account ID* (ou colonne de droite de **Workers & Pages**).
+3. Sur GitHub : *Settings* → *Secrets and variables* → *Actions* → **New repository secret** :
+   `CLOUDFLARE_API_TOKEN` (le jeton) et `CLOUDFLARE_ACCOUNT_ID` (l'identifiant). Facultatif : une
+   *variable* `CLOUDFLARE_PROJET` pour un autre nom de projet que `ggping`.
+4. Lancer une mise à jour : le projet est créé au premier passage, l'adresse exacte est dans le
+   journal (étape « Copie sur Cloudflare Pages ») ; si `ggping.pages.dev` est déjà pris par
+   quelqu'un d'autre, Cloudflare ajoute un suffixe.
+
+Comme pour Netlify, une copie identique à celle en ligne n'est pas renvoyée. Sans ces secrets, les
+étapes Cloudflare ne font rien ; une erreur Cloudflare est signalée sans empêcher les autres copies.
+
 ## Statistiques de visite (GoatCounter, facultatif)
 
 Pour savoir ce que font les membres du club sur la copie Netlify : nombre de pages vues et de

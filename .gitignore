@@ -14,3 +14,4 @@ publication.local.json
 
 # Application Android construite (android/construire.sh)
 android/construction/
+site-github/

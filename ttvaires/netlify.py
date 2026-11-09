@@ -36,6 +36,7 @@ import re
 import shutil
 import sys
 import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote
 
@@ -237,7 +238,7 @@ VISITEURS_JS = """window.compteurVisiteurs = function () {
   try { memo = JSON.parse(localStorage.getItem("cvtt-stats-vu") || "{}"); } catch (e) { return; }
   const d = new Date(), date = (x) => x.toLocaleDateString("sv");  // AAAA-MM-JJ, heure locale
   const lundi = new Date(d.getFullYear(), d.getMonth(), d.getDate() - (d.getDay() + 6) % 7);
-  const espace = /^\\/club\\b/.test(location.pathname) ? "club" : /^\\/gg\\b/.test(location.pathname) ? "gg" : "accueil";
+  const espace = /\\/club(\\/|$)/.test(location.pathname) ? "club" : /\\/gg(\\/|$)/.test(location.pathname) ? "gg" : "accueil";
   const NOMS = { jour: "aujourd'hui", semaine: "cette semaine", mois: "ce mois-ci" };
   const envois = memo.premier ? [] : [["appareils/nouveaux", "Appareils venus pour la première fois"]];
   for (const [periode, valeur] of [["jour", date(d)], ["semaine", date(lundi)], ["mois", date(d).slice(0, 7)]]) {
@@ -259,10 +260,11 @@ def code_umami(valeur):
     return m[0] if m else ""
 
 
-def avec_compteurs(html, goatcounter="", umami="", manuel=False):
+def avec_compteurs(html, goatcounter="", umami="", manuel=False, umami_src="/" + UMAMI_PUBLIE):
     """Ajoute les compteurs de visites configurés avant </head>. `manuel` : la page compte elle-même
     ce qu'on y fait (compter() de l'espace club et des accueils) ; sinon une page vue par chargement.
-    Le chemin compté ne garde pas le « ?v=... » des liens."""
+    Le chemin compté ne garde pas le « ?v=... » des liens. `umami_src` : adresse du script d'Umami
+    servi par le site (relative sur le site GitHub, qui est sous /ggping/)."""
     actifs = [nom for nom, code in (("goatcounter", goatcounter), ("umami", umami)) if code]
     if not actifs:
         return html
@@ -276,7 +278,7 @@ def avec_compteurs(html, goatcounter="", umami="", manuel=False):
                        """ onload="window.compteurPret && compteurPret('goatcounter')"></script>""")
     if umami:
         reglages = ' data-auto-track="false"' if manuel else ' data-performance="true" data-exclude-hash="true"'
-        balises.append(f'<script defer src="/{UMAMI_PUBLIE}" data-website-id="{umami}"{reglages} data-exclude-search="true"'
+        balises.append(f'<script defer src="{umami_src}" data-website-id="{umami}"{reglages} data-exclude-search="true"'
                        f' data-host-url="{UMAMI_HOTE}" data-before-send="umamiAvantEnvoi"'
                        ' onload="window.compteurPret && compteurPret(\'umami\')"></script>')
     script = "<script>\n" + "\n".join(js) + "\n</script>\n" + "".join(b + "\n" for b in balises)
@@ -314,6 +316,66 @@ def construire(site, dossier, mot_de_passe, mot_de_passe_gg, mot_de_passe_club="
     (dossier / "_headers").write_text("/*\n  X-Robots-Tag: noindex, nofollow\n  Cache-Control: no-cache\n", encoding="utf-8")
     _ajouter_compteurs(dossier, goatcounter, umami)
     return dossier
+
+
+def site_github(site, dossier, mot_de_passe, mot_de_passe_club="", goatcounter="", umami=""):
+    """Site GitHub à publier : le site (pages chiffrées avec le mot de passe du site) et, en plus,
+    l'espace club dans club/ (même page et même mot de passe que sur Netlify), soit
+    https://ggman23.github.io/ggping/club/ : GitHub Pages ne compte pas les mises en ligne."""
+    if dossier.exists():
+        shutil.rmtree(dossier)
+    shutil.copytree(site, dossier)
+    if not mot_de_passe_club:
+        print("::warning::Pas de secret MOT_DE_PASSE_CLUB : pas d'espace club sur le site GitHub.")
+        return dossier
+    try:
+        espace_club(site, dossier / "club", publier.cle(mot_de_passe), publier.cle(mot_de_passe_club))
+    except Exception as e:  # le site GitHub doit partir quand même, sans l'espace club
+        shutil.rmtree(dossier / "club", ignore_errors=True)
+        print(f"::warning::Espace club non ajouté au site GitHub : {e}")
+        return dossier
+    page = dossier / "club" / "index.html"
+    if umami:  # script d'Umami servi par le site, à côté de la page (le site GitHub est sous /ggping/)
+        (dossier / "club" / UMAMI_PUBLIE).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(UMAMI_JS, dossier / "club" / UMAMI_PUBLIE)
+    page.write_text(avec_compteurs(page.read_text(encoding="utf-8"), goatcounter, umami, True, UMAMI_PUBLIE),
+                    encoding="utf-8")
+    return dossier
+
+
+# Garde-fou : sur l'offre gratuite, Netlify met le site en pause quand les 300 crédits du mois sont
+# épuisés (« Site not available » jusqu'au cycle suivant). L'outil compte donc les mises en ligne du
+# cycle en cours (15 crédits chacune) et n'envoie plus rien sur Netlify à partir de LIMITE_ENVOIS
+# (18 = 270 crédits, la marge couvre le trafic) ; un envoi forcé passe jusqu'à PLAFOND_ENVOIS (19).
+JOUR_CYCLE = 6  # le cycle de facturation du compte repart le 6 du mois
+LIMITE_ENVOIS, PLAFOND_ENVOIS = 18, 19
+
+
+def debut_cycle(maintenant, jour=JOUR_CYCLE):
+    """Début (UTC) du cycle de crédits Netlify en cours."""
+    debut = maintenant.replace(day=jour, hour=0, minute=0, second=0, microsecond=0)
+    if maintenant.day < jour:
+        debut = (debut.replace(day=1) - timedelta(days=1)).replace(day=jour)
+    return debut
+
+
+def envois_du_cycle(jeton, site, maintenant=None, jour=JOUR_CYCLE):
+    """Nombre de mises en ligne (production, réussies) du site depuis le début du cycle."""
+    maintenant = maintenant or datetime.now(timezone.utc)
+    debut = debut_cycle(maintenant, jour)
+    entetes, nb = {"Authorization": f"Bearer {jeton}"}, 0
+    for page in range(1, 20):
+        r = requests.get(f"{API}/sites/{site}/deploys", params={"page": page, "per_page": 100}, headers=entetes, timeout=60)
+        r.raise_for_status()
+        liste = r.json()
+        for d in liste:
+            quand = datetime.fromisoformat((d.get("created_at") or "1970-01-01T00:00:00Z").replace("Z", "+00:00"))
+            if quand >= debut and d.get("state") == "ready" and d.get("context", "production") == "production":
+                nb += 1
+        if len(liste) < 100 or not liste or datetime.fromisoformat(
+                (liste[-1].get("created_at") or "1970-01-01T00:00:00Z").replace("Z", "+00:00")) < debut:
+            break
+    return nb
 
 
 # Empreinte du contenu publié, sans les dates de génération : une copie identique n'est pas renvoyée.
@@ -400,15 +462,25 @@ def deployer(dossier, jeton, site=SITE_PAR_DEFAUT, attente=180):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Copie de secours du site sur Netlify")
+    parser = argparse.ArgumentParser(description="Copie de secours du site sur Netlify (et Cloudflare Pages)")
     parser.add_argument("--site", default=str(RACINE / "site"), help="site GitHub déjà construit")
     parser.add_argument("--dossier", default=str(RACINE / "site-netlify"), help="dossier préparé pour Netlify")
+    parser.add_argument("--github", metavar="DOSSIER",
+                        help="préparer seulement le site GitHub à publier (site + espace club dans club/)")
     args = parser.parse_args()
-    jeton = os.environ.get("NETLIFY_AUTH_TOKEN", "")
-    if not jeton:
-        print("Netlify : pas de jeton (secret NETLIFY_AUTH_TOKEN), copie non envoyée. Voir PUBLICATION.md.")
+    if args.github:
+        umami = code_umami(os.environ.get("UMAMI", ""))
+        dossier = site_github(Path(args.site), Path(args.github), os.environ.get("MOT_DE_PASSE_SITE", ""),
+                              os.environ.get("MOT_DE_PASSE_CLUB", ""), code_goatcounter(os.environ.get("GOATCOUNTER", "")), umami)
+        if (dossier / "club" / "index.html").exists():
+            print("Espace club sur le site GitHub : https://ggman23.github.io/ggping/club/ (mot de passe du club)")
         return
+    jeton = os.environ.get("NETLIFY_AUTH_TOKEN", "")
     nom = os.environ.get("NETLIFY_SITE") or SITE_PAR_DEFAUT
+    if not (Path(args.site) / "etat.json").exists():
+        print("Site GitHub pas encore construit : pas de copie Netlify ni Cloudflare."
+              + ("" if jeton else " (Netlify : pas de jeton, secret NETLIFY_AUTH_TOKEN.)"))
+        return
     mot_de_passe_gg = os.environ.get("MOT_DE_PASSE_GG", "")
     mot_de_passe_club = os.environ.get("MOT_DE_PASSE_CLUB", "")
     for secret, valeur, partie in (("MOT_DE_PASSE_CLUB", mot_de_passe_club, "/club/"), ("MOT_DE_PASSE_GG", mot_de_passe_gg, "/gg/")):
@@ -422,16 +494,32 @@ def main():
         print("::warning::Variable UMAMI illisible (attendu : l'identifiant du site, data-website-id) : pas de statistiques Umami.")
     mot_de_passe = os.environ.get("MOT_DE_PASSE_SITE", "")
     try:
+        # La copie est toujours préparée : elle sert aussi à Cloudflare Pages (étape suivante du workflow)
         dossier = construire(Path(args.site), Path(args.dossier), mot_de_passe,
                              mot_de_passe_gg, mot_de_passe_club, goatcounter, umami)
         signature = signature_contenu(Path(args.site), mot_de_passe,
                                       (mot_de_passe_gg, mot_de_passe_club, goatcounter, umami))
+        (dossier / SIGNATURE).write_text(signature + "\n", encoding="utf-8")
+        if not jeton:
+            print("Netlify : pas de jeton (secret NETLIFY_AUTH_TOKEN), copie non envoyée. Voir PUBLICATION.md.")
+            return
         forcer = os.environ.get("FORCER_NETLIFY", "").lower() in ("1", "true", "oui")
         if not forcer and signature_en_ligne(nom) == signature:
             print("Netlify : rien de nouveau depuis la copie en ligne (mêmes résultats, mêmes pages) : "
                   "pas d'envoi, 15 crédits Netlify économisés.")
             return
-        (dossier / SIGNATURE).write_text(signature + "\n", encoding="utf-8")
+        try:
+            deja = envois_du_cycle(jeton, nom)
+        except (requests.RequestException, ValueError) as e:
+            print(f"::warning::Netlify : mises en ligne du mois non comptées ({e}) : envoi quand même.")
+            deja = 0
+        limite = PLAFOND_ENVOIS if forcer else LIMITE_ENVOIS
+        if deja >= limite:
+            print(f"::warning::Netlify : déjà {deja} mises en ligne depuis le {debut_cycle(datetime.now(timezone.utc)):%d/%m} "
+                  f"({deja * 15} crédits sur 300). Plus d'envoi jusqu'au {JOUR_CYCLE} du mois prochain, pour que "
+                  "Netlify ne mette pas le site en pause. Le site GitHub et Cloudflare Pages sont à jour.")
+            return
+        print(f"Netlify : {deja} mise(s) en ligne ce mois-ci avant celle-ci ({(deja + 1) * 15} crédits sur 300 après).")
         adresse = deployer(dossier, jeton, nom)
     except (ErreurNetlify, requests.RequestException, ValueError) as e:
         # Le site GitHub est déjà publié : la copie Netlify en échec est signalée sans tout faire échouer.

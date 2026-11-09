@@ -104,12 +104,52 @@ def test_envoi_par_empreintes_seuls_les_fichiers_changes(monkeypatch, tmp_path):
         netlify.deployer(dossier, "jeton")
 
 
-def test_sans_jeton_rien_n_est_envoye(monkeypatch, capsys):
+def test_sans_jeton_rien_n_est_envoye(monkeypatch, capsys, tmp_path):
+    _crypto()
     monkeypatch.delenv("NETLIFY_AUTH_TOKEN", raising=False)
+    monkeypatch.setenv("MOT_DE_PASSE_SITE", "secret")
     monkeypatch.setattr(netlify.requests, "post", lambda *a, **o: pytest.fail("rien ne doit partir sans jeton"))
-    monkeypatch.setattr("sys.argv", ["netlify"])
+    monkeypatch.setattr("sys.argv", ["netlify", "--site", str(_site(tmp_path)), "--dossier", str(tmp_path / "copie")])
     netlify.main()
     assert "pas de jeton" in capsys.readouterr().out
+    # La copie est quand même prête, avec son empreinte : elle sert à Cloudflare Pages
+    assert (tmp_path / "copie" / "index.html").exists() and (tmp_path / "copie" / netlify.SIGNATURE).exists()
+    # Site pas encore construit : rien
+    monkeypatch.setattr("sys.argv", ["netlify", "--site", str(tmp_path / "absent")])
+    netlify.main()
+    assert "pas encore construit" in capsys.readouterr().out
+
+
+def test_garde_fou_mises_en_ligne_du_cycle(monkeypatch):
+    from datetime import datetime, timezone
+    maintenant = datetime(2026, 11, 20, 8, 0, tzinfo=timezone.utc)
+    assert netlify.debut_cycle(maintenant) == datetime(2026, 11, 6, tzinfo=timezone.utc)
+    assert netlify.debut_cycle(datetime(2026, 1, 3, tzinfo=timezone.utc)) == datetime(2025, 12, 6, tzinfo=timezone.utc)
+    deploiements = ([{"created_at": f"2026-11-{j:02d}T07:00:00Z", "state": "ready", "context": "production"} for j in (19, 12, 7)]
+                    + [{"created_at": "2026-11-10T07:00:00Z", "state": "error", "context": "production"},
+                       {"created_at": "2026-11-05T07:00:00Z", "state": "ready", "context": "production"}])
+
+    class Reponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return deploiements
+
+    monkeypatch.setattr(netlify.requests, "get", lambda *a, **o: Reponse())
+    # 3 réussies depuis le 6/11 ; l'échec et celle du 5/11 (cycle précédent) ne comptent pas
+    assert netlify.envois_du_cycle("jeton", "ggping.netlify.app", maintenant) == 3
+
+
+def test_espace_club_sur_le_site_github(tmp_path):
+    _crypto()
+    site = _site(tmp_path)
+    dossier = netlify.site_github(site, tmp_path / "github", "secret", "club", "cvtt-vaires", "23cfef06-9803-4df0-b7e7-6631a2490f82")
+    assert (dossier / "etat.json").exists() and (dossier / "club" / "index.html").exists()
+    page = (dossier / "club" / "index.html").read_text(encoding="utf-8")
+    # Le site GitHub est sous /ggping/ : script d'Umami en adresse relative, servi à côté de la page
+    assert 'src="stats/umami.js"' in page and (dossier / "club" / "stats" / "umami.js").exists()
+    assert not (site / "club").exists()  # le site d'origine (source de la copie Netlify) n'est pas touché
 
 
 def test_sans_mot_de_passe_gg_seul_l_accueil_est_publie(tmp_path):

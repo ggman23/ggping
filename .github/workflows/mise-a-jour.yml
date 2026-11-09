@@ -141,9 +141,19 @@ jobs:
           FFTT_MOT_DE_PASSE: ${{ secrets.FFTT_MOT_DE_PASSE }}
         run: python -m ttvaires.archives --pingpocket-cache
 
+      # Site GitHub publié : le site, plus l'espace club dans club/ (même mot de passe que sur Netlify) :
+      # https://ggman23.github.io/ggping/club/ ; GitHub Pages ne compte pas les mises en ligne.
+      - name: Espace club sur le site GitHub (/club/)
+        env:
+          MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
+          MOT_DE_PASSE_CLUB: ${{ secrets.MOT_DE_PASSE_CLUB }}
+          GOATCOUNTER: ${{ vars.GOATCOUNTER || secrets.GOATCOUNTER }}
+          UMAMI: ${{ vars.UMAMI || secrets.UMAMI || '23cfef06-9803-4df0-b7e7-6631a2490f82' }}
+        run: python -m ttvaires.netlify --github site-github
+
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: site-github
 
       - name: Publication
         id: deploiement
@@ -170,3 +180,25 @@ jobs:
           # Umami Cloud : identifiant du site (public : il figure dans les pages) ; une variable UMAMI le remplace
           UMAMI: ${{ vars.UMAMI || secrets.UMAMI || '23cfef06-9803-4df0-b7e7-6631a2490f82' }}
         run: python -m ttvaires.netlify
+
+      # Copie sur Cloudflare Pages (gratuit : 500 mises en ligne par mois) : la même que pour Netlify.
+      # Sans les secrets CLOUDFLARE_API_TOKEN et CLOUDFLARE_ACCOUNT_ID, ces deux étapes ne font rien.
+      - name: Copie sur Cloudflare Pages (projet, contenu nouveau ?)
+        id: cloudflare
+        if: ${{ !cancelled() && steps.chiffrement.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PROJET: ${{ vars.CLOUDFLARE_PROJET }}
+          FORCER: ${{ inputs.forcer_netlify }}
+        run: python -m ttvaires.cloudflare
+
+      - name: Copie sur Cloudflare Pages (envoi)
+        if: ${{ !cancelled() && steps.cloudflare.outputs.envoyer == 'true' }}
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy site-netlify --project-name=${{ steps.cloudflare.outputs.projet }} --branch=main --commit-dirty=true
