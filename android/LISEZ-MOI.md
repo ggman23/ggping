@@ -1,11 +1,12 @@
 # Application Android CVTT Vaires
 
-Tout sous la main dans une seule application, en quatre onglets (en bas de l'écran) :
+Tout sous la main dans une seule application, en cinq onglets (en bas de l'écran) :
 
 | Onglet | Page |
 |---|---|
-| ⟳ **Mise à jour** | le site GitHub (https://ggman23.github.io/ggping/) : bouton « Lancer la mise à jour », pages, images |
+| ⟳ **Mise à jour** | le site GitHub (https://ggman23.github.io/ggping/) : boutons de mise à jour, pages, images |
 | 🏓 **Club** | l'espace club, sur GitHub (https://ggman23.github.io/ggping/club/), sinon Cloudflare, sinon Netlify (voir plus bas) |
+| 👑 **Lundi** | l'espace /lundi/ (« Le roi du lundi »), sur GitHub (https://ggman23.github.io/ggping/lundi/), sinon Cloudflare, sinon Netlify |
 | 📊 **GoatCounter** | les statistiques GoatCounter (https://ggman23.goatcounter.com/) |
 | 📈 **Umami** | les statistiques Umami (https://cloud.umami.is/, ou ton lien de partage : voir plus bas) |
 
@@ -19,16 +20,16 @@ d'Android revient à la page précédente de l'onglet.
 - Les liens vers d'autres sites (GitHub, cartes des salles...) s'ouvrent dans le navigateur.
 - Tes visites depuis l'application ne sont **pas comptées** dans les statistiques du club.
 
-## Onglet Club : trois copies du même espace
+## Onglets Club et Lundi : trois copies du même espace
 
-L'espace club est publié à trois adresses, avec le même contenu et le même mot de passe. À
-l'ouverture de l'onglet (et avec ⌂ ou un appui long sur l'onglet), l'application vérifie l'une
-après l'autre que la page du club répond et ouvre la première qui marche :
+Les espaces club et /lundi/ sont publiés à trois adresses, avec le même contenu et le même mot de
+passe (celui du club). À l'ouverture de l'onglet (et avec ⌂ ou un appui long sur l'onglet),
+l'application vérifie l'une après l'autre que la page répond et ouvre la première qui marche :
 
-1. **GitHub** : https://ggman23.github.io/ggping/club/ (mis à jour à chaque mise à jour) ;
-2. sinon **Cloudflare** : https://ggping-pap.pages.dev/club/ ;
-3. sinon **Netlify** : https://ggping.netlify.app/club/ (mis à jour seulement le lundi et avec le bouton
-   « Mettre à jour les 3 sites ») ;
+1. **GitHub** : https://ggman23.github.io/ggping/club/ (ou …/lundi/), mis à jour à chaque mise à jour ;
+2. sinon **Cloudflare** : https://ggping-pap.pages.dev/club/ (ou …/lundi/) ;
+3. sinon **Netlify** : https://ggping.netlify.app/club/ (ou …/lundi/), mis à jour seulement le lundi et
+   avec le bouton « Mettre à jour les 3 sites » ;
 4. sinon une page « site indisponible » avec un bouton **Réessayer** (↻ fait la même chose).
 
 La barre du haut dit quelle copie est affichée (« Club · GitHub », « Club · Cloudflare »...) et un
@@ -36,7 +37,8 @@ message prévient quand l'application a dû passer à la suivante. Si une page c
 cours de route (site en panne), la même page est ouverte sur la copie suivante.
 
 Chaque copie a sa propre mémoire : le mot de passe du club est demandé **une fois par copie** (une
-fois sur GitHub, puis une fois sur Cloudflare le jour où elle sert), cocher « Se souvenir ».
+fois sur GitHub, puis une fois sur Cloudflare le jour où elle sert), cocher « Se souvenir ». Sur une
+même copie, Club et Lundi partagent le mot de passe retenu : saisi dans l'un, l'autre s'ouvre seul.
 
 ## Umami sans avoir à se connecter
 

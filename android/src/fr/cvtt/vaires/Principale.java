@@ -54,10 +54,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Application CVTT Vaires : quatre onglets, chacun avec sa page qui reste ouverte quand on passe
- * de l'un à l'autre : le site GitHub (mise à jour), l'espace club, GoatCounter et Umami.
- * L'espace club est publié en trois copies identiques : l'onglet ouvre la première qui répond,
- * GitHub, sinon Cloudflare, sinon Netlify, sinon une page d'erreur avec « Réessayer ».
+ * Application CVTT Vaires : cinq onglets, chacun avec sa page qui reste ouverte quand on passe
+ * de l'un à l'autre : le site GitHub (mise à jour), l'espace club, l'espace /lundi/, GoatCounter et
+ * Umami. Les espaces club et lundi sont publiés en trois copies identiques : l'onglet ouvre la
+ * première qui répond, GitHub, sinon Cloudflare, sinon Netlify, sinon une page d'erreur avec
+ * « Réessayer ».
  * Les téléchargements et le partage d'images des pages passent par l'application (pont « Appli »).
  */
 public class Principale extends Activity {
@@ -68,11 +69,12 @@ public class Principale extends Activity {
      * bonne (null : il suffit qu'elle réponde) et les hôtes dont les pages restent dans l'onglet.
      */
     static final class Onglet {
-        final String titre, symbole, chemin, temoin;
+        final String cle, titre, symbole, chemin, temoin;  // cle : nom fixe de l'onglet dans les réglages
         final String[] racines, noms, hotes;
 
-        Onglet(String titre, String symbole, String[] racines, String[] noms, String chemin, String temoin,
+        Onglet(String cle, String titre, String symbole, String[] racines, String[] noms, String chemin, String temoin,
                String... hotes) {
+            this.cle = cle;
             this.titre = titre;
             this.symbole = symbole;
             this.racines = racines;
@@ -100,17 +102,23 @@ public class Principale extends Activity {
 
     static final String GITHUB = "https://ggman23.github.io/ggping/", CLOUDFLARE = "https://ggping-pap.pages.dev/",
             NETLIFY = "https://ggping.netlify.app/";
-    static final int MISE_A_JOUR = 0, CLUB = 1, GOATCOUNTER = 2, UMAMI = 3;
+    static final String[] COPIES = {GITHUB, CLOUDFLARE, NETLIFY}, NOMS_COPIES = {"GitHub", "Cloudflare", "Netlify"};
+    static final int MISE_A_JOUR = 0, CLUB = 1, LUNDI = 2, GOATCOUNTER = 3, UMAMI = 4;
+    // Le témoin est la clé sous laquelle les pages du club et de /lundi/ gardent le mot de passe
+    // (ttvaires/ressources.py) : Cloudflare Pages, par exemple, répond par la page d'accueil à une
+    // adresse qui n'existe pas.
+    static final String TEMOIN_CLUB = "cvtt-vaires-cle-club";
     static final Onglet[] ONGLETS = {
-        new Onglet("Mise à jour", "⟳", new String[]{GITHUB}, new String[]{"GitHub"}, "", null, "ggman23.github.io"),
-        // Le témoin est la clé sous laquelle la page du club garde le mot de passe (ttvaires/ressources.py) :
-        // Cloudflare Pages, par exemple, répond par la page d'accueil à une adresse qui n'existe pas.
-        new Onglet("Club", "🏓", new String[]{GITHUB, CLOUDFLARE, NETLIFY}, new String[]{"GitHub", "Cloudflare", "Netlify"},
-                "club/", "cvtt-vaires-cle-club", "ggman23.github.io", "ggping-pap.pages.dev", "ggping.netlify.app"),
-        new Onglet("GoatCounter", "📊", new String[]{"https://ggman23.goatcounter.com/"}, new String[]{"GoatCounter"},
-                "", null, "goatcounter.com"),
-        new Onglet("Umami", "📈", new String[]{"https://cloud.umami.is/"}, new String[]{"Umami"}, "", null, "umami.is"),
+        new Onglet("maj", "Mise à jour", "⟳", new String[]{GITHUB}, new String[]{"GitHub"}, "", null, "ggman23.github.io"),
+        new Onglet("club", "Club", "🏓", COPIES, NOMS_COPIES, "club/", TEMOIN_CLUB,
+                "ggman23.github.io", "ggping-pap.pages.dev", "ggping.netlify.app"),
+        new Onglet("lundi", "Lundi", "👑", COPIES, NOMS_COPIES, "lundi/", TEMOIN_CLUB,
+                "ggman23.github.io", "ggping-pap.pages.dev", "ggping.netlify.app"),
+        new Onglet("goatcounter", "GoatCounter", "📊", new String[]{"https://ggman23.goatcounter.com/"},
+                new String[]{"GoatCounter"}, "", null, "goatcounter.com"),
+        new Onglet("umami", "Umami", "📈", new String[]{"https://cloud.umami.is/"}, new String[]{"Umami"}, "", null, "umami.is"),
     };
+    static final String[] ANCIEN_ORDRE = {"maj", "club", "goatcounter", "umami"};  // version 1.3 (réglages)
     static final String REESSAYER = "cvtt-appli://reessayer";  // bouton de la page d'erreur
     static final String DEPART_PERSO = "depart_";  // réglage : page de départ choisie (lien de partage Umami)
     static final int DELAI_CONNEXION = 5000, DELAI_LECTURE = 8000, LECTURE_MAX = 512 * 1024;
@@ -141,7 +149,8 @@ public class Principale extends Activity {
         injection = lireAsset("appli.js");
         CookieManager.getInstance().setAcceptCookie(true);
         setContentView(construireEcran());
-        if (!ouvrirLien(getIntent())) choisir(reglages.getInt("onglet", 0));
+        reprendreReglages();
+        if (!ouvrirLien(getIntent())) choisir(indiceDe(reglages.getString("onglet_cle", "maj")));
     }
 
     // ------------------------------------------------------------------ écran
@@ -188,7 +197,9 @@ public class Principale extends Activity {
             TextView b = new TextView(this);
             b.setText(ONGLETS[i].symbole + "\n" + ONGLETS[i].titre);
             b.setGravity(Gravity.CENTER);
-            b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+            b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+            b.setMaxLines(2);
+            b.setEllipsize(android.text.TextUtils.TruncateAt.END);
             b.setPadding(0, dp(7), 0, dp(7));
             b.setOnClickListener(v -> choisir(n));
             b.setOnLongClickListener(v -> { afficher(n); demarrer(n); return true; });
@@ -260,7 +271,7 @@ public class Principale extends Activity {
         }
         majTitre();
         majAvancement();
-        reglages.edit().putInt("onglet", n).apply();
+        reglages.edit().putString("onglet_cle", ONGLETS[n].cle).apply();
         return nouvelle;
     }
 
@@ -293,7 +304,7 @@ public class Principale extends Activity {
 
     /** Page de départ de l'onglet (copie k) : celle choisie par l'utilisateur s'il y en a une. */
     private String departDe(int n, int copie) {
-        String perso = ONGLETS[n].racines.length == 1 ? reglages.getString(DEPART_PERSO + n, null) : null;
+        String perso = ONGLETS[n].racines.length == 1 ? reglages.getString(DEPART_PERSO + ONGLETS[n].cle, null) : null;
         return perso != null ? perso : ONGLETS[n].depart(copie);
     }
 
@@ -415,7 +426,7 @@ public class Principale extends Activity {
 
     /** Appui long sur ⌂ : oublier la page de départ choisie (lien de partage Umami). */
     private void departDorigine(int n) {
-        String perso = reglages.getString(DEPART_PERSO + n, null);
+        String perso = reglages.getString(DEPART_PERSO + ONGLETS[n].cle, null);
         if (perso == null) {
             Toast.makeText(this, "Page de départ de l'onglet", Toast.LENGTH_SHORT).show();
             return;
@@ -424,11 +435,30 @@ public class Principale extends Activity {
                 .setTitle(ONGLETS[n].titre)
                 .setMessage("Page de départ de l'onglet : " + perso + "\n\nRevenir à celle d'origine (" + ONGLETS[n].depart(0) + ") ?")
                 .setPositiveButton("Oui", (d, b) -> {
-                    reglages.edit().remove(DEPART_PERSO + n).apply();
+                    reglages.edit().remove(DEPART_PERSO + ONGLETS[n].cle).apply();
                     demarrer(n);
                 })
                 .setNegativeButton("Non", null)
                 .show();
+    }
+
+    static int indiceDe(String cle) {
+        for (int i = 0; i < ONGLETS.length; i++) if (ONGLETS[i].cle.equals(cle)) return i;
+        return 0;
+    }
+
+    /** Réglages de la version 1.3 (onglets repérés par leur numéro, avant l'onglet Lundi) : repris. */
+    private void reprendreReglages() {
+        SharedPreferences.Editor modif = reglages.edit();
+        int ancien = reglages.getInt("onglet", -1);
+        if (ancien >= 0 && ancien < ANCIEN_ORDRE.length && !reglages.contains("onglet_cle")) {
+            modif.putString("onglet_cle", ANCIEN_ORDRE[ancien]);
+        }
+        for (int i = 0; i < ANCIEN_ORDRE.length; i++) {
+            String perso = reglages.getString(DEPART_PERSO + i, null);
+            if (perso != null) modif.putString(DEPART_PERSO + ANCIEN_ORDRE[i], perso).remove(DEPART_PERSO + i);
+        }
+        modif.remove("onglet").apply();
     }
 
     private int indice(WebView vue) {
@@ -512,7 +542,7 @@ public class Principale extends Activity {
         }
         String chemin = adresse.getPath();
         if (n == UMAMI && chemin != null && chemin.startsWith("/share/")) {
-            reglages.edit().putString(DEPART_PERSO + n, adresse.toString()).apply();
+            reglages.edit().putString(DEPART_PERSO + ONGLETS[n].cle, adresse.toString()).apply();
             message("Lien de partage Umami enregistré : l'onglet Umami s'ouvre maintenant sur ces statistiques, "
                     + "sans connexion.");
         }

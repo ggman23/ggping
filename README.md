@@ -29,8 +29,8 @@ manche (11-7, 8-11…, Vaires toujours en premier, vert = manche gagnée), le sc
 après chaque partie et le bilan de chaque joueur. Sur un téléphone, les manches passent sous la
 partie ; des boutons filtrent une équipe.
 
-**Application Android** (APK) : le site (mise à jour), l'espace club (GitHub, sinon Cloudflare,
-sinon Netlify) et les deux statistiques en onglets, avec téléchargements et partage d'images : voir
+**Application Android** (APK) : le site (mise à jour), l'espace club et /lundi/ (GitHub, sinon
+Cloudflare, sinon Netlify) et les deux statistiques en onglets, avec téléchargements et partage d'images : voir
 `android/LISEZ-MOI.md`. Lien direct :
 https://github.com/ggman23/ggping/releases/download/application-android/CVTT-Vaires.apk
 
