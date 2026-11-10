@@ -1,6 +1,7 @@
 package fr.cvtt.vaires;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.DownloadManager;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
@@ -28,7 +29,9 @@ import android.webkit.DownloadListener;
 import android.webkit.JavascriptInterface;
 import android.webkit.URLUtil;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -44,28 +47,86 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Application CVTT Vaires : quatre onglets, chacun avec sa page qui reste ouverte quand on passe
- * de l'un à l'autre : le site GitHub (mise à jour), l'espace club (Netlify), GoatCounter et Umami.
+ * de l'un à l'autre : le site GitHub (mise à jour), l'espace club, GoatCounter et Umami.
+ * L'espace club est publié en trois copies identiques : l'onglet ouvre la première qui répond,
+ * GitHub, sinon Cloudflare, sinon Netlify, sinon une page d'erreur avec « Réessayer ».
  * Les téléchargements et le partage d'images des pages passent par l'application (pont « Appli »).
  */
 public class Principale extends Activity {
 
-    /** Titre, symbole, adresse de départ et hôtes de chaque onglet. */
-    static final String[][] ONGLETS = {
-        {"Mise à jour", "⟳", "https://ggman23.github.io/ggping/", "ggman23.github.io"},
-        {"Club", "🏓", "https://ggping.netlify.app/club/", "ggping.netlify.app"},
-        {"GoatCounter", "📊", "https://ggman23.goatcounter.com/", "goatcounter.com"},
-        {"Umami", "📈", "https://cloud.umami.is/", "umami.is"},
+    /**
+     * Un onglet : ses copies du même site (racines, par ordre de préférence, et leurs noms), le
+     * chemin de sa page de départ dans chacune, le texte que cette page doit contenir pour être la
+     * bonne (null : il suffit qu'elle réponde) et les hôtes dont les pages restent dans l'onglet.
+     */
+    static final class Onglet {
+        final String titre, symbole, chemin, temoin;
+        final String[] racines, noms, hotes;
+
+        Onglet(String titre, String symbole, String[] racines, String[] noms, String chemin, String temoin,
+               String... hotes) {
+            this.titre = titre;
+            this.symbole = symbole;
+            this.racines = racines;
+            this.noms = noms;
+            this.chemin = chemin;
+            this.temoin = temoin;
+            this.hotes = hotes;
+        }
+
+        String depart(int copie) {
+            return racines[copie] + chemin;
+        }
+
+        /** Copie (indice dans racines) d'une adresse, -1 si elle n'est dans aucune. */
+        int copie(String adresse) {
+            for (int k = 0; adresse != null && k < racines.length; k++) if (adresse.startsWith(racines[k])) return k;
+            return -1;
+        }
+
+        boolean aHote(String hote) {
+            for (String h : hotes) if (hote.equals(h) || hote.endsWith("." + h)) return true;
+            return false;
+        }
+    }
+
+    static final String GITHUB = "https://ggman23.github.io/ggping/", CLOUDFLARE = "https://ggping-pap.pages.dev/",
+            NETLIFY = "https://ggping.netlify.app/";
+    static final int MISE_A_JOUR = 0, CLUB = 1, GOATCOUNTER = 2, UMAMI = 3;
+    static final Onglet[] ONGLETS = {
+        new Onglet("Mise à jour", "⟳", new String[]{GITHUB}, new String[]{"GitHub"}, "", null, "ggman23.github.io"),
+        // Le témoin est la clé sous laquelle la page du club garde le mot de passe (ttvaires/ressources.py) :
+        // Cloudflare Pages, par exemple, répond par la page d'accueil à une adresse qui n'existe pas.
+        new Onglet("Club", "🏓", new String[]{GITHUB, CLOUDFLARE, NETLIFY}, new String[]{"GitHub", "Cloudflare", "Netlify"},
+                "club/", "cvtt-vaires-cle-club", "ggman23.github.io", "ggping-pap.pages.dev", "ggping.netlify.app"),
+        new Onglet("GoatCounter", "📊", new String[]{"https://ggman23.goatcounter.com/"}, new String[]{"GoatCounter"},
+                "", null, "goatcounter.com"),
+        new Onglet("Umami", "📈", new String[]{"https://cloud.umami.is/"}, new String[]{"Umami"}, "", null, "umami.is"),
     };
+    static final String REESSAYER = "cvtt-appli://reessayer";  // bouton de la page d'erreur
+    static final String DEPART_PERSO = "depart_";  // réglage : page de départ choisie (lien de partage Umami)
+    static final int DELAI_CONNEXION = 5000, DELAI_LECTURE = 8000, LECTURE_MAX = 512 * 1024;
     static final String DOSSIER = "CVTT Vaires";  // dans Téléchargements
     static final int TAILLE_MAX = 60 * 1024 * 1024;
     static final int ROUGE = Color.rgb(204, 16, 40), NUIT = Color.rgb(27, 42, 74), GRIS = Color.rgb(91, 101, 118);
 
     private final WebView[] pages = new WebView[ONGLETS.length];
     private final TextView[] boutons = new TextView[ONGLETS.length];
+    private final int[] generation = new int[ONGLETS.length];  // la dernière demande l'emporte
+    private final boolean[] recherche = new boolean[ONGLETS.length];  // copie qui répond : en cours
+    private final boolean[] enErreur = new boolean[ONGLETS.length];
+    private final String[] echec = new String[ONGLETS.length];  // adresse que la page d'erreur réessaie
+    // Après un passage sur une autre copie ou par la page d'erreur : historique de l'onglet vidé une fois
+    // la page affichée (sinon Retour ramènerait à la page en échec, qui renverrait aussitôt ici)
+    private final String[] viderSur = new String[ONGLETS.length];
     private FrameLayout cadre;
     private TextView titre;
     private ProgressBar avancement;
@@ -80,9 +141,7 @@ public class Principale extends Activity {
         injection = lireAsset("appli.js");
         CookieManager.getInstance().setAcceptCookie(true);
         setContentView(construireEcran());
-        int depart = getIntent() != null && getIntent().getData() != null ? ongletPour(getIntent().getData()) : -1;
-        choisir(depart >= 0 ? depart : reglages.getInt("onglet", 0));
-        if (depart >= 0) pages[depart].loadUrl(getIntent().getData().toString());
+        if (!ouvrirLien(getIntent())) choisir(reglages.getInt("onglet", 0));
     }
 
     // ------------------------------------------------------------------ écran
@@ -102,10 +161,14 @@ public class Principale extends Activity {
         titre.setTypeface(Typeface.DEFAULT_BOLD);
         titre.setSingleLine(true);
         barre.addView(titre, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-        barre.addView(action("⌂", "Page de départ de l'onglet", v -> pageCourante().loadUrl(ONGLETS[courant][2])));
-        barre.addView(action("↻", "Recharger", v -> pageCourante().reload()));
-        barre.addView(action("↗", "Ouvrir dans le navigateur", v -> ouvrirAilleurs(Uri.parse(pageCourante().getUrl() != null
-                ? pageCourante().getUrl() : ONGLETS[courant][2]))));
+        TextView maison = action("⌂", "Page de départ de l'onglet", v -> demarrer(courant));
+        maison.setOnLongClickListener(v -> { departDorigine(courant); return true; });
+        barre.addView(maison);
+        barre.addView(action("↻", "Recharger", v -> {
+            if (enErreur[courant]) reessayer(courant);
+            else pageCourante().reload();
+        }));
+        barre.addView(action("↗", "Ouvrir dans le navigateur", v -> ouvrirAilleurs(Uri.parse(adresseCourante(courant)))));
         racine.addView(barre);
 
         avancement = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
@@ -123,12 +186,12 @@ public class Principale extends Activity {
         for (int i = 0; i < ONGLETS.length; i++) {
             final int n = i;
             TextView b = new TextView(this);
-            b.setText(ONGLETS[i][1] + "\n" + ONGLETS[i][0]);
+            b.setText(ONGLETS[i].symbole + "\n" + ONGLETS[i].titre);
             b.setGravity(Gravity.CENTER);
             b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
             b.setPadding(0, dp(7), 0, dp(7));
             b.setOnClickListener(v -> choisir(n));
-            b.setOnLongClickListener(v -> { choisir(n); pages[n].loadUrl(ONGLETS[n][2]); return true; });
+            b.setOnLongClickListener(v -> { afficher(n); demarrer(n); return true; });
             boutons[i] = b;
             bas.addView(b, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         }
@@ -162,13 +225,29 @@ public class Principale extends Activity {
         return t;
     }
 
+    /** Affiche l'onglet ; sa page n'est chargée qu'à sa première ouverture. */
     private void choisir(int n) {
         if (n < 0 || n >= ONGLETS.length) n = 0;
-        if (pages[n] == null) {  // chaque page n'est chargée qu'à sa première ouverture
+        if (afficher(n)) demarrer(n);
+    }
+
+    /** Affiche l'onglet sur une adresse donnée (lien d'un autre onglet, lien partagé avec l'appli). */
+    private void ouvrir(int n, String adresse) {
+        afficher(n);
+        generation[n]++;  // une recherche de copie en cours ne l'emporte plus
+        recherche[n] = false;
+        if (enErreur[n]) viderSur[n] = "https://" + Uri.parse(adresse).getHost() + "/";
+        pages[n].loadUrl(adresse);
+        majAvancement();
+    }
+
+    /** Affiche l'onglet n (sans rien charger) ; true si sa page vient d'être créée. */
+    private boolean afficher(int n) {
+        boolean nouvelle = pages[n] == null;
+        if (nouvelle) {
             pages[n] = creerPage();
             cadre.addView(pages[n], new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT));
-            pages[n].loadUrl(ONGLETS[n][2]);
         }
         courant = n;
         for (int i = 0; i < ONGLETS.length; i++) {
@@ -179,13 +258,182 @@ public class Principale extends Activity {
             trait.setColor(i == n ? Color.rgb(253, 236, 238) : Color.WHITE);
             boutons[i].setBackground(trait);
         }
-        titre.setText(ONGLETS[n][0]);
-        avancement.setVisibility(pages[n].getProgress() < 100 ? View.VISIBLE : View.INVISIBLE);
+        majTitre();
+        majAvancement();
         reglages.edit().putInt("onglet", n).apply();
+        return nouvelle;
     }
 
     private WebView pageCourante() {
         return pages[courant];
+    }
+
+    /** Titre de la barre : l'onglet, et pour le club la copie affichée (« Club · Cloudflare »). */
+    private void majTitre() {
+        Onglet o = ONGLETS[courant];
+        int k = enErreur[courant] || pages[courant] == null ? -1 : o.copie(pages[courant].getUrl());
+        titre.setText(o.racines.length > 1 && k >= 0 ? o.titre + " · " + o.noms[k] : o.titre);
+    }
+
+    private void majAvancement() {
+        WebView page = pageCourante();
+        int pourcent = page == null ? 100 : page.getProgress();
+        boolean cherche = recherche[courant];
+        avancement.setIndeterminate(cherche);
+        if (!cherche) avancement.setProgress(pourcent);
+        avancement.setVisibility(cherche || pourcent < 100 ? View.VISIBLE : View.INVISIBLE);
+    }
+
+    private String adresseCourante(int n) {
+        String adresse = pages[n] == null || enErreur[n] ? null : pages[n].getUrl();
+        return adresse != null && adresse.startsWith("https://") ? adresse : departDe(n, 0);
+    }
+
+    // ------------------------------------------------------------------ copies du site
+
+    /** Page de départ de l'onglet (copie k) : celle choisie par l'utilisateur s'il y en a une. */
+    private String departDe(int n, int copie) {
+        String perso = ONGLETS[n].racines.length == 1 ? reglages.getString(DEPART_PERSO + n, null) : null;
+        return perso != null ? perso : ONGLETS[n].depart(copie);
+    }
+
+    /** Page de départ : pour le club, celle de la première copie qui répond ; sinon chargée directement
+     * (si le site ne répond pas, la page d'erreur de l'application s'affiche). */
+    private void demarrer(int n) {
+        if (ONGLETS[n].racines.length > 1) rechercher(n, ONGLETS[n].chemin, 0, true);
+        else ouvrir(n, departDe(n, 0));
+    }
+
+    /** Bouton « Réessayer » de la page d'erreur (et ↻ sur cette page). */
+    private void reessayer(int n) {
+        Onglet o = ONGLETS[n];
+        int k = o.copie(echec[n]);
+        if (o.racines.length > 1) rechercher(n, k >= 0 ? echec[n].substring(o.racines[k].length()) : o.chemin, 0, true);
+        else ouvrir(n, echec[n] != null ? echec[n] : departDe(n, 0));
+    }
+
+    /**
+     * Cherche, à partir de la copie `debut`, la première qui répond pour `chemin` (relatif aux racines)
+     * et l'ouvre dans l'onglet. Si aucune ne répond : page d'erreur si `erreurSiAucune`, sinon rien
+     * (la page du site, par exemple « introuvable », reste affichée).
+     */
+    private void rechercher(int n, String chemin, int debut, boolean erreurSiAucune) {
+        Onglet o = ONGLETS[n];
+        int demande = ++generation[n];
+        recherche[n] = true;
+        if (n == courant) majAvancement();
+        String temoin = chemin.equals(o.chemin) ? o.temoin : null;
+        new Thread(() -> {
+            int trouve = -1;
+            for (int k = debut; k < o.racines.length && trouve < 0; k++) if (repond(o.racines[k] + chemin, temoin)) trouve = k;
+            final int k = trouve;
+            runOnUiThread(() -> {
+                if (demande != generation[n] || isDestroyed()) return;  // entre-temps : autre demande
+                recherche[n] = false;
+                if (k >= 0) {
+                    if (k > 0 || enErreur[n]) viderSur[n] = o.racines[k];
+                    pages[n].loadUrl(o.racines[k] + chemin);
+                    if (k > debut) message(sansReponse(o, debut, k) + " : " + o.titre + " ouvert sur " + o.noms[k] + ".");
+                } else if (erreurSiAucune) {
+                    afficherErreur(n, o.racines[debut] + chemin);
+                }
+                if (n == courant) majAvancement();
+            });
+        }, "copie-" + o.titre).start();
+    }
+
+    private static String sansReponse(Onglet o, int debut, int fin) {
+        StringBuilder noms = new StringBuilder(o.noms[debut]);
+        for (int k = debut + 1; k < fin; k++) noms.append(k == fin - 1 ? " et " : ", ").append(o.noms[k]);
+        return noms + (fin - debut > 1 ? " ne répondent pas" : " ne répond pas");
+    }
+
+    /**
+     * La page répond-elle (code 2xx, après redirections) et contient-elle `temoin` (s'il est donné) ?
+     * Appelé hors du fil de l'écran.
+     */
+    static boolean repond(String adresse, String temoin) {
+        HttpURLConnection connexion = null;
+        try {
+            connexion = (HttpURLConnection) new URL(adresse).openConnection();
+            connexion.setConnectTimeout(DELAI_CONNEXION);
+            connexion.setReadTimeout(DELAI_LECTURE);
+            connexion.setUseCaches(false);
+            connexion.setRequestProperty("Cache-Control", "no-cache");
+            int code = connexion.getResponseCode();
+            if (code < 200 || code >= 300) return false;
+            if (temoin == null) return true;
+            try (InputStream entree = connexion.getInputStream(); ByteArrayOutputStream lu = new ByteArrayOutputStream()) {
+                byte[] tampon = new byte[16384];
+                for (int n; lu.size() < LECTURE_MAX && (n = entree.read(tampon)) > 0; ) lu.write(tampon, 0, n);
+                return lu.toString(StandardCharsets.UTF_8.name()).contains(temoin);
+            }
+        } catch (IOException | RuntimeException e) {
+            return false;
+        } finally {
+            if (connexion != null) connexion.disconnect();
+        }
+    }
+
+    /**
+     * Une page de l'onglet n'a pas pu s'afficher (code HTTP, 0 : site injoignable) : la même page sur la
+     * copie suivante ; si le site est injoignable partout, page d'erreur. Une page absente (404) ne fait
+     * changer de copie que pour la page de départ (copie pas encore publiée) : ailleurs, c'est un lien mort.
+     */
+    private void secours(WebView vue, String adresse, int code) {
+        int n = indice(vue);
+        if (n < 0) return;
+        Onglet o = ONGLETS[n];
+        int k = o.copie(adresse);
+        String chemin = k >= 0 ? adresse.substring(o.racines[k].length()) : null;
+        if (code == 404 && !o.chemin.equals(chemin)) return;
+        if (k >= 0 && k + 1 < o.racines.length) rechercher(n, chemin, k + 1, code == 0);
+        else if (code == 0) afficherErreur(n, adresse);
+    }
+
+    private void afficherErreur(int n, String adresse) {
+        Onglet o = ONGLETS[n];
+        StringBuilder liste = new StringBuilder();
+        for (int k = 0; k < o.racines.length; k++) {
+            liste.append("<li>").append(o.noms[k]).append(" <small>(").append(Uri.parse(o.racines[k]).getHost()).append(")</small></li>");
+        }
+        String page = "<!doctype html><html lang=fr><meta charset=utf-8>"
+                + "<meta name=viewport content='width=device-width,initial-scale=1'>"
+                + "<body style='font-family:sans-serif;margin:0;padding:28px 22px;color:#1b2a4a;background:#fff;line-height:1.45'>"
+                + "<div style='font-size:40px'>⚠️</div>"
+                + "<h2 style='margin:.3em 0 .6em'>" + o.titre + " : site indisponible</h2>"
+                + "<p>" + (o.racines.length > 1 ? "Aucune copie du site ne répond :" : "Le site ne répond pas :") + "</p>"
+                + "<ul>" + liste + "</ul>"
+                + "<p>Vérifie la connexion internet du téléphone (Wi-Fi ou données mobiles), puis réessaie.</p>"
+                + "<p><a href='" + REESSAYER + "' style='display:inline-block;background:#cc1028;color:#fff;"
+                + "padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold'>Réessayer</a></p>";
+        echec[n] = adresse;
+        enErreur[n] = true;
+        pages[n].loadDataWithBaseURL(null, page, "text/html", "utf-8", null);
+        if (n == courant) majTitre();
+    }
+
+    /** Appui long sur ⌂ : oublier la page de départ choisie (lien de partage Umami). */
+    private void departDorigine(int n) {
+        String perso = reglages.getString(DEPART_PERSO + n, null);
+        if (perso == null) {
+            Toast.makeText(this, "Page de départ de l'onglet", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(ONGLETS[n].titre)
+                .setMessage("Page de départ de l'onglet : " + perso + "\n\nRevenir à celle d'origine (" + ONGLETS[n].depart(0) + ") ?")
+                .setPositiveButton("Oui", (d, b) -> {
+                    reglages.edit().remove(DEPART_PERSO + n).apply();
+                    demarrer(n);
+                })
+                .setNegativeButton("Non", null)
+                .show();
+    }
+
+    private int indice(WebView vue) {
+        for (int i = 0; i < pages.length; i++) if (pages[i] == vue) return i;
+        return -1;
     }
 
     // ------------------------------------------------------------------ pages
@@ -207,44 +455,132 @@ public class Principale extends Activity {
         page.setWebChromeClient(new WebChromeClient() {  // aussi : alert(), confirm(), prompt() des pages
             @Override
             public void onProgressChanged(WebView vue, int pourcent) {
-                if (vue != pageCourante()) return;
-                avancement.setProgress(pourcent);
-                avancement.setVisibility(pourcent < 100 ? View.VISIBLE : View.INVISIBLE);
+                if (vue == pageCourante()) majAvancement();
             }
         });
         page.setDownloadListener(new Telechargement());
         return page;
     }
 
-    /** Onglet d'une adresse (selon son hôte), -1 si elle ne relève d'aucun onglet. */
+    /**
+     * Onglet d'une adresse, -1 si elle ne relève d'aucun : celui dont une page de départ la contient
+     * (la plus précise : …/ggping/club/… est le club, …/ggping/… la mise à jour), sinon le premier qui
+     * a son hôte (l'accueil public de Cloudflare ou de Netlify : le club).
+     */
     static int ongletPour(Uri adresse) {
         String hote = adresse.getHost();
         if (hote == null || !"https".equals(adresse.getScheme())) return -1;
+        String texte = adresse.toString();
+        int choisi = -1, longueur = -1;
         for (int i = 0; i < ONGLETS.length; i++) {
-            if (hote.equals(ONGLETS[i][3]) || hote.endsWith("." + ONGLETS[i][3])) return i;
+            for (int k = 0; k < ONGLETS[i].racines.length; k++) {
+                String depart = ONGLETS[i].depart(k);
+                if (texte.startsWith(depart) && depart.length() > longueur) {
+                    choisi = i;
+                    longueur = depart.length();
+                }
+            }
         }
+        if (choisi >= 0) return choisi;
+        for (int i = 0; i < ONGLETS.length; i++) if (ONGLETS[i].aHote(hote)) return i;
         return -1;
+    }
+
+    /** Lien dans un texte partagé avec l'application (« Partager » > CVTT Vaires). */
+    static Uri lienDans(String texte) {
+        if (texte == null) return null;
+        Matcher lien = Pattern.compile("https://[^\\s<>\"']+").matcher(texte);
+        return lien.find() ? Uri.parse(lien.group()) : null;
+    }
+
+    /**
+     * Lien ouvert ou partagé avec l'application : affiché dans son onglet. Un lien de partage Umami
+     * (…/share/…, statistiques en lecture seule, sans connexion) devient la page de départ de l'onglet
+     * Umami. Renvoie false s'il n'y a pas de lien pour l'application.
+     */
+    private boolean ouvrirLien(Intent intention) {
+        if (intention == null) return false;
+        Uri adresse = intention.getData();
+        if (adresse == null && Intent.ACTION_SEND.equals(intention.getAction())) {
+            adresse = lienDans(intention.getStringExtra(Intent.EXTRA_TEXT));
+        }
+        if (adresse == null) return false;
+        int n = ongletPour(adresse);
+        if (n < 0) {
+            message("Ce lien n'est pas pour l'application : " + adresse);
+            return false;
+        }
+        String chemin = adresse.getPath();
+        if (n == UMAMI && chemin != null && chemin.startsWith("/share/")) {
+            reglages.edit().putString(DEPART_PERSO + n, adresse.toString()).apply();
+            message("Lien de partage Umami enregistré : l'onglet Umami s'ouvre maintenant sur ces statistiques, "
+                    + "sans connexion.");
+        }
+        ouvrir(n, adresse.toString());
+        return true;
     }
 
     private class Client extends WebViewClient {
         @Override
         public boolean shouldOverrideUrlLoading(WebView vue, WebResourceRequest demande) {
             Uri adresse = demande.getUrl();
+            if (REESSAYER.equals(adresse.toString())) {
+                int n = indice(vue);
+                if (n >= 0) reessayer(n);
+                return true;
+            }
             if (!demande.isForMainFrame()) return false;
-            int n = ongletPour(adresse);
+            int ici = indice(vue);
+            String hote = adresse.getHost();
+            boolean https = "https".equals(adresse.getScheme()) && hote != null;
+            if (https && ici >= 0 && ONGLETS[ici].aHote(hote)) return false;  // même site : reste dans l'onglet
+            int n = https ? ongletPour(adresse) : -1;
             if (n < 0) {  // autre site (GitHub, carte d'une salle...) : dans le navigateur
+                if (https && ici == UMAMI && hote.equals("accounts.google.com")) {
+                    message("Google refuse la connexion dans une application : elle s'ouvre dans Chrome. "
+                            + "Pour Umami dans l'application sans connexion : lien de partage (voir LISEZ-MOI).");
+                }
                 ouvrirAilleurs(adresse);
                 return true;
             }
-            if (pages[n] == vue) return false;
-            choisir(n);  // lien vers un autre onglet : on y va
-            pages[n].loadUrl(adresse.toString());
+            ouvrir(n, adresse.toString());  // lien vers un autre onglet : on y va
             return true;
         }
 
         @Override
+        public void onPageStarted(WebView vue, String adresse, android.graphics.Bitmap icone) {
+            int n = indice(vue);
+            if (n >= 0 && adresse != null && adresse.startsWith("https://")) enErreur[n] = false;
+        }
+
+        @Override
         public void onPageFinished(WebView vue, String adresse) {
-            if (ongletPour(Uri.parse(adresse)) >= 0) vue.evaluateJavascript(injection, null);
+            if (adresse != null && adresse.startsWith("https://") && ongletPour(Uri.parse(adresse)) >= 0) {
+                vue.evaluateJavascript(injection, null);
+            }
+            int n = indice(vue);
+            if (n >= 0 && viderSur[n] != null && adresse != null && adresse.startsWith(viderSur[n])) {
+                vue.clearHistory();
+                viderSur[n] = null;
+            }
+            if (vue == pageCourante()) majTitre();
+        }
+
+        /** Site injoignable (pas de réseau, serveur arrêté...) : copie suivante, sinon page d'erreur. */
+        @Override
+        public void onReceivedError(WebView vue, WebResourceRequest demande, WebResourceError erreur) {
+            if (!demande.isForMainFrame()) return;
+            int code = erreur.getErrorCode();
+            if (code == ERROR_HOST_LOOKUP || code == ERROR_CONNECT || code == ERROR_TIMEOUT || code == ERROR_IO) {
+                secours(vue, demande.getUrl().toString(), 0);
+            }
+        }
+
+        /** Page absente ou serveur en panne sur cette copie : voir secours(). */
+        @Override
+        public void onReceivedHttpError(WebView vue, WebResourceRequest demande, WebResourceResponse reponse) {
+            int code = reponse.getStatusCode();
+            if (demande.isForMainFrame() && (code == 404 || code >= 500)) secours(vue, demande.getUrl().toString(), code);
         }
     }
 
@@ -367,18 +703,15 @@ public class Principale extends Activity {
     @Override
     protected void onNewIntent(Intent intention) {
         super.onNewIntent(intention);
-        int n = intention.getData() != null ? ongletPour(intention.getData()) : -1;
-        if (n >= 0) {
-            choisir(n);
-            pages[n].loadUrl(intention.getData().toString());
-        }
+        ouvrirLien(intention);
     }
 
-    /** Retour : page précédente de l'onglet ; au début de l'onglet, l'appli passe en arrière-plan. */
+    /** Retour : page précédente de l'onglet ; au début de l'onglet (ou sur la page d'erreur), l'appli
+     * passe en arrière-plan. */
     @Override
     @SuppressWarnings("deprecation")
     public void onBackPressed() {
-        if (pageCourante() != null && pageCourante().canGoBack()) {
+        if (pageCourante() != null && !enErreur[courant] && pageCourante().canGoBack()) {
             pageCourante().goBack();
         } else {
             moveTaskToBack(true);

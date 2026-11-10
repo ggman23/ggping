@@ -5,7 +5,8 @@
   window.__appliCvtt = true;
 
   // L'appli est celle de l'administrateur : ses visites ne comptent pas dans les statistiques du club
-  if (location.hostname === "ggping.netlify.app") {
+  // (espace club sur GitHub, Cloudflare ou Netlify)
+  if (["ggman23.github.io", "ggping-pap.pages.dev", "ggping.netlify.app"].includes(location.hostname)) {
     try { localStorage.setItem("skipgc", "t"); localStorage.setItem("umami.disabled", "1"); } catch (e) { /* rien */ }
   }
 
