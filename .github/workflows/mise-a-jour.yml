@@ -29,7 +29,7 @@ on:
     - cron: "7 6 * * 1"
 
 permissions:
-  # contents: write : commit de publication sur la branche « publication-pages » (voir ttvaires/pages.py)
+  # contents: write : commit vide en fin de mise à jour, pour GitHub Pages (voir ttvaires/pages.py)
   contents: write
   pages: write
   id-token: write
@@ -156,26 +156,19 @@ jobs:
           UMAMI: ${{ vars.UMAMI || secrets.UMAMI || '23cfef06-9803-4df0-b7e7-6631a2490f82' }}
         run: python -m ttvaires.netlify --github site-github
 
-      - name: Envoi du site GitHub
-        id: artefact
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: site-github
 
-      # GitHub Pages ignore une deuxième publication sur le même commit du code (elle se dit réussie
-      # mais l'ancienne version reste en ligne) : chaque mise à jour publie avec son propre commit
-      # de publication (ttvaires/pages.py). En cas d'échec, l'action officielle prend le relais.
-      - name: Publication (version unique)
-        id: publication
+      # Publication restée bloquée par l'essai du 10/11 (elle empêche les suivantes) : annulée
+      - name: Publication bloquée (nettoyage)
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          ARTIFACT_ID: ${{ steps.artefact.outputs.artifact_id }}
-        run: python -m ttvaires.pages
+        run: python -m ttvaires.pages nettoyer
 
       - name: Publication
         id: deploiement
-        if: ${{ steps.publication.outcome != 'success' }}
         uses: actions/deploy-pages@v4
 
       # Copie de secours sur Netlify : accueil public (adversaires), /club/ (espace club, secret
@@ -224,3 +217,12 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy site-netlify --project-name=${{ steps.cloudflare.outputs.projet }} --branch=main --commit-dirty=true
+
+      # GitHub Pages ne met en ligne qu'une publication par commit du code : un commit vide pour que
+      # la prochaine mise à jour (bouton, PC ou lundi) tourne sur un commit nouveau (ttvaires/pages.py)
+      - name: Commit pour la prochaine mise à jour
+        if: ${{ always() }}
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python -m ttvaires.pages commit-suivant

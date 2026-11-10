@@ -1,18 +1,19 @@
-"""Publication du site sur GitHub Pages, avec une version différente à chaque mise à jour.
+"""GitHub Pages : une mise à jour = un commit du code différent.
 
-GitHub Pages identifie une publication par le commit du code (« pages_build_version » de l'action
-officielle actions/deploy-pages, toujours GITHUB_SHA). Deux mises à jour lancées sur le même commit
-(par exemple la mise à jour du lundi après une mise à jour à la main, sans changement de l'outil
-entre les deux) donnent le même identifiant : GitHub répond « succès » mais garde l'ancienne
-version en ligne. Constaté le 09/11/2026 (le site GitHub est resté à la version de 01:28).
+GitHub Pages identifie une publication par le commit du code sur lequel tourne la mise à jour
+(GITHUB_SHA, utilisé par l'action officielle actions/deploy-pages). Deux mises à jour sur le même
+commit (par exemple la mise à jour automatique du lundi après une mise à jour à la main, sans
+nouvelle version de l'outil entre les deux) : la seconde se dit réussie mais l'ancienne version
+reste en ligne (constaté le 09/11/2026). Publier avec un autre commit que celui de la mise à jour
+ne marche pas non plus : GitHub l'accepte puis ne la traite jamais (essai du 10/11/2026).
 
-Ici, chaque mise à jour crée donc un commit de publication à part : même contenu que le code
-(même arbre), le commit du code pour parent, rangé sur la branche « publication-pages » (remplacée
-à chaque fois : l'historique de la branche principale n'est pas touché). Le site est publié avec ce
-commit comme version, par les mêmes appels que actions/deploy-pages. Les changements faits avec le
-jeton du workflow ne déclenchent aucun autre workflow.
+Donc, à la fin de chaque mise à jour (réussie ou non), un commit vide (« Mise à jour du site … »)
+est ajouté à la branche : la mise à jour suivante, qu'elle soit lancée par le bouton, le PC ou le
+calendrier, tourne sur un commit nouveau et sa publication est bien mise en ligne. Un commit fait
+avec le jeton du workflow ne déclenche aucun autre workflow.
 
-Si cette publication échoue, l'étape suivante du workflow (actions/deploy-pages) prend le relais.
+  python -m ttvaires.pages commit-suivant   # fin de la mise à jour
+  python -m ttvaires.pages nettoyer         # annule la publication bloquée de l'essai du 10/11
 """
 
 import os
@@ -22,9 +23,7 @@ import time
 import requests
 
 API = os.environ.get("GITHUB_API_URL", "https://api.github.com")
-BRANCHE = "publication-pages"
-ERREURS = {"deployment_failed", "deployment_perms_error", "deployment_content_failed", "deployment_cancelled",
-           "deployment_lost"}
+ANCIENNE_BRANCHE = "publication-pages"  # essai du 10/11/2026, abandonné
 
 
 class ErreurPages(Exception):
@@ -39,60 +38,60 @@ def _appel(methode, chemin, jeton, **options):
     return r.json() if r.content else {}
 
 
-def commit_de_publication(depot, sha, jeton, message):
-    """Nouveau commit, même arbre que `sha` (le code), rangé sur la branche de publication."""
-    arbre = _appel("GET", f"/repos/{depot}/git/commits/{sha}", jeton)["tree"]["sha"]
-    nouveau = _appel("POST", f"/repos/{depot}/git/commits", jeton, json={"message": message, "tree": arbre, "parents": [sha]})["sha"]
+def commit_suivant(depot, branche, jeton, message, essais=3):
+    """Ajoute un commit vide (même arbre) au bout de la branche ; renvoie son identifiant."""
+    for essai in range(essais):
+        tete = _appel("GET", f"/repos/{depot}/git/ref/heads/{branche}", jeton)["object"]["sha"]
+        arbre = _appel("GET", f"/repos/{depot}/git/commits/{tete}", jeton)["tree"]["sha"]
+        nouveau = _appel("POST", f"/repos/{depot}/git/commits", jeton,
+                         json={"message": message, "tree": arbre, "parents": [tete]})["sha"]
+        try:  # sans forcer : si quelqu'un a poussé entre-temps, on recommence par-dessus
+            _appel("PATCH", f"/repos/{depot}/git/refs/heads/{branche}", jeton, json={"sha": nouveau, "force": False})
+            return nouveau
+        except ErreurPages:
+            if essai == essais - 1:
+                raise
+            time.sleep(2)
+
+
+def nettoyer(depot, jeton):
+    """Annule la publication restée « en cours » de l'essai du 10/11 (elle bloque les suivantes) et
+    supprime sa branche. Ne fait rien si elle n'existe plus."""
     try:
-        _appel("PATCH", f"/repos/{depot}/git/refs/heads/{BRANCHE}", jeton, json={"sha": nouveau, "force": True})
-    except ErreurPages:  # première fois : la branche n'existe pas encore
-        _appel("POST", f"/repos/{depot}/git/refs", jeton, json={"ref": f"refs/heads/{BRANCHE}", "sha": nouveau})
-    return nouveau
-
-
-def jeton_oidc():
-    """Jeton OIDC du workflow (permission id-token: write), comme core.getIDToken()."""
-    url, jeton = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL"), os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
-    if not (url and jeton):
-        raise ErreurPages("jeton OIDC indisponible (permission id-token: write ?)")
-    r = requests.get(url, headers={"Authorization": f"bearer {jeton}"}, timeout=60)
-    if not r.ok:
-        raise ErreurPages(f"jeton OIDC refusé : HTTP {r.status_code}")
-    return r.json()["value"]
-
-
-def publier(depot, sha, jeton, artefact, message, attente=600, pause=5):
-    """Publie l'artefact « github-pages » déjà envoyé, avec une version de publication unique."""
-    version = commit_de_publication(depot, sha, jeton, message)
-    print(f"Version de publication : {version} (commit du code {sha[:7]})", flush=True)
-    deploiement = _appel("POST", f"/repos/{depot}/pages/deployments", jeton,
-                         json={"artifact_id": int(artefact), "pages_build_version": version, "oidc_token": jeton_oidc()})
-    ident = deploiement.get("id") or (deploiement.get("status_url") or "").rstrip("/").split("/")[-1] or version
-    fin = time.time() + attente
-    while time.time() < fin:
-        time.sleep(pause)
-        etat = _appel("GET", f"/repos/{depot}/pages/deployments/{ident}", jeton).get("status")
-        if etat == "succeed":
-            return deploiement.get("page_url") or ""
-        if etat in ERREURS:
-            raise ErreurPages(f"GitHub Pages : {etat}")
-    raise ErreurPages("GitHub Pages : publication toujours en cours après 10 minutes")
-
-
-def main():
-    depot, sha = os.environ.get("GITHUB_REPOSITORY", ""), os.environ.get("GITHUB_SHA", "")
-    jeton, artefact = os.environ.get("GITHUB_TOKEN", ""), os.environ.get("ARTIFACT_ID", "")
-    if not (depot and sha and jeton and artefact):
-        print("::warning::Publication GitHub Pages : contexte incomplet, l'action officielle prend le relais.")
-        return 1
-    message = f"Publication du site (mise à jour {os.environ.get('GITHUB_RUN_ID', '?')})"
+        sha = _appel("GET", f"/repos/{depot}/git/ref/heads/{ANCIENNE_BRANCHE}", jeton)["object"]["sha"]
+    except ErreurPages:
+        return False
     try:
-        adresse = publier(depot, sha, jeton, artefact, message)
-    except (ErreurPages, requests.RequestException, ValueError, KeyError) as e:
-        print(f"::warning::Publication GitHub Pages avec une version unique impossible ({e}) : "
-              "l'action officielle prend le relais.")
-        return 1
-    print(f"Site GitHub publié : {adresse}")
+        _appel("POST", f"/repos/{depot}/pages/deployments/{sha}/cancel", jeton)
+        print(f"Publication bloquée {sha[:7]} annulée.")
+    except ErreurPages as e:
+        print(f"Publication {sha[:7]} : annulation impossible ou inutile ({e}).")
+    _appel("DELETE", f"/repos/{depot}/git/refs/heads/{ANCIENNE_BRANCHE}", jeton)
+    print(f"Branche {ANCIENNE_BRANCHE} supprimée.")
+    return True
+
+
+def main(arguments=None):
+    action = (arguments or sys.argv[1:] or [""])[0]
+    depot, jeton = os.environ.get("GITHUB_REPOSITORY", ""), os.environ.get("GITHUB_TOKEN", "")
+    branche = os.environ.get("GITHUB_REF_NAME", "")
+    if not (depot and jeton):
+        print("::warning::GitHub Pages : contexte incomplet (GITHUB_REPOSITORY, GITHUB_TOKEN).")
+        return 0
+    try:
+        if action == "nettoyer":
+            nettoyer(depot, jeton)
+        elif action == "commit-suivant":
+            numero = os.environ.get("GITHUB_RUN_NUMBER", "?")
+            sha = commit_suivant(depot, branche, jeton, f"Mise à jour du site n° {numero} (publiée)\n\n"
+                                 "Commit vide : la prochaine mise à jour tourne sur un commit nouveau, "
+                                 "sinon GitHub Pages ne la mettrait pas en ligne (voir ttvaires/pages.py).")
+            print(f"Commit pour la prochaine mise à jour : {sha[:7]} sur {branche}")
+        else:
+            print("usage : python -m ttvaires.pages commit-suivant | nettoyer")
+            return 2
+    except (ErreurPages, requests.RequestException, KeyError) as e:
+        print(f"::warning::GitHub Pages ({action}) : {e}")
     return 0
 
 

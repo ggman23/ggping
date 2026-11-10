@@ -1,5 +1,3 @@
-import pytest
-
 from ttvaires import pages
 
 
@@ -12,48 +10,51 @@ class Reponse:
         return self._d
 
 
-def test_publication_avec_une_version_unique(monkeypatch):
-    appels, etats = [], iter(["deployment_queued", "succeed"])
+def test_commit_vide_au_bout_de_la_branche(monkeypatch):
+    appels, tetes = [], iter(["tete1", "tete2"])
 
     def requete(methode, url, **o):
         appels.append((methode, url.replace(pages.API, ""), o.get("json")))
-        if url.endswith("/git/commits/abc123"):
-            return Reponse(200, {"tree": {"sha": "arbre1"}})
+        if "/git/ref/heads/principale" in url:
+            return Reponse(200, {"object": {"sha": next(tetes)}})
+        if "/git/commits/tete" in url:
+            return Reponse(200, {"tree": {"sha": "arbre"}})
         if url.endswith("/git/commits"):
-            return Reponse(201, {"sha": "pub999"})
-        if "/git/refs/heads/" in url:
-            return Reponse(422, {"message": "Reference does not exist"})  # première fois
-        if url.endswith("/git/refs"):
-            return Reponse(201, {"ref": "refs/heads/publication-pages"})
-        if url.endswith("/pages/deployments"):
-            return Reponse(200, {"status_url": "https://api.github.com/repos/g/p/pages/deployments/pub999",
-                                 "page_url": "https://g.github.io/p/"})
-        if "/pages/deployments/pub999" in url:
-            return Reponse(200, {"status": next(etats)})
+            return Reponse(201, {"sha": "vide-" + o["json"]["parents"][0]})
+        if "/git/refs/heads/principale" in url:
+            # 1re fois : quelqu'un a poussé entre-temps (pas d'avance rapide) ; 2e fois : accepté
+            return Reponse(422 if o["json"]["sha"] == "vide-tete1" else 200, {})
         raise AssertionError(url)
 
     monkeypatch.setattr(pages.requests, "request", requete)
-    monkeypatch.setattr(pages, "jeton_oidc", lambda: "oidc")
-    assert pages.publier("g/p", "abc123", "jeton", "42", "Publication", pause=0) == "https://g.github.io/p/"
-    commit = next(j for m, u, j in appels if m == "POST" and u.endswith("/git/commits"))
-    assert commit == {"message": "Publication", "tree": "arbre1", "parents": ["abc123"]}  # même contenu, nouvel identifiant
-    assert ("POST", "/repos/g/p/git/refs", {"ref": "refs/heads/publication-pages", "sha": "pub999"}) in appels
-    deploiement = next(j for m, u, j in appels if u.endswith("/pages/deployments"))
-    assert deploiement == {"artifact_id": 42, "pages_build_version": "pub999", "oidc_token": "oidc"}
+    monkeypatch.setattr(pages.time, "sleep", lambda s: None)
+    assert pages.commit_suivant("g/p", "principale", "jeton", "Mise à jour du site") == "vide-tete2"
+    commits = [j for m, u, j in appels if m == "POST" and u.endswith("/git/commits")]
+    assert commits[-1] == {"message": "Mise à jour du site", "tree": "arbre", "parents": ["tete2"]}  # même contenu
+    assert all(j["force"] is False for m, u, j in appels if m == "PATCH")  # jamais d'écrasement
 
 
-def test_echec_signale_pour_que_l_action_officielle_prenne_le_relais(monkeypatch, capsys):
-    for nom, valeur in (("GITHUB_REPOSITORY", "g/p"), ("GITHUB_SHA", "abc"), ("GITHUB_TOKEN", "t"), ("ARTIFACT_ID", "1")):
+def test_nettoyage_de_la_publication_bloquee(monkeypatch, capsys):
+    appels = []
+
+    def requete(methode, url, **o):
+        appels.append((methode, url.replace(pages.API, "")))
+        if url.endswith("/git/ref/heads/publication-pages"):
+            return Reponse(200, {"object": {"sha": "cac4c94"}})
+        return Reponse(200, {})
+
+    monkeypatch.setattr(pages.requests, "request", requete)
+    assert pages.nettoyer("g/p", "jeton") is True
+    assert ("POST", "/repos/g/p/pages/deployments/cac4c94/cancel") in appels
+    assert ("DELETE", "/repos/g/p/git/refs/heads/publication-pages") in appels
+    # Déjà nettoyé : rien
+    monkeypatch.setattr(pages.requests, "request", lambda *a, **o: Reponse(404, {"message": "Not Found"}))
+    assert pages.nettoyer("g/p", "jeton") is False
+
+
+def test_erreur_signalee_sans_faire_echouer(monkeypatch, capsys):
+    for nom, valeur in (("GITHUB_REPOSITORY", "g/p"), ("GITHUB_TOKEN", "t"), ("GITHUB_REF_NAME", "principale")):
         monkeypatch.setenv(nom, valeur)
     monkeypatch.setattr(pages.requests, "request", lambda *a, **o: Reponse(403, {"message": "Resource not accessible"}))
-    assert pages.main() == 1
-    assert "l'action officielle prend le relais" in capsys.readouterr().out
-
-
-def test_deploiement_en_erreur(monkeypatch):
-    monkeypatch.setattr(pages, "commit_de_publication", lambda *a: "v1")
-    monkeypatch.setattr(pages, "jeton_oidc", lambda: "oidc")
-    reponses = iter([Reponse(200, {"id": "v1"}), Reponse(200, {"status": "deployment_failed"})])
-    monkeypatch.setattr(pages.requests, "request", lambda *a, **o: next(reponses))
-    with pytest.raises(pages.ErreurPages, match="deployment_failed"):
-        pages.publier("g/p", "abc", "t", "1", "m", pause=0)
+    assert pages.main(["commit-suivant"]) == 0
+    assert "::warning::GitHub Pages (commit-suivant)" in capsys.readouterr().out

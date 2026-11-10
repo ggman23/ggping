@@ -216,14 +216,15 @@ prochain »), la copie Netlify reste en ligne telle quelle, et l'espace club res
 GitHub et sur Cloudflare Pages. Un envoi forcé passe encore une fois (19, soit 285 crédits), jamais
 au-delà. Réglages dans `ttvaires/netlify.py` (JOUR_CYCLE, LIMITE_ENVOIS, PLAFOND_ENVOIS).
 
-## Publication sur GitHub Pages : une version par mise à jour
+## Publication sur GitHub Pages : un commit par mise à jour
 
-GitHub Pages identifie une publication par le commit du code : deux mises à jour sur le même commit
-(par exemple la mise à jour automatique du lundi après une mise à jour à la main, sans nouvelle
-version de l'outil entre les deux) se disaient réussies, mais la seconde n'était pas mise en ligne
-(constaté le 09/11/2026). Désormais chaque mise à jour crée un commit de publication (même contenu
-que le code, sur la branche `publication-pages`, remplacé à chaque fois) et publie avec lui
-(`ttvaires/pages.py`). En cas d'échec, l'action officielle de GitHub prend le relais.
+GitHub Pages identifie une publication par le commit du code sur lequel tourne la mise à jour : deux
+mises à jour sur le même commit (par exemple la mise à jour automatique du lundi après une mise à jour
+à la main, sans nouvelle version de l'outil entre les deux) se disaient réussies, mais la seconde
+n'était pas mise en ligne (constaté le 09/11/2026). Publier avec un autre commit ne marche pas non
+plus (essai du 10/11/2026 : publication jamais traitée). Donc, à la fin de chaque mise à jour, un
+commit vide « Mise à jour du site n° … » est ajouté à la branche (`ttvaires/pages.py`) : la suivante
+tourne sur un commit nouveau. Ces commits ne changent aucun fichier.
 
 ## Espace club sur le site GitHub (gratuit, sans limite de mises à jour)
 
