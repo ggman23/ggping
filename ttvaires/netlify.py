@@ -168,7 +168,8 @@ def espace_club(site, club, cle_site, cle_club):
     # Rubriques permanentes après les archives (Matériel, Prépa mentale...) : documents fournis, voir ressources.py
     rubriques = ressources.publier_dans(club, cle_club)
     donnees = {"maj": (etat.get("derniere_maj") or {}).get("fin"), "sel": publier.SEL, "iterations": publier.ITERATIONS,
-               "documents": documents, "archives": archives, "ressources": rubriques}
+               "documents": documents, "archives": archives, "ressources": rubriques,
+               "espaces": [{"chemin": e["chemin"], "titre": e["titre"]} for e in ressources.lire()["espaces"]]}
     js = json.dumps(donnees, ensure_ascii=False).replace("<", "\\u003c")
     (club / "index.html").write_text(GABARIT_CLUB.read_text(encoding="utf-8").replace("__DONNEES_JSON__", js), encoding="utf-8")
 
@@ -292,8 +293,10 @@ def _ajouter_compteurs(dossier, goatcounter, umami):
     if umami:
         (dossier / UMAMI_PUBLIE).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(UMAMI_JS, dossier / UMAMI_PUBLIE)
+    espaces = [dossier / e["chemin"] / "index.html" for e in ressources.lire()["espaces"]]
     for page, manuel in [(dossier / "index.html", False), (dossier / "club" / "index.html", True),
-                         *((f, True) for f in sorted((dossier / "gg").rglob("index.html")))]:
+                         *((f, True) for f in sorted((dossier / "gg").rglob("index.html"))),
+                         *((f, False) for f in espaces)]:
         if page.exists():
             page.write_text(avec_compteurs(page.read_text(encoding="utf-8"), goatcounter, umami, manuel), encoding="utf-8")
 
@@ -310,6 +313,8 @@ def construire(site, dossier, mot_de_passe, mot_de_passe_gg, mot_de_passe_club="
         copie_rechiffree(site, dossier / "gg", cle_site, publier.cle(mot_de_passe_gg))
     if mot_de_passe_club:
         espace_club(site, dossier / "club", cle_site, publier.cle(mot_de_passe_club))
+        # Espaces protégés à leur propre adresse (ex. /lundi/), mot de passe du club : voir ressources.py
+        ressources.publier_espaces(dossier, publier.cle(mot_de_passe_club))
     (dossier / "index.html").write_text(page_publique(site, mot_de_passe), encoding="utf-8")
     (dossier / "robots.txt").write_text("User-agent: *\nDisallow: /\n", encoding="utf-8")
     # En-têtes Netlify : pas de référencement, et des pages toujours à jour (pas de vieille copie en cache)
@@ -340,6 +345,10 @@ def site_github(site, dossier, mot_de_passe, mot_de_passe_club="", goatcounter="
         shutil.copyfile(UMAMI_JS, dossier / "club" / UMAMI_PUBLIE)
     page.write_text(avec_compteurs(page.read_text(encoding="utf-8"), goatcounter, umami, True, UMAMI_PUBLIE),
                     encoding="utf-8")
+    for chemin in ressources.publier_espaces(dossier, publier.cle(mot_de_passe_club)):  # ex. /ggping/lundi/
+        page = dossier / chemin / "index.html"
+        page.write_text(avec_compteurs(page.read_text(encoding="utf-8"), goatcounter, umami, False,
+                                       "../club/" + UMAMI_PUBLIE), encoding="utf-8")
     return dossier
 
 
@@ -502,6 +511,10 @@ def main():
         (dossier / SIGNATURE).write_text(signature + "\n", encoding="utf-8")
         if not jeton:
             print("Netlify : pas de jeton (secret NETLIFY_AUTH_TOKEN), copie non envoyée. Voir PUBLICATION.md.")
+            return
+        if os.environ.get("NETLIFY_ENVOI", "true").lower() not in ("1", "true", "oui"):
+            print("Netlify : pas demandé (mise à jour de GitHub et Cloudflare seulement) : la copie Netlify reste "
+                  "telle quelle, aucun crédit dépensé.")
             return
         forcer = os.environ.get("FORCER_NETLIFY", "").lower() in ("1", "true", "oui")
         if not forcer and signature_en_ligne(nom) == signature:

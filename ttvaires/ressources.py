@@ -31,15 +31,18 @@ from . import publier
 RACINE = Path(__file__).resolve().parent.parent
 DOSSIER = RACINE / "ressources"
 LISTE = "ressources.json"
-TYPES = {".html": "page", ".htm": "page", ".pdf": "pdf"}
+TYPES = {".html": "page", ".htm": "page", ".pdf": "pdf", ".png": "image", ".jpg": "image", ".jpeg": "image"}
+STOCKAGE_CLUB = "cvtt-vaires-cle-club"  # clé gardée par l'espace club : la même ouvre les espaces (voir publier_espaces)
 
 
 def lire(dossier=None):
-    """{"rubriques": [{"nom", "description", "documents": [{"fichier", "titre", "description"}]}]}"""
+    """{"rubriques": [{"nom", "description", "documents": [{"fichier", "titre", "description"}]}],
+        "espaces": [{"chemin", "fichier", "titre"}]}"""
     fichier = Path(dossier or DOSSIER) / LISTE
-    if not fichier.exists():
-        return {"rubriques": []}
-    return json.loads(fichier.read_text(encoding="utf-8"))
+    liste = json.loads(fichier.read_text(encoding="utf-8")) if fichier.exists() else {}
+    liste.setdefault("rubriques", [])
+    liste.setdefault("espaces", [])
+    return liste
 
 
 def _ecrire(liste, dossier):
@@ -62,7 +65,7 @@ def ajouter(rubrique, chemin, mot_de_passe_club, titre=None, description="", fic
 
     chemin, dossier = Path(chemin), Path(dossier or DOSSIER)
     if chemin.suffix.lower() not in TYPES:
-        raise ValueError(f"type de document non pris en charge : {chemin.suffix} (pages .html et PDF seulement)")
+        raise ValueError(f"type de document non pris en charge : {chemin.suffix} (pages .html, PDF et images seulement)")
     if not mot_de_passe_club:
         raise ValueError("mot de passe du club manquant")
     fichier = fichier or nom_de_fichier(chemin)
@@ -112,6 +115,52 @@ def publier_dans(club, cle_club, dossier=None):
     return rubriques
 
 
+def ajouter_espace(chemin_url, page, mot_de_passe_club, titre=None, dossier=None):
+    """Espace protégé à une adresse à lui (ex. /lundi/) : une page HTML fournie, affichée telle quelle
+    après le mot de passe du club. Chiffrée dans `dossier` ; un espace du même chemin est remplacé."""
+    from .netlify import chiffrer_stable
+
+    page, dossier = Path(page), Path(dossier or DOSSIER)
+    chemin_url = chemin_url.strip("/").lower()
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", chemin_url) or chemin_url in ("club", "gg", "stats", "archives"):
+        raise ValueError(f"adresse d'espace invalide ou réservée : /{chemin_url}/")
+    if page.suffix.lower() not in (".html", ".htm"):
+        raise ValueError("un espace est une page .html")
+    if not mot_de_passe_club:
+        raise ValueError("mot de passe du club manquant")
+    fichier = f"espace-{chemin_url}.html"
+    dossier.mkdir(parents=True, exist_ok=True)
+    (dossier / f"{fichier}.chiffre").write_bytes(chiffrer_stable(page.read_bytes(), publier.cle(mot_de_passe_club)))
+    liste = lire(dossier)
+    liste["espaces"] = [e for e in liste["espaces"] if e["chemin"] != chemin_url]
+    liste["espaces"].append({"chemin": chemin_url, "fichier": fichier, "titre": titre or page.stem, "taille": page.stat().st_size})
+    _ecrire(liste, dossier)
+    return fichier
+
+
+def publier_espaces(site, cle_club, dossier=None):
+    """Écrit <site>/<chemin>/index.html pour chaque espace : la page de mot de passe (celui du club)
+    qui affiche la page fournie, toujours chiffrée. Renvoie les chemins publiés."""
+    publies, dossier = [], Path(dossier or DOSSIER)
+    for e in lire(dossier)["espaces"]:
+        source = dossier / f"{e['fichier']}.chiffre"
+        try:
+            chiffre = source.read_bytes()
+            publier.dechiffrer(chiffre, cle_club)
+        except FileNotFoundError:
+            print(f"  ! espace /{e['chemin']}/ : {e['fichier']} introuvable dans ressources/", flush=True)
+            continue
+        except Exception:
+            print(f"  ! espace /{e['chemin']}/ : ne s'ouvre pas avec le mot de passe du club (changé depuis ?) : "
+                  "à ajouter de nouveau (python -m ttvaires.ressources espace)", flush=True)
+            continue
+        page = Path(site) / e["chemin"] / "index.html"
+        page.parent.mkdir(parents=True, exist_ok=True)
+        page.write_text(publier.page_verrouillee_chiffree(chiffre, e["titre"], STOCKAGE_CLUB), encoding="utf-8")
+        publies.append(e["chemin"])
+    return publies
+
+
 def main(arguments=None):
     p = argparse.ArgumentParser(prog="python -m ttvaires.ressources", description="Documents des rubriques de l'espace club")
     sous = p.add_subparsers(dest="action", required=True)
@@ -121,15 +170,26 @@ def main(arguments=None):
     a.add_argument("--titre")
     a.add_argument("--description", default="")
     a.add_argument("--fichier", help="nom publié (par défaut : celui du fichier, sans accent ni espace)")
-    sous.add_parser("liste", help="afficher les rubriques et leurs documents")
+    e = sous.add_parser("espace", help="page .html à une adresse à elle (ex. lundi -> /lundi/), mot de passe du club")
+    e.add_argument("adresse", help="par exemple lundi")
+    e.add_argument("chemin", type=Path)
+    e.add_argument("--titre")
+    sous.add_parser("liste", help="afficher les rubriques, leurs documents et les espaces")
     args = p.parse_args(arguments)
     if args.action == "liste":
-        for r in lire()["rubriques"]:
+        liste = lire()
+        for r in liste["rubriques"]:
             print(r["nom"])
             for d in r["documents"]:
                 print(f"  {d['fichier']} : {d['titre']}")
+        for x in liste["espaces"]:
+            print(f"/{x['chemin']}/ : {x['titre']}")
         return 0
     mdp = os.environ.get("MOT_DE_PASSE_CLUB") or getpass.getpass("Mot de passe de l'espace club : ")
+    if args.action == "espace":
+        ajouter_espace(args.adresse, args.chemin, mdp, args.titre)
+        print(f"Espace /{args.adresse.strip('/').lower()}/ ajouté. À envoyer sur GitHub (commit du dossier ressources/).")
+        return 0
     fichier = ajouter(args.rubrique, args.chemin, mdp, args.titre, args.description, args.fichier)
     print(f"Ajouté : ressources/{fichier}.chiffre (rubrique « {args.rubrique} »). À envoyer sur GitHub (commit).")
     return 0

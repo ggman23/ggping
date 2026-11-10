@@ -17,6 +17,18 @@
    "description": "",
    "documents": [
     {
+     "fichier": "memo-sac-de-sport.png",
+     "titre": "Mémo sac de sport (image)",
+     "description": "La check-list mentale à lire d'un coup d'œil sur le téléphone : avant le match, routine des 4 R, temps mort, money time, quand ça déraille",
+     "taille": 486691
+    },
+    {
+     "fichier": "memo-sac-de-sport.pdf",
+     "titre": "Mémo sac de sport : check-list mentale",
+     "description": "La même check-list en PDF, à imprimer (1 page)",
+     "taille": 50875
+    },
+    {
      "fichier": "guide-du-joueur.pdf",
      "titre": "Guide du joueur : mon mental de compétiteur",
      "description": "Stress, émotions, peur de perdre ou de gagner, outils avant, pendant et après le match (26 pages)",
@@ -41,6 +53,14 @@
      "taille": 101422
     }
    ]
+  }
+ ],
+ "espaces": [
+  {
+   "chemin": "lundi",
+   "fichier": "espace-lundi.html",
+   "titre": "Le roi du lundi",
+   "taille": 2093570
   }
  ]
 }

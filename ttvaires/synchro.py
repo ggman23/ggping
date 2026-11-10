@@ -177,8 +177,9 @@ def _version(config):
     return r.json()
 
 
-def envoyer(config, declencher=True):
-    """Chiffre et envoie les données du PC, puis lance la mise à jour du site."""
+def envoyer(config, declencher=True, netlify=False):
+    """Chiffre et envoie les données du PC, puis lance la mise à jour du site (GitHub et Cloudflare ;
+    Netlify aussi avec `netlify`, 15 crédits Netlify)."""
     archive, nb = paquet()
     chiffre = publier.chiffrer(archive, publier.cle(config["mot_de_passe"]))
     version = _version(config)
@@ -195,10 +196,11 @@ def envoyer(config, declencher=True):
         depot = config["depot"]
         branche = _github(config, "GET", f"/repos/{depot}").json().get("default_branch")
         r = _github(config, "POST", f"/repos/{depot}/actions/workflows/{publier.WORKFLOW}/dispatches", droit="Actions",
-                    json={"ref": branche, "inputs": {"pages": "tout"}})
+                    json={"ref": branche, "inputs": {"pages": "tout", "netlify": "true" if netlify else "false"}})
         if r.status_code != 204:
             raise ErreurSynchro(f"lancement de la mise à jour du site impossible : HTTP {r.status_code} {r.text[:200]}")
-        print(f"Mise à jour du site lancée : pages identiques en ligne dans 5 à 10 minutes "
+        print(f"Mise à jour du site lancée ({'les 3 sites' if netlify else 'GitHub et Cloudflare'}) : "
+              f"pages identiques en ligne dans 5 à 10 minutes "
               f"(https://{depot.split('/')[0].lower()}.github.io/{depot.split('/')[1]}/).")
 
 
@@ -265,8 +267,13 @@ def apres_lancement():
     if not config:
         return None
     print("\n=== Envoi des données au site (téléphone) ===")
+    netlify = False
+    if sys.stdin is not None and sys.stdin.isatty():
+        reponse = input("Publier aussi sur Netlify, l'adresse donnée au club (15 crédits Netlify sur 300 par mois) ? "
+                        "o = oui, Entrée = non (GitHub et Cloudflare seulement) : ").strip().lower()
+        netlify = reponse in ("o", "oui", "y", "yes")
     try:
-        envoyer(config)
+        envoyer(config, netlify=netlify)
         return "données envoyées, site en cours de mise à jour"
     except Exception as e:  # les pages du PC sont faites : un échec d'envoi ne doit rien bloquer
         print(f"  ! envoi impossible : {e}")

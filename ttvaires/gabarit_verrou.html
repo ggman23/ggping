@@ -40,7 +40,7 @@ button:disabled { opacity: .6; }
 <script id="chiffre" type="text/plain">__CHIFFRE__</script>
 <script>
 "use strict";
-const SEL = "__SEL__", ITERATIONS = __ITERATIONS__, STOCKAGE = "cvtt-vaires-cle";
+const SEL = "__SEL__", ITERATIONS = __ITERATIONS__, STOCKAGE = "__STOCKAGE__";
 const octets = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 const b64 = (o) => btoa(String.fromCharCode(...o));
 function lireCle() { try { const c = localStorage.getItem(STOCKAGE); return c ? octets(c) : null; } catch (e) { return null; } }

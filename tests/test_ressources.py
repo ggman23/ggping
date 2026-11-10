@@ -41,7 +41,7 @@ def test_type_non_pris_en_charge(tmp_path):
     try:
         ressources.ajouter("X", f, "club", dossier=tmp_path)
     except ValueError as e:
-        assert "pages .html et PDF" in str(e)
+        assert "pages .html, PDF et images" in str(e)
     else:
         raise AssertionError("type refusé attendu")
 
@@ -67,3 +67,36 @@ def test_ressources_du_depot_lisibles():
     for r in ressources.lire()["rubriques"]:
         for d in r["documents"]:
             assert (ressources.DOSSIER / f"{d['fichier']}.chiffre").exists(), d["fichier"]
+
+
+def test_espace_protege_a_son_adresse(tmp_path):
+    depot = tmp_path / "ressources"
+    page = tmp_path / "roi.html"
+    page.write_text("<!doctype html><title>Roi du lundi</title><p>Classement</p>", encoding="utf-8")
+    assert ressources.ajouter_espace("/Lundi/", page, "club", titre="Le roi du lundi", dossier=depot) == "espace-lundi.html"
+    assert b"Classement" not in (depot / "espace-lundi.html.chiffre").read_bytes()  # chiffrée dans le dépôt public
+    site = tmp_path / "site"
+    assert ressources.publier_espaces(site, publier.cle("club"), depot) == ["lundi"]
+    html = (site / "lundi" / "index.html").read_text(encoding="utf-8")
+    # Page de mot de passe : clé gardée comme celle de l'espace club (entrée une seule fois pour les deux)
+    assert "Le roi du lundi" in html and 'STOCKAGE = "cvtt-vaires-cle-club"' in html and "Classement" not in html
+    import base64
+    chiffre = re.search(r'<script id="chiffre" type="text/plain">(.*?)</script>', html, re.S)[1].strip()
+    assert b"Classement" in publier.dechiffrer(base64.b64decode(chiffre), publier.cle("club"))
+    # Mot de passe du club changé : signalé, pas publié
+    assert ressources.publier_espaces(tmp_path / "autre", publier.cle("nouveau"), depot) == []
+    for reserve in ("club", "gg", "a/b"):
+        try:
+            ressources.ajouter_espace(reserve, page, "club", dossier=depot)
+        except ValueError:
+            continue
+        raise AssertionError(f"/{reserve}/ refusé attendu")
+
+
+def test_image_dans_une_rubrique(tmp_path):
+    depot = tmp_path / "ressources"
+    image = tmp_path / "Mémo.png"
+    image.write_bytes(b"\x89PNG\r\n\x1a\n...")
+    ressources.ajouter("Prépa mentale", image, "club", dossier=depot)
+    (r,) = ressources.publier_dans(tmp_path / "club", publier.cle("club"), depot)
+    assert [(d["fichier"], d["type"]) for d in r["documents"]] == [("memo.png", "image")]

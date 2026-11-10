@@ -117,7 +117,7 @@ def test_envoi_sur_github(monkeypatch, tmp_path):
             assert options["params"] == {"name": "donnees-pc.chiffre"} and len(options["data"]) > 28
             return _Reponse(201, {})
         if url.endswith("/dispatches"):
-            assert options["json"] == {"ref": "principale", "inputs": {"pages": "tout"}}
+            assert options["json"] == {"ref": "principale", "inputs": {"pages": "tout", "netlify": "false"}}
             return _Reponse(204)
         return _Reponse(204)
 

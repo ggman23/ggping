@@ -75,7 +75,17 @@ navigateur du téléphone, choisir « Version pour ordinateur » si un menu n'ap
 
 ## Le bouton « Lancer la mise à jour » du site
 
-Il demande à GitHub de lancer la mise à jour, puis affiche son avancement (« en cours… »,
+Deux boutons :
+- **« Mettre à jour GitHub et Cloudflare »** : gratuit, autant de fois qu'il faut (corrections,
+  ajouts) ; la copie Netlify n'est pas touchée.
+- **« Mettre à jour les 3 sites (avec Netlify) »** : envoie aussi la version sur Netlify, l'adresse
+  donnée au club (15 crédits Netlify ; garde-fou à 18 envois par mois).
+
+La mise à jour automatique du lundi (après un week-end de championnat) met à jour les 3 sites. Sur le
+PC, à la fin de chaque lancement, l'outil demande s'il faut publier aussi sur Netlify (Entrée = non).
+Dans GitHub (*Actions* → *Run workflow*), c'est la case « Envoyer aussi sur Netlify ».
+
+Le bouton demande à GitHub de lancer la mise à jour, puis affiche son avancement (« en cours… »,
 « terminé »). Il utilise le jeton de l'étape 3, enregistré uniquement sur le téléphone (stockage
 du navigateur) ; « Effacer » le retire. Pour le bouton seul, le droit *Actions : Read and write*
 suffit.
@@ -338,6 +348,23 @@ les titres et les descriptions. Pour ajouter ou remplacer un document, sur le PC
 nouvelle rubrique est créée à la fin si son nom n'existe pas. Si le mot de passe du club change,
 ces documents ne s'ouvrent plus avec la nouvelle clé : la mise à jour le signale dans son journal et
 ne les publie pas ; il faut alors les ajouter de nouveau.
+
+
+Une image (png, jpg) peut aussi être un document de rubrique : elle s'affiche comme les images du
+site, avec « Partager » sur téléphone (ex. le mémo sac de sport, version image du PDF).
+
+## Espaces à leur propre adresse : /lundi/ (le roi du lundi)
+
+Une page HTML fournie peut avoir sa propre adresse, à côté de /club/ : **/lundi/** sur chaque site
+(https://ggping.netlify.app/lundi/, https://ggman23.github.io/ggping/lundi/,
+https://ggping-pap.pages.dev/lundi/). Elle demande le **mot de passe du club** puis s'affiche telle
+quelle ; quelqu'un qui est déjà entré dans l'espace club (« se souvenir ») l'ouvre directement. Le
+menu et l'accueil de l'espace club ont un lien « Autres espaces ». La page reste chiffrée dans le dépôt
+(dossier `ressources/`). Pour la remplacer par une nouvelle version, sur le PC :
+
+    python -m ttvaires.ressources espace lundi "C:\chemin\roi.html" --titre "Le roi du lundi"
+
+puis envoyer le dossier `ressources/` sur GitHub (ou m'envoyer la page).
 
 ## Sécurité
 

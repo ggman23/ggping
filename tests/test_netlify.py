@@ -320,3 +320,16 @@ def test_copie_identique_pas_renvoyee(tmp_path, monkeypatch):
     monkeypatch.setattr(netlify, "signature_en_ligne", lambda nom: None)           # copie en ligne illisible
     netlify.main()
     assert len(envois) == 2
+
+
+def test_netlify_seulement_si_demande(monkeypatch, capsys, tmp_path):
+    _crypto()
+    monkeypatch.setenv("NETLIFY_AUTH_TOKEN", "jeton")
+    monkeypatch.setenv("NETLIFY_ENVOI", "false")
+    monkeypatch.setenv("MOT_DE_PASSE_SITE", "secret")
+    monkeypatch.setattr(netlify.requests, "post", lambda *a, **o: pytest.fail("Netlify n'est pas demandé"))
+    monkeypatch.setattr(netlify, "signature_en_ligne", lambda site: pytest.fail("rien à comparer"))
+    monkeypatch.setattr("sys.argv", ["netlify", "--site", str(_site(tmp_path)), "--dossier", str(tmp_path / "copie")])
+    netlify.main()
+    assert "pas demandé" in capsys.readouterr().out
+    assert (tmp_path / "copie" / netlify.SIGNATURE).exists()  # la copie sert quand même à Cloudflare

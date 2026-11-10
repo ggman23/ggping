@@ -90,7 +90,11 @@ a { color: var(--accent); }
       <option value="virtuel">Classement virtuel</option>
       <option value="adversaires">Adversaires</option>
     </select>
-    <div class="ligne"><button id="lancer">Lancer la mise à jour</button></div>
+    <div class="ligne"><button id="lancer">Mettre à jour GitHub et Cloudflare</button>
+      <button id="lancer-netlify" class="second">Mettre à jour les 3 sites (avec Netlify)</button></div>
+    <p class="petit">GitHub et Cloudflare : gratuit, autant de fois qu'il faut (corrections, ajouts).
+      Les 3 sites : envoie aussi la version sur Netlify, l'adresse donnée au club (15 crédits Netlify sur 300 par mois ;
+      18 envois au plus par mois, au-delà Netlify n'est plus mis à jour jusqu'au 6).</p>
     <div id="statut" role="status"></div>
     <details id="reglage">
       <summary>Réglage du bouton (une fois par appareil et par adresse du site)</summary>
@@ -318,20 +322,21 @@ async function github(chemin, options = {}) {
     : r.status === 403 || r.status === 404 ? "le jeton n'a pas le droit « Actions : Read and write » sur ce dépôt" : `erreur ${r.status}`);
   return r.status === 204 ? null : r.json();
 }
-async function lancer() {
+// Deux boutons : GitHub et Cloudflare (gratuits), ou les 3 sites (Netlify en plus : 15 crédits)
+const boutonsMaj = (inactifs) => ["lancer", "lancer-netlify"].forEach((id) => { document.getElementById(id).disabled = inactifs; });
+async function lancer(netlify) {
   if (!lire(JETON)) { document.getElementById("reglage").open = true; statut('<span class="etat att">Fais d\'abord le réglage ci-dessous.</span>'); return; }
-  const bouton = document.getElementById("lancer");
-  bouton.disabled = true;
-  compter(`${ICI}/mise-a-jour`, "Mise à jour lancée", true);
+  boutonsMaj(true);
+  compter(`${ICI}/mise-a-jour${netlify ? "-netlify" : ""}`, netlify ? "Mise à jour lancée (3 sites)" : "Mise à jour lancée", true);
   const depuis = Date.now();
   try {
     await github(`/repos/${E.depot}/actions/workflows/${E.workflow}/dispatches`, { method: "POST",
-      body: JSON.stringify({ ref: E.branche, inputs: { pages: document.getElementById("choix").value } }) });
-    statut("Mise à jour demandée… ");
+      body: JSON.stringify({ ref: E.branche, inputs: { pages: document.getElementById("choix").value, netlify: netlify ? "true" : "false" } }) });
+    statut(netlify ? "Mise à jour des 3 sites demandée… " : "Mise à jour de GitHub et Cloudflare demandée… ");
     suivre(depuis, 0);
   } catch (e) {
     statut(`<span class="etat ko">Échec : ${esc(e.message)}</span>`);
-    bouton.disabled = false;
+    boutonsMaj(false);
   }
 }
 async function suivre(depuis, essais, id) {
@@ -342,7 +347,7 @@ async function suivre(depuis, essais, id) {
     if (run) id = run.id;
     const minutes = Math.round((Date.now() - depuis) / 60000);
     if (run && run.status === "completed") {
-      document.getElementById("lancer").disabled = false;
+      boutonsMaj(false);
       if (run.conclusion === "success") {
         statut(`<span class="etat ok">✓ Terminé : les pages sont à jour.</span>
           <div class="ligne"><button onclick="location.href='./?t=' + Date.now()">Recharger</button></div>`);
@@ -365,7 +370,7 @@ async function suivre(depuis, essais, id) {
   }
   if (essais < 120) setTimeout(() => suivre(depuis, essais + 1, id), 10000);
   else {
-    document.getElementById("lancer").disabled = false;
+    boutonsMaj(false);
     statut(`<span class="etat att">Toujours pas terminée après ${Math.round((Date.now() - depuis) / 60000)} min :
       la mise à jour continue, recharge la page plus tard pour la suivre.</span>`);
   }
@@ -377,7 +382,7 @@ async function reprendreSuivi() {
     const r = await github(`/repos/${E.depot}/actions/workflows/${E.workflow}/runs?per_page=5`);
     const run = (r.workflow_runs || []).find((x) => x.status !== "completed");
     if (!run) return;
-    document.getElementById("lancer").disabled = true;
+    boutonsMaj(true);
     suivre(new Date(run.created_at).getTime(), 0, run.id);
   } catch (e) { /* suivi impossible : la page reste utilisable */ }
 }
@@ -413,7 +418,8 @@ document.getElementById("garder-jeton").addEventListener("click", () => {
 });
 document.getElementById("oublier-jeton").addEventListener("click", () => { ecrire(JETON, null); afficherJeton(); });
 document.getElementById("oublier-mdp").addEventListener("click", (ev) => { ecrire(CLE, null); ev.target.textContent = "Mot de passe oublié sur cet appareil"; });
-document.getElementById("lancer").addEventListener("click", lancer);
+document.getElementById("lancer").addEventListener("click", () => lancer(false));
+document.getElementById("lancer-netlify").addEventListener("click", () => lancer(true));
 document.getElementById("nom-depot").textContent = E.depot || "le dépôt de l'outil";
 document.getElementById("lien-actions").href = `https://github.com/${E.depot}/actions/workflows/${E.workflow}`;
 if (!E.depot) {

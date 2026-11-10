@@ -149,7 +149,7 @@ const TITRES_GROUPES = { "récapitulatif": "Récapitulatif de la journée (à co
   "classements": "Classements des poules",
   "adversaires": "Adversaires", "résultats": "Résultats des joueurs", "rencontres": "Feuilles de match",
   "effectif": "Effectif et brûlages", "classement virtuel": "Classement virtuel" };
-const TYPES = { html: "text/html;charset=utf-8", png: "image/png", pdf: "application/pdf",
+const TYPES = { html: "text/html;charset=utf-8", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", pdf: "application/pdf",
   xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" };
 const ICONES = {
   page: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>',
@@ -184,6 +184,10 @@ const archives = (D.archives || []).map((a) => ({ ...a, docs: preparer(a.documen
 /* Rubriques permanentes après les archives (Matériel, Prépa mentale...) : documents fournis (ressources.py) */
 const rubriques = (D.ressources || []).map((r) => ({ ...r, docs: r.documents.map((d) => ({
   ...d, rubrique: r.nom, id: `ressources/${d.fichier}`, nom: d.fichier })) }));
+/* Espaces à leur propre adresse (ex. /lundi/), même mot de passe : la clé gardée ici les ouvre directement */
+const ESPACES = D.espaces || [];
+const lienEspace = (e) => `<a class="doc" href="../${encodeURIComponent(e.chemin)}/"><span class="icone page">${ICONES.page}</span>
+  <span class="texte"><b>${esc(e.titre)}</b><span>/${esc(e.chemin)}/</span></span></a>`;
 const parId = new Map([...docs, ...archives.flatMap((a) => a.docs), ...rubriques.flatMap((r) => r.docs)].map((d) => [d.id, d]));
 const taille = (o) => !o ? "" : o >= 1e6 ? `${(o / 1e6).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} Mo` : `${Math.max(1, Math.round(o / 1e3))} Ko`;
 /* PDF : affiché dans la page quand le navigateur sait le faire (ordinateur) ; sur téléphone (et dans
@@ -266,7 +270,7 @@ function quitter() {
 
 /* ---------- Menu ---------- */
 function ligne(d, classeEnPlus = "") {
-  const sous = d.type === "image" ? "" : `<span>${esc(d.type === "excel" ? "Classeur Excel" : d.type === "pdf"
+  const sous = d.type === "image" && !d.rubrique ? "" : `<span>${esc(d.type === "excel" ? "Classeur Excel" : d.type === "pdf"
     ? ["PDF", taille(d.taille), d.description].filter(Boolean).join(" · ") : d.description)}</span>`;
   return `<a class="doc ${classeEnPlus}" href="#${encodeURIComponent(d.id)}" data-id="${esc(d.id)}">
     <span class="icone ${d.type}">${ICONES[d.type]}</span><span class="texte"><b>${esc(d.titre)}</b>${sous}</span></a>`;
@@ -285,6 +289,7 @@ function construireMenu() {
           <span class="icone archive">${ICONES.archive}</span><span class="texte"><b>${esc(a.titre)}</b>
           <span>Phase ${esc(a.phase)} · état au ${esc(jour(a.date_reference))}</span></span></a>`).join("") : "")
     + rubriques.map((r) => `<h2>${esc(r.nom)}</h2>${r.docs.map((d) => ligne(d)).join("")}`).join("")
+    + (ESPACES.length ? `<h2>Autres espaces</h2>${ESPACES.map(lienEspace).join("")}` : "")
     + `<div class="pied-menu">
         <button class="second" id="tout">Tout télécharger (${docs.length} fichiers)</button>
         <p class="petit">Mise à jour : ${esc(quand(D.maj))}. Fichiers lisibles sans connexion : à garder dans le club.</p>
@@ -299,7 +304,7 @@ function construireMenu() {
 function tuile(d) {
   return `<a class="tuile" href="#${encodeURIComponent(d.id)}">
     <span class="icone ${d.type}" style="background: var(--${d.type})">${ICONES[d.type]}</span><b>${esc(d.titre)}</b>
-    <span>${esc(d.type === "image" ? A_LA_UNE_TEXTE[d.groupe] || "" : d.description)}</span>
+    <span>${esc(d.type === "image" && !d.rubrique ? A_LA_UNE_TEXTE[d.groupe] || "" : d.description)}</span>
     ${d.type === "pdf" ? `<span class="etat neutre">PDF${d.taille ? " · " + taille(d.taille) : ""}</span>` : ""}
     ${d.verification ? `<span class="etat ${classe(d.verification)}">${esc(d.verification)}</span>` : ""}</a>`;
 }
@@ -311,6 +316,9 @@ function accueil() {
       `<a class="tuile" href="#archives/${encodeURIComponent(a.cle)}"><span class="icone archive">${ICONES.archive}</span>
         <b>${esc(a.titre)}</b><span>Phase ${esc(a.phase)} ${esc(a.saison)} · état au ${esc(jour(a.date_reference))}</span></a>`).join("")}</div>` : ""}
     ${rubriques.map((r) => `<h2 class="titre-section">${esc(r.nom)}</h2><div class="tuiles">${r.docs.map(tuile).join("")}</div>`).join("")}
+    ${ESPACES.length ? `<h2 class="titre-section">Autres espaces</h2><div class="tuiles">${ESPACES.map((e) =>
+      `<a class="tuile" href="../${encodeURIComponent(e.chemin)}/"><span class="icone page" style="background: var(--page)">${ICONES.page}</span>
+        <b>${esc(e.titre)}</b><span>/${esc(e.chemin)}/ · même mot de passe que l'espace club</span></a>`).join("")}</div>` : ""}
   </div>`;
 }
 function vueArchive(a) {
