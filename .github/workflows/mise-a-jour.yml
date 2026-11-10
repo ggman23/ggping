@@ -29,7 +29,8 @@ on:
     - cron: "7 6 * * 1"
 
 permissions:
-  contents: read
+  # contents: write : commit de publication sur la branche « publication-pages » (voir ttvaires/pages.py)
+  contents: write
   pages: write
   id-token: write
 
@@ -155,12 +156,26 @@ jobs:
           UMAMI: ${{ vars.UMAMI || secrets.UMAMI || '23cfef06-9803-4df0-b7e7-6631a2490f82' }}
         run: python -m ttvaires.netlify --github site-github
 
-      - uses: actions/upload-pages-artifact@v3
+      - name: Envoi du site GitHub
+        id: artefact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: site-github
 
+      # GitHub Pages ignore une deuxième publication sur le même commit du code (elle se dit réussie
+      # mais l'ancienne version reste en ligne) : chaque mise à jour publie avec son propre commit
+      # de publication (ttvaires/pages.py). En cas d'échec, l'action officielle prend le relais.
+      - name: Publication (version unique)
+        id: publication
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: ${{ steps.artefact.outputs.artifact_id }}
+        run: python -m ttvaires.pages
+
       - name: Publication
         id: deploiement
+        if: ${{ steps.publication.outcome != 'success' }}
         uses: actions/deploy-pages@v4
 
       # Copie de secours sur Netlify : accueil public (adversaires), /club/ (espace club, secret
