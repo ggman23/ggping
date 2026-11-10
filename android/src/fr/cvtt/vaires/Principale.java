@@ -106,7 +106,9 @@ public class Principale extends Activity {
     static final int MISE_A_JOUR = 0, CLUB = 1, LUNDI = 2, GOATCOUNTER = 3, UMAMI = 4;
     // Le témoin est la clé sous laquelle les pages du club et de /lundi/ gardent le mot de passe
     // (ttvaires/ressources.py) : Cloudflare Pages, par exemple, répond par la page d'accueil à une
-    // adresse qui n'existe pas.
+    // adresse qui n'existe pas. Il est au début des pages (balise meta cvtt-cle) depuis la mise à jour
+    // du 10/11/2026 ; avant, seulement à la fin (après 2 Mo pour /lundi/) : la lecture s'arrête dès
+    // qu'il est trouvé, au pire après LECTURE_MAX.
     static final String TEMOIN_CLUB = "cvtt-vaires-cle-club";
     static final Onglet[] ONGLETS = {
         new Onglet("maj", "Mise à jour", "⟳", new String[]{GITHUB}, new String[]{"GitHub"}, "", null, "ggman23.github.io"),
@@ -121,7 +123,7 @@ public class Principale extends Activity {
     static final String[] ANCIEN_ORDRE = {"maj", "club", "goatcounter", "umami"};  // version 1.3 (réglages)
     static final String REESSAYER = "cvtt-appli://reessayer";  // bouton de la page d'erreur
     static final String DEPART_PERSO = "depart_";  // réglage : page de départ choisie (lien de partage Umami)
-    static final int DELAI_CONNEXION = 5000, DELAI_LECTURE = 8000, LECTURE_MAX = 512 * 1024;
+    static final int DELAI_CONNEXION = 5000, DELAI_LECTURE = 8000, LECTURE_MAX = 4 * 1024 * 1024;
     static final String DOSSIER = "CVTT Vaires";  // dans Téléchargements
     static final int TAILLE_MAX = 60 * 1024 * 1024;
     static final int ROUGE = Color.rgb(204, 16, 40), NUIT = Color.rgb(27, 42, 74), GRIS = Color.rgb(91, 101, 118);
@@ -374,10 +376,15 @@ public class Principale extends Activity {
             int code = connexion.getResponseCode();
             if (code < 200 || code >= 300) return false;
             if (temoin == null) return true;
-            try (InputStream entree = connexion.getInputStream(); ByteArrayOutputStream lu = new ByteArrayOutputStream()) {
+            try (InputStream entree = connexion.getInputStream()) {
                 byte[] tampon = new byte[16384];
-                for (int n; lu.size() < LECTURE_MAX && (n = entree.read(tampon)) > 0; ) lu.write(tampon, 0, n);
-                return lu.toString(StandardCharsets.UTF_8.name()).contains(temoin);
+                String fin = "";  // fin du morceau précédent : le témoin peut être à cheval sur deux morceaux
+                for (int n, total = 0; total < LECTURE_MAX && (n = entree.read(tampon)) > 0; total += n) {
+                    String morceau = fin + new String(tampon, 0, n, StandardCharsets.ISO_8859_1);  // octet = caractère
+                    if (morceau.contains(temoin)) return true;
+                    fin = morceau.substring(Math.max(0, morceau.length() - temoin.length()));
+                }
+                return false;
             }
         } catch (IOException | RuntimeException e) {
             return false;

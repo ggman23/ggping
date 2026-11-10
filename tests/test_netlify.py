@@ -149,6 +149,7 @@ def test_espace_club_sur_le_site_github(tmp_path):
     page = (dossier / "club" / "index.html").read_text(encoding="utf-8")
     # Le site GitHub est sous /ggping/ : script d'Umami en adresse relative, servi à côté de la page
     assert 'src="stats/umami.js"' in page and (dossier / "club" / "stats" / "umami.js").exists()
+    assert page.index('<meta name="cvtt-cle" content="cvtt-vaires-cle-club">') < 1000  # repère de l'appli Android
     assert not (site / "club").exists()  # le site d'origine (source de la copie Netlify) n'est pas touché
 
 

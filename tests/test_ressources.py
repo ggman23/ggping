@@ -80,6 +80,8 @@ def test_espace_protege_a_son_adresse(tmp_path):
     html = (site / "lundi" / "index.html").read_text(encoding="utf-8")
     # Page de mot de passe : clé gardée comme celle de l'espace club (entrée une seule fois pour les deux)
     assert "Le roi du lundi" in html and 'STOCKAGE = "cvtt-vaires-cle-club"' in html and "Classement" not in html
+    # Repère de l'application Android au début de la page (la page fait 2 Mo, la clé est à la fin)
+    assert html.index('<meta name="cvtt-cle" content="cvtt-vaires-cle-club">') < 1000
     import base64
     chiffre = re.search(r'<script id="chiffre" type="text/plain">(.*?)</script>', html, re.S)[1].strip()
     assert b"Classement" in publier.dechiffrer(base64.b64decode(chiffre), publier.cle("club"))
