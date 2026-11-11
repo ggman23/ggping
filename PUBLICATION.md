@@ -16,9 +16,9 @@ Les pages sont générées sur les serveurs de GitHub (GitHub Actions) et publi�
 - Les pages sont **chiffrées** : il faut le mot de passe du club pour les lire (cochez « Se
   souvenir sur cet appareil » pour ne le taper qu'une fois). Le site est public, mais sans le mot
   de passe on n'y voit aucun nom de joueur ; il n'est pas référencé par les moteurs de recherche.
-- Mise à jour automatique : le lundi vers 7 h, seulement si une équipe de Vaires a joué le week-end
-  (vendredi, samedi ou dimanche), sur GitHub et Cloudflare (Netlify seulement à la main) ; et après
-  chaque lancement de `lancer.bat` sur le PC.
+- Mise à jour automatique : tous les lundis vers 7 h et vers 22 h 30 (heure d'hiver ; une heure plus
+  tard en été), sur GitHub et Cloudflare (Netlify seulement à la main) ; et après chaque lancement de
+  `lancer.bat` sur le PC.
 - Gratuit (dépôt public : GitHub Actions et GitHub Pages sans frais).
 
 ## Même résultat sur le PC et sur le téléphone
@@ -82,7 +82,7 @@ Deux boutons :
 - **« Mettre à jour les 3 sites (avec Netlify) »** : envoie aussi la version sur Netlify, l'adresse
   donnée au club (15 crédits Netlify ; garde-fou à 18 envois par mois).
 
-La mise à jour automatique du lundi (après un week-end de championnat) met à jour GitHub et
+Les mises à jour automatiques du lundi (matin et soir) mettent à jour GitHub et
 Cloudflare seulement : Netlify n'est envoyé qu'à la main (aucun crédit dépensé sans le demander). Sur le
 PC, à la fin de chaque lancement, l'outil demande s'il faut publier aussi sur Netlify (Entrée = non).
 Dans GitHub (*Actions* → *Run workflow*), c'est la case « Envoyer aussi sur Netlify ».
@@ -204,13 +204,14 @@ photos, code de l'outil, réglages) et la compare à celle de la copie en ligne 
 chiffrée). Sans résultat nouveau, le journal affiche « rien de nouveau depuis la copie en ligne : pas
 d'envoi » et rien n'est décompté.
 
-La mise à jour automatique n'a lieu que le **lundi qui suit un week-end de championnat** : le lundi
-matin, le workflow regarde d'abord dans le calendrier de la FFTT si une équipe de Vaires a joué du
-vendredi au dimanche (`python -m ttvaires.calendrier`) ; sinon il s'arrête sans rien faire. Elle ne
-publie que sur GitHub et Cloudflare (depuis le 11/11/2026) : **les envois sur Netlify sont tous
-manuels** (bouton « Mettre à jour les 3 sites », case « Envoyer aussi sur Netlify », ou réponse
-« o » sur le PC). Les mises à jour lancées à la main (site, téléphone, `lancer.bat`) ne passent pas
-par le contrôle du calendrier.
+Mises à jour automatiques : **tous les lundis**, vers 7 h et vers 22 h 30 (heure d'hiver ; une heure
+plus tard en été, l'horaire de GitHub étant en heure universelle), même sans championnat le week-end :
+les critériums et tournois changent aussi la forme des adversaires, et certains résultats ne sont
+saisis que le lundi (celle du soir les prend). Elles ne publient que sur GitHub et Cloudflare
+(depuis le 11/11/2026) : **les envois sur Netlify sont tous manuels** (bouton « Mettre à jour les 3
+sites », case « Envoyer aussi sur Netlify », ou réponse « o » sur le PC). Requêtes vers l'API de la
+FFTT : environ 1 100 le lundi matin (dont les parties des joueurs adverses, relues une fois par
+jour), quelques centaines le soir ; de 6 000 à 8 000 par mois avec quelques mises à jour à la main.
 Le site GitHub, lui, est toujours mis à jour (gratuit). Pour forcer l'envoi : *Actions* → *Mise à
 jour du site* → *Run workflow* → cocher « Envoyer la copie Netlify même si rien n'a changé ».
 

@@ -201,7 +201,7 @@ les rencontres incomplètes sont retéléchargées à chaque lancement.
 Les mises à jour peuvent aussi être lancées depuis un téléphone : GitHub génère les pages sur ses
 serveurs et les publie, chiffrées par un mot de passe, sur **https://ggman23.github.io/ggping/**
 (bouton « Lancer la mise à jour » sur la page d'accueil, Excel téléchargeable, mises à jour
-automatique le lundi qui suit un week-end de championnat, sur GitHub et Cloudflare ; Netlify seulement à la main). Pour que le site donne exactement les mêmes pages que le PC,
+automatique tous les lundis matin et soir, sur GitHub et Cloudflare ; Netlify seulement à la main). Pour que le site donne exactement les mêmes pages que le PC,
 le PC y envoie, chiffrés, son dossier `import` et ses pages de pingpocket.fr après chaque lancement
 (option 7 du menu pour le réglage). Copie de secours sur **https://ggping.netlify.app/** après
 chaque mise à jour : la page des adversaires pour tout le club, l'**espace club** dans **/club/**

@@ -24,10 +24,13 @@ on:
         type: boolean
         default: false
   schedule:
-    # Le lundi vers 7 h, heure de Paris (6 h 07 UTC), et seulement après un week-end de championnat
-    # (job « week-end » ci-dessous) : GitHub et Cloudflare (gratuits). Netlify (15 crédits par envoi,
-    # 300 par mois) seulement à la main : bouton « les 3 sites », case netlify, ou PC.
+    # Tous les lundis, GitHub et Cloudflare (gratuits) : vers 7 h (heure de Paris en hiver, 8 h en été),
+    # puis vers 22 h 30 (23 h 30 en été) pour les résultats saisis dans la journée du lundi. La seconde
+    # ne relit presque rien d'autre (parties des adversaires gardées 24 h, feuilles déjà saisies gardées).
+    # Netlify (15 crédits par envoi, 300 par mois) seulement à la main : bouton « les 3 sites », case
+    # netlify, ou PC.
     - cron: "7 6 * * 1"
+    - cron: "37 21 * * 1"
 
 permissions:
   # contents: write : commit vide en fin de mise à jour, pour GitHub Pages (voir ttvaires/pages.py)
@@ -40,33 +43,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Mise à jour automatique (lundi) : une équipe de Vaires a-t-elle joué vendredi, samedi ou dimanche ?
-  # Sinon rien n'est fait. Les mises à jour lancées à la main ne passent pas par là.
-  week-end:
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    outputs:
-      continuer: ${{ steps.calendrier.outputs.continuer }}
-    env:
-      TZ: Europe/Paris
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: pip install -r requirements.txt
-      - name: Week-end de championnat ?
-        id: calendrier
-        env:
-          FFTT_IDENTIFIANT: ${{ secrets.FFTT_IDENTIFIANT }}
-          FFTT_MOT_DE_PASSE: ${{ secrets.FFTT_MOT_DE_PASSE }}
-        run: python -m ttvaires.calendrier
-
   mise-a-jour:
-    needs: week-end
-    if: ${{ !cancelled() && (github.event_name != 'schedule' || needs.week-end.outputs.continuer == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment:
