@@ -79,3 +79,49 @@ def test_classement_virtuel_de_bout_en_bout(tmp_path):
     assert [x["id"] for x in d["joueurs"]] == ["200", "100", "300"]  # par points virtuels
     assert [(c["nom"], c["coef"]) for c in d["competitions"]] == [("Championnat par équipes M", 1), ("Top Jeune Departemental", 0.5)]
     assert d["source"]["origine"] == "import"
+
+
+def test_forme_des_joueurs_adverses():
+    """Page adversaires : victoires, défaites et points par famille de compétitions, sans lire le
+    détail des parties hors championnat (aucune requête /games/{id})."""
+    from test_effectif import FauxClient
+    from ttvaires.virtuel import famille_competition, forme_joueurs
+
+    assert famille_competition("Championnat par équipes M", True) == "Championnat"
+    assert famille_competition("Critérium Fédéral") == famille_competition("CRITERIUM FEDERAL") == "Critérium fédéral"
+    assert famille_competition("Tournoi National B de Chelles") == "Tournois"
+    assert famille_competition("Finales par classement") == "Finales par classement"
+
+    crit = {"id": 3, "name": "FED_Critérium Fédéral"}
+    tournoi = {"id": 4, "name": "Tournoi de Chelles"}
+    pages = {
+        url_parties("50"): json.dumps({"hydra:member": [
+            _partie(21, "2026-09-25", ("50", 750), ("9", 850)),                           # perf en championnat
+            _partie(22, "2026-10-04", ("50", 750), ("8", 700), contest=crit),             # victoire, coefficient 1,5
+            _partie(23, "2026-10-04", ("7", 900), ("50", 750), contest=crit),             # défaite contre plus fort
+            _partie(24, "2026-10-11", ("50", 750), ("6", 760), contest=tournoi),
+            _partie(25, "2026-10-12", ("50", 750), (None,), contest=tournoi),            # forfait : écartée
+        ]}),
+        url_parties("60"): json.dumps({"hydra:member": []}),                              # ne joue pas
+        f"{API}/contests/1": json.dumps({"name": CHAMPIONNAT["name"], "coefficient": 1}),
+        f"{API}/contests/3": json.dumps({"name": crit["name"], "coefficient": 1.5}),
+        f"{API}/contests/4": json.dumps({"name": tournoi["name"], "coefficient": 0.5}),
+    }
+    class Client(FauxClient):
+        demandes = []
+
+        def get(self, chemin, *a, **o):
+            self.demandes.append(chemin)
+            return super().get(chemin, *a, **o)
+
+    client = Client(pages)
+    f = forme_joueurs(client, ["50", "60", "70"], {}, "2026-07-01", "2026-12-31")
+    assert f["70"] is None  # l'API n'a rien répondu pour lui
+    assert (f["60"]["v"], f["60"]["d"], f["60"]["competitions"]) == (0, 0, [])
+    x = f["50"]
+    assert (x["v"], x["d"], x["officiels"], x["derniere"]) == (3, 1, 750, "2026-10-11")
+    assert [c["nom"] for c in x["competitions"]] == ["Championnat", "Critérium fédéral", "Tournois"]
+    assert [(c["v"], c["d"]) for c in x["competitions"]] == [(1, 0), (1, 1), (1, 0)]
+    assert x["points"] == round(sum(c["points"] for c in x["competitions"]), 1) and x["virtuels"] == 750 + x["points"]
+    assert x["competitions"][0]["points"] > 0
+    assert not [u for u in client.demandes if "/games/" in u]  # détail des parties non demandé

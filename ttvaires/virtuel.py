@@ -15,6 +15,7 @@ compétitions jeunes...
 
 import json
 import re
+import unicodedata
 from collections import Counter
 from datetime import date, datetime
 
@@ -50,10 +51,10 @@ def _simple(partie):
     return not (partie.get("doubleOpposition") or partie.get("homeTeammatePlayer") or partie.get("awayTeammatePlayer"))
 
 
-def _lire_parties(client, licences):
+def _lire_parties(client, licences, ttl=HEURE, message="parties des joueurs"):
     """{licence: [parties de la saison]} (None si l'API n'a pas répondu pour ce joueur)."""
     urls = {lic: url_parties(lic) for lic in licences}
-    pages = client.get_plusieurs(list(urls.values()), ttl=HEURE, message="parties des joueurs",
+    pages = client.get_plusieurs(list(urls.values()), ttl=ttl, message=message,
                                  entetes=ENTETES, valide=json_valide)
     res = {}
     for lic, url in urls.items():
@@ -64,7 +65,7 @@ def _lire_parties(client, licences):
         parties = d.get("hydra:member", [])
         suivante = d.get("hydra:view", {}).get("hydra:next")
         if suivante:
-            parties += fftt.lire_tout(client, suivante[len("/api"):], ttl=HEURE)
+            parties += fftt.lire_tout(client, suivante[len("/api"):], ttl=ttl)
         res[lic] = parties
     return res
 
@@ -80,6 +81,17 @@ def _competitions(client, ids):
     return res
 
 
+def etats_des_feuilles(detail_rencontres):
+    """{id de partie: {non_comptee, forfait, division}} d'après les feuilles de match déjà lues."""
+    etats = {}
+    for d in detail_rencontres.values():
+        division = fftt.libelle_division((d.get("division") or {}).get("name"))
+        for g in d.get("games") or []:
+            etats[g.get("id")] = {"non_comptee": bool(g.get("notCounted")), "forfait": bool(g.get("forfeit")),
+                                  "division": division}
+    return etats
+
+
 def _etats(client, parties, detail_rencontres):
     """{id de partie: {non_comptee, forfait, division}}.
 
@@ -87,12 +99,7 @@ def _etats(client, parties, detail_rencontres):
     pour les autres (compétitions individuelles...), le détail de chaque partie est lu une fois
     puis gardé en cache.
     """
-    etats = {}
-    for d in detail_rencontres.values():
-        division = fftt.libelle_division((d.get("division") or {}).get("name"))
-        for g in d.get("games") or []:
-            etats[g.get("id")] = {"non_comptee": bool(g.get("notCounted")), "forfait": bool(g.get("forfeit")),
-                                  "division": division}
+    etats = etats_des_feuilles(detail_rencontres)
     manquantes = sorted({p["id"] for p in parties if p["id"] not in etats})
     urls = {i: f"{API}/games/{i}" for i in manquantes}
     pages = client.get_plusieurs(list(urls.values()), ttl=None, message="détail des parties", entetes=ENTETES, valide=json_valide)
@@ -149,6 +156,62 @@ def analyser(licence, parties, competitions, etats, debut, fin):
             })
     lignes.sort(key=lambda l: (l["date"], l["id"]))
     return lignes, officiels, ecartees
+
+
+def famille_competition(competition, championnat=False):
+    """Regroupement des compétitions pour la forme des adversaires : « Championnat », « Critérium
+    fédéral », « Tournois » (chaque tournoi est une compétition à part), sinon le libellé (finales
+    par classement, compétitions jeunes, vétérans...)."""
+    if championnat:
+        return "Championnat"
+    simple = unicodedata.normalize("NFKD", competition or "").encode("ascii", "ignore").decode("ascii").lower()
+    if "criterium" in simple:
+        return "Critérium fédéral"
+    if "tournoi" in simple:
+        return "Tournois"
+    return competition or "Autre compétition"
+
+
+def resume_forme(lignes, officiels):
+    """Résumé des parties retenues d'un joueur (voir analyser) : victoires, défaites, points gagnés
+    ou perdus depuis le début de la phase, points virtuels, et le détail par famille de compétitions
+    (championnat d'abord, puis par nombre de parties)."""
+    familles = {}
+    for l in lignes:
+        f = familles.setdefault(famille_competition(l["competition"], l["championnat"]),
+                                {"v": 0, "d": 0, "points": 0.0})
+        f["v" if l["victoire"] else "d"] += 1
+        f["points"] += l["points"]
+    off = officiels.most_common(1)[0][0] if officiels else None
+    total = round(sum(l["points"] for l in lignes), 1)
+    return {
+        "v": sum(l["victoire"] for l in lignes), "d": sum(not l["victoire"] for l in lignes), "points": total,
+        "officiels": off, "virtuels": round(off + total, 1) if off else None,
+        "derniere": lignes[-1]["date"] if lignes else None,
+        "competitions": [{"nom": n, "v": f["v"], "d": f["d"], "points": round(f["points"], 1)}
+                         for n, f in sorted(familles.items(), key=lambda x: (x[0] != "Championnat", -(x[1]["v"] + x[1]["d"]), x[0]))],
+    }
+
+
+def forme_joueurs(client, licences, detail_rencontres, debut, fin, ttl=JOUR):
+    """Forme de joueurs d'autres clubs (page adversaires) : {licence: resume_forme(...), ou None si
+    l'API n'a pas répondu pour ce joueur}. Même calcul que le classement virtuel, avec une économie :
+    seules les feuilles de match déjà lues disent si une partie est non comptée ou perdue par forfait.
+    Le détail des parties hors championnat n'est pas demandé (une requête par partie) : une partie de
+    compétition individuelle abandonnée par forfait alors que les deux joueurs sont inscrits compterait
+    (cas rare ; une partie sans adversaire, elle, est bien écartée)."""
+    toutes = _lire_parties(client, sorted(licences), ttl=ttl, message="parties des joueurs adverses")
+    simples = [p for ps in toutes.values() if ps for p in ps if debut <= (p.get("date") or "")[:10] <= fin and _simple(p)]
+    competitions = _competitions(client, {(p.get("contest") or {}).get("id") for p in simples} - {None})
+    etats = etats_des_feuilles(detail_rencontres)
+    res = {}
+    for lic, parties in toutes.items():
+        if parties is None:
+            res[lic] = None
+            continue
+        lignes, officiels, _ = analyser(lic, parties, competitions, etats, debut, fin)
+        res[lic] = resume_forme(lignes, officiels)
+    return res
 
 
 def controle_parties(joueurs, detail_rencontres, numero_club, source):

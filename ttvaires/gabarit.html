@@ -87,6 +87,15 @@ tr.vaires td { font-weight: 700; background: var(--accent-fond); }
 .semaine.courante { border: 2px solid var(--accent); }
 .semaine h3 .badge { margin-left: 6px; }
 .m { font-variant-numeric: tabular-nums; font-weight: 700; }
+.forme { white-space: nowrap; font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--doux); }
+.forme b { font-weight: 700; color: var(--texte); }
+.forme.plus b { color: var(--ok); }
+.forme.moins b { color: var(--danger); }
+.forme.vide { font-style: italic; }
+.tris { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0; font-size: 13px; color: var(--doux); }
+button.tri { font: inherit; font-size: 13px; padding: 3px 10px; border-radius: 99px; border: 1px solid var(--bord);
+  background: var(--surface); color: var(--texte); cursor: pointer; }
+button.tri.actif { background: var(--accent); border-color: var(--accent); color: var(--surface); }
 .m.fort { color: var(--fort); }
 .m.egal { color: var(--accent); }
 .m.faible { color: var(--faible); }
@@ -161,7 +170,48 @@ function nomJoueur(j) { return `${esc(j.nom)} ${esc(j.prenom)}`.trim(); }
 const badgeNouveau = (j) => j.nouveau ? ' <span class="badge nouveau" title="inscrit ou réinscrit depuis la liste précédente de son club">nouveau</span>' : "";
 function joueurCourt(j, ch) {
   const fille = j.sexe === "F" && ch !== "F" ? ' <span class="badge fille">F</span>' : "";
-  return `${nomJoueur(j)}${fille}${badgeNouveau(j)} <span class="petit">${cltJ(j)} · ${pts(j) || "?"} pts${j.categorie ? " · " + esc(j.categorie) : ""}</span>`;
+  return `${nomJoueur(j)}${fille}${badgeNouveau(j)} <span class="petit">${cltJ(j)} · ${pts(j) || "?"} pts${j.categorie ? " · " + esc(j.categorie) : ""}</span>${formeCourte(j)}`;
+}
+/* Forme : parties depuis le début de la phase, toutes compétitions (championnat, critérium fédéral,
+   tournois...) : victoires-défaites et points gagnés ou perdus (voir adversaires.ajouter_forme).
+   j.forme absent : joueur non suivi ; null : parties non lues lors de la mise à jour. */
+const signe = (x) => (Math.round(x) > 0 ? "+" : Math.round(x) < 0 ? "−" : "±") + Math.abs(Math.round(x));
+const classeForme = (f) => (Math.round(f.points) > 0 ? "plus" : Math.round(f.points) < 0 ? "moins" : "");
+const abrege = (nom) => (nom === "Critérium fédéral" ? "Critérium" : nom.length > 26 ? nom.slice(0, 25) + "…" : nom);
+function formeTitre(f) {
+  const s = (n, mot) => `${n} ${mot}${n > 1 ? "s" : ""}`;
+  return `Depuis le début de la phase, toutes compétitions : ${s(f.v, "victoire")}, ${s(f.d, "défaite")}, ${signe(f.points)} points`
+    + (f.virtuels != null ? ` (${Math.round(f.virtuels)} points virtuels)` : "")
+    + f.competitions.map((c) => `\n${c.nom} : ${c.v}/${c.v + c.d}, ${signe(c.points)} pts`).join("")
+    + (f.derniere ? `\nDernière partie : ${fmtDate(f.derniere, true)}` : "");
+}
+function formeCourte(j) {
+  const f = j.forme;
+  if (!f) return "";
+  if (!(f.v + f.d)) return ' <span class="forme vide" title="Aucune partie cette phase, toutes compétitions">· 0 partie</span>';
+  return ` <span class="forme ${classeForme(f)}" title="${esc(formeTitre(f))}">· ${f.v}/${f.v + f.d} <b>${signe(f.points)}</b></span>`;
+}
+function celForme(j) {
+  const f = j.forme;
+  if (f === undefined) return "";
+  if (f === null) return '<span class="petit">non lue</span>';
+  if (!(f.v + f.d)) return '<span class="forme vide">aucune partie</span>';
+  return `<span class="forme ${classeForme(f)}" title="${esc(formeTitre(f))}">${f.v}/${f.v + f.d} <b>${signe(f.points)}</b></span>`
+    + (f.virtuels != null ? ` <span class="petit">${Math.round(f.virtuels)}</span>` : "");
+}
+const celHorsChampionnat = (j) => ((j.forme || {}).competitions || []).filter((c) => c.nom !== "Championnat")
+  .map((c) => `<span class="badge neutre" title="${esc(c.nom)} : ${c.v} V, ${c.d} D, ${signe(c.points)} pts">${esc(abrege(c.nom))} ${c.v}/${c.v + c.d} ${signe(c.points)}</span>`).join(" ");
+const TRIS_EFFECTIF = {
+  points: (j) => -pts(j),
+  forme: (j) => (j.forme && j.forme.v + j.forme.d ? -j.forme.points : Infinity),
+  parties: (j) => -(j.forme ? j.forme.v + j.forme.d : -1),
+};
+let triEffectif = "points";
+const EFFECTIFS = {};  // tableau affiché : lignes à retrier sans redessiner la page
+function trierEffectif(cle, tri, bouton) {
+  triEffectif = tri;
+  document.getElementById(cle).innerHTML = EFFECTIFS[cle](tri);
+  bouton.parentElement.querySelectorAll("button").forEach((b) => b.classList.toggle("actif", b === bouton));
 }
 function meilleur(j) {
   const m = j.meilleur;
@@ -433,6 +483,7 @@ function statutJoueur(j, a, r) {
 function tableEffectif(club, ch, a, N, r) {
   const tous = (club.joueurs || []).filter((j) => ch !== "F" || j.sexe === "F" || j.sexe == null);
   const actifs = tous.filter((j) => j.renouvele !== false).sort((x, y) => pts(y) - pts(x));
+  const avecForme = tous.some((j) => j.forme !== undefined);
   const anciens = tous.filter((j) => j.renouvele === false).sort((x, y) => pts(y) - pts(x));
   const parcours = club.parcours || {};
   const maxJ = Math.max(1, ...(club.equipes || []).filter((e) => e.championnat === ch)
@@ -446,14 +497,29 @@ function tableEffectif(club, ch, a, N, r) {
     <td>${nomJoueur(j)}${j.sexe === "F" && ch !== "F" ? ' <span class="badge fille">F</span>' : ""}${badgeNouveau(j)}</td>
     <td title="${esc(j.categorie_long ?? "")}">${esc(j.categorie ?? "")}</td>
     <td class="num">${cltJ(j)} <span class="petit">${j.points ?? ""}</span></td>
+    ${avecForme ? `<td>${celForme(j)}</td>` : ""}
     <td class="num">${j.points_mensuels ?? "—"}${j.points_mensuels && j.points ? ecartMensuel(j.points_mensuels - j.points) : ""}</td>
     <td>${meilleur(j)}</td>
+    ${avecForme ? `<td>${celHorsChampionnat(j)}</td>` : ""}
     ${js.map((jn) => `<td class="c">${cellule(j, jn)}</td>`).join("")}
     ${avecStatut ? `<td>${statutJoueur(j, a, r)}</td>` : ""}</tr>`;
-  const entete = (avecStatut) => `<thead><tr><th>Joueur</th><th>Cat.</th><th class="num">Officiel</th><th class="num">Mensuel</th><th>Meilleur (année)</th>
+  const entete = (avecStatut) => `<thead><tr><th>Joueur</th><th>Cat.</th><th class="num">Officiel</th>
+    ${avecForme ? '<th title="Victoires sur parties jouées et points gagnés ou perdus depuis le début de la phase, toutes compétitions ; en petit : points virtuels">Phase</th>' : ""}
+    <th class="num">Mensuel</th><th>Meilleur (année)</th>${avecForme ? "<th>Hors championnat</th>" : ""}
     ${js.map((jn) => `<th class="c">J${jn}</th>`).join("")}${avecStatut ? `<th>Pour l'équipe ${N}</th>` : ""}</tr></thead>`;
   const legende = `<p class="petit">Colonnes J1, J2… : numéro de l'équipe dans laquelle le joueur a joué —
-    <span class="m fort">rouge</span> = équipe plus forte que la ${N}, <span class="m egal">bleu</span> = équipe ${N}, <span class="m faible">gris</span> = équipe plus faible.</p>`;
+    <span class="m fort">rouge</span> = équipe plus forte que la ${N}, <span class="m egal">bleu</span> = équipe ${N}, <span class="m faible">gris</span> = équipe plus faible.</p>`
+    + (avecForme ? `<p class="petit">Phase : victoires sur parties jouées (12/12 = 12 gagnées sur 12) et points gagnés ou perdus depuis le début de la phase dans
+    toutes les compétitions (championnat, critérium fédéral, tournois…), comme le classement virtuel de Vaires ; en petit,
+    les points virtuels. Hors championnat : les compétitions individuelles jouées. Lu pour les joueurs déjà alignés et les
+    licenciés à plus de 500 points.</p>` : "");
+  const cle = `eff-${club.numero}-${ch}`;
+  const cles = Object.keys(TRIS_EFFECTIF);
+  const tri = avecForme && cles.includes(triEffectif) ? triEffectif : "points";
+  EFFECTIFS[cle] = (t) => actifs.slice().sort((x, y) => TRIS_EFFECTIF[t](x) - TRIS_EFFECTIF[t](y) || pts(y) - pts(x))
+    .map((j) => ligne(j, true)).join("");
+  const tris = avecForme ? `<div class="tris">Trier par :${cles.map((t) => ` <button type="button" class="tri${t === tri ? " actif" : ""}"
+    onclick="trierEffectif('${cle}', '${t}', this)">${{ points: "points", forme: "forme (points gagnés)", parties: "parties jouées" }[t]}</button>`).join("")}</div>` : "";
   const partiel = club.effectif_complet === false
     ? `<p class="note">Effectif limité aux joueurs déjà alignés cette phase : pingpocket.fr (effectifs complets, catégories,
        meilleur classement) n'a pas répondu lors de la mise à jour. Relancer plus tard, ou enregistrer ses listes
@@ -461,7 +527,7 @@ function tableEffectif(club, ch, a, N, r) {
        <a href="${listeClub(club.numero, "LICENCE_STATE")}" target="_blank" rel="noopener">par licences à jour</a>
        (Ctrl+S, « Page Web, complète ») dans le dossier import de l'outil.</p>` : "";
   return `<h4>Effectif de ${esc(club.nom)} (${actifs.length} ${ch === "F" ? "joueuses" : "joueurs"})</h4>${noteVerifClub(club.numero)}${partiel}${noteListe(club)}${legende}
-    <div class="defil"><table>${entete(true)}<tbody>${actifs.map((j) => ligne(j, true)).join("")}</tbody></table></div>
+    ${tris}<div class="defil"><table>${entete(true)}<tbody id="${cle}">${EFFECTIFS[cle](tri)}</tbody></table></div>
     ${anciens.length ? `<details><summary>Pas encore renouvelés (${anciens.length})</summary>
       <div class="defil"><table>${entete(false)}<tbody>${anciens.map((j) => ligne(j, false)).join("")}</tbody></table></div></details>` : ""}`;
 }

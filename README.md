@@ -8,7 +8,10 @@ Outil qui récupère sur Internet les informations sur les adversaires des équi
 - un **onglet par équipe** (Vaires 1 à 6, Vaires 1 F) : calendrier, classement de la poule,
   et pour chaque adversaire une fiche avec l'**effectif du club** (catégorie, classement
   officiel, mensuel, meilleur classement et son année), **qui a joué dans quelle équipe**,
-  les **brûlés**, les **renforts possibles** et une **composition probable**.
+  les **brûlés**, les **renforts possibles** et une **composition probable**. Pour les clubs
+  encore à rencontrer, la **forme** de chaque joueur depuis le début de la phase, toutes
+  compétitions : parties gagnées sur parties jouées et points gagnés ou perdus (« 12/12 +46 »),
+  points virtuels, et critérium fédéral ou tournois joués (tableau triable par forme).
 
 Une seconde page, **Résultats des joueurs de Vaires** (`sortie\resultats_vaires.html` et
 `sortie\resultats_vaires.xlsx`), donne pour chaque journée les joueurs alignés dans les
@@ -92,6 +95,7 @@ ne retéléchargent que ce qui a pu changer :
 | Feuille de match pas encore saisie | à chaque lancement, jusqu'à ce qu'elle soit saisie |
 | Feuille de match saisie | relue pendant 10 jours (corrections), puis gardée |
 | Parties de chaque joueur (classement virtuel) | à chaque lancement (si plus de 1 h) |
+| Parties des joueurs adverses (forme) | une fois par jour |
 | Liste des licenciés de Vaires (pingpocket) | à chaque lancement (si plus de 1 h) |
 | Listes des licenciés des clubs adverses (pingpocket) | une fois par jour |
 | Adresses des salles (pingpocket) | une fois par mois |
@@ -131,7 +135,8 @@ téléphone et partagées dans les groupes du club (dossier `sortie\images\` sur
 
 - **adversaires** : la prochaine journée (équipes, dates, adversaires, lieux) et, pour chaque
   équipe de Vaires, le prochain adversaire avec sa composition probable, ses renforts possibles et
-  les 8 mieux classés qui n'ont pas encore joué ;
+  les 8 mieux classés qui n'ont pas encore joué, avec la forme de chacun (« 12/12 +46 ») et le
+  critérium ou les tournois joués ;
 - **résultats** : la dernière journée (triée par points gagnés sur la journée) et le cumul (trié
   par points gagnés au total) ;
 - **feuilles de match** : une image par rencontre de la dernière journée (chaque partie, le score

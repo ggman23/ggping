@@ -169,3 +169,15 @@ def test_feuilles_de_match_de_la_derniere_journee(tmp_path):
     ancienne = {**rencontre, "journee": 2}
     sorties = images.images_rencontres({**CLUB, "journees": [2, 3], "rencontres": [ancienne, rencontre, sans_feuille]}, tmp_path)
     assert [(c.name, t) for c, t in sorties] == [("rencontres_J3_V1.png", "Vaires 1 : feuille de match J3")]
+
+
+def test_forme_des_adversaires_dans_l_image():
+    from ttvaires.images import _cel_forme, _hors_championnat
+
+    f = {"v": 12, "d": 0, "points": 46.4, "competitions": [
+        {"nom": "Championnat", "v": 8, "d": 0, "points": 30}, {"nom": "Critérium fédéral", "v": 3, "d": 0, "points": 12},
+        {"nom": "Tournois", "v": 1, "d": 0, "points": 4.4}]}
+    assert _cel_forme(f).texte == "12/12 +46" and _cel_forme({**f, "points": -0.3}).texte == "12/12 ±0"
+    assert _cel_forme({"v": 2, "d": 10, "points": -67}).texte == "2/12 -67"
+    assert _cel_forme({"v": 0, "d": 0, "points": 0}).texte == "0 partie" and _cel_forme(None).texte == ""
+    assert _hors_championnat(f) == "critérium 3/3 · tournois 1/1" and _hors_championnat(None) == ""

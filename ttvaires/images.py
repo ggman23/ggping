@@ -841,6 +841,25 @@ def _note_liste(club, donnees):
             + (f" ; « nouvel inscrit » : inscrit ou réinscrit depuis la liste précédente ({nb})" if nb else "") + ".")
 
 
+def _cel_forme(f):
+    """« 12/12 +46 » : parties gagnées sur parties jouées, points gagnés ou perdus (toutes compétitions)."""
+    if not f:
+        return C("")
+    n = f["v"] + f["d"]
+    if not n:
+        return C("0 partie", couleur=DOUX)
+    pts = round(f["points"])
+    return C(f"{f['v']}/{n} {signe(pts) if pts else '±0'}", gras=True,
+             couleur=POS_TEXTE if pts > 0 else NEG_TEXTE if pts < 0 else NOIR)
+
+
+def _hors_championnat(f):
+    """« critérium 3/3 · tournois 2/5 » : compétitions individuelles jouées cette phase."""
+    noms = {"Critérium fédéral": "critérium", "Tournois": "tournois"}
+    return " · ".join(f"{noms.get(c['nom'], c['nom'])} {c['v']}/{c['v'] + c['d']}"
+                      for c in (f or {}).get("competitions", []) if c["nom"] != "Championnat")
+
+
 def images_adversaires(donnees, dossier, aujourdhui=None):
     _nettoyer(dossier, "adversaires_")
     auj = (aujourdhui or date.today()).isoformat()
@@ -908,19 +927,22 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                     j = par_id.get(jid)
                     if not j:
                         continue
-                    # Nouvel inscrit du club (depuis sa liste précédente) : en vert dans la dernière colonne
-                    texte = " · ".join(t for t in ("nouvel inscrit" if j.get("nouveau") else "", (info or {}).get(jid, "")) if t)
+                    # Nouvel inscrit du club (depuis sa liste précédente) : en vert dans la dernière colonne ;
+                    # compétitions individuelles jouées cette phase (critérium, tournois...) ensuite
+                    texte = " · ".join(t for t in ("nouvel inscrit" if j.get("nouveau") else "", (info or {}).get(jid, ""),
+                                                   _hors_championnat(j.get("forme"))) if t)
                     sortie.append([
                         cel_nom(j.get("nom"), j.get("prenom"), apres="F" if j.get("sexe") == "F" else None),
                         C(_clt(j) or "", gras=True), C(fmt(_pts(j)) if _pts(j) else "", couleur=DOUX),
                         C(j.get("categorie") or "", couleur=DOUX),
+                        _cel_forme(j.get("forme")),
                         C(resume_joueur(places.get(jid), pl.get("libelles")), couleur=NOIR, align="g"),
                         C(texte, couleur=OK_TEXTE if j.get("nouveau") else DOUX, gras=bool(j.get("nouveau")), align="g"),
                     ])
                 return sortie
 
             def ou_aucun(lignes, texte="aucun"):
-                return lignes or [[C(texte, couleur=DOUX, align="g"), C(), C(), C(), C(), C()]]
+                return lignes or [[C(texte, couleur=DOUX, align="g"), C(), C(), C(), C(), C(), C()]]
 
             num = r["adversaire"].get("numero")
             renforts = {x["id"]: "a joué en " + ", ".join(str(n) for n in x["equipes"])
@@ -943,8 +965,8 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                  ou_aucun(lignes_joueurs(pas_joue[:8]))),
             ]
             toutes = [l for _, _, lignes in tableaux for l in lignes]
-            # Colonnes facultatives (positions déjà occupées, équipes des renforts) : retirées si vides
-            facultatives = [(4, "Placé"), (5, "")]
+            # Colonnes facultatives (forme, positions déjà occupées, équipes des renforts) : retirées si vides
+            facultatives = [(4, "Phase"), (5, "Placé"), (6, "")]
             garder = [i for i, _ in facultatives if any(l[i].texte for l in toutes)]
             larg = {i: max(largeur_naturelle(l[i]) for l in toutes if l[i].texte) for i in garder}
             tableaux = [(t_, d_, [l[:4] + [l[i] for i in garder] for l in lignes]) for t_, d_, lignes in tableaux]
@@ -979,7 +1001,10 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                                ("A, B, C, D" if pl["format"] == 4 else "A, B, C")))
                 largeur_pl = (largeur - 2 * MARGE - RENC_PL) / pl["format"]
                 img.tableau([Col("Renc.", RENC_PL, "g")] + [Col(l, largeur_pl, "g") for l in pl["libelles"]], lignes_pl)
+        avec_forme = any(j.get("forme") for j in club.get("joueurs", []))
         img.pied("Composition probable : estimation à partir des rencontres déjà jouées par le club adverse."
+                 + (" Phase : parties gagnées sur parties jouées et points gagnés ou perdus depuis le début de la phase,"
+                    " toutes compétitions (championnat, critérium, tournois)." if a and avec_forme else "")
                  + _note_liste(club, donnees)
                  + (" Placé : positions occupées dans cette équipe (A/W = A quand elle reçoit, W quand elle se déplace)."
                     " A ne joue jamais Z, B jamais Y, C jamais X, D jamais W." if a and (r.get("placements") or {}).get("format") == 4

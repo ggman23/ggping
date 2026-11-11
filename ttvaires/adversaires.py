@@ -16,6 +16,7 @@ from . import fftt, pingpocket
 from .effectif import TRIS, suivre_inscrits
 from .reseau import HEURE, JOUR, ErreurReseau
 from .verifications import bilan_club, bilan_rencontres
+from .virtuel import forme_joueurs
 
 SITE_PINGPOCKET = "www.pingpocket.fr"
 MAX_HISTORIQUES = 150  # historiques téléchargés au plus par lancement (≈ 10 minutes)
@@ -157,7 +158,7 @@ def recuperer(client, numero_club="08770250", aujourdhui=None, dossier_import=No
     debut, fin = fftt.bornes_phase(aujourdhui)
 
     # 1. Équipes du club, poules, calendrier et résultats
-    print(f"1/5 Équipes, poules et calendrier du club {numero_club} (phase {phase} {saison}, API FFTT)", flush=True)
+    print(f"1/6 Équipes, poules et calendrier du club {numero_club} (phase {phase} {saison}, API FFTT)", flush=True)
     id_club = fftt.id_interne_club(client, numero_club, debut)
     nos_equipes, nom_club = {}, numero_club
     for r in fftt.rencontres_club(client, id_club, debut, fin, ttl=3 * HEURE):
@@ -219,7 +220,7 @@ def recuperer(client, numero_club="08770250", aujourdhui=None, dossier_import=No
         })
 
     # 2 et 3. Clubs adverses : toutes leurs équipes et leurs feuilles de match
-    print(f"2/5 Clubs adverses : {len(clubs_adv)} (API FFTT)", flush=True)
+    print(f"2/6 Clubs adverses : {len(clubs_adv)} (API FFTT)", flush=True)
     rencontres_clubs, erreurs = {}, {}
     for i, (num, c) in enumerate(sorted(clubs_adv.items()), 1):
         try:
@@ -230,7 +231,7 @@ def recuperer(client, numero_club="08770250", aujourdhui=None, dossier_import=No
             erreurs[num] = "rencontres du club non récupérées (l'API FFTT n'a pas répondu) : relancer"
         if i % 10 == 0 or i == len(clubs_adv):
             print(f"  clubs : {i}/{len(clubs_adv)}", flush=True)
-    print("3/5 Feuilles de match des équipes adverses (API FFTT)", flush=True)
+    print("3/6 Feuilles de match des équipes adverses (API FFTT)", flush=True)
     suivies = {num: [r for r in rs if ("F" if fftt.feminin(r) else "M") in clubs_adv[num]["championnats"]]
                for num, rs in rencontres_clubs.items()}
     a_detailler = [r for rs in suivies.values() for r in rs]
@@ -249,7 +250,42 @@ def recuperer(client, numero_club="08770250", aujourdhui=None, dossier_import=No
         "verification": verification(numero_club, nom_club, rencontres_poules, suivies, clubs_adv, etats, erreurs, auj),
     }
     completer_avec_pingpocket(client, donnees, dossier_import, tous_les_historiques, fichier_etat)
+    ajouter_forme(client, donnees, detail, debut, min(fin, auj), auj)
     return donnees
+
+
+def joueurs_a_suivre(donnees, auj):
+    """Joueurs des clubs que Vaires doit encore rencontrer (rencontre à venir ou pas encore saisie) dont
+    on lit la forme : ceux déjà alignés cette phase, et les licenciés réinscrits à plus de 500 points
+    (ils peuvent jouer critérium ou tournois sans avoir encore joué en championnat). {licence: [fiches]}."""
+    a_venir = {r["adversaire"]["club"] for e in donnees["equipes"] for r in e["rencontres"]
+               if r.get("adversaire") and (not r.get("score") or r["date"] > auj)}
+    joueurs = {}
+    for num in sorted(a_venir):
+        club = donnees["clubs"].get(num)
+        if not club:
+            continue
+        alignes = {jid for e in club["equipes"] for c in e["compositions"] for jid in c["joueurs"]}
+        for j in club["joueurs"]:
+            if j["id"] in alignes or (j.get("renouvele") and (j.get("points_mensuels") or j.get("points") or 0) > 500):
+                joueurs.setdefault(j["id"], []).append(j)
+    return a_venir, joueurs
+
+
+def ajouter_forme(client, donnees, detail, debut, fin, auj):
+    """Forme des joueurs adverses (j["forme"]) : victoires, défaites et points gagnés ou perdus depuis
+    le début de la phase, toutes compétitions (championnat, critérium fédéral, tournois...)."""
+    a_venir, joueurs = joueurs_a_suivre(donnees, auj)
+    print(f"6/6 Forme des joueurs adverses (toutes compétitions) : {len(joueurs)} joueurs des {len(a_venir)} clubs "
+          "encore à rencontrer (API FFTT)", flush=True)
+    formes = forme_joueurs(client, list(joueurs), detail, debut, fin) if joueurs else {}
+    for lic, fiches in joueurs.items():
+        for j in fiches:
+            j["forme"] = formes.get(lic)
+    muets = sum(1 for f in formes.values() if f is None)
+    donnees["sources"]["forme"] = {"joueurs": len(joueurs), "clubs": len(a_venir), "sans_reponse": muets, "debut": debut}
+    if muets:
+        print(f"  ! parties non lues pour {muets} joueurs (API FFTT) : leur forme manque, relancer plus tard", flush=True)
 
 
 def verification(numero_club, nom_club, rencontres_poules, suivies, clubs_adv, etats, erreurs, auj):
@@ -295,7 +331,7 @@ def completer_avec_pingpocket(client, donnees, dossier_import=None, tous_les_his
     liste (date_effectif) ; avec `fichier_etat` (état mémorisé, envoyé par le PC comme celui de la
     page effectif), les joueurs inscrits ou réinscrits depuis la liste précédente du club sont
     marqués « nouveau » (reference_nouveaux : date de cette liste précédente)."""
-    print("4/5 Compléments pingpocket.fr : effectifs complets, catégories, adresses des salles", flush=True)
+    print("4/6 Compléments pingpocket.fr : effectifs complets, catégories, adresses des salles", flush=True)
     numero_club = donnees["club"]["numero"]
     clubs = donnees["clubs"]
     importees, ignores = pingpocket.listes_du_dossier(dossier_import) if dossier_import else ({}, [])
@@ -387,7 +423,7 @@ def completer_avec_pingpocket(client, donnees, dossier_import=None, tous_les_his
     a_telecharger = [] if muet else [j for j in a_lire if not client.en_cache(chemin.format(j["licence"]), ttl_historique)]
     reportes = set() if tous_les_historiques else {j["id"] for j in a_telecharger[MAX_HISTORIQUES:]}
     a_lire = [j for j in a_lire if j["id"] not in reportes]
-    print(f"5/5 Historiques des joueurs : {len(a_lire)} ("
+    print(f"5/6 Historiques des joueurs : {len(a_lire)} ("
           + ("pages déjà téléchargées, pingpocket.fr non interrogé" if muet else "pingpocket.fr") + ")"
           + (f", {len(reportes)} reportés au prochain lancement" if reportes else ""), flush=True)
     a_lire_en_ligne = len(a_telecharger) - len(reportes)

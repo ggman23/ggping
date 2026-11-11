@@ -312,3 +312,28 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
 - Site : images chiffrées comme les pages ; section « Images à partager » (voir, télécharger,
   partager) ; « Tout télécharger » inclut les images. Les images d'une page sont remplacées à
   chaque mise à jour de cette page.
+
+## Forme des joueurs adverses (11/11/2026)
+
+Demande : pour les adversaires des équipes de Vaires, voir qui joue et qui est en forme (un 750 qui a
+gagné 12 parties sur 12 et déjà +46 points virtuels n'est pas un 790 qui en a gagné 2 sur 12 avec
+−67), et qui joue aussi le critérium, les individuels ou des tournois.
+
+- Joueurs suivis : ceux des clubs que Vaires doit encore rencontrer (rencontre à venir ou pas encore
+  saisie), déjà alignés cette phase, ou réinscrits à plus de 500 points (ils peuvent jouer critérium
+  ou tournois sans avoir encore joué en championnat).
+- Pour chacun : parties de simple depuis le début de la phase dans toutes les compétitions (API
+  FFTT, une requête par joueur, relue une fois par jour), victoires, défaites, points gagnés ou
+  perdus avec le barème et le coefficient de chaque compétition (même calcul que le classement
+  virtuel de Vaires), points virtuels, et le détail par famille : championnat, critérium fédéral,
+  tournois, autres (finales par classement, jeunes, vétérans...).
+- Pour ménager l'API, le détail de chaque partie hors championnat n'est pas demandé : seules les
+  feuilles de match déjà lues disent si une partie est non comptée ou perdue par forfait. Une
+  partie sans adversaire est écartée ; un forfait déclaré en cours de compétition individuelle
+  alors que les deux joueurs sont inscrits compterait (rare).
+- Page adversaires : « 12/12 +46 » (parties gagnées sur parties jouées, points) après chaque joueur
+  des listes (composition probable, renforts, montées...) ; dans l'effectif, colonnes « Phase » (avec
+  les points virtuels) et « Hors championnat » (« Critérium 3/3 +18 », « Tournois 2/5 −4 »), tri par
+  points, par forme ou par nombre de parties.
+- Image du prochain adversaire : colonne « Phase » et compétitions individuelles dans la dernière
+  colonne (« critérium 3/3 · tournois 1/2 »).

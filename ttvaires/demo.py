@@ -120,6 +120,23 @@ def _poule(rng, vaires, adversaires, dates, heure):
     return rencontres, classement
 
 
+def _forme(rng, points):
+    """Forme fictive (voir adversaires.ajouter_forme) : championnat, parfois critérium et tournois."""
+    familles = [("Championnat", rng.randint(0, 8))]
+    if rng.random() < 0.3:
+        familles.append(("Critérium fédéral", rng.randint(2, 6)))
+    if rng.random() < 0.2:
+        familles.append(("Tournois", rng.randint(1, 8)))
+    comps = []
+    for nom, n in familles:
+        if n:
+            v = sum(rng.random() < 0.5 for _ in range(n))
+            comps.append({"nom": nom, "v": v, "d": n - v, "points": round((2 * v - n) * rng.uniform(2, 7), 1)})
+    total = round(sum(c["points"] for c in comps), 1)
+    return {"v": sum(c["v"] for c in comps), "d": sum(c["d"] for c in comps), "points": total, "officiels": points,
+            "virtuels": round(points + total, 1), "derniere": DATES_M[JOUES - 1] if comps else None, "competitions": comps}
+
+
 def donnees_demo(graine=77):
     rng = random.Random(graine)
     clubs = {}
@@ -148,5 +165,9 @@ def donnees_demo(graine=77):
     equipes.append({"id": "v1f", "libelle": "VAIRES 1 (féminine)", "nom_court": "Vaires 1 F", "numero": 1,
                     "championnat": "F", "division": "Régionale féminine", "poule": "Poule unique",
                     "jour": "samedi", "rencontres": rencontres, "classement": classement})
+    for club in clubs.values():  # après le reste : les autres données fictives ne changent pas
+        for j in club["joueurs"]:
+            if j["renouvele"]:
+                j["forme"] = _forme(rng, j["points"])
     return {"demo": True, "genere_le": datetime.now().isoformat(timespec="minutes"), "saison": "2026-2027",
             "phase": 1, "club": vaires, "equipes": equipes, "clubs": clubs}

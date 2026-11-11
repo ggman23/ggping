@@ -214,3 +214,38 @@ def test_premier_suivi_part_de_la_liste_deja_en_cache(tmp_path):
     club = donnees["clubs"][MEAUX]
     assert [j["id"] for j in club["joueurs"] if j.get("nouveau")] == ["7"]
     assert club["reference_nouveaux"] < club["date_effectif"]
+
+
+def test_forme_des_joueurs_des_clubs_encore_a_rencontrer():
+    import json
+
+    from test_effectif import FauxClient
+    from ttvaires.fftt import API
+    from ttvaires.virtuel import url_parties
+
+    def joueur(id_, points, renouvele=True):
+        return {"id": id_, "licence": id_, "nom": "N" + id_, "prenom": "P", "points": points, "points_mensuels": None,
+                "renouvele": renouvele}
+
+    a_venir = {"numero": "A", "joueurs": [joueur("1", 700), joueur("2", 900), joueur("3", 500), joueur("4", 1200, False)],
+               "equipes": [{"compositions": [{"joueurs": ["1"]}]}]}
+    deja_joue = {"numero": "B", "joueurs": [joueur("9", 1500)], "equipes": []}
+    donnees = {"equipes": [{"rencontres": [
+        {"date": "2026-11-21", "score": None, "adversaire": {"club": "A"}},
+        {"date": "2026-10-03", "score": [10, 4], "adversaire": {"club": "B"}},
+        {"date": "2026-10-17", "score": None, "adversaire": None},  # exempt
+    ]}], "clubs": {"A": a_venir, "B": deja_joue}, "sources": {}}
+    clubs, joueurs = adversaires.joueurs_a_suivre(donnees, "2026-11-11")
+    # Aligné (même à 700) et réinscrit à plus de 500 points ; pas le 500 non aligné ni le non réinscrit
+    assert clubs == {"A"} and sorted(joueurs) == ["1", "2"]
+    partie = {"id": 5, "date": "2026-10-04T00:00:00", "winner": "home", "doubleOpposition": False,
+              "contest": {"id": 1, "name": "FED_Championnat de France par Equipes Masculin"},
+              "homePlayer": {"identifier": "2", "points": 900}, "awayPlayer": {"identifier": "8", "points": 1000}}
+    client = FauxClient({url_parties("2"): json.dumps({"hydra:member": [partie]}),
+                         url_parties("1"): json.dumps({"hydra:member": []}),
+                         f"{API}/contests/1": json.dumps({"name": partie["contest"]["name"], "coefficient": 1})})
+    adversaires.ajouter_forme(client, donnees, {}, "2026-07-01", "2026-11-11", "2026-11-11")
+    f = {j["id"]: j.get("forme") for j in a_venir["joueurs"]}
+    assert (f["2"]["v"], f["2"]["d"]) == (1, 0) and f["2"]["points"] > 0 and f["1"]["v"] + f["1"]["d"] == 0
+    assert f["3"] is None and "forme" not in deja_joue["joueurs"][0]
+    assert donnees["sources"]["forme"]["joueurs"] == 2
