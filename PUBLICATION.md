@@ -382,6 +382,30 @@ menu et l'accueil de l'espace club ont un lien « Autres espaces ». La page res
 
 puis envoyer le dossier `ressources/` sur GitHub (ou m'envoyer la page).
 
+## Individuels : /indivs/ (poules du critérium et forme des adversaires)
+
+**/indivs/** sur chaque site (https://ggping-pap.pages.dev/indivs/, https://ggman23.github.io/ggping/indivs/,
+https://ggping.netlify.app/indivs/), avec le **mot de passe du club** (déjà entré dans l'espace club :
+ouverture directe ; lien dans « Autres espaces » de /club/). Menu à gauche (sur téléphone : la liste
+d'abord) : la vue d'ensemble, puis chaque joueur de Vaires, rangés en Adultes, Jeunes et Féminines.
+Pour chacun : sa poule (compétition, date, horaires, lieu avec le plan), son rang probable, et ses
+adversaires du plus fort au plus faible, avec pour chacun les points virtuels, les parties gagnées sur
+parties jouées depuis le début de la phase, les points gagnés ou perdus, les compétitions jouées
+(championnat, critérium, tournois) et un niveau : **plus fort** (au moins 50 points virtuels de plus),
+**à surveiller** (à moins de 50 points, ou plus faible mais à +30 points sur la phase), **à ta portée**.
+
+- Les poules viennent des convocations (PDF, captures WhatsApp) : je les recopie à chaque tour
+  (licence, nom, points, club, catégorie) dans `ressources/indivs.json.chiffre`, chiffré avec le mot
+  de passe du club (joueurs mineurs, dépôt public). Il suffit de m'envoyer les convocations du tour.
+- À chaque mise à jour (« Tout », ou « Individuels » dans la liste des pages), les parties de la phase
+  de chaque joueur des poules sont lues dans l'API de la FFTT (une requête par joueur, environ 200 par
+  tour, gardées un jour). Le nom donné par l'API pour chaque licence est comparé à celui de la
+  convocation : une licence mal recopiée est signalée (« licence ? » sur la page, et dans le journal).
+- Sans le secret MOT_DE_PASSE_CLUB (ou si le mot de passe du club a changé depuis l'enregistrement des
+  poules), la page n'est pas faite ; le bilan l'indique.
+- Pour les relire ou les corriger soi-même : `python -m ttvaires.indivs exporter poules.json` (en clair :
+  ne pas l'envoyer sur GitHub), puis `python -m ttvaires.indivs importer poules.json`.
+
 ## Sécurité
 
 - Chaque page, l'Excel et les données envoyées par le PC sont chiffrés en AES-256-GCM avec une clé

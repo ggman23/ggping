@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>CVTT Vaires · individuels</title>
+<style>
+:root { color-scheme: light dark; --fond: #eef1f5; --surface: #fff; --surface2: #f3f5f8; --texte: #1c2330; --doux: #5b6576;
+  --bord: #dde1e7; --accent: #1f5fbf; --accent-fond: #e8f0fc; --bandeau: #173b60; --bandeau-texte: #fff;
+  --ok: #1d7a46; --ok-fond: #e3f4ea; --att: #8a5a00; --att-fond: #fff4d6; --ko: #b3261e; --ko-fond: #fbe7e5; }
+@media (prefers-color-scheme: dark) { :root { --fond: #12151b; --surface: #1b2029; --surface2: #232a35; --texte: #e6e9ef;
+  --doux: #9aa4b5; --bord: #313a48; --accent: #7fb0ff; --accent-fond: #1d2a40; --bandeau: #0f2236;
+  --ok: #6fd39b; --ok-fond: #173323; --att: #f3cd6b; --att-fond: #3a3014; --ko: #ff8f86; --ko-fond: #3d1c1a; } }
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--fond); color: var(--texte); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+button { font: inherit; cursor: pointer; }
+a { color: var(--accent); }
+#appli { height: 100%; display: flex; flex-direction: column; }
+.barre { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 14px; padding-top: max(10px, env(safe-area-inset-top));
+  background: var(--bandeau); color: var(--bandeau-texte); }
+.barre .titres { flex: 1 1 auto; min-width: 0; }
+.barre b { display: block; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barre .titres span { display: block; font-size: 12.5px; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barre button { flex: none; border: 1px solid rgba(255, 255, 255, .35); background: rgba(255, 255, 255, .12); color: #fff;
+  border-radius: 9px; padding: 7px 12px; font-size: 14.5px; font-weight: 600; }
+.corps { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 300px 1fr; }
+#menu { overflow-y: auto; background: var(--surface); border-right: 1px solid var(--bord); padding: 8px 10px 24px; }
+#menu h2 { font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--doux); margin: 16px 8px 6px; }
+.entree { display: block; width: 100%; text-align: left; padding: 8px 10px; border: 0; border-radius: 10px; background: none;
+  color: inherit; text-decoration: none; }
+.entree:hover { background: var(--surface2); }
+.entree.actif { background: var(--accent-fond); }
+.entree b { display: block; font-size: 15px; font-weight: 600; }
+.entree span { display: block; font-size: 12.5px; color: var(--doux); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#vue { min-width: 0; min-height: 0; overflow: auto; }
+.contenu { max-width: 980px; margin: 0 auto; padding: 22px 20px 40px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h1 small { font-size: 15px; color: var(--doux); font-weight: 500; }
+.carte { background: var(--surface); border: 1px solid var(--bord); border-radius: 14px; padding: 14px 16px; margin: 14px 0; }
+.carte h2 { font-size: 17px; margin: 0 0 8px; }
+.petit { color: var(--doux); font-size: 12.5px; }
+.infos { color: var(--doux); font-size: 14px; margin: 2px 0; }
+.chiffres { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 2px; }
+.chiffre { border-radius: 10px; padding: 6px 10px; font-size: 14px; background: var(--surface2); }
+.chiffre b { font-size: 17px; }
+.defil { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { padding: 6px 7px; border-bottom: 1px solid var(--bord); text-align: left; vertical-align: middle; }
+th { color: var(--doux); font-weight: 600; font-size: 12.5px; white-space: nowrap; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr.moi td { background: var(--accent-fond); font-weight: 650; }
+tr.vaires td:nth-child(2) b::after { content: " · Vaires"; color: var(--accent); font-weight: 600; font-size: 12px; }
+.nom { min-width: 150px; }
+.nom span.club { display: block; font-size: 12px; color: var(--doux); }
+.nom .badge { margin-left: 2px; }
+.badge { display: inline-block; padding: 1px 7px; border-radius: 99px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.ok { background: var(--ok-fond); color: var(--ok); } .att { background: var(--att-fond); color: var(--att); }
+.ko { background: var(--ko-fond); color: var(--ko); } .neutre { background: var(--surface2); color: var(--doux); }
+.forme { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.forme b { font-weight: 700; }
+.plus { color: var(--ok); } .moins { color: var(--ko); }
+.details { display: flex; flex-wrap: wrap; gap: 4px; }
+.note { background: var(--att-fond); color: var(--att); border-radius: 8px; padding: 8px 10px; font-size: 13.5px; margin: 10px 0 0; }
+.legende { font-size: 13px; color: var(--doux); margin: 8px 0 0; }
+#retour { display: none; }
+@media (max-width: 860px) {
+  .corps { grid-template-columns: 1fr; }
+  #menu { border-right: 0; }
+  #appli:not(.joueur) #vue { display: none; }
+  #appli.joueur #menu { display: none; }
+  #appli.joueur #retour { display: inline-block; }
+  .contenu { padding: 16px 12px 32px; }
+  th, td { padding: 6px 5px; }
+}
+</style>
+</head>
+<body>
+<div id="appli">
+  <header class="barre">
+    <button id="retour" aria-label="Retour à la liste des joueurs">‹ Joueurs</button>
+    <div class="titres"><b>CVTT Vaires · individuels</b><span id="sous-titre"></span></div>
+  </header>
+  <div class="corps">
+    <nav id="menu" aria-label="Joueurs de Vaires"></nav>
+    <main id="vue"></main>
+  </div>
+</div>
+<script>
+const D = __DONNEES_JSON__;
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+const dateCourte = (iso) => { if (!iso) return "date à préciser"; const d = new Date(iso + "T12:00:00");
+  return `${JOURS[d.getDay()]} ${iso.slice(8, 10)}/${iso.slice(5, 7)}`; };
+const signe = (x) => (Math.round(x) > 0 ? "+" : Math.round(x) < 0 ? "−" : "±") + Math.abs(Math.round(x));
+const nomComplet = (j) => `${esc(j.nom)} ${esc(j.prenom)}`.trim();
+
+/* Points virtuels = points officiels + points gagnés ou perdus depuis le début de la phase (toutes
+   compétitions) ; sans partie lue, les points de la convocation. */
+const officiels = (j) => j.points ?? (j.forme && j.forme.officiels) ?? null;
+const virt = (j) => (j.forme && j.forme.virtuels != null ? j.forme.virtuels : officiels(j));
+const parVirtuels = (js) => js.slice().sort((a, b) => (virt(b) ?? -1) - (virt(a) ?? -1) || (officiels(b) ?? 0) - (officiels(a) ?? 0));
+
+/* Niveau d'un adversaire pour le joueur de Vaires : plus fort (50 points virtuels de plus ou davantage),
+   à surveiller (à moins de 50 points, ou plus faible mais en grande forme : +30 sur la phase), à ta portée. */
+function niveau(adv, moi) {
+  const a = virt(adv), m = virt(moi);
+  if (a == null || m == null) return null;
+  const d = a - m, pts = adv.forme ? adv.forme.points : 0;
+  if (d >= 50) return { cl: "ko", txt: "plus fort" };
+  if (d > -50 || pts >= 30) return { cl: "att", txt: "à surveiller" };
+  return { cl: "ok", txt: "à ta portée" };
+}
+
+const ENTREES = [];
+for (const p of D.poules) for (const j of p.joueurs) if (j.vaires) ENTREES.push({ cle: `${p.id}-${j.licence}`, p, j });
+const SECTIONS = Object.entries(D.publics).map(([cle, titre]) => ({ cle, titre, entrees: ENTREES.filter((e) => e.p.public === cle)
+  .sort((a, b) => (a.p.date || "9").localeCompare(b.p.date || "9") || (virt(b.j) ?? 0) - (virt(a.j) ?? 0)) }))
+  .filter((s) => s.entrees.length);
+
+function bilan(e) {
+  const tries = parVirtuels(e.p.joueurs);
+  const n = { ko: 0, att: 0, ok: 0 };
+  for (const j of e.p.joueurs) if (j !== e.j) { const x = niveau(j, e.j); if (x) n[x.cl]++; }
+  return { rang: tries.indexOf(e.j) + 1, total: tries.length, n };
+}
+
+function formeTxt(f) {
+  if (f === undefined || f === null) return '<span class="petit">non lue</span>';
+  if (!(f.v + f.d)) return '<span class="petit">aucune partie</span>';
+  return `<span class="forme">${f.v}/${f.v + f.d} <b class="${Math.round(f.points) > 0 ? "plus" : Math.round(f.points) < 0 ? "moins" : ""}">${signe(f.points)}</b></span>`;
+}
+const ABREGES = { "Championnat": "Champ.", "Critérium fédéral": "Critérium" };
+const detail = (f) => !f ? "" : `<div class="details">${f.competitions.map((c) =>
+  `<span class="badge neutre" title="${esc(c.nom)} : ${c.v} victoire(s), ${c.d} défaite(s), ${signe(c.points)} points">${esc(ABREGES[c.nom] || (c.nom.length > 22 ? c.nom.slice(0, 21) + "…" : c.nom))} ${c.v}/${c.v + c.d} ${signe(c.points)}</span>`).join("")}</div>`;
+
+function menu(actif) {
+  document.getElementById("menu").innerHTML = `<a class="entree${actif ? "" : " actif"}" href="#ensemble"><b>Vue d'ensemble</b><span>Tous les joueurs de Vaires</span></a>`
+    + SECTIONS.map((s) => `<h2>${esc(s.titre)}</h2>` + s.entrees.map((e) =>
+      `<a class="entree${e.cle === actif ? " actif" : ""}" href="#j/${encodeURIComponent(e.cle)}"><b>${nomComplet(e.j)}</b>
+        <span>${dateCourte(e.p.date)} · ${esc(e.p.titre)}</span></a>`).join("")).join("");
+}
+
+function vueEnsemble() {
+  return `<div class="contenu"><h1>Individuels</h1>
+    <p class="infos">Poules des joueurs de Vaires et forme de leurs adversaires depuis le début de la phase (toutes compétitions).
+      Choisir un joueur dans la liste.</p>
+    ${SECTIONS.map((s) => `<div class="carte"><h2>${esc(s.titre)}</h2><div class="defil"><table>
+      <thead><tr><th>Joueur</th><th>Poule</th><th>Date</th><th class="num">Rang probable</th><th>Adversaires</th></tr></thead><tbody>
+      ${s.entrees.map((e) => { const b = bilan(e); return `<tr>
+        <td class="nom"><a href="#j/${encodeURIComponent(e.cle)}"><b>${nomComplet(e.j)}</b></a><span class="club">${formeTxt(e.j.forme)}</span></td>
+        <td>${esc(e.p.titre)}<span class="petit"><br>${esc(e.p.competition)}</span></td>
+        <td>${dateCourte(e.p.date)}</td>
+        <td class="num">${b.rang}<span class="petit">/${b.total}</span></td>
+        <td><span class="badge ko">${b.n.ko} plus forts</span> <span class="badge att">${b.n.att} à surveiller</span></td></tr>`; }).join("")}
+      </tbody></table></div></div>`).join("")}
+    ${notes()}</div>`;
+}
+
+function vueJoueur(e) {
+  const moi = e.j, p = e.p, b = bilan(e);
+  const lignes = parVirtuels(p.joueurs).map((j, i) => {
+    const n = j === moi ? null : niveau(j, moi);
+    const ecart = j === moi || virt(j) == null || virt(moi) == null ? "" : signe(virt(j) - virt(moi));
+    const doute = j.licence_douteuse ? ` <span class="badge att" title="L'API de la FFTT donne un autre nom pour la licence ${esc(j.licence)} (${esc((j.forme || {}).nom)}) : ces résultats ne sont peut-être pas les siens.">licence ?</span>` : "";
+    return `<tr class="${j === moi ? "moi" : j.vaires ? "vaires" : ""}">
+      <td class="num">${i + 1}</td>
+      <td class="nom"><b>${nomComplet(j)}</b> ${n ? `<span class="badge ${n.cl}">${n.txt}</span>` : ""}${doute}
+        <span class="club">${esc(j.club)}${j.cat ? " · " + esc(j.cat) : ""}</span></td>
+      <td class="num"><b>${virt(j) != null ? Math.round(virt(j)) : "—"}</b><span class="petit"><br>${officiels(j) ?? ""}</span></td>
+      <td>${formeTxt(j.forme)}</td>
+      <td class="num">${ecart}</td>
+      <td>${detail(j.forme)}</td></tr>`;
+  }).join("");
+  const lieu = p.lieu ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.lieu)}" target="_blank" rel="noopener">${esc(p.lieu)}</a>` : "lieu à préciser";
+  return `<div class="contenu">
+    <h1>${nomComplet(moi)} <small>${esc(p.titre)}</small></h1>
+    <p class="infos">${esc(p.competition)} · <b>${dateCourte(p.date)}</b>${p.horaire ? " · " + esc(p.horaire) : ""}</p>
+    <p class="infos">${lieu}</p>
+    <div class="chiffres">
+      <span class="chiffre">Rang probable <b>${b.rang}</b>/${b.total}</span>
+      <span class="chiffre ko">Plus forts <b>${b.n.ko}</b></span>
+      <span class="chiffre att">À surveiller <b>${b.n.att}</b></span>
+      <span class="chiffre ok">À ta portée <b>${b.n.ok}</b></span>
+      <span class="chiffre">Sa phase ${formeTxt(moi.forme)}</span>
+    </div>
+    ${p.titre.includes("qualifiées") ? '<p class="note">Liste des qualifiées : les poules sont faites sur place.</p>' : ""}
+    <div class="carte"><h2>${p.titre.includes("qualifiées") ? "Les qualifiées" : "La poule"}, de la plus forte à la plus faible</h2>
+      <div class="defil"><table>
+        <thead><tr><th class="num">#</th><th>Joueur</th><th class="num" title="Points virtuels ; en petit, points officiels">Virt.</th>
+          <th title="Parties gagnées sur parties jouées depuis le début de la phase, et points gagnés ou perdus">Phase</th>
+          <th class="num" title="Points virtuels de l'adversaire moins ceux de ${esc(moi.prenom || moi.nom)}">Écart</th>
+          <th>Compétitions</th></tr></thead>
+        <tbody>${lignes}</tbody></table></div>
+      ${notes(true)}</div></div>`;
+}
+
+function notes(courtes) {
+  const c = D.controle || {};
+  return `<p class="legende">Virt. : points virtuels = points officiels + points gagnés ou perdus depuis le début de la phase
+      (championnat, critérium, tournois…) ; en petit, les points officiels. Phase : parties gagnées sur parties jouées.
+      Plus fort : au moins 50 points virtuels de plus ; à surveiller : à moins de 50 points, ou plus faible mais en grande
+      forme (+30 points sur la phase) ; à ta portée : les autres. Pour les jeunes à 500 points, les parties de la phase en
+      disent plus que les points.</p>`
+    + (courtes ? "" : `<p class="legende">Poules recopiées des convocations${D.maj_poules ? " (mises à jour le " + esc(D.maj_poules.split("-").reverse().join("/")) + ")" : ""} ;
+      parties lues dans l'API de la FFTT pour ${c.joueurs ?? "?"} joueurs${c.sans_reponse ? `, sans réponse pour ${c.sans_reponse}` : ""}.</p>`)
+    + (!courtes && (c.licences_douteuses || []).length ? `<p class="note">Licences à vérifier (l'API donne un autre nom) : ${c.licences_douteuses.map(esc).join(" ; ")}.</p>` : "");
+}
+
+function route() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  const e = h.startsWith("j/") ? ENTREES.find((x) => x.cle === h.slice(2)) : null;
+  menu(e ? e.cle : null);
+  document.getElementById("vue").innerHTML = e ? vueJoueur(e) : vueEnsemble();
+  // Téléphone : la liste des joueurs d'abord, puis un joueur (ou la vue d'ensemble) en plein écran
+  document.getElementById("appli").classList.toggle("joueur", !!e || h === "ensemble");
+  document.getElementById("vue").scrollTop = 0;
+}
+document.getElementById("retour").addEventListener("click", () => { location.hash = ""; });
+document.getElementById("sous-titre").textContent = `Critérium · données du ${D.genere_le ? new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "?"}`;
+window.addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>

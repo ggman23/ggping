@@ -32,6 +32,10 @@ manche (11-7, 8-11…, Vaires toujours en premier, vert = manche gagnée), le sc
 après chaque partie et le bilan de chaque joueur. Sur un téléphone, les manches passent sous la
 partie ; des boutons filtrent une équipe.
 
+**Individuels** (/indivs/, mot de passe du club) : pour chaque joueur de Vaires inscrit au critérium,
+sa poule et la forme de ses adversaires depuis le début de la phase (points virtuels, parties gagnées,
+critérium, tournois), du plus fort au plus faible : voir PUBLICATION.md.
+
 **Application Android** (APK) : le site (mise à jour), l'espace club et /lundi/ (GitHub, sinon
 Cloudflare, sinon Netlify) et les deux statistiques en onglets, avec téléchargements et partage d'images : voir
 `android/LISEZ-MOI.md`. Lien direct :

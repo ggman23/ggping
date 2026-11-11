@@ -63,6 +63,9 @@ UMAMI_PUBLIE = "stats/umami.js"
 UMAMI_HOTE = "https://cloud.umami.is"
 ORDRE_CLUB = ["vaires.html", "resultats_vaires.html", "resultats_vaires.xlsx", "rencontres_vaires.html",
               "classements_vaires.html", "effectif_vaires.html", "classement_virtuel.html"]
+# Pages du site publiées à leur propre adresse avec le mot de passe du club (et non parmi les documents
+# de /club/, qui y renvoie par « Autres espaces ») : page du site -> (adresse, titre)
+PAGES_A_PART = {"indivs.html": ("indivs", "Individuels")}
 
 
 class ErreurNetlify(Exception):
@@ -126,7 +129,7 @@ def _documents_club(site, etat, fichiers, prefixe, cle_site, cle_club):
     fichiers.mkdir(parents=True, exist_ok=True)
     documents = []
     for publie, info in etat.get("pages", {}).items():
-        if not (site / publie).exists():
+        if not (site / publie).exists() or publie in PAGES_A_PART:
             continue
         nom = info.get("nom_telecharge") or publie.removesuffix(".chiffre")
         (fichiers / f"{nom}.chiffre").write_bytes(chiffrer_stable(_clair(site / publie, cle_site), cle_club))
@@ -143,6 +146,21 @@ def _documents_club(site, etat, fichiers, prefixe, cle_site, cle_club):
         documents.append({"fichier": nom, "chemin": f"{prefixe}{nom}.chiffre", "type": "image", "titre": info.get("titre", nom),
                           "groupe": info.get("groupe"), "ordre": info.get("ordre", 0), "date": info.get("date")})
     return documents
+
+
+def publier_pages_a_part(site, dossier, cle_site, cle_club):
+    """Pages du site (PAGES_A_PART) publiées aussi à leur adresse, ex. /indivs/ : page de mot de passe
+    (celui du club, retenu comme pour /club/) qui affiche la page, toujours chiffrée. Renvoie les adresses."""
+    publiees = []
+    for publie, (chemin, titre) in PAGES_A_PART.items():
+        if not (site / publie).exists():
+            continue
+        page = dossier / chemin / "index.html"
+        page.parent.mkdir(parents=True, exist_ok=True)
+        chiffre = chiffrer_stable(_clair(site / publie, cle_site), cle_club)
+        page.write_text(publier.page_verrouillee_chiffree(chiffre, titre, ressources.STOCKAGE_CLUB), encoding="utf-8")
+        publiees.append(chemin)
+    return publiees
 
 
 def espace_club(site, club, cle_site, cle_club):
@@ -169,7 +187,9 @@ def espace_club(site, club, cle_site, cle_club):
     rubriques = ressources.publier_dans(club, cle_club)
     donnees = {"maj": (etat.get("derniere_maj") or {}).get("fin"), "sel": publier.SEL, "iterations": publier.ITERATIONS,
                "documents": documents, "archives": archives, "ressources": rubriques,
-               "espaces": [{"chemin": e["chemin"], "titre": e["titre"]} for e in ressources.lire()["espaces"]]}
+               "espaces": [{"chemin": e["chemin"], "titre": e["titre"]} for e in ressources.lire()["espaces"]]
+                          + [{"chemin": chemin, "titre": titre} for publie, (chemin, titre) in PAGES_A_PART.items()
+                             if (site / publie).exists()]}
     js = json.dumps(donnees, ensure_ascii=False).replace("<", "\\u003c")
     (club / "index.html").write_text(GABARIT_CLUB.read_text(encoding="utf-8").replace("__DONNEES_JSON__", js), encoding="utf-8")
 
@@ -294,6 +314,7 @@ def _ajouter_compteurs(dossier, goatcounter, umami):
         (dossier / UMAMI_PUBLIE).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(UMAMI_JS, dossier / UMAMI_PUBLIE)
     espaces = [dossier / e["chemin"] / "index.html" for e in ressources.lire()["espaces"]]
+    espaces += [dossier / chemin / "index.html" for chemin, _ in PAGES_A_PART.values()]
     for page, manuel in [(dossier / "index.html", False), (dossier / "club" / "index.html", True),
                          *((f, True) for f in sorted((dossier / "gg").rglob("index.html"))),
                          *((f, False) for f in espaces)]:
@@ -315,6 +336,7 @@ def construire(site, dossier, mot_de_passe, mot_de_passe_gg, mot_de_passe_club="
         espace_club(site, dossier / "club", cle_site, publier.cle(mot_de_passe_club))
         # Espaces protégés à leur propre adresse (ex. /lundi/), mot de passe du club : voir ressources.py
         ressources.publier_espaces(dossier, publier.cle(mot_de_passe_club))
+        publier_pages_a_part(site, dossier, cle_site, publier.cle(mot_de_passe_club))  # ex. /indivs/
     (dossier / "index.html").write_text(page_publique(site, mot_de_passe), encoding="utf-8")
     (dossier / "robots.txt").write_text("User-agent: *\nDisallow: /\n", encoding="utf-8")
     # En-têtes Netlify : pas de référencement, et des pages toujours à jour (pas de vieille copie en cache)
@@ -345,7 +367,8 @@ def site_github(site, dossier, mot_de_passe, mot_de_passe_club="", goatcounter="
         shutil.copyfile(UMAMI_JS, dossier / "club" / UMAMI_PUBLIE)
     page.write_text(avec_compteurs(page.read_text(encoding="utf-8"), goatcounter, umami, True, UMAMI_PUBLIE),
                     encoding="utf-8")
-    for chemin in ressources.publier_espaces(dossier, publier.cle(mot_de_passe_club)):  # ex. /ggping/lundi/
+    a_part = publier_pages_a_part(site, dossier, publier.cle(mot_de_passe), publier.cle(mot_de_passe_club))
+    for chemin in ressources.publier_espaces(dossier, publier.cle(mot_de_passe_club)) + a_part:  # ex. /ggping/lundi/
         page = dossier / chemin / "index.html"
         page.write_text(avec_compteurs(page.read_text(encoding="utf-8"), goatcounter, umami, False,
                                        "../club/" + UMAMI_PUBLIE), encoding="utf-8")

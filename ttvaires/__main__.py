@@ -11,12 +11,12 @@ from .brulage import enrichir
 from .demo import donnees_demo
 from .adversaires import donnees_classements, recuperer
 from .effectif import recuperer_effectif
-from .rendu import (GABARIT_CLASSEMENTS, GABARIT_EFFECTIF, GABARIT_RENCONTRES, GABARIT_RESULTATS, GABARIT_VIRTUEL,
-                    generer_html)
+from .rendu import (GABARIT_CLASSEMENTS, GABARIT_EFFECTIF, GABARIT_INDIVS, GABARIT_RENCONTRES, GABARIT_RESULTATS,
+                    GABARIT_VIRTUEL, generer_html)
 from .reseau import Client, ErreurReseau
 from .resultats import donnees_page, ecrire_xlsx, recuperer_parties, recuperer_rencontres
 from .virtuel import recuperer_virtuel
-from . import compte_fftt, synchro, verifications
+from . import compte_fftt, indivs, synchro, verifications
 
 RACINE = Path(__file__).resolve().parent.parent
 SORTIE = RACINE / "sortie"
@@ -123,6 +123,25 @@ def page_virtuel(client, club, ctx):
     return [html, *faire_images("images_virtuel", donnees, dossier=ctx.images)], resume
 
 
+def page_indivs(client, club, ctx):
+    """Individuels : poules (critérium...) des joueurs de Vaires et forme de leurs adversaires. Les poules
+    sont chiffrées avec le mot de passe du club (MOT_DE_PASSE_CLUB) : sans lui, pas de page."""
+    import os
+
+    print("=== Individuels : poules des joueurs de Vaires et forme de leurs adversaires", flush=True)
+    mot_de_passe = os.environ.get("MOT_DE_PASSE_CLUB", "")
+    if not mot_de_passe:
+        return [], "pas de page (mot de passe du club absent : MOT_DE_PASSE_CLUB)"
+    try:
+        poules = indivs.lire(mot_de_passe)
+    except Exception:  # noqa: BLE001 - autre clé : mot de passe du club changé depuis l'enregistrement
+        return [], "pas de page (poules illisibles avec ce mot de passe du club : à enregistrer de nouveau)"
+    if not poules:
+        return [], "pas de page (aucune poule enregistrée : python -m ttvaires.indivs importer)"
+    donnees = indivs.recuperer(client, poules, ctx.aujourdhui)
+    return [generer_html(donnees, ctx.sortie / "indivs_vaires.html", GABARIT_INDIVS)], indivs.resume(donnees)
+
+
 def generer_pages(client, club, ctx, a_faire):
     """Fait les pages demandées [(nom, fonction)] dans ctx.sortie. Renvoie (fichiers, bilans)."""
     ctx.sortie.mkdir(parents=True, exist_ok=True)
@@ -162,6 +181,8 @@ def main():
     parser.add_argument("--rencontres", action="store_true", help="feuilles de match des rencontres de Vaires seulement")
     parser.add_argument("--effectif", action="store_true", help="effectif de Vaires : brûlages par joueur et par équipe")
     parser.add_argument("--virtuel", action="store_true", help="classement virtuel du club, toutes compétitions")
+    parser.add_argument("--indivs", action="store_true",
+                        help="individuels : poules des joueurs de Vaires et forme de leurs adversaires (mot de passe du club)")
     parser.add_argument("--demo", action="store_true", help="page des adversaires avec des données fictives")
     parser.add_argument("--hors-ligne", action="store_true",
                         help="n'utilise que les pages déjà téléchargées (refaire pages et images en 30 s, sans envoi au site)")
@@ -195,7 +216,9 @@ def main():
             a_faire.append(("effectif", page_effectif))
         if args.virtuel:
             a_faire.append(("classement virtuel", page_virtuel))
-        if args.adversaires or not (args.resultats or args.rencontres or args.effectif or args.virtuel):
+        if args.indivs:
+            a_faire.append(("individuels", page_indivs))
+        if args.adversaires or not (args.resultats or args.rencontres or args.effectif or args.virtuel or args.indivs):
             a_faire.append(("adversaires", lambda c, club, ctx: page_adversaires(c, club, ctx, args.tous_les_historiques)))
         ctx = Contexte()
         pages, bilans = generer_pages(client, args.club, ctx, a_faire)

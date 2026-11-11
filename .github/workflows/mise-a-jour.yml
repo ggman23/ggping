@@ -13,7 +13,7 @@ on:
       pages:
         description: Pages à mettre à jour
         type: choice
-        options: [tout, resultats, effectif, virtuel, adversaires]
+        options: [tout, resultats, effectif, virtuel, adversaires, indivs]
         default: tout
       netlify:
         description: Envoyer aussi sur Netlify, l'adresse donnée au club (15 crédits Netlify) ; sinon GitHub et Cloudflare seulement
@@ -91,10 +91,12 @@ jobs:
           # Compte licencié FFTT : l'API de la FFTT demande une connexion depuis le 31/10/2026
           FFTT_IDENTIFIANT: ${{ secrets.FFTT_IDENTIFIANT }}
           FFTT_MOT_DE_PASSE: ${{ secrets.FFTT_MOT_DE_PASSE }}
+          # Individuels : les poules (ressources/indivs.json.chiffre) sont chiffrées avec le mot de passe du club
+          MOT_DE_PASSE_CLUB: ${{ secrets.MOT_DE_PASSE_CLUB }}
         run: |
           case "$CHOIX" in
-            tout) ARGS="--resultats --effectif --virtuel --adversaires" ;;
-            resultats|effectif|virtuel|adversaires) ARGS="--$CHOIX" ;;
+            tout) ARGS="--resultats --effectif --virtuel --adversaires --indivs" ;;
+            resultats|effectif|virtuel|adversaires|indivs) ARGS="--$CHOIX" ;;
             *) echo "::error::Choix inconnu : $CHOIX"; exit 1 ;;
           esac
           # pingpocket.fr refuse les serveurs de GitHub : on utilise ses pages envoyées par le PC

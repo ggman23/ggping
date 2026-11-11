@@ -337,3 +337,23 @@ gagné 12 parties sur 12 et déjà +46 points virtuels n'est pas un 790 qui en a
   points, par forme ou par nombre de parties.
 - Image du prochain adversaire : colonne « Phase » et compétitions individuelles dans la dernière
   colonne (« critérium 3/3 · tournois 1/2 »).
+
+## Individuels : poules du critérium (11/11/2026)
+
+Demande : récupérer les poules d'individuels des joueurs de Vaires (adultes, jeunes, féminines) et
+regarder, comme pour les adversaires en championnat, les performances de leurs adversaires de poule,
+pour voir qui est dangereux ; le tout dans une page comme /club/, à l'adresse /indivs/, avec un menu à
+gauche.
+
+- Source : les convocations du tour (PDF du CD77 et du critérium jeunes filles 77/94, captures des
+  poules adultes, liste des qualifiées R2 dames de la Ligue). Recopiées une fois (licence, nom,
+  prénom, points, club, catégorie) dans ressources/indivs.json.chiffre (clé du club). Tour 2 :
+  13 poules, 18 joueurs de Vaires (10 adultes, 6 jeunes, 2 féminines).
+- Forme de chaque joueur des poules : même calcul que la forme des adversaires en championnat
+  (virtuel.forme_joueurs) ; nom de l'API comparé à celui de la convocation (licence mal recopiée).
+- Niveau de chaque adversaire pour le joueur de Vaires, d'après les points virtuels : plus fort
+  (≥ +50), à surveiller (à moins de 50 points, ou plus faible mais à +30 points sur la phase), à ta
+  portée ; rang probable dans la poule.
+- Page indivs_vaires.html (gabarit_indivs.html), publiée chiffrée sur le site GitHub (« Individuels »)
+  et à son adresse /indivs/ avec le mot de passe du club (clé retenue avec celle de /club/), pas parmi
+  les documents de /club/ (lien « Autres espaces »). Faite avec « Tout » et le choix « Individuels ».

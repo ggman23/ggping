@@ -211,7 +211,18 @@ def forme_joueurs(client, licences, detail_rencontres, debut, fin, ttl=JOUR):
             continue
         lignes, officiels, _ = analyser(lic, parties, competitions, etats, debut, fin)
         res[lic] = resume_forme(lignes, officiels)
+        res[lic]["nom"] = _nom_du_joueur(lic, parties)
     return res
+
+
+def _nom_du_joueur(licence, parties):
+    """Nom de famille du joueur d'après ses parties (pour vérifier qu'une licence recopiée est la bonne)."""
+    for g in parties:
+        for cote in ("homePlayer", "awayPlayer"):
+            j = g.get(cote) or {}
+            if j.get("identifier") == licence:
+                return ((j.get("person") or {}).get("familyName") or "").strip() or None
+    return None
 
 
 def controle_parties(joueurs, detail_rencontres, numero_club, source):
