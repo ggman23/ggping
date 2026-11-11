@@ -1,13 +1,14 @@
 # Application Android CVTT Vaires
 
-Tout sous la main dans une seule application, en cinq onglets (en bas de l'écran) :
+Tout sous la main dans une seule application, en six onglets (en bas de l'écran) :
 
 | Onglet | Page |
 |---|---|
 | ⟳ **Mise à jour** | le site GitHub (https://ggman23.github.io/ggping/) : boutons de mise à jour, pages, images |
 | 🏓 **Club** | l'espace club, sur GitHub (https://ggman23.github.io/ggping/club/), sinon Cloudflare, sinon Netlify (voir plus bas) |
 | 👑 **Lundi** | l'espace /lundi/ (« Le roi du lundi »), sur GitHub (https://ggman23.github.io/ggping/lundi/), sinon Cloudflare, sinon Netlify |
-| 📊 **GoatCounter** | les statistiques GoatCounter (https://ggman23.goatcounter.com/) |
+| 🎯 **Indivs** | les individuels /indivs/ (poules du critérium et forme des adversaires), sur GitHub (https://ggman23.github.io/ggping/indivs/), sinon Cloudflare, sinon Netlify |
+| 📊 **Goat** | les statistiques GoatCounter (https://ggman23.goatcounter.com/) |
 | 📈 **Umami** | les statistiques Umami (https://cloud.umami.is/, ou ton lien de partage : voir plus bas) |
 
 Chaque onglet garde sa page quand on passe à un autre (une mise à jour en cours continue d'être
@@ -20,10 +21,10 @@ d'Android revient à la page précédente de l'onglet.
 - Les liens vers d'autres sites (GitHub, cartes des salles...) s'ouvrent dans le navigateur.
 - Tes visites depuis l'application ne sont **pas comptées** dans les statistiques du club.
 
-## Onglets Club et Lundi : trois copies du même espace
+## Onglets Club, Lundi et Indivs : trois copies du même espace
 
-Les espaces club et /lundi/ sont publiés à trois adresses, avec le même contenu et le même mot de
-passe (celui du club). À l'ouverture de l'onglet (et avec ⌂ ou un appui long sur l'onglet),
+Les espaces club, /lundi/ et /indivs/ sont publiés à trois adresses, avec le même contenu et le même
+mot de passe (celui du club). À l'ouverture de l'onglet (et avec ⌂ ou un appui long sur l'onglet),
 l'application vérifie l'une après l'autre que la page répond et ouvre la première qui marche :
 
 1. **GitHub** : https://ggman23.github.io/ggping/club/ (ou …/lundi/), mis à jour à chaque mise à jour ;
@@ -38,7 +39,9 @@ cours de route (site en panne), la même page est ouverte sur la copie suivante.
 
 Chaque copie a sa propre mémoire : le mot de passe du club est demandé **une fois par copie** (une
 fois sur GitHub, puis une fois sur Cloudflare le jour où elle sert), cocher « Se souvenir ». Sur une
-même copie, Club et Lundi partagent le mot de passe retenu : saisi dans l'un, l'autre s'ouvre seul.
+même copie, Club, Lundi et Indivs partagent le mot de passe retenu : saisi dans l'un, les autres
+s'ouvrent seuls. Un lien d'une de ces pages vers une autre (« Espace club » ou « Image de la poule » depuis
+/indivs/, « Autres espaces » du club) ouvre le bon onglet.
 
 ## Umami sans avoir à se connecter
 

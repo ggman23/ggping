@@ -54,11 +54,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Application CVTT Vaires : cinq onglets, chacun avec sa page qui reste ouverte quand on passe
- * de l'un à l'autre : le site GitHub (mise à jour), l'espace club, l'espace /lundi/, GoatCounter et
- * Umami. Les espaces club et lundi sont publiés en trois copies identiques : l'onglet ouvre la
- * première qui répond, GitHub, sinon Cloudflare, sinon Netlify, sinon une page d'erreur avec
- * « Réessayer ».
+ * Application CVTT Vaires : six onglets, chacun avec sa page qui reste ouverte quand on passe
+ * de l'un à l'autre : le site GitHub (mise à jour), l'espace club, /lundi/, les individuels
+ * (/indivs/), GoatCounter et Umami. Le club, /lundi/ et /indivs/ sont publiés en trois copies
+ * identiques : l'onglet ouvre la première qui répond, GitHub, sinon Cloudflare, sinon Netlify, sinon
+ * une page d'erreur avec « Réessayer ».
  * Les téléchargements et le partage d'images des pages passent par l'application (pont « Appli »).
  */
 public class Principale extends Activity {
@@ -69,13 +69,14 @@ public class Principale extends Activity {
      * bonne (null : il suffit qu'elle réponde) et les hôtes dont les pages restent dans l'onglet.
      */
     static final class Onglet {
-        final String cle, titre, symbole, chemin, temoin;  // cle : nom fixe de l'onglet dans les réglages
-        final String[] racines, noms, hotes;
+        final String cle, titre, court, symbole, chemin, temoin;  // cle : nom fixe de l'onglet dans les réglages
+        final String[] racines, noms, hotes;                      // court : libellé du bouton (en bas)
 
         Onglet(String cle, String titre, String symbole, String[] racines, String[] noms, String chemin, String temoin,
                String... hotes) {
             this.cle = cle;
             this.titre = titre;
+            this.court = titre.equals("GoatCounter") ? "Goat" : titre;
             this.symbole = symbole;
             this.racines = racines;
             this.noms = noms;
@@ -103,7 +104,7 @@ public class Principale extends Activity {
     static final String GITHUB = "https://ggman23.github.io/ggping/", CLOUDFLARE = "https://ggping-pap.pages.dev/",
             NETLIFY = "https://ggping.netlify.app/";
     static final String[] COPIES = {GITHUB, CLOUDFLARE, NETLIFY}, NOMS_COPIES = {"GitHub", "Cloudflare", "Netlify"};
-    static final int MISE_A_JOUR = 0, CLUB = 1, LUNDI = 2, GOATCOUNTER = 3, UMAMI = 4;
+    static final int MISE_A_JOUR = 0, CLUB = 1, LUNDI = 2, INDIVS = 3, GOATCOUNTER = 4, UMAMI = 5;
     // Le témoin est la clé sous laquelle les pages du club et de /lundi/ gardent le mot de passe
     // (ttvaires/ressources.py) : Cloudflare Pages, par exemple, répond par la page d'accueil à une
     // adresse qui n'existe pas. Il est au début des pages (balise meta cvtt-cle) depuis la mise à jour
@@ -115,6 +116,8 @@ public class Principale extends Activity {
         new Onglet("club", "Club", "🏓", COPIES, NOMS_COPIES, "club/", TEMOIN_CLUB,
                 "ggman23.github.io", "ggping-pap.pages.dev", "ggping.netlify.app"),
         new Onglet("lundi", "Lundi", "👑", COPIES, NOMS_COPIES, "lundi/", TEMOIN_CLUB,
+                "ggman23.github.io", "ggping-pap.pages.dev", "ggping.netlify.app"),
+        new Onglet("indivs", "Indivs", "🎯", COPIES, NOMS_COPIES, "indivs/", TEMOIN_CLUB,
                 "ggman23.github.io", "ggping-pap.pages.dev", "ggping.netlify.app"),
         new Onglet("goatcounter", "GoatCounter", "📊", new String[]{"https://ggman23.goatcounter.com/"},
                 new String[]{"GoatCounter"}, "", null, "goatcounter.com"),
@@ -197,9 +200,9 @@ public class Principale extends Activity {
         for (int i = 0; i < ONGLETS.length; i++) {
             final int n = i;
             TextView b = new TextView(this);
-            b.setText(ONGLETS[i].symbole + "\n" + ONGLETS[i].titre);
+            b.setText(ONGLETS[i].symbole + "\n" + ONGLETS[i].court);
             b.setGravity(Gravity.CENTER);
-            b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+            b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
             b.setMaxLines(2);
             b.setEllipsize(android.text.TextUtils.TruncateAt.END);
             b.setPadding(0, dp(7), 0, dp(7));
@@ -507,6 +510,15 @@ public class Principale extends Activity {
     static int ongletPour(Uri adresse) {
         String hote = adresse.getHost();
         if (hote == null || !"https".equals(adresse.getScheme())) return -1;
+        int choisi = ongletDepart(adresse);
+        if (choisi >= 0) return choisi;
+        for (int i = 0; i < ONGLETS.length; i++) if (ONGLETS[i].aHote(hote)) return i;
+        return -1;
+    }
+
+    /** Onglet dont une page de départ contient l'adresse (la plus précise), -1 sinon. */
+    static int ongletDepart(Uri adresse) {
+        if (adresse.getHost() == null || !"https".equals(adresse.getScheme())) return -1;
         String texte = adresse.toString();
         int choisi = -1, longueur = -1;
         for (int i = 0; i < ONGLETS.length; i++) {
@@ -518,9 +530,7 @@ public class Principale extends Activity {
                 }
             }
         }
-        if (choisi >= 0) return choisi;
-        for (int i = 0; i < ONGLETS.length; i++) if (ONGLETS[i].aHote(hote)) return i;
-        return -1;
+        return choisi;
     }
 
     /** Lien dans un texte partagé avec l'application (« Partager » > CVTT Vaires). */
@@ -570,6 +580,12 @@ public class Principale extends Activity {
             int ici = indice(vue);
             String hote = adresse.getHost();
             boolean https = "https".equals(adresse.getScheme()) && hote != null;
+            // Lien vers la page d'un autre onglet (« Espace club » depuis /indivs/, …/lundi/ depuis le club) : on y va
+            int autre = https ? ongletDepart(adresse) : -1;
+            if (autre >= 0 && autre != ici) {
+                ouvrir(autre, adresse.toString());
+                return true;
+            }
             if (https && ici >= 0 && ONGLETS[ici].aHote(hote)) return false;  // même site : reste dans l'onglet
             int n = https ? ongletPour(adresse) : -1;
             if (n < 0) {  // autre site (GitHub, carte d'une salle...) : dans le navigateur

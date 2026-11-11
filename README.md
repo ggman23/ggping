@@ -36,7 +36,7 @@ partie ; des boutons filtrent une équipe.
 sa poule et la forme de ses adversaires depuis le début de la phase (points virtuels, parties gagnées,
 critérium, tournois), du plus fort au plus faible : voir PUBLICATION.md.
 
-**Application Android** (APK) : le site (mise à jour), l'espace club et /lundi/ (GitHub, sinon
+**Application Android** (APK) : le site (mise à jour), l'espace club, /lundi/ et /indivs/ (GitHub, sinon
 Cloudflare, sinon Netlify) et les deux statistiques en onglets, avec téléchargements et partage d'images : voir
 `android/LISEZ-MOI.md`. Lien direct :
 https://github.com/ggman23/ggping/releases/download/application-android/CVTT-Vaires.apk
