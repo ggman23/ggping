@@ -28,8 +28,8 @@ l'application vérifie l'une après l'autre que la page répond et ouvre la prem
 
 1. **GitHub** : https://ggman23.github.io/ggping/club/ (ou …/lundi/), mis à jour à chaque mise à jour ;
 2. sinon **Cloudflare** : https://ggping-pap.pages.dev/club/ (ou …/lundi/) ;
-3. sinon **Netlify** : https://ggping.netlify.app/club/ (ou …/lundi/), mis à jour seulement le lundi et
-   avec le bouton « Mettre à jour les 3 sites » ;
+3. sinon **Netlify** : https://ggping.netlify.app/club/ (ou …/lundi/), mis à jour seulement à la main
+   (bouton « Mettre à jour les 3 sites ») ;
 4. sinon une page « site indisponible » avec un bouton **Réessayer** (↻ fait la même chose).
 
 La barre du haut dit quelle copie est affichée (« Club · GitHub », « Club · Cloudflare »...) et un

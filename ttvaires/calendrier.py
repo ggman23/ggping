@@ -1,10 +1,10 @@
 """Mise à jour automatique du lundi : seulement après un week-end de championnat.
 
-Chaque mise en ligne sur Netlify coûte 15 crédits (300 par mois sur l'offre gratuite). Le workflow
-planifié tourne donc le lundi matin et demande d'abord ici si une équipe de Vaires (masculine ou
-féminine) a joué entre le vendredi et le dimanche précédents. Sinon il s'arrête là : pas de mise à
-jour, rien de dépensé. Les mises à jour lancées à la main (site, téléphone, PC) ne passent pas par
-ce contrôle.
+Le workflow planifié tourne le lundi matin et demande d'abord ici si une équipe de Vaires (masculine
+ou féminine) a joué entre le vendredi et le dimanche précédents. Sinon il s'arrête là : pas de mise
+à jour. Elle publie sur GitHub et Cloudflare seulement (gratuits) ; Netlify (15 crédits par envoi)
+n'est envoyé qu'à la main. Les mises à jour lancées à la main (site, téléphone, PC) ne passent pas
+par ce contrôle.
 
   python -m ttvaires.calendrier                    # écrit continuer=true/false pour le workflow
   python -m ttvaires.calendrier --date 2026-11-09  # essai pour un autre lundi
@@ -50,14 +50,14 @@ def main(arguments=None):
     try:
         compte_fftt.connecter(client, demander=False)
         rencontres = rencontres_du_week_end(client, jour)
-    except ErreurReseau as e:  # dans le doute, on met à jour (mieux vaut 15 crédits qu'un site en retard)
+    except ErreurReseau as e:  # dans le doute, on met à jour (gratuit : GitHub et Cloudflare)
         print(f"Calendrier de la FFTT illisible ({e}) : mise à jour faite par précaution.")
         continuer = True
     else:
         continuer = bool(rencontres)
         print(f"Week-end du {vendredi:%d/%m} au {dimanche:%d/%m} : "
               + (f"{len(rencontres)} rencontre(s) de championnat de Vaires, mise à jour." if continuer
-                 else "pas de championnat pour Vaires, pas de mise à jour (rien de dépensé sur Netlify)."))
+                 else "pas de championnat pour Vaires, pas de mise à jour."))
     sortie = os.environ.get("GITHUB_OUTPUT")
     if sortie:
         with open(sortie, "a", encoding="utf-8") as f:

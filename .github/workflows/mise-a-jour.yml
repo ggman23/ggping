@@ -25,7 +25,8 @@ on:
         default: false
   schedule:
     # Le lundi vers 7 h, heure de Paris (6 h 07 UTC), et seulement après un week-end de championnat
-    # (job « week-end » ci-dessous) : une mise en ligne Netlify coûte 15 crédits (300 par mois).
+    # (job « week-end » ci-dessous) : GitHub et Cloudflare (gratuits). Netlify (15 crédits par envoi,
+    # 300 par mois) seulement à la main : bouton « les 3 sites », case netlify, ou PC.
     - cron: "7 6 * * 1"
 
 permissions:
@@ -189,9 +190,10 @@ jobs:
           SURNOMS: ${{ secrets.SURNOMS }}  # dans l'empreinte du contenu : un surnom changé refait la copie
           # Une copie identique à celle en ligne n'est pas renvoyée (15 crédits Netlify par envoi), sauf si on force
           FORCER_NETLIFY: ${{ inputs.forcer_netlify }}
-          # Netlify seulement si on le demande (bouton « les 3 sites ») et pour la mise à jour automatique
-          # du lundi ; sinon la copie est préparée pour Cloudflare et Netlify n'est pas touché
-          NETLIFY_ENVOI: ${{ github.event_name == 'schedule' || inputs.netlify || inputs.forcer_netlify }}
+          # Netlify seulement si on le demande (bouton « les 3 sites », case netlify, PC), jamais pour la
+          # mise à jour automatique du lundi ; sinon la copie est préparée pour Cloudflare et Netlify n'est
+          # pas touché
+          NETLIFY_ENVOI: ${{ inputs.netlify || inputs.forcer_netlify || false }}
           # Umami Cloud : identifiant du site (public : il figure dans les pages) ; une variable UMAMI le remplace
           UMAMI: ${{ vars.UMAMI || secrets.UMAMI || '23cfef06-9803-4df0-b7e7-6631a2490f82' }}
         run: python -m ttvaires.netlify
