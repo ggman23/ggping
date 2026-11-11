@@ -120,7 +120,30 @@ def _etats(client, parties, detail_rencontres):
         etats[i] = {"non_comptee": bool(g.get("notCounted")), "forfait": bool(g.get("forfeit")),
                     "abandon": bool(g.get("abandonment")), "manches": _manches(g),
                     "division": fftt.libelle_division(division) if division else None}
+    _signaler_manches_absentes(parties, [json.loads(pages[u]) for u in list(urls.values())[:1] if pages.get(u)],
+                               [etats[i] for i in urls if i in etats])
     return etats
+
+
+def _champs(objet):
+    """Noms des champs d'une réponse de l'API (jamais leurs valeurs), avec la forme du champ « sets »."""
+    sets = objet.get("sets", "absent")
+    forme = (f"liste de {len(sets)} ({type(sets[0]).__name__})" if isinstance(sets, list) and sets
+             else "liste vide" if isinstance(sets, list) else sets if sets == "absent" else type(sets).__name__)
+    return f"{', '.join(sorted(objet))} ; sets : {forme}"
+
+
+def _signaler_manches_absentes(parties, details, etats_lus):
+    """Journal : si aucune partie hors championnat n'a ses manches, les champs que l'API donne pour une
+    de ces parties (dans la liste et dans le détail), pour savoir si les manches existent sous un autre nom."""
+    if not etats_lus or any(e.get("manches") for e in etats_lus):
+        return
+    hors = [p for p in parties if not est_championnat((p.get("contest") or {}).get("name"))]
+    print(f"  ! manches absentes pour les {len(etats_lus)} parties lues hors feuilles de match (critérium, tournois...)")
+    if hors:
+        print(f"    champs d'une partie dans la liste : {_champs(hors[0])}"[:700])
+    if details:
+        print(f"    champs du détail d'une partie : {_champs(details[0])}"[:700])
 
 
 def analyser(licence, parties, competitions, etats, debut, fin):
