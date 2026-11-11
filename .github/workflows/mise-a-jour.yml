@@ -102,6 +102,15 @@ jobs:
           # pingpocket.fr refuse les serveurs de GitHub : on utilise ses pages envoyées par le PC
           python -m ttvaires $ARGS --pas-de-navigateur --pingpocket-cache
 
+      # Tournois autour de Vaires, étape 1 : ce que l'API de la FFTT en donne (quelques requêtes, dans le
+      # journal seulement ; voir ttvaires/tournois.py). N'empêche jamais la mise à jour.
+      - name: Tournois (vérification de l'API de la FFTT)
+        continue-on-error: true
+        env:
+          FFTT_IDENTIFIANT: ${{ secrets.FFTT_IDENTIFIANT }}
+          FFTT_MOT_DE_PASSE: ${{ secrets.FFTT_MOT_DE_PASSE }}
+        run: python -m ttvaires.tournois --verification
+
       - name: Réglage de GitHub Pages
         id: pages
         uses: actions/configure-pages@v5
