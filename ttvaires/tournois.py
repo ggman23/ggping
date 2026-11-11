@@ -4,8 +4,8 @@ La liste officielle des tournois est celle de la FFTT (monclub.fftt.com, « List
 application web qui la charge depuis un service de la FFTT. L'API de la FFTT n'a pas d'adresse
 publique « tournaments » et sa documentation demande une connexion : cette vérification, faite pendant
 une mise à jour avec le compte licencié de l'outil, lit la liste des ressources de l'API et sa
-documentation OpenAPI, signale celles qui parlent de tournois (et leurs filtres), puis en lit un petit
-échantillon. Quelques requêtes en tout, en lecture seule ; aucune protection n'est contournée.
+documentation (JSON-LD, puis OpenAPI), signale celles qui parlent de tournois (et leurs filtres), puis
+en lit un petit échantillon. Quelques requêtes en tout, en lecture seule ; aucune protection n'est contournée.
 
     python -m ttvaires.tournois --verification
 """
@@ -52,6 +52,25 @@ def chemins_tournois(openapi):
     return sortie
 
 
+def classes_hydra(doc):
+    """Documentation JSON-LD (Hydra) de l'API : (titres de toutes les classes, {classe « tournois » :
+    ses propriétés}, adresses des collections « tournois » du point d'entrée)."""
+    titres, tournois, adresses = [], {}, []
+    for c in doc.get("hydra:supportedClass") or doc.get("supportedClass") or []:
+        titre = c.get("hydra:title") or c.get("title") or str(c.get("@id", "")).lstrip("#")
+        titres.append(titre)
+        proprietes = c.get("hydra:supportedProperty") or c.get("supportedProperty") or []
+        if any(m in titre.lower() for m in MOTS):
+            tournois[titre] = [x.get("hydra:title") or x.get("title") or "" for x in proprietes]
+        if titre.lower() == "entrypoint" or str(c.get("@id", "")).endswith("Entrypoint"):
+            for x in proprietes:
+                prop = x.get("hydra:property") or x.get("property") or {}
+                ident = prop.get("@id", "") if isinstance(prop, dict) else str(prop)
+                if any(m in ident.lower() for m in MOTS):
+                    adresses.append(ident)
+    return titres, tournois, adresses
+
+
 def _resume_element(e):
     """Clés d'un élément et quelques valeurs courtes (nom, dates, lieu) pour juger de son intérêt."""
     valeurs = {k: v for k, v in e.items() if isinstance(v, (str, int, float)) and not k.startswith("@")
@@ -69,6 +88,18 @@ def verification(client):
         print(f"  ! point d'entrée illisible : {e}")
     retenues = {k: v for k, v in collections.items() if any(m in k.lower() for m in MOTS)}
     print("  Collections « tournois » : " + (", ".join(f"{k} -> {v}" for k, v in retenues.items()) or "aucune"))
+    # Documentation JSON-LD (Hydra) : la seule qui existe (sans connexion : « JWT Token not found »)
+    try:
+        titres, classes, adresses = classes_hydra(_lire(client, API + "/docs.jsonld"))
+        print(f"  Documentation JSON-LD : {len(titres)} classes : {', '.join(sorted(titres))}"[:3000])
+        for titre, proprietes in classes.items():
+            print(f"    Classe « {titre} » : {', '.join(proprietes)}"[:1500])
+        print("  Collections « tournois » du point d'entrée (documentation) : " + (", ".join(adresses) or "aucune"))
+        for ident in adresses:  # « #Entrypoint/tournament » -> /api/tournaments ? on garde le nom pour l'échantillon
+            nom = ident.split("/")[-1]
+            retenues.setdefault(nom, f"/api/{nom}s" if not nom.endswith("s") else f"/api/{nom}")
+    except (ErreurReseau, ValueError) as e:
+        print(f"  ! documentation JSON-LD illisible : {e}")
     filtres = {}
     for doc in ("/docs.json", "/docs.jsonopenapi"):
         try:

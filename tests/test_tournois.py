@@ -43,3 +43,20 @@ def test_rien_sur_les_tournois(capsys):
     tournois.verification(Client({API: {"@id": "/api"}}))
     sortie = capsys.readouterr().out
     assert "Collections « tournois » : aucune" in sortie and "documentation /docs.json illisible" in sortie
+
+
+def test_documentation_json_ld(capsys):
+    pages = {
+        API: {"@id": "/api"},
+        API + "/docs.jsonld": {"hydra:supportedClass": [
+            {"@id": "#Contest", "hydra:title": "Contest", "hydra:supportedProperty": [{"hydra:title": "name"}]},
+            {"@id": "#TournamentRequest", "hydra:title": "TournamentRequest",
+             "hydra:supportedProperty": [{"hydra:title": "name"}, {"hydra:title": "startDate"}, {"hydra:title": "address"}]},
+            {"@id": "#Entrypoint", "hydra:title": "Entrypoint", "hydra:supportedProperty": [
+                {"hydra:property": {"@id": "#Entrypoint/tournamentRequest"}}, {"hydra:property": {"@id": "#Entrypoint/contest"}}]}]},
+        f"{API}/tournamentRequests?itemsPerPage=2": {"hydra:totalItems": 3, "hydra:member": [{"name": "Tournoi de Lagny"}]},
+    }
+    tournois.verification(Client(pages))
+    sortie = capsys.readouterr().out
+    assert "Classe « TournamentRequest » : name, startDate, address" in sortie
+    assert "#Entrypoint/tournamentRequest" in sortie and "/api/tournamentRequests : 3 élément(s)" in sortie
