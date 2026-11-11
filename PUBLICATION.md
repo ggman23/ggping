@@ -400,8 +400,8 @@ parties jouées depuis le début de la phase, les points gagnés ou perdus, les 
   <prénom> » quand un seul joueur de Vaires est dans la poule. Leurs titres ne donnent que la poule et
   sa date (la liste des images est visible sans mot de passe ; les images, elles, sont chiffrées).
   Sur /indivs/, le bouton « Image de la poule à partager » ouvre celle de la poule dans l'espace club.
-- Liens : « Espace club » en haut de /indivs/ (et dans son menu) ; « Individuels » dans « Autres
-  espaces » de /club/ (menu et accueil).
+- Liens : « Club » et « Tournois » en haut de /indivs/ (et dans son menu) ; « Individuels » en haut du
+  menu de /club/ (« Aller à ») et dans ses « Autres espaces » (menu et accueil).
 
 - Les poules viennent des convocations (PDF, captures WhatsApp) : je les recopie à chaque tour
   (licence, nom, points, club, catégorie) dans `ressources/indivs.json.chiffre`, chiffré avec le mot
@@ -414,6 +414,33 @@ parties jouées depuis le début de la phase, les points gagnés ou perdus, les 
   poules), la page n'est pas faite ; le bilan l'indique.
 - Pour les relire ou les corriger soi-même : `python -m ttvaires.indivs exporter poules.json` (en clair :
   ne pas l'envoyer sur GitHub), puis `python -m ttvaires.indivs importer poules.json`.
+
+## Tournois : /tournois/ (tournois à venir, par PingRadar)
+
+**/tournois/** sur chaque site (https://ggping-pap.pages.dev/tournois/, https://ggman23.github.io/ggping/tournois/,
+https://ggping.netlify.app/tournois/), avec le **mot de passe du club** (déjà entré dans l'espace club :
+ouverture directe). Menu à gauche (sur téléphone : la liste « Autour de Vaires » d'abord, « ‹ Menu »
+pour les autres) :
+
+- **Autour de Vaires** : les 10 prochains tournois à moins de 100 km (à vol d'oiseau) ;
+- **Ce week-end** et **Le week-end prochain** : à moins de 100 km ;
+- **Île-de-France** et **Seine-et-Marne** : les 10 prochains ;
+- **Chercher plus** : la recherche de PingRadar (filtre par points, distance, dates) et la liste
+  officielle des tournois de la FFTT ;
+- **Autres espaces** : l'espace club et les individuels (aussi en haut de la page : « Club », « Indivs »).
+
+Chaque liste est le bloc « prochains tournois » que PingRadar (pingradar.fr, site indépendant, d'après
+la liste des tournois de la FFTT) propose d'intégrer au site d'un club (page « Intégrer PingRadar ») :
+un cadre sans script, sans cookie ni traceur, qui se met à jour tout seul. Rien n'est copié ni calculé
+par l'outil, qui ne fait aucune requête pour les tournois ; la page ne change pas d'une mise à jour à
+l'autre (elle est publiée à chaque mise à jour, comme /club/). Touche un tournoi pour ouvrir sa fiche
+sur PingRadar (tableaux, tarifs, lien d'inscription).
+
+- PingRadar le dit lui-même : sa liste n'est pas forcément complète ; vérifier sur la fiche du tournoi
+  et, au besoin, dans la liste officielle de la FFTT. L'inscription se fait auprès de l'organisateur.
+- Autres sources regardées et écartées : l'API de la FFTT (aucune liste de tournois pour le compte de
+  l'outil), le flux de tournois-tt.fr (arrêté au 18/10/2026), PingMap (extraction automatique
+  interdite par le site), MyPing Tournois (application, sans intégration prévue) : à utiliser à la main.
 
 ## Sécurité
 

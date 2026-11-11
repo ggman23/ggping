@@ -36,6 +36,11 @@ partie ; des boutons filtrent une équipe.
 sa poule et la forme de ses adversaires depuis le début de la phase (points virtuels, parties gagnées,
 critérium, tournois), du plus fort au plus faible : voir PUBLICATION.md.
 
+**Tournois** (/tournois/, mot de passe du club) : les prochains tournois à 100 km de Vaires, ce week-end
+et le suivant, en Île-de-France et en Seine-et-Marne, avec les blocs de PingRadar (mis à jour en continu,
+sans aucune requête de l'outil) ; liens vers la recherche de PingRadar et la liste de la FFTT. Liens
+directs entre /club/, /indivs/ et /tournois/ : voir PUBLICATION.md.
+
 **Application Android** (APK) : le site (mise à jour), l'espace club, /lundi/ et /indivs/ (GitHub, sinon
 Cloudflare, sinon Netlify) et les deux statistiques en onglets, avec téléchargements et partage d'images : voir
 `android/LISEZ-MOI.md`. Lien direct :

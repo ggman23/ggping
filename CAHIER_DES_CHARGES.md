@@ -388,3 +388,24 @@ plusieurs pour les comparer (en restant lisible) ; des images si c'est lisible.
   parties, cumulées à partir de ses points officiels) puis passe aux points officiels de janvier :
   recuperer_virtuel garde pour cela les parties de la phase 1 (déjà dans la liste de la saison ; leur
   détail n'est pas redemandé). Départ des courbes : les points au 1er septembre (tournois d'été compris).
+
+## Tournois à venir (11/11/2026)
+
+Demande : la liste des tournois de tennis de table d'Île-de-France ou à 100 km de Vaires, dans une page
+/tournois/ comme /club/, avec des liens pour aller de /tournois/ à /club/ et /indivs/ et réciproquement.
+Pas d'onglet dans l'application pour l'instant.
+
+- Sources regardées : l'API de la FFTT (vérifiée pendant les mises à jour n° 56 et 57 avec le compte de
+  l'outil : point d'entrée vide, documentation JSON-LD limitée aux classes techniques, pas d'OpenAPI ;
+  vérification retirée ensuite) ; le flux RSS de tournois-tt.fr (autorisé mais arrêté au 18/10/2026) ;
+  PingMap (robots.txt : extraction automatique de sa base interdite) ; MyPing Tournois (application
+  web) ; PingRadar (pingradar.fr, d'après la liste des tournois de la FFTT, collecte du jour), qui
+  propose un bloc à intégrer au site d'un club (gratuit, sans compte, sans script ni cookie,
+  frame-ancestors *) ; ses adresses /api/ sont interdites aux robots : rien n'est extrait.
+- Page fixe gabarit_tournois.html (aucune donnée de mise à jour), publiée par netlify.PAGES_FIXES à
+  /tournois/ sur les trois sites, chiffrée avec le mot de passe du club (clé retenue avec celle de
+  /club/) : cinq blocs (100 km autour de Vaires, code INSEE 77479 : 10 prochains, ce week-end, le
+  week-end prochain ; Île-de-France ; Seine-et-Marne), format compact sur téléphone, liens vers la
+  recherche de PingRadar et la liste de la FFTT.
+- Liens : /tournois/ → « Club », « Indivs » (en haut et dans le menu) ; /indivs/ → « Club »,
+  « Tournois » ; /club/ → « Aller à » en haut du menu (tous les autres espaces) et « Autres espaces ».

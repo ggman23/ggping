@@ -50,6 +50,11 @@ button { font: inherit; cursor: pointer; }
 
 #menu { overflow-y: auto; background: var(--surface); border-right: 1px solid var(--bord); padding: 8px 10px 24px; }
 #menu h2 { font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--doux); margin: 16px 8px 6px; }
+.raccourcis { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 6px 2px; }
+.raccourcis span { font-size: 12.5px; color: var(--doux); margin-right: 2px; }
+.raccourcis a { padding: 5px 12px; border-radius: 99px; border: 1px solid var(--bord); background: var(--surface2); color: var(--texte);
+  font-size: 13.5px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.raccourcis a:hover { border-color: var(--accent); }
 #menu h3 { font-size: 13.5px; color: var(--doux); margin: 12px 8px 2px; font-weight: 600; }
 .doc { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; padding: 9px 9px; border: 0; border-radius: 10px;
   background: none; color: inherit; text-decoration: none; }
@@ -284,7 +289,10 @@ function listeImages(liste) {
 }
 function construireMenu() {
   document.getElementById("menu").innerHTML =
-    `<h2>Pages et Excel</h2>${pages.map((d) => ligne(d)).join("")}`
+    /* Accès direct aux autres espaces (individuels, tournois...), aussi listés en bas du menu */
+    (ESPACES.length ? `<nav class="raccourcis" aria-label="Autres espaces"><span>Aller à</span>${ESPACES.map((e) =>
+      `<a href="../${encodeURIComponent(e.chemin)}/">${esc(e.titre)}</a>`).join("")}</nav>` : "")
+    + `<h2>Pages et Excel</h2>${pages.map((d) => ligne(d)).join("")}`
     + (images.length ? `<h2>Images à partager</h2>${listeImages(images)}` : "")
     + (archives.length ? `<h2>Archives des journées passées</h2>` + archives.map((a) =>
         `<a class="doc" href="#archives/${encodeURIComponent(a.cle)}" data-id="archives/${esc(a.cle)}">

@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>CVTT Vaires · tournois</title>
+<style>
+:root { color-scheme: light dark; --fond: #eef1f5; --surface: #fff; --surface2: #f3f5f8; --texte: #1c2330; --doux: #5b6576;
+  --bord: #dde1e7; --accent: #1f5fbf; --accent-fond: #e8f0fc; --bandeau: #173b60; --bandeau-texte: #fff;
+  --att: #8a5a00; --att-fond: #fff4d6; }
+@media (prefers-color-scheme: dark) { :root { --fond: #12151b; --surface: #1b2029; --surface2: #232a35; --texte: #e6e9ef;
+  --doux: #9aa4b5; --bord: #313a48; --accent: #7fb0ff; --accent-fond: #1d2a40; --bandeau: #0f2236;
+  --att: #f3cd6b; --att-fond: #3a3014; } }
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--fond); color: var(--texte); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--accent); }
+#appli { height: 100%; display: flex; flex-direction: column; }
+.barre { flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 14px; padding-top: max(10px, env(safe-area-inset-top));
+  background: var(--bandeau); color: var(--bandeau-texte); }
+.barre .titres { flex: 1 1 auto; min-width: 0; }
+.barre b { display: block; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barre .titres span { display: block; font-size: 12.5px; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barre a { flex: none; border: 1px solid rgba(255, 255, 255, .35); background: rgba(255, 255, 255, .12); color: #fff;
+  border-radius: 9px; padding: 7px 11px; font-size: 14.5px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.corps { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 300px 1fr; }
+#menu { overflow-y: auto; background: var(--surface); border-right: 1px solid var(--bord); padding: 8px 10px 24px; }
+#menu h2 { font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--doux); margin: 16px 8px 6px; }
+.entree { display: block; width: 100%; text-align: left; padding: 8px 10px; border-radius: 10px; color: inherit; text-decoration: none; }
+.entree:hover { background: var(--surface2); }
+.entree.actif { background: var(--accent-fond); }
+.entree b { display: block; font-size: 15px; font-weight: 600; }
+.entree span { display: block; font-size: 12.5px; color: var(--doux); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#vue { min-width: 0; min-height: 0; overflow: auto; }
+.contenu { max-width: 700px; padding: 22px 20px 40px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h1 small { font-size: 15px; color: var(--doux); font-weight: 500; }
+.infos { color: var(--doux); font-size: 14px; margin: 2px 0 12px; }
+/* Cadre transparent : le bloc a sa propre carte ; la place prévue pour 10 tournois reste invisible s'il y en a moins */
+.cadre iframe { display: block; width: 100%; border: 0; color-scheme: light; background: transparent; }
+.credit { color: var(--doux); font-size: 12.5px; margin: 6px 2px 0; }
+.liens { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
+.bouton { display: inline-block; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--bord); background: var(--surface);
+  color: var(--texte); font-weight: 600; font-size: 14.5px; text-decoration: none; }
+.bouton:hover { border-color: var(--accent); }
+.note { background: var(--att-fond); color: var(--att); border-radius: 8px; padding: 8px 10px; font-size: 13.5px; margin: 14px 0 0; }
+#retour { display: none; }
+@media (max-width: 860px) {
+  .corps { grid-template-columns: 1fr; }
+  #menu { border-right: 0; }
+  #appli.sur-menu #vue, #appli:not(.sur-menu) #menu { display: none; }
+  #appli:not(.sur-menu) #retour { display: inline-block; }
+  .contenu { padding: 16px 12px 32px; }
+}
+@media (max-width: 420px) { .barre { padding-left: 10px; padding-right: 10px; } .barre a { padding: 7px 9px; font-size: 14px; } }
+</style>
+</head>
+<body>
+<div id="appli">
+  <header class="barre">
+    <a id="retour" href="#menu" aria-label="Choisir une autre liste de tournois">‹ Menu</a>
+    <div class="titres"><b>CVTT Vaires · tournois</b><span id="sous-titre">Tournois à venir, par PingRadar</span></div>
+    <a id="vers-club" href="../club/" title="Espace club : pages, images, archives">Club</a>
+    <a id="vers-indivs" href="../indivs/" title="Individuels : poules du critérium et adversaires">Indivs</a>
+  </header>
+  <div class="corps">
+    <nav id="menu" aria-label="Listes de tournois"></nav>
+    <main id="vue"></main>
+  </div>
+</div>
+<script>
+"use strict";
+/* Tournois à venir : blocs « prochains tournois » de PingRadar (pingradar.fr/integrer), faits pour être
+   intégrés au site d'un club. Chaque bloc est un cadre sans script ni cookie, qui se met à jour tout seul
+   (données de PingRadar, tirées de la liste des tournois de la FFTT) : rien n'est copié ni recalculé ici,
+   et l'outil ne fait aucune requête pour les tournois. */
+const PINGRADAR = "https://pingradar.fr";
+const VAIRES = "77479";  // code INSEE de Vaires-sur-Marne
+const BLOCS = [
+  { cle: "autour", titre: "Autour de Vaires", detail: "100 km · les 10 prochains",
+    texte: "Les 10 prochains tournois à moins de 100 km de Vaires-sur-Marne (à vol d'oiseau), par date.",
+    params: { commune: VAIRES, radius_km: 100, period: "upcoming" } },
+  { cle: "week-end", titre: "Ce week-end", detail: "100 km autour de Vaires",
+    texte: "Les tournois de ce week-end (samedi et dimanche) à moins de 100 km de Vaires-sur-Marne.",
+    nombre: 5, params: { commune: VAIRES, radius_km: 100, period: "weekend" } },
+  { cle: "week-end-prochain", titre: "Le week-end prochain", detail: "100 km autour de Vaires",
+    texte: "Les tournois du week-end prochain à moins de 100 km de Vaires-sur-Marne.",
+    nombre: 5, params: { commune: VAIRES, radius_km: 100, period: "next_weekend" } },
+  { cle: "ile-de-france", titre: "Île-de-France", detail: "Les 10 prochains de la région",
+    texte: "Les 10 prochains tournois d'Île-de-France, par date.", params: { region: 11 } },
+  { cle: "seine-et-marne", titre: "Seine-et-Marne", detail: "Les 10 prochains du 77",
+    texte: "Les 10 prochains tournois de Seine-et-Marne, par date.", params: { department: 77 } },
+];
+const RECHERCHE = `${PINGRADAR}/tournois?commune=${VAIRES}&radius_km=100`;
+const FFTT = "https://monclub.fftt.com/tournaments/search";
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+/* Espace club et individuels à côté de /tournois/ (même mot de passe, déjà retenu), y compris sur le
+   site GitHub (…/ggping/tournois/). */
+function racine() {
+  const p = location.pathname, i = p.search(/\/(gg\/)?tournois(\/|\.html)/);
+  return i >= 0 ? p.slice(0, i) : p.replace(/\/[^/]*$/, "");
+}
+const BASE = location.protocol === "file:" ? ".." : racine();
+const CLUB = `${BASE}/club/`, INDIVS = `${BASE}/indivs/`;
+document.getElementById("vers-club").href = CLUB;
+document.getElementById("vers-indivs").href = INDIVS;
+
+/* Format du bloc : « compact » (jusqu'à 360 px) sur téléphone, « standard » (jusqu'à 640 px) sinon ;
+   hauteur donnée par PingRadar pour le nombre de tournois (10, ou 5 pour un week-end). */
+const HAUTEURS = { standard: { 5: 641, 10: 1101 }, compact: { 5: 599, 10: 999 } };
+const ETROIT = matchMedia("(max-width: 600px)");
+const TELEPHONE = matchMedia("(max-width: 860px)");
+function cadre(b) {
+  const compact = ETROIT.matches, format = compact ? "compact" : "standard", nombre = b.nombre || 10;
+  const q = new URLSearchParams({ ...b.params, count: nombre, layout: format });
+  return `<iframe src="${PINGRADAR}/integrer/prochains-tournois?${esc(q)}" height="${HAUTEURS[format][nombre]}"
+    style="max-width:${compact ? 360 : 640}px" loading="lazy" referrerpolicy="no-referrer"
+    title="Prochains tournois de tennis de table : ${esc(b.titre)}, par PingRadar"></iframe>`;
+}
+
+function menu(actif) {
+  document.getElementById("menu").innerHTML = "<h2>Tournois à venir</h2>"
+    + BLOCS.map((b) => `<a class="entree${b.cle === actif ? " actif" : ""}" href="#${b.cle}"><b>${esc(b.titre)}</b><span>${esc(b.detail)}</span></a>`).join("")
+    + `<h2>Chercher plus</h2>
+       <a class="entree" href="${RECHERCHE}" target="_blank" rel="noopener"><b>Recherche PingRadar</b><span>Par date, distance, points · nouvel onglet</span></a>
+       <a class="entree" href="${FFTT}" target="_blank" rel="noopener"><b>Liste officielle de la FFTT</b><span>Recherche de tournois · nouvel onglet</span></a>
+       <h2>Autres espaces</h2>
+       <a class="entree" href="${CLUB}"><b>Espace club</b><span>Pages, images à partager, archives</span></a>
+       <a class="entree" href="${INDIVS}"><b>Individuels</b><span>Poules du critérium et adversaires</span></a>`;
+}
+
+function vue(b) {
+  document.getElementById("vue").innerHTML = `<div class="contenu">
+    <h1>${esc(b.titre)} <small>${esc(b.detail)}</small></h1>
+    <p class="infos">${esc(b.texte)} Touche un tournoi pour ouvrir sa fiche (tableaux, tarifs, inscription).</p>
+    <div class="cadre">${cadre(b)}</div>
+    <p class="credit">Tournois proposés par <a href="${PINGRADAR}/" target="_blank" rel="noopener">PingRadar</a>
+      (site indépendant, d'après la liste des tournois de la FFTT) · mis à jour en continu.</p>
+    <div class="liens">
+      <a class="bouton" href="${RECHERCHE}" target="_blank" rel="noopener">Tous les tournois à 100 km (filtre par points)</a>
+      <a class="bouton" href="${FFTT}" target="_blank" rel="noopener">Liste officielle de la FFTT</a>
+    </div>
+    <p class="note">La liste de PingRadar n'est pas forcément complète. Vérifie les dates, les tableaux et les conditions
+      sur la fiche du tournoi ; l'inscription se fait auprès de l'organisateur.</p>
+  </div>`;
+}
+
+function route() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  const surMenu = h === "menu" && TELEPHONE.matches;
+  const b = BLOCS.find((x) => x.cle === h) || BLOCS[0];
+  document.getElementById("appli").classList.toggle("sur-menu", surMenu);
+  menu(surMenu ? null : b.cle);
+  if (!surMenu) vue(b);
+  document.title = `CVTT Vaires · tournois${surMenu ? "" : " · " + b.titre}`;
+}
+window.addEventListener("hashchange", route);
+ETROIT.addEventListener("change", route);
+TELEPHONE.addEventListener("change", route);
+route();
+</script>
+</body>
+</html>
