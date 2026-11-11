@@ -408,4 +408,6 @@ Pas d'onglet dans l'application pour l'instant.
   week-end prochain ; Île-de-France ; Seine-et-Marne), format compact sur téléphone, liens vers la
   recherche de PingRadar et la liste de la FFTT.
 - Liens : /tournois/ → « Club », « Indivs » (en haut et dans le menu) ; /indivs/ → « Club »,
-  « Tournois » ; /club/ → « Aller à » en haut du menu (tous les autres espaces) et « Autres espaces ».
+  « Tournois » ; /club/ → « Aller à » en haut du menu (individuels, tournois) et « Autres espaces ».
+- Changement (11/11) : /lundi/ (le roi du lundi) n'est plus listé dans /club/ (ni « Aller à » ni
+  « Autres espaces ») : il est pour l'administrateur et l'application seulement.

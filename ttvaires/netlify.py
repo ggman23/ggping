@@ -197,8 +197,9 @@ def espace_club(site, club, cle_site, cle_club):
     rubriques = ressources.publier_dans(club, cle_club)
     donnees = {"maj": (etat.get("derniere_maj") or {}).get("fin"), "sel": publier.SEL, "iterations": publier.ITERATIONS,
                "documents": documents, "archives": archives, "ressources": rubriques,
-               "espaces": [{"chemin": e["chemin"], "titre": e["titre"]} for e in ressources.lire()["espaces"]]
-                          + [{"chemin": chemin, "titre": titre} for publie, (chemin, titre) in PAGES_A_PART.items()
+               # Autres espaces listés dans /club/ : individuels et tournois ; pas les espaces fournis
+               # (ressources.py, ex. /lundi/ : pour l'administrateur et l'application seulement)
+               "espaces": [{"chemin": chemin, "titre": titre} for publie, (chemin, titre) in PAGES_A_PART.items()
                              if (site / publie).exists()]
                           + [{"chemin": chemin, "titre": titre} for chemin, (titre, _) in PAGES_FIXES.items()]}
     js = json.dumps(donnees, ensure_ascii=False).replace("<", "\\u003c")

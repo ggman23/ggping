@@ -374,8 +374,9 @@ site, avec « Partager » sur téléphone (ex. le mémo sac de sport, version im
 Une page HTML fournie peut avoir sa propre adresse, à côté de /club/ : **/lundi/** sur chaque site
 (https://ggping.netlify.app/lundi/, https://ggman23.github.io/ggping/lundi/,
 https://ggping-pap.pages.dev/lundi/). Elle demande le **mot de passe du club** puis s'affiche telle
-quelle ; quelqu'un qui est déjà entré dans l'espace club (« se souvenir ») l'ouvre directement. Le
-menu et l'accueil de l'espace club ont un lien « Autres espaces ». La page reste chiffrée dans le dépôt
+quelle ; quelqu'un qui est déjà entré dans l'espace club (« se souvenir ») l'ouvre directement. Elle
+n'est pas listée dans l'espace club (ni dans /indivs/ ou /tournois/) : elle est pour l'administrateur et
+l'application (onglet Lundi). La page reste chiffrée dans le dépôt
 (dossier `ressources/`). Pour la remplacer par une nouvelle version, sur le PC :
 
     python -m ttvaires.ressources espace lundi "C:\chemin\roi.html" --titre "Le roi du lundi"
@@ -401,7 +402,7 @@ parties jouées depuis le début de la phase, les points gagnés ou perdus, les 
   sa date (la liste des images est visible sans mot de passe ; les images, elles, sont chiffrées).
   Sur /indivs/, le bouton « Image de la poule à partager » ouvre celle de la poule dans l'espace club.
 - Liens : « Club » et « Tournois » en haut de /indivs/ (et dans son menu) ; « Individuels » en haut du
-  menu de /club/ (« Aller à ») et dans ses « Autres espaces » (menu et accueil).
+  menu de /club/ (« Aller à », avec « Tournois ») et dans ses « Autres espaces » (menu et accueil).
 
 - Les poules viennent des convocations (PDF, captures WhatsApp) : je les recopie à chaque tour
   (licence, nom, points, club, catégorie) dans `ressources/indivs.json.chiffre`, chiffré avec le mot

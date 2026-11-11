@@ -40,6 +40,8 @@ def test_page_publiee_avec_le_mot_de_passe_du_club_sans_donnee_de_mise_a_jour(tm
         assert publier.dechiffrer(base64.b64decode(chiffre), publier.cle("club")) == GABARIT.read_bytes()
         club = (dossier / "club" / "index.html").read_text(encoding="utf-8")
         assert '{"chemin": "tournois", "titre": "Tournois"}' in club  # dans « Autres espaces » de /club/
+        espaces = json.loads(re.search(r'"espaces": (\[.*?\])', club)[1])
+        assert all(e["chemin"] in ("indivs", "tournois") for e in espaces)  # pas /lundi/ : administrateur et application
 
 
 def test_pas_d_espace_tournois_sans_mot_de_passe_du_club(tmp_path):
