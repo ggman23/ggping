@@ -854,9 +854,10 @@ def _cel_forme(f):
 
 
 def _hors_championnat(f):
-    """« critérium 3/3 · tournois 2/5 » : compétitions individuelles jouées cette phase."""
+    """« critérium 3/3 · tournois 2/5 » : compétitions individuelles jouées cette phase (les autres
+    compétitions par leurs deux premiers mots : « Top Jeune 2/3 »)."""
     noms = {"Critérium fédéral": "critérium", "Tournois": "tournois"}
-    return " · ".join(f"{noms.get(c['nom'], c['nom'])} {c['v']}/{c['v'] + c['d']}"
+    return " · ".join(f"{noms.get(c['nom']) or ' '.join(c['nom'].split()[:2])} {c['v']}/{c['v'] + c['d']}"
                       for c in (f or {}).get("competitions", []) if c["nom"] != "Championnat")
 
 
@@ -927,12 +928,13 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                     j = par_id.get(jid)
                     if not j:
                         continue
-                    # Nouvel inscrit du club (depuis sa liste précédente) : en vert dans la dernière colonne ;
-                    # compétitions individuelles jouées cette phase (critérium, tournois...) ensuite
-                    texte = " · ".join(t for t in ("nouvel inscrit" if j.get("nouveau") else "", (info or {}).get(jid, ""),
-                                                   _hors_championnat(j.get("forme"))) if t)
+                    # Nouvel inscrit du club (depuis sa liste précédente) : en vert dans la dernière colonne.
+                    # Compétitions individuelles jouées cette phase (critérium, tournois...) : sous le nom.
+                    texte = " · ".join(t for t in ("nouvel inscrit" if j.get("nouveau") else "", (info or {}).get(jid, "")) if t)
+                    nom_j = cel_nom(j.get("nom"), j.get("prenom"), apres="F" if j.get("sexe") == "F" else None)
+                    nom_j.sous = _hors_championnat(j.get("forme")) or None
                     sortie.append([
-                        cel_nom(j.get("nom"), j.get("prenom"), apres="F" if j.get("sexe") == "F" else None),
+                        nom_j,
                         C(_clt(j) or "", gras=True), C(fmt(_pts(j)) if _pts(j) else "", couleur=DOUX),
                         C(j.get("categorie") or "", couleur=DOUX),
                         _cel_forme(j.get("forme")),
@@ -986,6 +988,11 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
             if lignes_pl:  # une colonne par position : l'image s'élargit un peu si les noms l'exigent
                 nom_pl = min(210, max(largeur_naturelle(c) for l in lignes_pl for c in l[1:]) + 10)
                 largeur = min(LARGEUR, max(largeur, round(RENC_PL + pl["format"] * nom_pl + 2 * MARGE)))
+            # Trop large pour l'image : la dernière colonne (remarques) rétrécit, son texte est réduit,
+            # plutôt que de déborder de l'image (le nom garde au moins NOM_MIN)
+            trop = NOM_MIN + sum(c.largeur for c in fixes) + 2 * MARGE - largeur
+            if trop > 0 and fixes[-1].titre == "":
+                fixes[-1].largeur = max(140, fixes[-1].largeur - trop)
             colonnes = colonnes_egales([Col("Joueur", None, "g")] + fixes, largeur - 2 * MARGE)
             img = Rendu(largeur)
             img.titre(titre, sous_titre)

@@ -181,3 +181,4 @@ def test_forme_des_adversaires_dans_l_image():
     assert _cel_forme({"v": 2, "d": 10, "points": -67}).texte == "2/12 -67"
     assert _cel_forme({"v": 0, "d": 0, "points": 0}).texte == "0 partie" and _cel_forme(None).texte == ""
     assert _hors_championnat(f) == "critérium 3/3 · tournois 1/1" and _hors_championnat(None) == ""
+    assert _hors_championnat({"competitions": [{"nom": "Top Jeune Departemental", "v": 2, "d": 1}]}) == "Top Jeune 2/3"
