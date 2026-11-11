@@ -145,11 +145,12 @@ button { font: inherit; cursor: pointer; }
 "use strict";
 const D = JSON.parse(document.getElementById("donnees").textContent);
 const CLE = "cvtt-vaires-cle-club";  // distincte de celle de /gg/ (autre mot de passe, même site)
-const GROUPES = ["récapitulatif", "classements", "adversaires", "résultats", "rencontres", "effectif", "classement virtuel", "individuels"];
+const GROUPES = ["récapitulatif", "classements", "adversaires", "résultats", "rencontres", "effectif", "classement virtuel", "progression", "individuels"];
 const TITRES_GROUPES = { "récapitulatif": "Récapitulatif de la journée (à compléter avec la photo)",
   "classements": "Classements des poules",
   "adversaires": "Adversaires", "résultats": "Résultats des joueurs", "rencontres": "Feuilles de match",
-  "effectif": "Effectif et brûlages", "classement virtuel": "Classement virtuel", "individuels": "Individuels (poules du critérium)" };
+  "effectif": "Effectif et brûlages", "classement virtuel": "Classement virtuel", "progression": "Progression des joueurs",
+  "individuels": "Individuels (poules du critérium)" };
 const TYPES = { html: "text/html;charset=utf-8", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", pdf: "application/pdf",
   xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" };
 const ICONES = {

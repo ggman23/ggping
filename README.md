@@ -72,6 +72,15 @@ les parties non comptées sont écartés. Un clic sur un joueur affiche le déta
 Deux autres onglets classent les parties elles-mêmes : **Meilleures perfs** (les victoires qui ont
 rapporté le plus de points, avec l'écart de classement) et **Pires contres** (les défaites qui ont
 coûté le plus), toutes compétitions confondues, en entier ou une seule ligne par joueur.
+
+Avec elle, la page **Progression des joueurs** (`sortie\progression_vaires.html`, mêmes parties, rien
+à télécharger de plus) : les points virtuels de chaque joueur **semaine après semaine** depuis le début
+de la phase. Une liste déroulante choisit le joueur (sa courbe s'affiche) ; on peut en ajouter jusqu'à
+5 pour les comparer (au-delà, les courbes se mélangent), en points virtuels ou en évolution (±, tous
+partent de zéro : utile entre joueurs de niveaux différents) ; survol ou toucher : la valeur de chaque
+joueur pour la semaine choisie. En dessous, tous les joueurs avec leur mini-courbe, leur progression
+sur la phase et sur les 4 dernières semaines (progresse, stable, régresse), triables et filtrables par
+équipe. Images à partager : une par équipe, une petite courbe par joueur.
 Pour avoir tous les joueurs (y compris les jeunes qui ne jouent pas en championnat), la liste des
 licenciés est lue sur pingpocket ou dans le dossier `import\` (voir plus bas) ; sinon seuls les
 joueurs alignés en championnat apparaissent.
@@ -143,6 +152,8 @@ téléphone et partagées dans les groupes du club (dossier `sortie\images\` sur
   critérium ou les tournois joués ;
 - **résultats** : la dernière journée (triée par points gagnés sur la journée) et le cumul (trié
   par points gagnés au total) ;
+- **progression des joueurs** : une image par équipe (`progression_V1.png`...), une petite courbe
+  par joueur (points virtuels semaine après semaine), avec sa progression sur la phase en couleur ;
 - **feuilles de match** : une image par rencontre de la dernière journée (chaque partie, le score
   des manches, le bilan des joueurs) ;
 - **récapitulatif de la journée** (`recap_J3.png`) : la copie de l'image du club faite avec

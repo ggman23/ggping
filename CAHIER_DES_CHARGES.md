@@ -359,3 +359,22 @@ gauche.
   les documents de /club/ (lien « Autres espaces »). Faite avec « Tout » et le choix « Individuels ».
 - Images à partager (12/11) : une par poule (images_indivs), section « Individuels » de /club/ ; titres
   sans nom de joueur. Liens croisés /indivs/ ↔ /club/ (bouton « Espace club », « Autres espaces »).
+
+## Progression des joueurs (12/11/2026)
+
+Demande : des graphes, dans une autre rubrique, qui montrent au fil des semaines si un joueur de
+Vaires progresse ou régresse ; choisir son joueur dans une liste déroulante, pouvoir en sélectionner
+plusieurs pour les comparer (en restant lisible) ; des images si c'est lisible.
+
+- Données : les parties du classement virtuel (toutes compétitions), cumulées par semaine (lundi au
+  dimanche) à partir des points officiels de la phase (progression.py) ; aucune requête de plus.
+- Page progression_vaires.html (gabarit_progression.html, publiée « Progression des joueurs » après
+  le classement virtuel, dans /club/ aussi) : liste déroulante par équipe, jusqu'à 5 joueurs
+  comparés (couleurs vérifiées pour le daltonisme en clair et en sombre ; chaque joueur garde sa
+  couleur), points virtuels ou évolution (±, choisie seule dès deux joueurs), bulle au survol ou au
+  toucher (sous le graphe sur téléphone), noms au bout des courbes s'ils ne se chevauchent pas,
+  tableau des joueurs affichés ; tous les joueurs avec mini-courbe, progression sur la phase et sur
+  les 4 dernières semaines (tendance : ±5 points), tri et filtre par équipe ; choix gardés sur
+  l'appareil.
+- Images : une par équipe (petits multiples : une courbe par joueur qui a joué, échelle propre d'au
+  moins 40 points, niveau de départ en trait fin), groupe « Progression des joueurs ».

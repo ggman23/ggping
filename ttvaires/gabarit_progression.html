@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Progression des joueurs Vaires</title>
+<style>
+:root { color-scheme: light; --fond: #f4f5f7; --surface: #fff; --surface2: #f3f5f8; --texte: #1c2330; --doux: #5b6576;
+  --muet: #8a93a3; --bord: #dde1e7; --grille: #e8ebef; --accent: #1f5fbf; --accent-fond: #e8f0fc;
+  --plus: #1d7a46; --moins: #b3261e;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; }
+@media (prefers-color-scheme: dark) { :root { color-scheme: dark; --fond: #12151b; --surface: #1b2029; --surface2: #232a35;
+  --texte: #e6e9ef; --doux: #9aa4b5; --muet: #7c8698; --bord: #313a48; --grille: #2a313d; --accent: #7fb0ff; --accent-fond: #1d2a40;
+  --plus: #6fd39b; --moins: #ff8f86;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+header { background: var(--surface); border-bottom: 1px solid var(--bord); padding: 10px 16px; }
+h1 { font-size: 18px; margin: 0 0 2px; }
+header p { margin: 0; color: var(--doux); font-size: 13px; }
+main { max-width: 1100px; margin: 0 auto; padding: 14px 14px 40px; }
+.carte { background: var(--surface); border: 1px solid var(--bord); border-radius: 12px; padding: 14px 14px 12px; margin-bottom: 14px; }
+.carte h2 { font-size: 16px; margin: 0 0 4px; }
+.intro { color: var(--doux); font-size: 13.5px; margin: 0 0 10px; }
+.outils { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+select { font: inherit; font-size: 15px; padding: 7px 10px; border: 1px solid var(--bord); border-radius: 8px; background: var(--surface); color: var(--texte); max-width: 100%; }
+.bascule { display: inline-flex; border: 1px solid var(--bord); border-radius: 8px; overflow: hidden; }
+.bascule button { font: inherit; font-size: 13.5px; border: 0; padding: 7px 11px; background: var(--surface); color: var(--texte); cursor: pointer; }
+.bascule button.actif { background: var(--accent); color: var(--surface); }
+.choix { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
+.puce { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--bord); border-radius: 99px; padding: 3px 4px 3px 10px;
+  font-size: 13.5px; background: var(--surface2); }
+.puce button { font: inherit; border: 0; background: none; color: var(--doux); cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: 99px; }
+.puce button:hover { background: var(--bord); }
+.cle { display: inline-block; width: 16px; height: 0; border-top: 3px solid; border-radius: 2px; }
+.legende { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--doux); margin: 2px 0 4px; }
+.legende span { display: inline-flex; align-items: center; gap: 6px; }
+.graphe { position: relative; }
+.graphe svg { display: block; width: 100%; touch-action: pan-y; }
+.graphe svg:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.axe { fill: var(--doux); font-size: 11.5px; }
+.etiquette { fill: var(--texte); font-size: 12px; }
+.etiquette tspan.doux { fill: var(--doux); }
+.bulle { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--bord); border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .14); padding: 7px 9px; font-size: 13px; min-width: 150px; z-index: 3; }
+.bulle .titre { color: var(--doux); font-size: 12px; margin-bottom: 4px; }
+.bulle .ligne { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.bulle .ligne b { font-variant-numeric: tabular-nums; }
+.bulle .ligne span.doux { color: var(--doux); }
+/* Téléphone : la bulle sous le graphe (le doigt cache ce qui est à côté) */
+.graphe.petit .bulle { position: static; box-shadow: none; margin-top: 6px; }
+.vide { color: var(--doux); padding: 30px 8px; text-align: center; }
+.defil { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--bord); text-align: left; white-space: nowrap; }
+th { color: var(--doux); font-weight: 600; font-size: 12.5px; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+.plus { color: var(--plus); font-weight: 650; } .moins { color: var(--moins); font-weight: 650; }
+.doux { color: var(--doux); font-size: 12.5px; }
+.tend { font-size: 12.5px; font-weight: 650; border-radius: 99px; padding: 1px 8px; background: var(--surface2); color: var(--doux); }
+.tend.progresse { color: var(--plus); } .tend.régresse { color: var(--moins); }
+.comparer { font: inherit; font-size: 13px; border: 1px solid var(--bord); border-radius: 99px; padding: 3px 10px; background: var(--surface); color: var(--texte); cursor: pointer; }
+.comparer.oui { background: var(--accent-fond); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.comparer:disabled { opacity: .45; cursor: default; }
+.mini { display: block; }
+.note { font-size: 12.5px; color: var(--doux); margin: 8px 0 0; }
+@media (max-width: 600px) { main { padding: 10px 8px 32px; } .carte { padding: 12px 10px 10px; } th, td { padding: 6px 5px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Progression des joueurs</h1>
+  <p id="sous-titre"></p>
+</header>
+<main>
+  <section class="carte" aria-labelledby="t-graphe">
+    <h2 id="t-graphe">Courbe d'un joueur, ou plusieurs pour les comparer</h2>
+    <p class="intro">Points virtuels semaine après semaine depuis le début de la phase (toutes compétitions). Une courbe qui monte : le joueur progresse.</p>
+    <div class="outils">
+      <select id="ajout" aria-label="Choisir un joueur"></select>
+      <div class="bascule" role="group" aria-label="Valeurs affichées">
+        <button type="button" data-mode="points">Points virtuels</button>
+        <button type="button" data-mode="evolution">Évolution (±)</button>
+      </div>
+    </div>
+    <div class="choix" id="choix"></div>
+    <div class="graphe" id="graphe"></div>
+    <div class="defil"><table id="table-choix"></table></div>
+    <p class="note" id="note-max"></p>
+  </section>
+  <section class="carte" aria-labelledby="t-tous">
+    <h2 id="t-tous">Tous les joueurs</h2>
+    <p class="intro" id="intro-tous"></p>
+    <div class="outils">
+      <select id="filtre" aria-label="Équipe"></select>
+      <select id="tri" aria-label="Tri">
+        <option value="recent">Tri : progression récente</option>
+        <option value="total">Tri : progression sur la phase</option>
+        <option value="points">Tri : points virtuels</option>
+        <option value="nom">Tri : nom</option>
+      </select>
+    </div>
+    <div class="defil"><table id="table-tous"></table></div>
+  </section>
+</main>
+<script>
+const D = __DONNEES_JSON__;
+const MAX = 5;  // au-delà, les courbes se mélangent : le graphe n'est plus lisible
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const lire = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const ecrire = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* navigation privée */ } };
+const fr = (x, dec = 0) => Number(x).toLocaleString("fr-FR", { maximumFractionDigits: dec, minimumFractionDigits: 0 });
+const signe = (x) => (Math.round(x) > 0 ? "+" : Math.round(x) < 0 ? "−" : "±") + fr(Math.abs(Math.round(x)));
+const classe = (x) => (Math.round(x) > 0 ? "plus" : Math.round(x) < 0 ? "moins" : "");
+const jjmm = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+const SEM = D.semaines || [];
+const J = D.joueurs || [];
+const PAR_ID = new Map(J.map((j) => [j.id, j]));
+const nomCourt = (j) => `${j.nom || ""} ${(j.prenom || "").charAt(0)}.`.trim();
+const nomLong = (j) => `${j.nom || ""} ${j.prenom || ""}`.trim();
+const EQUIPES = [...new Set(J.map((j) => j.equipe || ""))].sort((a, b) => (a === "") - (b === "") || a.localeCompare(b, "fr", { numeric: true }));
+
+/* Sélection : chaque joueur garde sa couleur tant qu'il est affiché (la couleur suit le joueur, pas son rang). */
+let choix = [];  // [{ id, slot }]
+/* Valeurs : points virtuels, ou évolution depuis le début de la phase (tous partent de zéro, ce qui
+   compare mieux des joueurs de niveaux différents). Tant qu'on n'a pas choisi : points pour un joueur,
+   évolution à partir de deux. */
+let modeChoisi = ["points", "evolution"].includes(lire("progression-mode")) ? lire("progression-mode") : null;
+let mode = "points";
+const fixerMode = () => { mode = modeChoisi || (choix.length > 1 ? "evolution" : "points"); };
+try { choix = JSON.parse(lire("progression-choix") || "[]").filter((c) => PAR_ID.has(c.id)).slice(0, MAX); } catch (e) { choix = []; }
+if (!choix.length && J.length) {
+  const premier = J.slice().sort((a, b) => b.recent - a.recent)[0];
+  choix = [{ id: premier.id, slot: 1 }];
+}
+const sauver = () => { ecrire("progression-choix", JSON.stringify(choix)); if (modeChoisi) ecrire("progression-mode", modeChoisi); };
+function ajouter(id) {
+  if (!id || choix.some((c) => c.id === id) || choix.length >= MAX) return;
+  const pris = new Set(choix.map((c) => c.slot));
+  choix.push({ id, slot: [1, 2, 3, 4, 5].find((s) => !pris.has(s)) });
+  sauver(); dessinerTout();
+}
+function retirer(id) { choix = choix.filter((c) => c.id !== id); sauver(); dessinerTout(); }
+
+/* ---------- Choix des joueurs ---------- */
+function menuAjout() {
+  const sel = document.getElementById("ajout");
+  sel.textContent = "";
+  const tete = document.createElement("option");
+  tete.value = "";
+  tete.textContent = choix.length >= MAX ? `${MAX} joueurs au plus` : choix.length ? "Ajouter un joueur pour comparer…" : "Choisir un joueur…";
+  sel.appendChild(tete);
+  for (const eq of EQUIPES) {
+    const groupe = document.createElement("optgroup");
+    groupe.label = eq ? eq.replace(/^V(\d+)( F)?$/, (m, n, f) => `Vaires ${n}${f ? " F" : ""}`) : "Sans équipe cette phase";
+    for (const j of J.filter((x) => (x.equipe || "") === eq).sort((a, b) => b.serie[b.serie.length - 1] - a.serie[a.serie.length - 1])) {
+      const o = document.createElement("option");
+      o.value = j.id;
+      o.textContent = `${nomLong(j)} (${fr(j.serie[j.serie.length - 1])})`;
+      o.disabled = choix.some((c) => c.id === j.id) || choix.length >= MAX;
+      groupe.appendChild(o);
+    }
+    sel.appendChild(groupe);
+  }
+  sel.value = "";
+}
+function puces() {
+  const zone = document.getElementById("choix");
+  zone.textContent = "";
+  for (const c of choix) {
+    const j = PAR_ID.get(c.id);
+    const p = document.createElement("span");
+    p.className = "puce";
+    const cle = document.createElement("span");
+    cle.className = "cle";
+    cle.style.borderColor = `var(--s${c.slot})`;
+    p.append(cle, document.createTextNode(nomLong(j)));
+    const x = document.createElement("button");
+    x.type = "button";
+    x.textContent = "×";
+    x.setAttribute("aria-label", `Retirer ${nomLong(j)}`);
+    x.addEventListener("click", () => retirer(c.id));
+    p.appendChild(x);
+    zone.appendChild(p);
+  }
+  document.querySelectorAll(".bascule button").forEach((b) => b.classList.toggle("actif", b.dataset.mode === mode));
+  document.getElementById("note-max").textContent = choix.length >= MAX
+    ? `${MAX} joueurs au plus sur le graphe, pour qu'il reste lisible : en retirer un (×) pour en ajouter un autre.`
+    : choix.length > 1 && mode === "evolution" ? "Évolution (±) : tous partent de zéro au début de la phase, pour comparer des joueurs de niveaux différents." : "";
+}
+
+/* ---------- Graphe ---------- */
+function echelle(min, max, nb = 5) {
+  if (min === max) { min -= 10; max += 10; }
+  const brut = (max - min) / nb, p = Math.pow(10, Math.floor(Math.log10(brut)));
+  const pas = [1, 2, 2.5, 5, 10].map((m) => m * p).find((x) => x >= brut) || 10 * p;
+  const bas = Math.floor(min / pas) * pas, haut = Math.ceil(max / pas) * pas;
+  const ticks = [];
+  for (let v = bas; v <= haut + pas / 2; v += pas) ticks.push(Math.round(v * 100) / 100);
+  return { bas, haut, ticks };
+}
+const valeurs = (j) => (mode === "evolution" ? j.serie.map((v) => v - j.serie[0]) : j.serie);
+
+function graphe() {
+  const zone = document.getElementById("graphe");
+  zone.textContent = "";
+  if (!choix.length || !SEM.length) {
+    const v = document.createElement("div");
+    v.className = "vide";
+    v.textContent = SEM.length ? "Choisir un joueur dans la liste." : "Aucune partie jouée cette phase.";
+    zone.appendChild(v);
+    return;
+  }
+  const series = choix.map((c) => ({ ...c, j: PAR_ID.get(c.id), v: valeurs(PAR_ID.get(c.id)) }));
+  // Légende : les étiquettes des joueurs affichés, au-dessus (trait de la couleur de chaque courbe)
+  const L = zone.clientWidth || 600, petit = L < 560;
+  zone.classList.toggle("petit", petit);
+  const H = petit ? 280 : 340;
+  const toutes = series.flatMap((s) => s.v);
+  const sc = echelle(Math.min(...toutes, mode === "evolution" ? 0 : Infinity), Math.max(...toutes, mode === "evolution" ? 0 : -Infinity));
+  // Étiquettes au bout des courbes (4 joueurs au plus, et si elles ne se chevauchent pas) ; sinon légende et bulle
+  let droite = 14, etiquettes = series.length <= 4;
+  const M = { g: 46, h: 10, b: 26 };
+  const yv = (v, h) => M.h + (sc.haut - v) / (sc.haut - sc.bas) * (h - M.h - M.b);
+  if (etiquettes) {
+    const ys = series.map((s) => yv(s.v[s.v.length - 1], H)).sort((a, b) => a - b);
+    if (ys.some((y, i) => i && y - ys[i - 1] < 15)) etiquettes = false;
+    else droite = petit ? 92 : 128;
+  }
+  const n = SEM.length, x = (i) => M.g + (n === 1 ? 0 : i / (n - 1) * (L - M.g - droite)), y = (v) => yv(v, H);
+  const NS = "http://www.w3.org/2000/svg", el = (nom, attrs) => { const e = document.createElementNS(NS, nom);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); return e; };
+  const svg = el("svg", { viewBox: `0 0 ${L} ${H}`, height: H, tabindex: 0, role: "img",
+    "aria-label": `Points ${mode === "evolution" ? "gagnés ou perdus" : "virtuels"} par semaine : ${series.map((s) => nomLong(s.j)).join(", ")}` });
+  for (const t of sc.ticks) {  // grille : traits fins, discrets
+    svg.appendChild(el("line", { x1: M.g, x2: L - droite, y1: y(t), y2: y(t), stroke: mode === "evolution" && t === 0 ? "var(--muet)" : "var(--grille)", "stroke-width": 1 }));
+    const tx = el("text", { x: M.g - 6, y: y(t) + 4, "text-anchor": "end", class: "axe" });
+    tx.textContent = mode === "evolution" ? (t > 0 ? "+" : "") + fr(t) : fr(t);
+    svg.appendChild(tx);
+  }
+  const tous = Math.max(1, Math.ceil(n / Math.max(2, Math.floor((L - M.g - droite) / 52))));
+  for (let i = 0; i < n; i += tous) {
+    const tx = el("text", { x: x(i), y: H - 8, "text-anchor": i === 0 ? "start" : "middle", class: "axe" });
+    tx.textContent = jjmm(SEM[i]);
+    svg.appendChild(tx);
+  }
+  for (const s of series) {
+    svg.appendChild(el("path", { d: s.v.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(""),
+      fill: "none", stroke: `var(--s${s.slot})`, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+    const fin = s.v.length - 1;
+    svg.appendChild(el("circle", { cx: x(fin), cy: y(s.v[fin]), r: 4.5, fill: `var(--s${s.slot})`, stroke: "var(--surface)", "stroke-width": 2 }));
+    if (etiquettes) {
+      const t = el("text", { x: x(fin) + 9, y: y(s.v[fin]) + 4, class: "etiquette" });
+      const a = document.createElementNS(NS, "tspan"); a.textContent = `${nomCourt(s.j)} `;
+      const b = document.createElementNS(NS, "tspan"); b.setAttribute("class", "doux");
+      b.textContent = mode === "evolution" ? signe(s.v[fin]) : fr(s.v[fin]);
+      t.append(a, b); svg.appendChild(t);
+    }
+  }
+  // Survol, toucher et clavier : un trait vertical sur la semaine la plus proche et une bulle avec chaque joueur
+  const trait = el("line", { y1: M.h, y2: H - M.b, stroke: "var(--muet)", "stroke-width": 1, visibility: "hidden" });
+  const points = series.map((s) => el("circle", { r: 4.5, fill: `var(--s${s.slot})`, stroke: "var(--surface)", "stroke-width": 2, visibility: "hidden" }));
+  svg.append(trait, ...points);
+  const bulle = document.createElement("div");
+  bulle.className = "bulle"; bulle.hidden = true;
+  zone.append(svg, bulle);
+  let courant = null;
+  const montrer = (i) => {
+    courant = i;
+    trait.setAttribute("x1", x(i)); trait.setAttribute("x2", x(i)); trait.setAttribute("visibility", "visible");
+    series.forEach((s, k) => { points[k].setAttribute("cx", x(i)); points[k].setAttribute("cy", y(s.v[i])); points[k].setAttribute("visibility", "visible"); });
+    bulle.textContent = "";
+    const titre = document.createElement("div"); titre.className = "titre";
+    titre.textContent = i === 0 ? "Début de la phase (points officiels)" : `Semaine du ${jjmm(SEM[i])}`;
+    bulle.appendChild(titre);
+    for (const s of series.slice().sort((a, b) => b.v[i] - a.v[i])) {
+      const ligne = document.createElement("div"); ligne.className = "ligne";
+      const cle = document.createElement("span"); cle.className = "cle"; cle.style.borderColor = `var(--s${s.slot})`;
+      const val = document.createElement("b"); val.textContent = mode === "evolution" ? signe(s.v[i]) : fr(s.v[i]);
+      const nom = document.createElement("span"); nom.textContent = nomCourt(s.j);
+      const semaine = document.createElement("span"); semaine.className = "doux";
+      const np = s.j.parties[i], d = i ? s.j.serie[i] - s.j.serie[i - 1] : 0;
+      semaine.textContent = np ? `${signe(d)} · ${s.j.victoires[i]} gagnée${s.j.victoires[i] > 1 ? "s" : ""} sur ${np}` : i ? "pas de partie" : "";
+      ligne.append(cle, val, nom, semaine); bulle.appendChild(ligne);
+    }
+    bulle.hidden = false;
+    if (!petit) {
+      const bx = x(i) / L * zone.clientWidth, w = bulle.offsetWidth;
+      bulle.style.left = `${Math.max(0, Math.min(zone.clientWidth - w, bx > zone.clientWidth / 2 ? bx - w - 12 : bx + 12))}px`;
+      bulle.style.top = "8px";
+    }
+  };
+  const cacher = () => { courant = null; trait.setAttribute("visibility", "hidden"); points.forEach((p) => p.setAttribute("visibility", "hidden")); bulle.hidden = true; };
+  const versIndex = (ev) => {
+    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) / r.width * L;
+    return Math.max(0, Math.min(n - 1, Math.round((px - M.g) / ((L - M.g - droite) / Math.max(1, n - 1)))));
+  };
+  svg.addEventListener("pointermove", (ev) => montrer(versIndex(ev)));
+  svg.addEventListener("pointerdown", (ev) => montrer(versIndex(ev)));
+  svg.addEventListener("pointerleave", (ev) => { if (ev.pointerType === "mouse") cacher(); });
+  svg.addEventListener("blur", cacher);
+  svg.addEventListener("keydown", (ev) => {
+    if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
+      ev.preventDefault();
+      montrer(Math.max(0, Math.min(n - 1, (courant ?? n - 1) + (ev.key === "ArrowLeft" ? -1 : 1))));
+    } else if (ev.key === "Escape") cacher();
+  });
+}
+
+/* Tableau des joueurs affichés : les mêmes valeurs que le graphe, sans survol */
+function tableChoix() {
+  const t = document.getElementById("table-choix");
+  if (!choix.length) { t.innerHTML = ""; return; }
+  t.innerHTML = `<thead><tr><th>Joueur</th><th class="n">Départ</th><th class="n">Aujourd'hui</th><th class="n">Phase</th>
+    <th class="n">${D.recent} dern. sem.</th><th class="n">Parties</th><th>Tendance</th></tr></thead><tbody>`
+    + choix.map((c) => { const j = PAR_ID.get(c.id); return `<tr>
+      <td><span class="cle" style="border-color:var(--s${c.slot})"></span> ${esc(nomLong(j))} <span class="doux">${esc(j.equipe || "")}</span></td>
+      <td class="n">${fr(j.serie[0])}</td><td class="n"><b>${fr(j.serie[j.serie.length - 1])}</b></td>
+      <td class="n ${classe(j.total)}">${signe(j.total)}</td><td class="n ${classe(j.recent)}">${signe(j.recent)}</td>
+      <td class="n">${j.v + j.d ? `${j.v}/${j.v + j.d}` : "—"}</td>
+      <td>${j.tendance ? `<span class="tend ${j.tendance}">${j.tendance}</span>` : '<span class="doux">aucune partie</span>'}</td></tr>`; }).join("")
+    + "</tbody>";
+}
+
+/* ---------- Tous les joueurs : mini-courbe, progression, bouton pour comparer ---------- */
+function mini(j) {
+  const v = j.serie, l = 110, h = 30, min = Math.min(...v), max = Math.max(...v), et = Math.max(max - min, 20);
+  const bas = (min + max) / 2 - et / 2;
+  const pts = v.map((x, i) => `${(2 + i / Math.max(1, v.length - 1) * (l - 8)).toFixed(1)},${(h - 4 - (x - bas) / et * (h - 8)).toFixed(1)}`);
+  const [fx, fy] = pts[pts.length - 1].split(",");
+  return `<svg class="mini" width="${l}" height="${h}" viewBox="0 0 ${l} ${h}" aria-hidden="true">
+    <polyline points="${pts.join(" ")}" fill="none" stroke="var(--doux)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${fx}" cy="${fy}" r="3" fill="var(--texte)"/></svg>`;
+}
+function tableTous() {
+  const filtre = document.getElementById("filtre").value, tri = document.getElementById("tri").value;
+  ecrire("progression-filtre", filtre); ecrire("progression-tri", tri);
+  const liste = J.filter((j) => filtre === "*" || (j.equipe || "") === filtre);
+  const cles = { recent: (j) => -j.recent, total: (j) => -j.total, points: (j) => -j.serie[j.serie.length - 1] };
+  liste.sort((a, b) => tri === "nom" ? nomLong(a).localeCompare(nomLong(b), "fr") : (cles[tri](a) - cles[tri](b)) || nomLong(a).localeCompare(nomLong(b), "fr"));
+  const plein = choix.length >= MAX;
+  document.getElementById("table-tous").innerHTML = `<thead><tr><th>Joueur</th><th>Courbe</th><th class="n">Virt.</th>
+    <th class="n">Phase</th><th class="n">${D.recent} dern. sem.</th><th>Tendance</th><th></th></tr></thead><tbody>`
+    + liste.map((j) => { const oui = choix.some((c) => c.id === j.id); return `<tr>
+      <td>${esc(nomLong(j))} <span class="doux">${esc([j.equipe, j.categorie].filter(Boolean).join(" · "))}</span></td>
+      <td>${mini(j)}</td><td class="n"><b>${fr(j.serie[j.serie.length - 1])}</b></td>
+      <td class="n ${classe(j.total)}">${signe(j.total)}</td><td class="n ${classe(j.recent)}">${signe(j.recent)}</td>
+      <td>${j.tendance ? `<span class="tend ${j.tendance}">${j.tendance}</span>` : '<span class="doux">aucune partie</span>'}</td>
+      <td><button type="button" class="comparer${oui ? " oui" : ""}" data-id="${esc(j.id)}" ${!oui && plein ? "disabled" : ""}>${oui ? "✓ affiché" : "Comparer"}</button></td></tr>`; }).join("")
+    + "</tbody>";
+  document.querySelectorAll("#table-tous .comparer").forEach((b) => b.addEventListener("click", () => {
+    choix.some((c) => c.id === b.dataset.id) ? retirer(b.dataset.id) : ajouter(b.dataset.id);
+    document.getElementById("graphe").scrollIntoView({ behavior: "smooth", block: "center" });
+  }));
+}
+
+function dessinerTout() { fixerMode(); menuAjout(); puces(); graphe(); tableChoix(); tableTous(); }
+
+/* ---------- Démarrage ---------- */
+const filtre = document.getElementById("filtre");
+filtre.innerHTML = `<option value="*">Toutes les équipes</option>` + EQUIPES.map((e) =>
+  `<option value="${esc(e)}">${e ? esc(e.replace(/^V(\d+)( F)?$/, (m, n, f) => `Vaires ${n}${f ? " F" : ""}`)) : "Sans équipe cette phase"}</option>`).join("");
+filtre.value = EQUIPES.includes(lire("progression-filtre")) ? lire("progression-filtre") : "*";
+document.getElementById("tri").value = ["recent", "total", "points", "nom"].includes(lire("progression-tri")) ? lire("progression-tri") : "recent";
+filtre.addEventListener("change", tableTous);
+document.getElementById("tri").addEventListener("change", tableTous);
+document.getElementById("ajout").addEventListener("change", (ev) => ajouter(ev.target.value));
+document.querySelectorAll(".bascule button").forEach((b) => b.addEventListener("click", () => { modeChoisi = b.dataset.mode; sauver(); dessinerTout(); }));
+document.getElementById("intro-tous").textContent = `Tendance : d'après les ${D.recent} dernières semaines (progresse : +${D.seuil} points ou plus ; régresse : −${D.seuil} ou moins). « Comparer » ajoute le joueur au graphe (${MAX} au plus).`;
+document.getElementById("sous-titre").textContent = `${D.club ? D.club.nom + " · " : ""}phase ${D.phase ?? "?"} ${D.saison ?? ""} · `
+  + (D.date_reference ? "archive, état au " + new Date(D.date_reference + "T12:00").toLocaleDateString("fr-FR")
+     : "données du " + (D.genere_le ? new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "?"));
+let largeur = 0;
+window.addEventListener("resize", () => { const l = document.getElementById("graphe").clientWidth; if (l !== largeur) { largeur = l; graphe(); } });
+dessinerTout();
+</script>
+</body>
+</html>

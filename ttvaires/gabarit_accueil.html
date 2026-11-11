@@ -251,12 +251,13 @@ async function telecharger(boutons) {
 }
 
 /* ---------- Images à partager ---------- */
-const GROUPES = ["récapitulatif", "classements", "adversaires", "résultats", "rencontres", "effectif", "classement virtuel", "individuels"];
+const GROUPES = ["récapitulatif", "classements", "adversaires", "résultats", "rencontres", "effectif", "classement virtuel", "progression", "individuels"];
 const TITRES_GROUPES = { "récapitulatif": "Récapitulatif de la journée (à compléter avec la photo)",
   "classements": "Classements des poules",
   "adversaires": "Adversaires", "résultats": "Résultats des joueurs", "rencontres": "Feuilles de match",
   "effectif": "Effectif et brûlages",
-  "classement virtuel": "Classement virtuel", "individuels": "Individuels (poules du critérium)" };
+  "classement virtuel": "Classement virtuel", "progression": "Progression des joueurs",
+  "individuels": "Individuels (poules du critérium)" };
 function afficherImages() {
   const zone = document.getElementById("images");
   const liste = Object.entries(E.images || {}).sort(([, a], [, b]) =>

@@ -39,11 +39,12 @@ PUBLIES = {
     "classements_vaires.html": ("classements.html", "Classements des poules", "La poule de chaque équipe de Vaires : points, victoires, nuls, défaites"),
     "effectif_vaires.html": ("effectif.html", "Effectif et brûlages", "Joueurs de Vaires : équipes jouées, brûlés et possibles par équipe"),
     "classement_virtuel.html": ("classement_virtuel.html", "Classement virtuel", "Toutes compétitions, meilleures perfs et pires contres"),
+    "progression_vaires.html": ("progression.html", "Progression des joueurs", "Points virtuels semaine après semaine : qui progresse, qui régresse, comparaison"),
     "indivs_vaires.html": ("indivs.html", "Individuels", "Poules du critérium des joueurs de Vaires et forme de leurs adversaires"),
 }
 
 # Images à partager rangées à part (et non avec la page qui les produit)
-GROUPES_A_PART = {"recap_": "récapitulatif", "classements_": "classements"}
+GROUPES_A_PART = {"recap_": "récapitulatif", "classements_": "classements", "progression_": "progression"}
 
 
 class ErreurPublication(Exception):

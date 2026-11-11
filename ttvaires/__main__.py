@@ -11,8 +11,9 @@ from .brulage import enrichir
 from .demo import donnees_demo
 from .adversaires import donnees_classements, recuperer
 from .effectif import recuperer_effectif
-from .rendu import (GABARIT_CLASSEMENTS, GABARIT_EFFECTIF, GABARIT_INDIVS, GABARIT_RENCONTRES, GABARIT_RESULTATS,
-                    GABARIT_VIRTUEL, generer_html)
+from .progression import donnees_progression
+from .rendu import (GABARIT_CLASSEMENTS, GABARIT_EFFECTIF, GABARIT_INDIVS, GABARIT_PROGRESSION, GABARIT_RENCONTRES,
+                    GABARIT_RESULTATS, GABARIT_VIRTUEL, generer_html)
 from .reseau import Client, ErreurReseau
 from .resultats import donnees_page, ecrire_xlsx, recuperer_parties, recuperer_rencontres
 from .virtuel import recuperer_virtuel
@@ -120,7 +121,11 @@ def page_virtuel(client, club, ctx):
     resume = verifications.afficher_club(donnees["verification"], "feuilles de match des équipes de Vaires")
     resume = " ; ".join([resume] + verifications.afficher_controle_parties(donnees["controle"]))
     html = generer_html(donnees, ctx.sortie / "classement_virtuel.html", GABARIT_VIRTUEL)
-    return [html, *faire_images("images_virtuel", donnees, dossier=ctx.images)], resume
+    # Progression des joueurs : les mêmes parties, cumulées semaine après semaine (rien à télécharger de plus)
+    progression = donnees_progression(donnees, ctx.aujourdhui)
+    page_progression = generer_html(progression, ctx.sortie / "progression_vaires.html", GABARIT_PROGRESSION)
+    return [html, page_progression, *faire_images("images_virtuel", donnees, dossier=ctx.images),
+            *faire_images("images_progression", progression, dossier=ctx.images)], resume
 
 
 def page_indivs(client, club, ctx):

@@ -14,6 +14,7 @@ Chacune écrit ses images dans le dossier donné et renvoie [(chemin, titre)].
 """
 
 import math
+import re
 from collections import Counter
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -1071,4 +1072,94 @@ def images_indivs(donnees, dossier):
         sorties += _tableau_pagine(dossier, f"indivs_{p['id']}", titre, sous,
                                    colonnes_egales(colonnes, LARGEUR - 2 * MARGE), lignes, pied,
                                    f"{public} · {titre}" if public else titre)
+    return sorties
+
+
+# ---------------------------------------------------------------------------
+# Progression des joueurs : une image par équipe, une petite courbe par joueur
+# ---------------------------------------------------------------------------
+
+COURBE = "#2a78d6"   # trait des courbes (bleu de la page)
+GRILLE = "#e3e6eb"   # ligne du niveau de départ
+PANNEAU_H = 214      # hauteur d'un joueur (nom, chiffres, courbe)
+
+
+def _nom_equipe(code):
+    m = re.fullmatch(r"V(\d+)( F)?", code or "")
+    return f"Vaires {m[1]}{' F' if m[2] else ''}" if m else "Autres joueurs"
+
+
+def _panneaux(rendu, joueurs, recent):
+    """Petits multiples : deux joueurs par rangée ; chacun sa courbe (points virtuels par semaine,
+    échelle propre au joueur, au moins 40 points de haut), son niveau de départ en trait fin, ses
+    chiffres en clair (points de départ et d'aujourd'hui, parties gagnées, phase, dernières semaines)."""
+    colonnes, ecart = 2, 16
+    larg = (rendu.largeur - 2 * MARGE - ecart * (colonnes - 1)) / colonnes
+    rangs = (len(joueurs) + colonnes - 1) // colonnes
+    h = rangs * (PANNEAU_H + ecart)
+
+    def dessiner(d, img, y0):
+        for k, j in enumerate(joueurs):
+            x, y = MARGE + (k % colonnes) * (larg + ecart), y0 + (k // colonnes) * (PANNEAU_H + ecart)
+            d.rounded_rectangle([x * S, y * S, (x + larg) * S, (y + PANNEAU_H) * S], radius=10 * S, fill=ZEBRE)
+            total = j["total"]
+            couleur = POS_TEXTE if round(total) > 0 else NEG_TEXTE if round(total) < 0 else NOIR
+            delta = signe(round(total)) if round(total) else "±0"
+            ld = largeur_texte(delta, 30, True)
+            nom, taille = ajuster(f"{j.get('nom') or ''} {j.get('prenom') or ''}".strip(), larg - 36 - ld, 23, True,
+                                  nom_alternatives(j.get("nom"), j.get("prenom"))[1])
+            d.text(((x + 12) * S, (y + 10) * S), nom, font=police(taille, True), fill=NOIR)
+            d.text(((x + larg - 12 - ld) * S, (y + 6) * S), delta, font=police(30, True), fill=couleur)
+            serie = j["serie"]
+            infos = (f"{fmt(round(serie[0]))} → {fmt(round(serie[-1]))} · {j['v']}/{j['v'] + j['d']} gagnées · "
+                     f"{recent} dern. sem. {signe(round(j['recent'])) if round(j['recent']) else '±0'}")
+            t, tl = ajuster(infos, larg - 24, 16)
+            d.text(((x + 12) * S, (y + 42) * S), t, font=police(tl), fill=DOUX)
+            # Courbe
+            gx, gy, gl, gh = x + 16, y + 74, larg - 40, PANNEAU_H - 90
+            bas, haut = min(serie), max(serie)
+            if haut - bas < 40:
+                milieu = (haut + bas) / 2
+                bas, haut = milieu - 20, milieu + 20
+            px = lambda i: gx + (i / max(1, len(serie) - 1)) * gl
+            py = lambda v: gy + (haut - v) / (haut - bas) * gh
+            d.line([gx * S, py(serie[0]) * S, (gx + gl) * S, py(serie[0]) * S], fill=GRILLE, width=2 * S)
+            d.line([(px(i) * S, py(v) * S) for i, v in enumerate(serie)], fill=COURBE, width=3 * S, joint="curve")
+            fx, fy = px(len(serie) - 1), py(serie[-1])
+            r = 6
+            d.ellipse([(fx - r - 2) * S, (fy - r - 2) * S, (fx + r + 2) * S, (fy + r + 2) * S], fill=ZEBRE)
+            d.ellipse([(fx - r) * S, (fy - r) * S, (fx + r) * S, (fy + r) * S], fill=COURBE)
+    rendu.elements.append((h, dessiner))
+
+
+def images_progression(donnees, dossier):
+    """Une image par équipe de Vaires (et une pour les joueurs sans équipe cette phase) : la courbe de
+    chaque joueur qui a joué, du mieux classé au moins bien classé. Titres sans nom de joueur."""
+    _nettoyer(dossier, "progression_")
+    semaines = donnees.get("semaines") or []
+    if not semaines:
+        return []
+    equipes = {}
+    for j in donnees["joueurs"]:
+        equipes.setdefault(j.get("equipe") or "", []).append(j)
+    ordre = sorted(equipes, key=lambda e: (e == "", " F" in e, int(re.sub(r"\D", "", e) or 0)))
+    sorties = []
+    for code in ordre:
+        joueurs = sorted((j for j in equipes[code] if j["v"] + j["d"]), key=lambda j: -j["serie"][-1])
+        sans = [j for j in equipes[code] if not j["v"] + j["d"]]
+        if not joueurs:
+            continue
+        nom = _nom_equipe(code)
+        r = Rendu()
+        r.titre(f"Progression · {nom}",
+                f"Points virtuels semaine après semaine, du {jour_fr(semaines[0])} au {jour_fr(semaines[-1])} (semaine du lundi) · "
+                f"{_genere(donnees)}")
+        r.espace(12)
+        _panneaux(r, joueurs, donnees.get("recent", 4))
+        r.pied("Chiffre en couleur : points gagnés ou perdus depuis le début de la phase, toutes compétitions. Trait fin : "
+               "niveau de départ (points officiels). Chaque courbe a sa propre échelle (au moins 40 points de haut)."
+               + (" Sans partie cette phase : " + ", ".join(f"{x.get('nom') or ''} {x.get('prenom') or ''}".strip() for x in sans) + "."
+                  if sans else ""))
+        fichier = f"progression_{code.replace(' ', '') or 'autres'}.png"
+        sorties.append((_enregistrer(r.image(), dossier, fichier), f"Progression · {nom}"))
     return sorties
