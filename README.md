@@ -89,6 +89,24 @@ moins), avec une lecture : une courbe qui descend sans contre, ce sont des défa
 des perfs avec une courbe qui monte, c'est un joueur en progression. En dessous, tous les joueurs avec leur mini-courbe, leur progression
 depuis le 1er septembre (progresse, stable, régresse : ±10 points), triables et filtrables par
 équipe. Images à partager : une par équipe, une petite courbe par joueur.
+
+Et la page **Fiches des joueurs** (`sortie\fiches_vaires.html`, mêmes parties encore) : tout ce que
+l'outil sait d'un joueur sur une page, choisie dans une **liste déroulante** rangée par équipe (boutons
+‹ › pour passer au joueur précédent ou suivant ; le dernier joueur consulté est retenu). Sur la fiche :
+points officiels et virtuels, bilan de la saison, série en cours, sa courbe depuis le 1er septembre, puis
+
+- **Manches** : ses parties en 3, 4 ou 5 manches et la part de celles qu'il a gagnées, la répartition
+  de ses victoires (en 3, 4 ou 5 manches), manches gagnées et perdues, manches serrées (2 points d'écart) ;
+- **Remontées** : victoires après avoir été mené au score des manches (dont celles après deux manches
+  de retard), avances perdues, et ce que donne la première manche gagnée ou perdue ;
+- **Selon le niveau de l'adversaire** : bilan contre plus faible, de même niveau (à 50 points près,
+  points officiels de la phase) et plus fort, avec les points gagnés ou perdus ;
+- bilan par compétition, équipes jouées en championnat, meilleures perfs, contres, et toutes ses
+  parties avec le score de chaque manche.
+
+En bas, un tableau compare tout le club sur ces chiffres (tri par % de victoires, belles gagnées,
+remontées, victoires contre plus fort...). Le détail des manches vient des feuilles de match (une
+partie saisie sans ses manches compte dans le bilan, pas dans ces statistiques).
 Pour avoir tous les joueurs (y compris les jeunes qui ne jouent pas en championnat), la liste des
 licenciés est lue sur pingpocket ou dans le dossier `import\` (voir plus bas) ; sinon seuls les
 joueurs alignés en championnat apparaissent.

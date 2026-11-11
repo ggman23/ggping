@@ -40,6 +40,7 @@ PUBLIES = {
     "effectif_vaires.html": ("effectif.html", "Effectif et brûlages", "Joueurs de Vaires : équipes jouées, brûlés et possibles par équipe"),
     "classement_virtuel.html": ("classement_virtuel.html", "Classement virtuel", "Toutes compétitions, meilleures perfs et pires contres"),
     "progression_vaires.html": ("progression.html", "Progression des joueurs", "Points virtuels semaine après semaine : qui progresse, qui régresse, comparaison"),
+    "fiches_vaires.html": ("fiches.html", "Fiches des joueurs", "Tout sur un joueur : courbe, manches (3, 4 ou 5), remontées, bilan selon le niveau de l'adversaire"),
     "indivs_vaires.html": ("indivs.html", "Individuels", "Poules du critérium des joueurs de Vaires et forme de leurs adversaires"),
 }
 

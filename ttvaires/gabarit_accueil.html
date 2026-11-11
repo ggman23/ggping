@@ -135,7 +135,9 @@ a { color: var(--accent); }
 "use strict";
 const E = JSON.parse(document.getElementById("etat").textContent);
 const CLE = "cvtt-vaires-cle", JETON = "cvtt-vaires-jeton-github";
-const ORDRE = ["adversaires.html", "resultats.html", "resultats_vaires.xlsx.chiffre", "rencontres.html", "classements.html", "effectif.html", "classement_virtuel.html"];
+const ORDRE = ["adversaires.html", "resultats.html", "resultats_vaires.xlsx.chiffre", "rencontres.html", "classements.html", "effectif.html", "classement_virtuel.html",
+  "progression.html", "fiches.html", "indivs.html"];
+const rang = (nom) => (ORDRE.includes(nom) ? ORDRE.indexOf(nom) : ORDRE.length);  // une page inconnue : à la fin
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const lire = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const ecrire = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) { /* navigation privée */ } };
@@ -159,7 +161,7 @@ const evenement = (quoi, nom, titre) => compter(`${ICI}/${quoi}/${nom}`, titre, 
 
 /* ---------- Pages publiées ---------- */
 function afficherPages() {
-  const noms = Object.keys(E.pages || {}).sort((a, b) => ORDRE.indexOf(a) - ORDRE.indexOf(b));
+  const noms = Object.keys(E.pages || {}).sort((a, b) => rang(a) - rang(b));
   document.getElementById("pages").innerHTML = noms.length ? noms.map((n) => {
     const p = E.pages[n];
     const etat = `<span class="etat ${classe(p.verification)}">${esc(p.verification)}</span>`;

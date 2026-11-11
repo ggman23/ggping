@@ -12,12 +12,12 @@ from .demo import donnees_demo
 from .adversaires import donnees_classements, recuperer
 from .effectif import recuperer_effectif
 from .progression import donnees_progression
-from .rendu import (GABARIT_CLASSEMENTS, GABARIT_EFFECTIF, GABARIT_INDIVS, GABARIT_PROGRESSION, GABARIT_RENCONTRES,
+from .rendu import (GABARIT_CLASSEMENTS, GABARIT_EFFECTIF, GABARIT_FICHES, GABARIT_INDIVS, GABARIT_PROGRESSION, GABARIT_RENCONTRES,
                     GABARIT_RESULTATS, GABARIT_VIRTUEL, generer_html)
 from .reseau import Client, ErreurReseau
 from .resultats import donnees_page, ecrire_xlsx, recuperer_parties, recuperer_rencontres
 from .virtuel import recuperer_virtuel
-from . import compte_fftt, indivs, synchro, verifications
+from . import compte_fftt, fiches, indivs, synchro, verifications
 
 RACINE = Path(__file__).resolve().parent.parent
 SORTIE = RACINE / "sortie"
@@ -124,7 +124,11 @@ def page_virtuel(client, club, ctx):
     # Progression des joueurs : les mêmes parties, cumulées semaine après semaine (rien à télécharger de plus)
     progression = donnees_progression(donnees, ctx.aujourdhui)
     page_progression = generer_html(progression, ctx.sortie / "progression_vaires.html", GABARIT_PROGRESSION)
-    return [html, page_progression, *faire_images("images_virtuel", donnees, dossier=ctx.images),
+    # Fiches des joueurs : les mêmes parties encore, un joueur par page (manches, remontées, niveau des adversaires)
+    donnees_des_fiches = fiches.donnees_fiches(donnees, progression)
+    page_fiches = generer_html(donnees_des_fiches, ctx.sortie / "fiches_vaires.html", GABARIT_FICHES)
+    print(f"Fiches des joueurs : {fiches.resume(donnees_des_fiches)}", flush=True)
+    return [html, page_progression, page_fiches, *faire_images("images_virtuel", donnees, dossier=ctx.images),
             *faire_images("images_progression", progression, dossier=ctx.images)], resume
 
 

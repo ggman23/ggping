@@ -62,7 +62,8 @@ UMAMI_PUBLIE = "stats/umami.js"
 # les visiteurs apparaissaient aux États-Unis (pays du relais et non du visiteur).
 UMAMI_HOTE = "https://cloud.umami.is"
 ORDRE_CLUB = ["vaires.html", "resultats_vaires.html", "resultats_vaires.xlsx", "rencontres_vaires.html",
-              "classements_vaires.html", "effectif_vaires.html", "classement_virtuel.html", "progression_vaires.html"]
+              "classements_vaires.html", "effectif_vaires.html", "classement_virtuel.html", "progression_vaires.html",
+              "fiches_vaires.html"]
 # Pages du site publiées à leur propre adresse avec le mot de passe du club (et non parmi les documents
 # de /club/, qui y renvoie par « Autres espaces ») : page du site -> (adresse, titre)
 PAGES_A_PART = {"indivs.html": ("indivs", "Individuels")}

@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Fiches des joueurs Vaires</title>
+<style>
+:root { color-scheme: light; --fond: #f4f5f7; --surface: #fff; --surface2: #f3f5f8; --texte: #1c2330; --doux: #5b6576;
+  --muet: #8a93a3; --bord: #dde1e7; --grille: #e8ebef; --accent: #1f5fbf; --accent-fond: #e8f0fc;
+  --plus: #1d7a46; --plus-fond: #e3f4ea; --moins: #b3261e; --moins-fond: #fbe7e5;
+  --s1: #2a78d6; --piste: #d9e6f7; }
+@media (prefers-color-scheme: dark) { :root { color-scheme: dark; --fond: #12151b; --surface: #1b2029; --surface2: #232a35;
+  --texte: #e6e9ef; --doux: #9aa4b5; --muet: #7c8698; --bord: #313a48; --grille: #2a313d; --accent: #7fb0ff; --accent-fond: #1d2a40;
+  --plus: #6fd39b; --plus-fond: #173323; --moins: #ff8f86; --moins-fond: #3d1c1a;
+  --s1: #3987e5; --piste: #23354f; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+header { background: var(--surface); border-bottom: 1px solid var(--bord); padding: 10px 16px; }
+h1 { font-size: 18px; margin: 0 0 2px; }
+header p { margin: 0; color: var(--doux); font-size: 13px; }
+main { max-width: 1000px; margin: 0 auto; padding: 0 14px 40px; }
+/* Choix du joueur : reste en haut de l'écran quand on fait défiler sa fiche */
+.outils-joueur { position: sticky; top: 0; z-index: 4; display: flex; gap: 8px; align-items: center; padding: 10px 0; background: var(--fond); }
+.outils-joueur select { flex: 1 1 auto; min-width: 0; font-weight: 600; }
+.outils { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+select, .pas { font: inherit; font-size: 15px; padding: 8px 10px; border: 1px solid var(--bord); border-radius: 8px; background: var(--surface); color: var(--texte); max-width: 100%; }
+.pas { flex: none; min-width: 42px; font-size: 18px; line-height: 1.1; cursor: pointer; }
+.pas:hover { border-color: var(--accent); }
+.carte { background: var(--surface); border: 1px solid var(--bord); border-radius: 12px; padding: 14px 14px 12px; margin-bottom: 14px; }
+.carte h2 { font-size: 16px; margin: 0 0 4px; }
+.carte h3 { font-size: 14px; margin: 14px 0 4px; }
+.intro { color: var(--doux); font-size: 13.5px; margin: 0 0 10px; }
+.identite h2 { font-size: 21px; margin: 0; }
+.identite .qui { color: var(--doux); font-size: 14px; margin: 2px 0 12px; }
+/* Chiffres clés */
+.cles { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 8px; }
+.cle-chiffre { background: var(--surface2); border-radius: 10px; padding: 9px 11px; min-width: 0; }
+.cle-chiffre .nom { font-size: 12.5px; color: var(--doux); }
+.cle-chiffre .valeur { font-size: 22px; font-weight: 650; line-height: 1.2; white-space: nowrap; }
+.cle-chiffre .valeur small { font-size: 14px; font-weight: 500; color: var(--doux); }
+.cle-chiffre .detail { font-size: 12.5px; color: var(--doux); }
+.plus { color: var(--plus); font-weight: 650; } .moins { color: var(--moins); font-weight: 650; }
+.tri-p { color: var(--plus); } .tri-c { color: var(--moins); }
+/* Listes de jauges : un libellé, une barre (part de victoires), un chiffre */
+.jauges { display: grid; grid-template-columns: 230px minmax(90px, 1fr) 270px; gap: 9px 14px; align-items: center; margin: 6px 0 2px; }
+.rangee { display: contents; }
+.jauges .lib b { display: block; font-weight: 600; }
+.jauges .lib span { display: block; font-size: 12.5px; color: var(--doux); }
+.jauges .chiffre { font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.jauges .chiffre b { font-size: 15px; }
+.jauges .chiffre span { color: var(--doux); }
+.jauge { display: block; height: 8px; border-radius: 99px; background: var(--piste); overflow: hidden; }
+.jauge i { display: block; height: 100%; border-radius: 99px; background: var(--s1); }
+.jauge.vide { background: var(--surface2); }
+.faits { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 5px; font-size: 14px; }
+.faits li b { font-variant-numeric: tabular-nums; }
+.faits li span { color: var(--doux); }
+.note { font-size: 12.5px; color: var(--doux); margin: 8px 0 0; }
+.vide { color: var(--doux); padding: 14px 4px; }
+.puces { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 0; }
+.puce { border: 1px solid var(--bord); border-radius: 99px; padding: 2px 10px; font-size: 13.5px; background: var(--surface2); white-space: nowrap; }
+.puce b { font-weight: 650; }
+.deux { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.deux .carte { margin-bottom: 0; }
+.deux { margin-bottom: 14px; }
+ul.liste { margin: 4px 0 0; padding: 0; list-style: none; font-size: 14px; display: grid; gap: 5px; }
+ul.liste span { color: var(--doux); }
+/* Courbe */
+.graphe { position: relative; }
+.graphe svg { display: block; width: 100%; touch-action: pan-y; }
+.graphe svg:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.axe { fill: var(--doux); font-size: 11.5px; }
+.etiquette { fill: var(--texte); font-size: 12px; font-weight: 600; }
+.lecture { color: var(--doux); font-size: 13.5px; margin: 0 0 6px; }
+.lecture em { font-style: italic; }
+.cles-graphe { font-size: 12.5px; color: var(--doux); margin: 4px 0 0; }
+.bulle { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--bord); border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .14); padding: 7px 9px; font-size: 13px; min-width: 150px; z-index: 3; }
+.bulle .titre { color: var(--doux); font-size: 12px; margin-bottom: 2px; }
+.bulle b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.bulle .ligne { color: var(--doux); white-space: nowrap; }
+.graphe.petit .bulle { position: static; box-shadow: none; margin-top: 6px; }
+details { margin-top: 8px; font-size: 13.5px; }
+summary { cursor: pointer; color: var(--accent); }
+/* Tableaux */
+.defil { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--bord); text-align: left; white-space: nowrap; }
+th { color: var(--doux); font-weight: 600; font-size: 12.5px; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+td .doux, .doux { color: var(--doux); font-size: 12.5px; }
+.res { display: inline-block; min-width: 22px; text-align: center; border-radius: 6px; padding: 0 6px; font-weight: 700; font-size: 12.5px; }
+.res.v { background: var(--plus-fond); color: var(--plus); } .res.d { background: var(--moins-fond); color: var(--moins); }
+/* Parties : une ligne par partie (date, adversaire, résultat et manches, points) */
+.parties { margin: 0; padding: 0; list-style: none; font-size: 14px; }
+.partie { display: grid; grid-template-columns: 52px minmax(0, 1.25fr) minmax(0, 1fr) 58px; gap: 2px 12px; padding: 7px 4px;
+  border-bottom: 1px solid var(--bord); align-items: start; }
+.partie .date { color: var(--doux); font-variant-numeric: tabular-nums; }
+.partie .qui b { font-weight: 600; }
+.partie .pts { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.partie .res-ligne { white-space: nowrap; margin-right: 8px; }
+.manches { color: var(--doux); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.manches b { color: var(--texte); font-weight: 600; }
+button.nom-joueur { font: inherit; border: 0; background: none; color: var(--accent); padding: 0; cursor: pointer; font-weight: 600; text-align: left; }
+button.nom-joueur:hover { text-decoration: underline; }
+tr.courant td { background: var(--accent-fond); }
+@media (max-width: 700px) {
+  main { padding: 0 8px 32px; }
+  .carte { padding: 12px 10px 10px; }
+  th, td { padding: 6px 5px; }
+  .deux { grid-template-columns: 1fr; }
+  /* Jauges : le libellé, la barre dessous, puis le chiffre */
+  .jauges { display: block; }
+  .rangee { display: block; margin: 0 0 11px; }
+  .jauges .lib b, .jauges .lib span { display: inline; }
+  .jauges .lib span::before { content: " · "; }
+  .jauges .jauge { margin: 4px 0 3px; }
+  .cles { grid-template-columns: repeat(2, 1fr); }
+  .cle-chiffre:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  /* Parties : l'adversaire et les points sur la première ligne, le résultat et les manches dessous */
+  .partie { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 1px 8px; }
+  .partie .date { grid-row: 1 / span 2; }
+  .partie .qui { grid-column: 2; grid-row: 1; }
+  .partie .pts { grid-column: 3; grid-row: 1; }
+  .partie .resultat { grid-column: 2 / -1; grid-row: 2; }
+  /* Tableau de tout le club : le nom reste visible quand on fait défiler les colonnes */
+  #table-tous .equipe { display: none; }
+  #table-tous td:first-child, #table-tous th:first-child { position: sticky; left: 0; background: var(--surface); max-width: 46vw; overflow: hidden; text-overflow: ellipsis; }
+  #table-tous tr.courant td:first-child { background: var(--accent-fond); }
+  button.nom-joueur { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Fiches des joueurs</h1>
+  <p id="sous-titre"></p>
+</header>
+<main>
+  <div class="outils-joueur">
+    <button type="button" class="pas" id="prec" aria-label="Joueur précédent">‹</button>
+    <select id="joueur" aria-label="Choisir un joueur"></select>
+    <button type="button" class="pas" id="suiv" aria-label="Joueur suivant">›</button>
+  </div>
+  <div id="fiche"></div>
+  <section class="carte" aria-labelledby="t-tous">
+    <h2 id="t-tous">Comparer tous les joueurs</h2>
+    <p class="intro">Les mêmes chiffres pour tout le club. Touche un nom pour ouvrir sa fiche.</p>
+    <div class="outils">
+      <select id="filtre" aria-label="Équipe"></select>
+      <select id="tri" aria-label="Tri">
+        <option value="nom">Tri : nom</option>
+        <option value="victoires">Tri : % de victoires</option>
+        <option value="belles">Tri : belles gagnées</option>
+        <option value="remontees">Tri : remontées</option>
+        <option value="fort">Tri : victoires contre plus fort</option>
+        <option value="parties">Tri : nombre de parties</option>
+      </select>
+    </div>
+    <div class="defil"><table id="table-tous"></table></div>
+    <p class="note" id="note-tous"></p>
+  </section>
+</main>
+<script>
+const D = __DONNEES_JSON__;
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const lire = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const ecrire = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* navigation privée */ } };
+const fr = (x, dec = 0) => Number(x).toLocaleString("fr-FR", { maximumFractionDigits: dec, minimumFractionDigits: 0 });
+const pts = (x) => (x > 0.04 ? "+" : x < -0.04 ? "−" : "±") + fr(Math.abs(x), 1);  // points gagnés ou perdus
+const classe = (x) => (x > 0.04 ? "plus" : x < -0.04 ? "moins" : "");
+const pc = (a, b) => (b ? Math.round(100 * a / b) : null);
+const pluriel = (n, mot, mots) => `${n} ${n > 1 ? mots || mot + "s" : mot}`;
+const jjmm = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+const SEM = D.semaines || [];
+const J = D.joueurs || [];
+const PAR_ID = new Map(J.map((j) => [j.id, j]));
+const nomLong = (j) => `${j.nom || ""} ${j.prenom || ""}`.trim();
+const equipeLongue = (eq) => (eq ? eq.replace(/^V(\d+)( F)?$/, (m, n, f) => `Vaires ${n}${f ? " F" : ""}`) : "Sans équipe cette phase");
+const CATEGORIES = { P: "Poussin", B: "Benjamin", M: "Minime", C: "Cadet", J: "Junior", S: "Senior", V: "Vétéran" };
+const categorie = (c) => { const m = /^([PBMCJSV])(\d?)$/.exec(c || ""); return m ? `${CATEGORIES[m[1]]}${m[2] ? " " + m[2] : ""}` : c || ""; };
+const EQUIPES = [...new Set(J.map((j) => j.equipe || ""))].sort((a, b) => (a === "") - (b === "") || a.localeCompare(b, "fr", { numeric: true }));
+/* Ordre de la liste déroulante (et des boutons ‹ ›) : par équipe, puis par nom */
+const ORDRE = EQUIPES.flatMap((eq) => J.filter((j) => (j.equipe || "") === eq));
+const SEUIL = D.seuil_niveau ?? 50;
+
+document.getElementById("sous-titre").textContent = [D.saison ? `Saison ${D.saison}` : "", "toutes compétitions depuis le début de la saison",
+  D.genere_le ? `mise à jour le ${jjmm(D.genere_le)} à ${D.genere_le.slice(11, 16).replace(":", " h ")}` : ""].filter(Boolean).join(" · ");
+
+/* ---------- Choix du joueur ---------- */
+const selJoueur = document.getElementById("joueur");
+for (const eq of EQUIPES) {
+  const groupe = document.createElement("optgroup");
+  groupe.label = equipeLongue(eq);
+  for (const j of ORDRE.filter((x) => (x.equipe || "") === eq)) {
+    const o = document.createElement("option");
+    o.value = j.id; o.textContent = nomLong(j);
+    groupe.appendChild(o);
+  }
+  selJoueur.appendChild(groupe);
+}
+let courant = null;
+function choisir(id, remonter = false) {
+  if (!PAR_ID.has(id)) return;
+  courant = id;
+  ecrire("fiche-joueur", id);
+  try { history.replaceState(null, "", "#" + encodeURIComponent(id)); } catch (e) { /* page ouverte dans un cadre */ }
+  selJoueur.value = id;
+  dessinerFiche();
+  tableTous();
+  if (remonter) window.scrollTo({ top: 0, behavior: "smooth" });
+}
+selJoueur.addEventListener("change", () => choisir(selJoueur.value));
+const pas = (d) => { const i = ORDRE.findIndex((j) => j.id === courant); if (ORDRE.length) choisir(ORDRE[(i + d + ORDRE.length) % ORDRE.length].id); };
+document.getElementById("prec").addEventListener("click", () => pas(-1));
+document.getElementById("suiv").addEventListener("click", () => pas(1));
+
+/* ---------- Morceaux de fiche ---------- */
+const jauge = (part, total) => (total
+  ? `<span class="jauge" role="img" aria-label="${pc(part, total)} %"><i style="width:${pc(part, total)}%"></i></span>`
+  : `<span class="jauge vide" role="img" aria-label="aucune partie"></span>`);
+const ligneJauge = (titre, sous, gagnees, jouees, suite = "") => `<div class="rangee">
+  <div class="lib"><b>${esc(titre)}</b>${sous ? `<span>${esc(sous)}</span>` : ""}</div>
+  ${jauge(gagnees, jouees)}
+  <div class="chiffre">${jouees ? `<b>${pc(gagnees, jouees)} %</b> <span>· ${gagnees} gagnée${gagnees > 1 ? "s" : ""} sur ${jouees}${suite}</span>` : "<span>aucune partie</span>"}</div></div>`;
+const chiffre = (nom, valeur, detail = "") => `<div class="cle-chiffre"><div class="nom">${esc(nom)}</div><div class="valeur">${valeur}</div>${detail ? `<div class="detail">${detail}</div>` : ""}</div>`;
+const scoreManches = (m) => [m.filter(([a, b]) => a > b).length, m.filter(([a, b]) => b > a).length];
+
+function carteIdentite(j) {
+  const n = j.bilan.v + j.bilan.d, s = j.series;
+  const serie = !n ? "—" : s.en_cours_victoires ? pluriel(s.en_cours, "victoire") : pluriel(s.en_cours, "défaite");
+  const qui = [equipeLongue(j.equipe), categorie(j.categorie), j.classement != null ? `classé ${j.classement}` : ""].filter(Boolean).join(" · ");
+  return `<section class="carte identite"><h2>${esc(nomLong(j))}</h2><p class="qui">${esc(qui)}</p>
+    <div class="cles">
+      ${chiffre("Points officiels", j.officiels != null ? fr(j.officiels) : "—", "de la phase")}
+      ${chiffre("Points virtuels", j.virtuels != null ? fr(j.virtuels) : "—",
+        j.virtuels != null ? `<span class="${classe(j.total_phase)}">${pts(j.total_phase || 0)}</span> sur la phase` : "")}
+      ${chiffre("Bilan de la saison", n ? `${j.bilan.v} V <small>– ${j.bilan.d} D</small>` : "—",
+        n ? `${pc(j.bilan.v, n)} % de victoires · <span class="${classe(j.bilan.points)}">${pts(j.bilan.points)}</span> pts` : "aucune partie comptée")}
+      ${chiffre("Perfs et contres", `<span class="tri-p">▲</span> ${j.nb_perfs} <small>· <span class="tri-c">▼</span> ${j.nb_contres}</small>`,
+        `${j.nb_perfs > 1 ? "perfs" : "perf"} · ${j.nb_contres > 1 ? "contres" : "contre"}`)}
+      ${chiffre("Série en cours", serie, n ? `meilleure série : ${pluriel(s.meilleure, "victoire")}` : "")}
+    </div>
+    ${j.inconnu ? '<p class="note">Les parties de ce joueur n\'ont pas pu être lues à cette mise à jour.</p>' : ""}</section>`;
+}
+
+function carteManches(j) {
+  const m = j.manches, n = j.bilan.v + j.bilan.d;
+  if (!n) return "";
+  let corps;
+  if (!m.avec_detail) {
+    corps = `<p class="vide">Le détail des manches n'est connu pour aucune de ses ${n} parties (feuilles saisies sans les manches, ou compétition qui ne le donne pas).</p>`;
+  } else {
+    const noms = { 3: ["En 3 manches", "3-0 ou 0-3"], 4: ["En 4 manches", "3-1 ou 1-3"], 5: ["En 5 manches", "à la belle : 3-2 ou 2-3"] };
+    const gagnees = m.formats.reduce((s, f) => s + f.gagnees, 0);
+    const victoires = gagnees ? "Ses " + pluriel(gagnees, "victoire") + " : " + m.formats.filter((f) => f.gagnees)
+      .map((f) => `${pc(f.gagnees, gagnees)} % en ${f.manches} manches`).join(", ") + "." : "";
+    const serrees = m.serrees[0] + m.serrees[1];
+    corps = `<div class="jauges">${m.formats.map((f) => ligneJauge(noms[f.manches][0], noms[f.manches][1], f.gagnees, f.jouees)).join("")}</div>
+      <ul class="faits">
+        ${victoires ? `<li>${esc(victoires)}</li>` : ""}
+        <li>Manches : <b>${m.manches[0]}</b> gagnées, <b>${m.manches[1]}</b> perdues <span>· points des manches : ${fr(m.points[0])} marqués, ${fr(m.points[1])} encaissés</span></li>
+        ${serrees ? `<li>Manches serrées (2 points d'écart : 11-9, 12-10…) : <b>${m.serrees[0]}</b> gagnées sur ${serrees} <span>· ${pc(m.serrees[0], serrees)} %</span></li>` : ""}
+        ${m.autres_formats ? `<li><span>${pluriel(m.autres_formats, "partie")} dans un autre format (deux ou quatre manches gagnantes) : hors des trois lignes ci-dessus.</span></li>` : ""}
+      </ul>
+      ${m.sans_detail ? `<p class="note">${pluriel(m.sans_detail, "partie")} sans le détail des manches (ou arrêtée sur abandon) : dans le bilan, pas dans ces chiffres.</p>` : ""}`;
+  }
+  return `<section class="carte"><h2>Manches</h2>
+    <p class="intro">Ses parties selon leur longueur : la barre montre la part de celles qu'il a gagnées.</p>${corps}</section>`;
+}
+
+function carteRemontees(j) {
+  const r = j.remontees, m = j.manches;
+  if (!m.avec_detail) return "";
+  const de2 = (n) => (n ? ` <span>· dont ${n} après deux manches ${"d'écart"}</span>` : "");
+  return `<section class="carte"><h2>Remontées</h2>
+    <p class="intro">Ce qui se passe quand il est mené, ou quand il mène, au score des manches.</p>
+    <ul class="faits">
+      <li><b>${pluriel(r.remontees, "remontée")}</b> : ${r.remontees > 1 ? "victoires" : "victoire"} après avoir été mené${de2(r.remontees_de_2)}</li>
+      <li><b>${pluriel(r.avances_perdues, "avance perdue", "avances perdues")}</b> : ${r.avances_perdues > 1 ? "défaites" : "défaite"} après avoir mené${de2(r.avances_perdues_de_2)}</li>
+    </ul>
+    <h3>Selon la première manche</h3>
+    <div class="jauges">
+      ${ligneJauge("1re manche gagnée", "", r.premiere_gagnee.gagnees, r.premiere_gagnee.jouees)}
+      ${ligneJauge("1re manche perdue", "", r.premiere_perdue.gagnees, r.premiere_perdue.jouees)}
+    </div></section>`;
+}
+
+function carteNiveaux(j) {
+  if (!(j.bilan.v + j.bilan.d)) return "";
+  const sous = { plus_faible: `plus de ${SEUIL} points de moins que lui`, meme: `à ${SEUIL} points près`, plus_fort: `plus de ${SEUIL} points de plus que lui` };
+  return `<section class="carte"><h2>Selon le niveau de l'adversaire</h2>
+    <p class="intro">Points officiels de la phase, au moment de la partie. La barre montre la part de victoires.</p>
+    <div class="jauges">${j.niveaux.map((n) => ligneJauge(n.titre, sous[n.cle], n.v, n.v + n.d,
+      ` · <span class="${classe(n.points)}">${pts(n.points)}</span> pts`)).join("")}</div></section>`;
+}
+
+function carteCompetitions(j) {
+  if (!j.competitions.length) return "";
+  return `<section class="carte"><h2>Par compétition</h2><div class="defil"><table>
+    <tr><th>Compétition</th><th class="n">Parties</th><th class="n">V</th><th class="n">D</th><th class="n">% vict.</th><th class="n">Points</th></tr>
+    ${j.competitions.map((c) => `<tr><td>${esc(c.nom)}</td><td class="n">${c.v + c.d}</td><td class="n">${c.v}</td><td class="n">${c.d}</td>
+      <td class="n">${pc(c.v, c.v + c.d)} %</td><td class="n ${classe(c.points)}">${pts(c.points)}</td></tr>`).join("")}
+  </table></div>
+  ${j.alignements.length ? `<h3>Championnat par équipes : équipes jouées</h3><div class="puces">${j.alignements.map((a) =>
+    `<span class="puce">J${esc(a.journee)} <b>${esc(a.equipe)}</b></span>`).join("")}</div>` : ""}</section>`;
+}
+
+function cartesPerfs(j) {
+  const liste = (xs) => xs.map((p) => `<li><b>${esc(p.adversaire)}</b> <span>${fr(p.adv_points)} pts (${p.ecart > 0 ? "+" : "−"}${fr(Math.abs(p.ecart))}) · ${jjmm(p.date)} · ${esc(p.competition)}</span>
+    <span class="${classe(p.points)}">${pts(p.points)}</span></li>`).join("");
+  if (!j.perfs.length && !j.contres.length) return "";
+  return `<div class="deux">
+    <section class="carte"><h2><span class="tri-p">▲</span> Meilleures perfs</h2>${j.perfs.length ? `<ul class="liste">${liste(j.perfs)}</ul>` : '<p class="vide">Aucune perf pour l\'instant.</p>'}
+      ${j.nb_perfs > j.perfs.length ? `<p class="note">${j.nb_perfs} perfs en tout.</p>` : ""}</section>
+    <section class="carte"><h2><span class="tri-c">▼</span> Contres</h2>${j.contres.length ? `<ul class="liste">${liste(j.contres)}</ul>` : '<p class="vide">Aucune contre.</p>'}
+      ${j.nb_contres > j.contres.length ? `<p class="note">${j.nb_contres} contres en tout.</p>` : ""}</section>
+  </div>`;
+}
+
+function carteParties(j) {
+  if (!j.parties.length) return `<section class="carte"><h2>Toutes ses parties</h2><p class="vide">Aucune partie comptée cette saison.</p></section>`;
+  const lignes = j.parties.slice().reverse().map((p) => {
+    const m = p.manches && !p.abandon ? p.manches : null, s = m ? scoreManches(m) : null;
+    const marque = p.victoire && p.ecart > 0 ? ' <span class="tri-p" title="perf">▲</span>' : !p.victoire && p.ecart < 0 ? ' <span class="tri-c" title="contre">▼</span>' : "";
+    return `<li class="partie"><span class="date">${jjmm(p.date)}</span>
+      <div class="qui"><b>${esc(p.adversaire)}</b> <span class="doux">${fr(p.adv_points)} pts (${p.ecart > 0 ? "+" : p.ecart < 0 ? "−" : "±"}${fr(Math.abs(p.ecart))})</span>
+        <br><span class="doux">${esc(p.competition)}${p.division ? " · " + esc(p.division) : ""}</span></div>
+      <div class="resultat"><span class="res-ligne"><span class="res ${p.victoire ? "v" : "d"}">${p.victoire ? "V" : "D"}</span>${s ? ` ${s[0]}-${s[1]}` : ""}${marque}</span>
+        <span class="manches">${p.abandon ? "abandon" : m ? m.map(([a, b]) => (a > b ? `<b>${a}-${b}</b>` : `${a}-${b}`)).join(" · ") : "manches non saisies"}</span></div>
+      <span class="pts ${classe(p.points)}">${pts(p.points)}</span></li>`;
+  }).join("");
+  return `<section class="carte"><h2>Toutes ses parties</h2>
+    <p class="intro">De la plus récente à la plus ancienne : adversaire (ses points, l'écart avec lui), résultat, manches (ses points d'abord, en gras celles qu'il a gagnées), points gagnés ou perdus.</p>
+    <ul class="parties">${lignes}</ul></section>`;
+}
+
+/* ---------- Courbe : points virtuels semaine après semaine (une seule série : pas de légende) ---------- */
+function echelle(min, max, nb = 5) {
+  if (min === max) { min -= 10; max += 10; }
+  const brut = (max - min) / nb, p = Math.pow(10, Math.floor(Math.log10(brut)));
+  const pasE = [1, 2, 2.5, 5, 10].map((m) => m * p).find((x) => x >= brut) || 10 * p;
+  const bas = Math.floor(min / pasE) * pasE, haut = Math.ceil(max / pasE) * pasE;
+  const ticks = [];
+  for (let v = bas; v <= haut + pasE / 2; v += pasE) ticks.push(Math.round(v * 100) / 100);
+  return { bas, haut, ticks };
+}
+function courbe(zone, j) {
+  const c = j.courbe, v = c.serie, n = SEM.length;
+  const L = zone.clientWidth || 600, petit = L < 560, H = petit ? 230 : 270;
+  zone.classList.toggle("petit", petit);
+  const sc = echelle(Math.min(...v), Math.max(...v));
+  const M = { g: 46, h: 20, b: 34 };  // place pour les triangles des perfs (en haut) et des contres (en bas)
+  const mesure = document.createElement("canvas").getContext("2d");
+  mesure.font = `600 12px ${getComputedStyle(document.body).fontFamily}`;
+  const droite = mesure.measureText(fr(v[n - 1])).width + 18;
+  const x = (i) => M.g + (n === 1 ? 0 : i / (n - 1) * (L - M.g - droite));
+  const y = (val) => M.h + (sc.haut - val) / (sc.haut - sc.bas) * (H - M.h - M.b);
+  const NS = "http://www.w3.org/2000/svg", el = (nom, attrs) => { const e = document.createElementNS(NS, nom);
+    for (const [k, val] of Object.entries(attrs)) e.setAttribute(k, val); return e; };
+  const svg = el("svg", { viewBox: `0 0 ${L} ${H}`, height: H, tabindex: 0, role: "img",
+    "aria-label": `Points virtuels de ${nomLong(j)} semaine après semaine, de ${fr(v[0])} à ${fr(v[n - 1])}` });
+  for (const t of sc.ticks) {
+    svg.appendChild(el("line", { x1: M.g, x2: L - droite, y1: y(t), y2: y(t), stroke: "var(--grille)", "stroke-width": 1 }));
+    const tx = el("text", { x: M.g - 6, y: y(t) + 4, "text-anchor": "end", class: "axe" });
+    tx.textContent = fr(t); svg.appendChild(tx);
+  }
+  const tous = Math.max(1, Math.ceil(n / Math.max(2, Math.floor((L - M.g - droite) / 52))));
+  for (let i = 0; i < n; i += tous) {
+    const tx = el("text", { x: x(i), y: H - 8, "text-anchor": i === 0 ? "start" : "middle", class: "axe" });
+    tx.textContent = jjmm(SEM[i]); svg.appendChild(tx);
+  }
+  const trace = v.map((val, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(val).toFixed(1)}`).join("");
+  svg.appendChild(el("path", { d: `${trace}L${x(n - 1).toFixed(1)},${y(sc.bas)}L${x(0).toFixed(1)},${y(sc.bas)}Z`, fill: "var(--s1)", "fill-opacity": 0.1 }));
+  svg.appendChild(el("path", { d: trace, fill: "none", stroke: "var(--s1)", "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+  for (let i = 1; i < n; i++) {
+    if (c.perfs[i]) svg.appendChild(el("path", { d: `M${x(i)},${y(v[i]) - 15} l5.5,9 h-11 z`, fill: "var(--plus)", stroke: "var(--surface)", "stroke-width": 1.5 }));
+    if (c.contres[i]) svg.appendChild(el("path", { d: `M${x(i)},${y(v[i]) + 15} l5.5,-9 h-11 z`, fill: "var(--moins)", stroke: "var(--surface)", "stroke-width": 1.5 }));
+  }
+  svg.appendChild(el("circle", { cx: x(n - 1), cy: y(v[n - 1]), r: 4.5, fill: "var(--s1)", stroke: "var(--surface)", "stroke-width": 2 }));
+  const fin = el("text", { x: x(n - 1) + 9, y: y(v[n - 1]) + 4, class: "etiquette" });
+  fin.textContent = fr(v[n - 1]); svg.appendChild(fin);
+  // Survol, toucher et clavier : un trait vertical sur la semaine la plus proche et une bulle
+  const trait = el("line", { y1: M.h, y2: H - M.b, stroke: "var(--muet)", "stroke-width": 1, visibility: "hidden" });
+  const point = el("circle", { r: 4.5, fill: "var(--s1)", stroke: "var(--surface)", "stroke-width": 2, visibility: "hidden" });
+  svg.append(trait, point);
+  const bulle = document.createElement("div");
+  bulle.className = "bulle"; bulle.hidden = true;
+  zone.append(svg, bulle);
+  let pos = null;
+  const montrer = (i) => {
+    pos = i;
+    trait.setAttribute("x1", x(i)); trait.setAttribute("x2", x(i)); trait.setAttribute("visibility", "visible");
+    point.setAttribute("cx", x(i)); point.setAttribute("cy", y(v[i])); point.setAttribute("visibility", "visible");
+    bulle.textContent = "";
+    const titre = document.createElement("div"); titre.className = "titre";
+    titre.textContent = i === 0 ? "Départ : points au début de la saison" : `Semaine du ${jjmm(SEM[i])}`;
+    const val = document.createElement("b"); val.textContent = fr(v[i], 1);
+    const ligne = document.createElement("div"); ligne.className = "ligne";
+    const np = c.parties[i], d = i ? v[i] - v[i - 1] : 0;
+    const marques = [c.perfs[i] ? pluriel(c.perfs[i], "perf") : "", c.contres[i] ? pluriel(c.contres[i], "contre") : ""].filter(Boolean).join(", ");
+    ligne.textContent = np ? `${pts(d)} · ${c.victoires[i]} gagnée${c.victoires[i] > 1 ? "s" : ""} sur ${np}${marques ? " · " + marques : ""}` : i ? "pas de partie" : "";
+    bulle.append(titre, val, ligne);
+    bulle.hidden = false;
+    if (!petit) {
+      const w = bulle.offsetWidth, bx = x(i) / L * zone.clientWidth;
+      bulle.style.left = `${Math.max(0, Math.min(zone.clientWidth - w, bx > zone.clientWidth / 2 ? bx - w - 12 : bx + 12))}px`;
+      bulle.style.top = `${svg.getBoundingClientRect().top - zone.getBoundingClientRect().top + 8}px`;
+    }
+  };
+  const cacher = () => { pos = null; trait.setAttribute("visibility", "hidden"); point.setAttribute("visibility", "hidden"); bulle.hidden = true; };
+  const indice = (ev) => { const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) / r.width * L;
+    return Math.max(0, Math.min(n - 1, Math.round((px - M.g) / (L - M.g - droite) * (n - 1)))); };
+  svg.addEventListener("pointermove", (ev) => montrer(indice(ev)));
+  svg.addEventListener("pointerdown", (ev) => montrer(indice(ev)));
+  svg.addEventListener("pointerleave", (ev) => { if (ev.pointerType === "mouse") cacher(); });
+  svg.addEventListener("blur", cacher);
+  svg.addEventListener("keydown", (ev) => {
+    if (ev.key === "ArrowRight" || ev.key === "ArrowLeft") { ev.preventDefault();
+      montrer(Math.max(0, Math.min(n - 1, (pos ?? n - 1) + (ev.key === "ArrowRight" ? 1 : -1)))); }
+    else if (ev.key === "Escape") cacher();
+  });
+}
+function carteCourbe(j) {
+  const c = j.courbe;
+  if (!c || SEM.length < 2) return "";
+  const lignes = SEM.map((s, i) => `<tr><td>${i ? "Semaine du " + jjmm(s) : "Départ"}</td><td class="n">${fr(c.serie[i], 1)}</td>
+    <td class="n">${c.parties[i] ? `${c.victoires[i]} sur ${c.parties[i]}` : "—"}</td><td class="n">${c.perfs[i] || "—"}</td><td class="n">${c.contres[i] || "—"}</td></tr>`).join("");
+  return `<section class="carte"><h2>Progression depuis le début de la saison</h2>
+    <p class="lecture">Points virtuels semaine après semaine : <b class="${classe(c.total)}">${pts(c.total)}</b> depuis le début de la saison${c.lecture ? ` · <em>${esc(c.lecture)}</em>` : ""}.</p>
+    <div class="graphe" id="graphe"></div>
+    <p class="cles-graphe"><span class="tri-p">▲</span> semaine avec une perf (victoire contre plus de points) · <span class="tri-c">▼</span> avec une contre (défaite contre moins de points)</p>
+    <details><summary>Les valeurs semaine par semaine</summary><div class="defil"><table>
+      <tr><th>Semaine</th><th class="n">Points virtuels</th><th class="n">Parties gagnées</th><th class="n">Perfs</th><th class="n">Contres</th></tr>${lignes}</table></div></details>
+  </section>`;
+}
+
+function dessinerFiche() {
+  const j = PAR_ID.get(courant), zone = document.getElementById("fiche");
+  if (!j) { zone.innerHTML = '<section class="carte"><p class="vide">Aucun joueur.</p></section>'; return; }
+  zone.innerHTML = carteIdentite(j) + carteCourbe(j) + carteManches(j) + carteRemontees(j) + carteNiveaux(j)
+    + carteCompetitions(j) + cartesPerfs(j) + carteParties(j);
+  const g = document.getElementById("graphe");
+  if (g) courbe(g, j);
+  document.title = `Fiche de ${nomLong(j)} · Vaires`;
+}
+
+/* ---------- Tous les joueurs ---------- */
+const selFiltre = document.getElementById("filtre"), selTri = document.getElementById("tri");
+selFiltre.innerHTML = `<option value="*">Toutes les équipes</option>` + EQUIPES.map((eq) => `<option value="${esc(eq)}">${esc(equipeLongue(eq))}</option>`).join("");
+if (["nom", "victoires", "belles", "remontees", "fort", "parties"].includes(lire("fiche-tri"))) selTri.value = lire("fiche-tri");
+const fort = (j) => j.niveaux.find((x) => x.cle === "plus_fort") || { v: 0, d: 0 };
+const taux = (a, b) => (b ? a / b : -1);
+const TRIS = {
+  nom: () => 0,
+  victoires: (a, b) => taux(b.bilan.v, b.bilan.v + b.bilan.d) - taux(a.bilan.v, a.bilan.v + a.bilan.d) || (b.bilan.v + b.bilan.d) - (a.bilan.v + a.bilan.d),
+  belles: (a, b) => b.manches.belles.gagnees - a.manches.belles.gagnees || taux(b.manches.belles.gagnees, b.manches.belles.jouees) - taux(a.manches.belles.gagnees, a.manches.belles.jouees),
+  remontees: (a, b) => b.remontees.remontees - a.remontees.remontees || b.remontees.remontees_de_2 - a.remontees.remontees_de_2,
+  fort: (a, b) => fort(b).v - fort(a).v || taux(fort(b).v, fort(b).v + fort(b).d) - taux(fort(a).v, fort(a).v + fort(a).d),
+  parties: (a, b) => (b.bilan.v + b.bilan.d) - (a.bilan.v + a.bilan.d),
+};
+function tableTous() {
+  const eq = selFiltre.value;
+  const liste = J.filter((j) => eq === "*" || (j.equipe || "") === eq).sort(TRIS[selTri.value] || TRIS.nom);
+  const sur = (a, b) => (b ? `${a} sur ${b}` : "—");
+  document.getElementById("table-tous").innerHTML = `<tr><th>Joueur</th><th class="equipe">Équipe</th><th class="n">Parties</th><th class="n">% vict.</th>
+      <th class="n">Belles gagnées</th><th class="n">Remontées</th><th class="n">Avances perdues</th><th class="n">Contre plus fort</th><th class="n">Virtuels</th></tr>`
+    + liste.map((j) => { const n = j.bilan.v + j.bilan.d, f = fort(j);
+      return `<tr${j.id === courant ? ' class="courant"' : ""}><td><button type="button" class="nom-joueur" data-id="${esc(j.id)}">${esc(nomLong(j))}</button></td>
+        <td class="equipe">${esc(j.equipe || "—")}</td><td class="n">${n || "—"}</td><td class="n">${n ? pc(j.bilan.v, n) + " %" : "—"}</td>
+        <td class="n">${sur(j.manches.belles.gagnees, j.manches.belles.jouees)}</td>
+        <td class="n">${j.manches.avec_detail ? j.remontees.remontees : "—"}</td><td class="n">${j.manches.avec_detail ? j.remontees.avances_perdues : "—"}</td>
+        <td class="n">${f.v + f.d ? `${f.v} V – ${f.d} D` : "—"}</td><td class="n">${j.virtuels != null ? fr(j.virtuels) : "—"}</td></tr>`; }).join("");
+  document.getElementById("note-tous").textContent = `Belles : parties allées à la manche décisive. Remontées : victoires après avoir été mené au score des manches ; avances perdues : défaites après avoir mené. Plus fort : plus de ${SEUIL} points de plus. « — » : aucune partie, ou manches non saisies.`;
+}
+document.getElementById("table-tous").addEventListener("click", (ev) => { const b = ev.target.closest("button.nom-joueur"); if (b) choisir(b.dataset.id, true); });
+selFiltre.addEventListener("change", tableTous);
+selTri.addEventListener("change", () => { ecrire("fiche-tri", selTri.value); tableTous(); });
+
+/* ---------- Départ : le joueur de l'adresse (#licence), sinon le dernier consulté, sinon le premier de la liste ---------- */
+const duLien = () => decodeURIComponent(location.hash.slice(1));
+const depart = [duLien(), lire("fiche-joueur"), ORDRE[0] && ORDRE[0].id].find((id) => id && PAR_ID.has(id));
+if (depart) choisir(depart); else { dessinerFiche(); tableTous(); }
+window.addEventListener("hashchange", () => { const id = duLien(); if (id !== courant) choisir(id); });
+let largeur = window.innerWidth;
+window.addEventListener("resize", () => { if (window.innerWidth !== largeur) { largeur = window.innerWidth; dessinerFiche(); } });
+</script>
+</body>
+</html>

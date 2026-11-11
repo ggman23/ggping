@@ -81,19 +81,27 @@ def _competitions(client, ids):
     return res
 
 
+def _manches(partie):
+    """Manches d'une partie telles que l'API les donne : [[points « home », points « away »], ...] dans
+    l'ordre joué ; None si elles n'ont pas été saisies (ou si la réponse ne les contient pas)."""
+    manches = [[m.get("homeScore"), m.get("awayScore")] for m in partie.get("sets") or [] if isinstance(m, dict)]
+    manches = [m for m in manches if isinstance(m[0], int) and isinstance(m[1], int) and m[0] != m[1]]
+    return manches or None
+
+
 def etats_des_feuilles(detail_rencontres):
-    """{id de partie: {non_comptee, forfait, division}} d'après les feuilles de match déjà lues."""
+    """{id de partie: {non_comptee, forfait, abandon, division, manches}} d'après les feuilles de match déjà lues."""
     etats = {}
     for d in detail_rencontres.values():
         division = fftt.libelle_division((d.get("division") or {}).get("name"))
         for g in d.get("games") or []:
             etats[g.get("id")] = {"non_comptee": bool(g.get("notCounted")), "forfait": bool(g.get("forfeit")),
-                                  "division": division}
+                                  "abandon": bool(g.get("abandonment")), "division": division, "manches": _manches(g)}
     return etats
 
 
 def _etats(client, parties, detail_rencontres):
-    """{id de partie: {non_comptee, forfait, division}}.
+    """{id de partie: {non_comptee, forfait, abandon, division, manches}}.
 
     Les parties du championnat par équipes du club sont dans les feuilles de match déjà lues ;
     pour les autres (compétitions individuelles...), le détail de chaque partie est lu une fois
@@ -110,6 +118,7 @@ def _etats(client, parties, detail_rencontres):
         sm = g.get("sportMatch") or {}
         division = ((sm.get("tour") or {}).get("division") or sm.get("division") or {}).get("name")
         etats[i] = {"non_comptee": bool(g.get("notCounted")), "forfait": bool(g.get("forfeit")),
+                    "abandon": bool(g.get("abandonment")), "manches": _manches(g),
                     "division": fftt.libelle_division(division) if division else None}
     return etats
 
@@ -147,12 +156,18 @@ def analyser(licence, parties, competitions, etats, debut, fin):
         else:
             victoire = g["winner"] == cote
             adversaire = fftt.joueur(adv)
+            # Manches : dans la liste des parties si l'API les y donne, sinon dans le détail déjà lu
+            # (feuille de match, ou détail de la partie) ; vues du joueur : ses points d'abord
+            manches = _manches(g) or etat.get("manches")
+            if manches and cote == "away":
+                manches = [[b, a] for a, b in manches]
             lignes.append({
                 "id": g["id"], "date": jour, "competition": libelle_competition(nom), "division": etat.get("division"),
                 "championnat": est_championnat(nom), "coef": comp["coef"],
                 "pts_joueur": moi["points"], "adversaire": adversaire["nom"], "adv_points": adv["points"],
                 "ecart": adv["points"] - moi["points"], "victoire": victoire,
                 "points": round(points_partie(moi["points"], adv["points"], victoire, comp["coef"]), 3),
+                "manches": manches, "abandon": bool(g.get("abandonment") or etat.get("abandon")),
             })
     lignes.sort(key=lambda l: (l["date"], l["id"]))
     return lignes, officiels, ecartees
@@ -273,6 +288,8 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
         if equipes:
             (ch, n), _ = max(equipes.items(), key=lambda e: (e[1], e[0][0] == "M", -e[0][1]))
             j["equipe"] = f"V{n}" + (" F" if ch == "F" else "")
+        j["alignements"] = sorted(({"journee": p["journee"], "date": p["date"], "equipe": f"V{p['numero']}" + (" F" if p["championnat"] == "F" else "")}
+                                   for p in feuilles["parts"].get(lic, [])), key=lambda a: (a["date"], a["journee"], a["equipe"]))
 
     print(f"3/3 Parties de toutes les compétitions : {len(joueurs)} joueurs (API FFTT)", flush=True)
     toutes = _lire_parties(client, sorted(joueurs))
@@ -303,6 +320,7 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
             "total": total, "virtuels": virtuels, "classement_virtuel": classement(virtuels),
             "v": sum(l["victoire"] for l in lignes), "d": sum(not l["victoire"] for l in lignes),
             "parties": lignes, "ecartees": dict(ecartees), "inconnu": parties is None,
+            "alignements": j.get("alignements") or [],
         })
         if debut1:  # phase 1 de la saison : ses points officiels et ses parties (progression depuis septembre)
             lignes1, officiels1, _ = analyser(lic, parties or [], competitions, etats, debut1, fin1)

@@ -389,6 +389,33 @@ plusieurs pour les comparer (en restant lisible) ; des images si c'est lisible.
   recuperer_virtuel garde pour cela les parties de la phase 1 (déjà dans la liste de la saison ; leur
   détail n'est pas redemandé). Départ des courbes : les points au 1er septembre (tournois d'été compris).
 
+## Fiches des joueurs (12/11/2026)
+
+Demande : une page qui récapitule tout pour chaque joueur, avec une liste déroulante plutôt que 90
+liens (format laissé à l'appréciation), et en plus des statistiques de manches (% de victoires en 3,
+4 ou 5 manches), les remontées, et le bilan selon le niveau de l'adversaire (plus faible, même
+niveau, plus fort).
+
+- Données : celles du classement virtuel et de la progression, aucune requête de plus. Chaque partie
+  garde ses manches, vues du joueur (virtuel._manches) : lues dans la liste des parties si l'API les y
+  donne, sinon dans le détail déjà lu (feuille de match pour le championnat, détail de la partie pour
+  les autres compétitions de la phase) ; les abandons sont repérés. Le journal de la mise à jour dit
+  combien de parties ont leurs manches (championnat / autres compétitions).
+- Calculs (fiches.py, testés) : parties en 3, 4, 5 manches (vainqueur à 3 manches ; autres formats à
+  part), belles (manche décisive), manches et points des manches, manches serrées (2 points d'écart) ;
+  remontées (victoire après avoir été mené, dont de deux manches), avances perdues, résultat selon la
+  première manche ; niveaux à ±50 points (points officiels de la phase au moment de la partie) ; bilan
+  par famille de compétitions ; séries ; 3 meilleures perfs et contres ; équipes jouées par journée.
+  Une partie sans manches, arrêtée sur abandon ou dont les manches contredisent le résultat : dans le
+  bilan, pas dans les statistiques de manches.
+- Page fiches_vaires.html (gabarit_fiches.html), publiée « Fiches des joueurs » après la progression
+  (site et /club/) : liste déroulante par équipe puis par nom, boutons ‹ ›, adresse #licence, dernier
+  joueur retenu sur l'appareil ; tuiles, courbe (une série, bulle au survol, tableau des valeurs),
+  jauges (part de victoires), liste des parties avec le score des manches ; tableau de tout le club
+  triable et filtrable par équipe. Lisible sur téléphone, thème sombre.
+- Au passage : sur l'accueil du site, les pages hors de la liste d'ordre (progression, individuels) se
+  plaçaient en tête ; elles suivent maintenant le classement virtuel.
+
 ## Tournois à venir (11/11/2026)
 
 Demande : la liste des tournois de tennis de table d'Île-de-France ou à 100 km de Vaires, dans une page

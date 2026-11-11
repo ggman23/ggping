@@ -67,6 +67,8 @@ def test_classement_virtuel_de_bout_en_bout(tmp_path):
     pages[f"{API}/contests/1"] = json.dumps({"@context": "/api/contexts/Contest", "name": CHAMPIONNAT["name"], "coefficient": 1})
     pages[f"{API}/contests/2"] = json.dumps({"@context": "/api/contexts/Contest", "name": TOP_JEUNE["name"], "coefficient": 0.5})
     pages[f"{API}/games/13"] = json.dumps({"@context": "/api/contexts/Game", "notCounted": False,
+                                           "sets": [{"homeScore": 11, "awayScore": 7}, {"homeScore": 9, "awayScore": 11},
+                                                    {"homeScore": 11, "awayScore": 5}, {"homeScore": 12, "awayScore": 10}],
                                            "sportMatch": {"tour": {"division": {"name": "M15G - Cadets"}}}})
 
     d = recuperer_virtuel(FauxClient(pages), VAIRES, aujourdhui=date(2026, 10, 6), dossier_import=dossier)
@@ -79,6 +81,21 @@ def test_classement_virtuel_de_bout_en_bout(tmp_path):
     assert [x["id"] for x in d["joueurs"]] == ["200", "100", "300"]  # par points virtuels
     assert [(c["nom"], c["coef"]) for c in d["competitions"]] == [("Championnat par équipes M", 1), ("Top Jeune Departemental", 0.5)]
     assert d["source"]["origine"] == "import"
+    # Manches d'une partie hors championnat : lues dans son détail (déjà demandé), sans requête de plus
+    assert j["300"]["parties"][0]["manches"] == [[11, 7], [9, 11], [11, 5], [12, 10]] and not j["300"]["parties"][0]["abandon"]
+    assert [(a["journee"], a["equipe"]) for a in j["100"]["alignements"]] == [(1, "V4"), (2, "V4"), (2, "V1 F")]  # aussi en féminines
+    assert j["300"]["alignements"] == []
+
+    # Fiches des joueurs : la même récolte, une fiche par joueur, et la page
+    from ttvaires import fiches
+    from ttvaires.rendu import GABARIT_FICHES, generer_html
+    f = fiches.donnees_fiches(d, aujourdhui=date(2026, 10, 6))
+    tom = next(x for x in f["joueurs"] if x["id"] == "300")
+    assert tom["manches"]["formats"][1] == {"manches": 4, "jouees": 1, "gagnees": 1} and tom["remontees"]["remontees"] == 0
+    assert [n["v"] for n in tom["niveaux"]] == [1, 0, 0]  # adversaire à 100 points de moins : « plus faible »
+    assert "autres compétitions 1/1" in fiches.resume(f)
+    html = generer_html(f, tmp_path / "fiches_vaires.html", GABARIT_FICHES).read_text(encoding="utf-8")
+    assert "__DONNEES_JSON__" not in html and '"seuil_niveau": 50' in html
 
 
 def test_forme_des_joueurs_adverses():
