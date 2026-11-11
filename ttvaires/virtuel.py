@@ -276,10 +276,15 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
 
     print(f"3/3 Parties de toutes les compétitions : {len(joueurs)} joueurs (API FFTT)", flush=True)
     toutes = _lire_parties(client, sorted(joueurs))
-    du_club = [p for ps in toutes.values() if ps for p in ps
-               if debut <= (p.get("date") or "")[:10] <= fin and _simple(p)]
+    # En phase 2, les parties de la phase 1 (déjà dans la liste de la saison) servent aussi : la page
+    # « Progression des joueurs » suit toute la saison, depuis le 1er septembre
+    debut1, fin1 = fftt.bornes_phase(date(int(saison[:4]), 9, 1)) if phase == 2 else (None, None)
+    retenue = lambda jour: debut <= jour <= fin or (debut1 is not None and debut1 <= jour <= fin1)
+    du_club = [p for ps in toutes.values() if ps for p in ps if retenue((p.get("date") or "")[:10]) and _simple(p)]
     competitions = _competitions(client, {(p.get("contest") or {}).get("id") for p in du_club} - {None})
-    etats = _etats(client, du_club, feuilles["detail"])
+    # Détail des parties (non comptée, forfait) : seulement pour la phase en cours ; celles de la phase 1,
+    # pour la progression, s'en passent (sinon des centaines de requêtes de plus en janvier)
+    etats = _etats(client, [p for p in du_club if debut <= p["date"][:10] <= fin], feuilles["detail"])
 
     resultat, sans_reponse = [], 0
     for lic, j in joueurs.items():
@@ -299,6 +304,10 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
             "v": sum(l["victoire"] for l in lignes), "d": sum(not l["victoire"] for l in lignes),
             "parties": lignes, "ecartees": dict(ecartees), "inconnu": parties is None,
         })
+        if debut1:  # phase 1 de la saison : ses points officiels et ses parties (progression depuis septembre)
+            lignes1, officiels1, _ = analyser(lic, parties or [], competitions, etats, debut1, fin1)
+            resultat[-1]["phase1"] = {"officiels": officiels1.most_common(1)[0][0] if officiels1 else None,
+                                      "parties": lignes1}
     resultat.sort(key=lambda j: (j["virtuels"] is None, -(j["virtuels"] or 0), j["nom"] or ""))
 
     comps = Counter()

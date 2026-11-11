@@ -1089,10 +1089,10 @@ def _nom_equipe(code):
     return f"Vaires {m[1]}{' F' if m[2] else ''}" if m else "Autres joueurs"
 
 
-def _panneaux(rendu, joueurs, recent):
+def _panneaux(rendu, joueurs, depuis):
     """Petits multiples : deux joueurs par rangée ; chacun sa courbe (points virtuels par semaine,
     échelle propre au joueur, au moins 40 points de haut), son niveau de départ en trait fin, ses
-    chiffres en clair (points de départ et d'aujourd'hui, parties gagnées, phase, dernières semaines)."""
+    chiffres en clair (points au départ et aujourd'hui, matchs, perfs, contres, progression)."""
     colonnes, ecart = 2, 16
     larg = (rendu.largeur - 2 * MARGE - ecart * (colonnes - 1)) / colonnes
     rangs = (len(joueurs) + colonnes - 1) // colonnes
@@ -1111,8 +1111,7 @@ def _panneaux(rendu, joueurs, recent):
             d.text(((x + 12) * S, (y + 10) * S), nom, font=police(taille, True), fill=NOIR)
             d.text(((x + larg - 12 - ld) * S, (y + 6) * S), delta, font=police(30, True), fill=couleur)
             serie = j["serie"]
-            infos = (f"{fmt(round(serie[0]))} → {fmt(round(serie[-1]))} · "
-                     f"{recent} dern. sem. {signe(round(j['recent'])) if round(j['recent']) else '±0'}")
+            infos = f"{fmt(round(serie[0]))} {depuis} → {fmt(round(serie[-1]))} aujourd'hui"
             t, tl = ajuster(infos, larg - 24, 16)
             d.text(((x + 12) * S, (y + 42) * S), t, font=police(tl), fill=DOUX)
             # Matchs, perfs (victoires contre plus de points) et contres (défaites contre moins de points)
@@ -1154,6 +1153,10 @@ def images_progression(donnees, dossier):
     semaines = donnees.get("semaines") or []
     if not semaines:
         return []
+    d0 = date.fromisoformat(donnees["debut_saison"]) if donnees.get("debut_saison") else date.fromisoformat(semaines[1])
+    mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+    depart = f"{'1er' if d0.day == 1 else d0.day} {mois[d0.month - 1]}"
+    depart_court = f"{d0:%d/%m}"
     equipes = {}
     for j in donnees["joueurs"]:
         equipes.setdefault(j.get("equipe") or "", []).append(j)
@@ -1167,12 +1170,11 @@ def images_progression(donnees, dossier):
         nom = _nom_equipe(code)
         r = Rendu()
         r.titre(f"Progression · {nom}",
-                f"Points virtuels semaine après semaine, du {jour_fr(semaines[0])} au {jour_fr(semaines[-1])} (semaine du lundi) · "
-                f"{_genere(donnees)}")
+                f"Points virtuels semaine après semaine depuis le {depart} (toutes compétitions) · {_genere(donnees)}")
         r.espace(12)
-        _panneaux(r, joueurs, donnees.get("recent", 4))
-        r.pied("Chiffre en couleur : points gagnés ou perdus depuis le début de la phase, toutes compétitions. Trait fin : "
-               "niveau de départ (points officiels). Triangle vert : semaine avec une perf (victoire contre un joueur qui a "
+        _panneaux(r, joueurs, f"au {depart_court}")
+        r.pied(f"Chiffre en couleur : points gagnés ou perdus depuis le {depart}, toutes compétitions (en janvier, la "
+               "courbe continue avec les nouveaux points officiels). Trait fin : niveau de départ. Triangle vert : semaine avec une perf (victoire contre un joueur qui a "
                "plus de points) ; rouge : avec une contre (défaite contre un joueur qui en a moins). Une courbe qui descend "
                "sans contre : défaites contre plus fort. Chaque courbe a sa propre échelle (au moins 40 points de haut)."
                + (" Sans partie cette phase : " + ", ".join(f"{x.get('nom') or ''} {x.get('prenom') or ''}".strip() for x in sans) + "."

@@ -383,3 +383,8 @@ plusieurs pour les comparer (en restant lisible) ; des images si c'est lisible.
   la courbe, ▲ / ▼ sur les semaines concernées, dans la bulle, les tableaux et les images ; lecture :
   « baisse sans contre : perdu contre plus fort », « baisse avec n contres », « progression avec n
   perfs », « progression sans perf », « stable ».
+- Changement (12/11) : progression et tendance depuis le début de la saison (1er septembre) et non plus
+  sur les 4 dernières semaines ; tendance : ±10 points. En phase 2, la courbe reprend la phase 1 (ses
+  parties, cumulées à partir de ses points officiels) puis passe aux points officiels de janvier :
+  recuperer_virtuel garde pour cela les parties de la phase 1 (déjà dans la liste de la saison ; leur
+  détail n'est pas redemandé). Départ des courbes : les points au 1er septembre (tournois d'été compris).

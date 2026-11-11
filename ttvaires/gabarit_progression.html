@@ -84,7 +84,7 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 <main>
   <section class="carte" aria-labelledby="t-graphe">
     <h2 id="t-graphe">Courbe d'un joueur, ou plusieurs pour les comparer</h2>
-    <p class="intro">Points virtuels semaine après semaine depuis le début de la phase (toutes compétitions). Une courbe qui monte : le joueur progresse.</p>
+    <p class="intro" id="intro-graphe">Points virtuels semaine après semaine depuis le début de la saison (toutes compétitions). Une courbe qui monte : le joueur progresse.</p>
     <div class="outils">
       <select id="ajout" aria-label="Choisir un joueur"></select>
       <div class="bascule" role="group" aria-label="Valeurs affichées">
@@ -103,8 +103,7 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
     <div class="outils">
       <select id="filtre" aria-label="Équipe"></select>
       <select id="tri" aria-label="Tri">
-        <option value="recent">Tri : progression récente</option>
-        <option value="total">Tri : progression sur la phase</option>
+        <option value="total">Tri : progression depuis le 1er septembre</option>
         <option value="points">Tri : points virtuels</option>
         <option value="nom">Tri : nom</option>
       </select>
@@ -123,6 +122,10 @@ const signe = (x) => (Math.round(x) > 0 ? "+" : Math.round(x) < 0 ? "−" : "±"
 const classe = (x) => (Math.round(x) > 0 ? "plus" : Math.round(x) < 0 ? "moins" : "");
 const jjmm = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 const SEM = D.semaines || [];
+// Début de la saison (1er septembre) : le point de départ des courbes et de la progression
+const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+const DEPART = D.debut_saison ? `le ${+D.debut_saison.slice(8, 10) === 1 ? "1er" : +D.debut_saison.slice(8, 10)} ${MOIS[+D.debut_saison.slice(5, 7) - 1]}` : "au début de la saison";
+const DEPUIS = D.debut_saison ? `Depuis le ${D.debut_saison.slice(8, 10)}/${D.debut_saison.slice(5, 7)}` : "Saison";
 const J = D.joueurs || [];
 const PAR_ID = new Map(J.map((j) => [j.id, j]));
 const nomCourt = (j) => `${j.nom || ""} ${(j.prenom || "").charAt(0)}.`.trim();
@@ -131,7 +134,7 @@ const EQUIPES = [...new Set(J.map((j) => j.equipe || ""))].sort((a, b) => (a ===
 
 /* Sélection : chaque joueur garde sa couleur tant qu'il est affiché (la couleur suit le joueur, pas son rang). */
 let choix = [];  // [{ id, slot }]
-/* Valeurs : points virtuels, ou évolution depuis le début de la phase (tous partent de zéro, ce qui
+/* Valeurs : points virtuels, ou évolution depuis le début de la saison (tous partent de zéro, ce qui
    compare mieux des joueurs de niveaux différents). Tant qu'on n'a pas choisi : points pour un joueur,
    évolution à partir de deux. */
 let modeChoisi = ["points", "evolution"].includes(lire("progression-mode")) ? lire("progression-mode") : null;
@@ -139,7 +142,7 @@ let mode = "points";
 const fixerMode = () => { mode = modeChoisi || (choix.length > 1 ? "evolution" : "points"); };
 try { choix = JSON.parse(lire("progression-choix") || "[]").filter((c) => PAR_ID.has(c.id)).slice(0, MAX); } catch (e) { choix = []; }
 if (!choix.length && J.length) {
-  const premier = J.slice().sort((a, b) => b.recent - a.recent)[0];
+  const premier = J.slice().sort((a, b) => b.total - a.total)[0];
   choix = [{ id: premier.id, slot: 1 }];
 }
 const sauver = () => { ecrire("progression-choix", JSON.stringify(choix)); if (modeChoisi) ecrire("progression-mode", modeChoisi); };
@@ -195,7 +198,7 @@ function puces() {
   document.querySelectorAll(".bascule button").forEach((b) => b.classList.toggle("actif", b.dataset.mode === mode));
   document.getElementById("note-max").textContent = choix.length >= MAX
     ? `${MAX} joueurs au plus sur le graphe, pour qu'il reste lisible : en retirer un (×) pour en ajouter un autre.`
-    : choix.length > 1 && mode === "evolution" ? "Évolution (±) : tous partent de zéro au début de la phase, pour comparer des joueurs de niveaux différents." : "";
+    : choix.length > 1 && mode === "evolution" ? `Évolution (±) : tous partent de zéro ${DEPART}, pour comparer des joueurs de niveaux différents.` : "";
 }
 
 /* ---------- Graphe ---------- */
@@ -307,7 +310,7 @@ function graphe() {
     series.forEach((s, k) => { points[k].setAttribute("cx", x(i)); points[k].setAttribute("cy", y(s.v[i])); points[k].setAttribute("visibility", "visible"); });
     bulle.textContent = "";
     const titre = document.createElement("div"); titre.className = "titre";
-    titre.textContent = i === 0 ? "Début de la phase (points officiels)" : `Semaine du ${jjmm(SEM[i])}`;
+    titre.textContent = i === 0 ? `Départ : points ${DEPART.replace(/^le /, "au ")}` : `Semaine du ${jjmm(SEM[i])}`;
     bulle.appendChild(titre);
     for (const s of series.slice().sort((a, b) => b.v[i] - a.v[i])) {
       const ligne = document.createElement("div"); ligne.className = "ligne";
@@ -349,12 +352,12 @@ function graphe() {
 function tableChoix() {
   const t = document.getElementById("table-choix");
   if (!choix.length) { t.innerHTML = ""; return; }
-  t.innerHTML = `<thead><tr><th>Joueur</th><th class="n">Départ</th><th class="n">Aujourd'hui</th><th class="n">Phase</th>
-    <th class="n">${D.recent} dern. sem.</th><th class="n">Matchs</th><th class="n">Perfs</th><th class="n">Contres</th><th>Lecture</th></tr></thead><tbody>`
+  t.innerHTML = `<thead><tr><th>Joueur</th><th class="n">${DEPART.replace(/^le /, "Au ")}</th><th class="n">Aujourd'hui</th><th class="n">${DEPUIS}</th>
+    <th class="n">Matchs</th><th class="n">Perfs</th><th class="n">Contres</th><th>Lecture</th></tr></thead><tbody>`
     + choix.map((c) => { const j = PAR_ID.get(c.id); return `<tr>
       <td><span class="cle" style="border-color:var(--s${c.slot})"></span> ${esc(nomLong(j))} <span class="doux">${esc(j.equipe || "")}</span></td>
       <td class="n">${fr(j.serie[0])}</td><td class="n"><b>${fr(j.serie[j.serie.length - 1])}</b></td>
-      <td class="n ${classe(j.total)}">${signe(j.total)}</td><td class="n ${classe(j.recent)}">${signe(j.recent)}</td>
+      <td class="n ${classe(j.total)}">${signe(j.total)}</td>
       <td class="n">${j.v + j.d ? `${j.v + j.d} <span class="doux">(${j.v} V)</span>` : "—"}</td>
       <td class="n">${j.nb_perfs}</td><td class="n">${j.nb_contres}</td>
       <td>${j.lecture ? esc(j.lecture) : '<span class="doux">aucune partie</span>'}</td></tr>`; }).join("")
@@ -375,15 +378,15 @@ function tableTous() {
   const filtre = document.getElementById("filtre").value, tri = document.getElementById("tri").value;
   ecrire("progression-filtre", filtre); ecrire("progression-tri", tri);
   const liste = J.filter((j) => filtre === "*" || (j.equipe || "") === filtre);
-  const cles = { recent: (j) => -j.recent, total: (j) => -j.total, points: (j) => -j.serie[j.serie.length - 1] };
+  const cles = { total: (j) => -j.total, points: (j) => -j.serie[j.serie.length - 1] };
   liste.sort((a, b) => tri === "nom" ? nomLong(a).localeCompare(nomLong(b), "fr") : (cles[tri](a) - cles[tri](b)) || nomLong(a).localeCompare(nomLong(b), "fr"));
   const plein = choix.length >= MAX;
   document.getElementById("table-tous").innerHTML = `<thead><tr><th>Joueur</th><th>Courbe</th><th class="n">Virt.</th>
-    <th class="n">Phase</th><th class="n">${D.recent} dern. sem.</th><th class="n" title="Matchs · perfs · contres de la phase">M · ▲ · ▼</th><th>Tendance</th><th></th></tr></thead><tbody>`
+    <th class="n">${DEPUIS}</th><th class="n" title="Matchs · perfs · contres de la saison">M · ▲ · ▼</th><th>Tendance</th><th></th></tr></thead><tbody>`
     + liste.map((j) => { const oui = choix.some((c) => c.id === j.id); return `<tr>
       <td>${esc(nomLong(j))} <span class="doux">${esc([j.equipe, j.categorie].filter(Boolean).join(" · "))}</span></td>
       <td>${mini(j)}</td><td class="n"><b>${fr(j.serie[j.serie.length - 1])}</b></td>
-      <td class="n ${classe(j.total)}">${signe(j.total)}</td><td class="n ${classe(j.recent)}">${signe(j.recent)}</td>
+      <td class="n ${classe(j.total)}">${signe(j.total)}</td>
       <td class="n">${j.v + j.d} · <span class="tri-p">${j.nb_perfs}</span> · <span class="tri-c">${j.nb_contres}</span></td>
       <td>${j.tendance ? `<span class="tend ${j.tendance}">${j.tendance}</span>` : '<span class="doux">aucune partie</span>'}</td>
       <td><button type="button" class="comparer${oui ? " oui" : ""}" data-id="${esc(j.id)}" ${!oui && plein ? "disabled" : ""}>${oui ? "✓ affiché" : "Comparer"}</button></td></tr>`; }).join("")
@@ -401,12 +404,13 @@ const filtre = document.getElementById("filtre");
 filtre.innerHTML = `<option value="*">Toutes les équipes</option>` + EQUIPES.map((e) =>
   `<option value="${esc(e)}">${e ? esc(e.replace(/^V(\d+)( F)?$/, (m, n, f) => `Vaires ${n}${f ? " F" : ""}`)) : "Sans équipe cette phase"}</option>`).join("");
 filtre.value = EQUIPES.includes(lire("progression-filtre")) ? lire("progression-filtre") : "*";
-document.getElementById("tri").value = ["recent", "total", "points", "nom"].includes(lire("progression-tri")) ? lire("progression-tri") : "recent";
+document.getElementById("tri").value = ["total", "points", "nom"].includes(lire("progression-tri")) ? lire("progression-tri") : "total";
 filtre.addEventListener("change", tableTous);
 document.getElementById("tri").addEventListener("change", tableTous);
 document.getElementById("ajout").addEventListener("change", (ev) => ajouter(ev.target.value));
 document.querySelectorAll(".bascule button").forEach((b) => b.addEventListener("click", () => { modeChoisi = b.dataset.mode; sauver(); dessinerTout(); }));
-document.getElementById("intro-tous").textContent = `Tendance : d'après les ${D.recent} dernières semaines (progresse : +${D.seuil} points ou plus ; régresse : −${D.seuil} ou moins). M · ▲ · ▼ : matchs, perfs et contres de la phase. « Comparer » ajoute le joueur au graphe (${MAX} au plus).`;
+document.getElementById("intro-tous").textContent = `Progression et tendance depuis ${DEPART} (progresse : +${D.seuil} points ou plus ; régresse : −${D.seuil} ou moins). M · ▲ · ▼ : matchs, perfs et contres de la saison. « Comparer » ajoute le joueur au graphe (${MAX} au plus).`;
+document.getElementById("intro-graphe").textContent = `Points virtuels semaine après semaine depuis ${DEPART} (toutes compétitions ; en janvier, la courbe continue avec les nouveaux points officiels). Une courbe qui monte : le joueur progresse.`;
 document.getElementById("sous-titre").textContent = `${D.club ? D.club.nom + " · " : ""}phase ${D.phase ?? "?"} ${D.saison ?? ""} · `
   + (D.date_reference ? "archive, état au " + new Date(D.date_reference + "T12:00").toLocaleDateString("fr-FR")
      : "données du " + (D.genere_le ? new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "?"));

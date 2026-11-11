@@ -1,19 +1,21 @@
 """Page « Progression des joueurs » : les points virtuels de chaque joueur de Vaires semaine après
-semaine depuis le début de la phase, pour voir qui progresse et qui régresse, et comparer des joueurs.
+semaine depuis le début de la saison (1er septembre), pour voir qui progresse et qui régresse, et
+comparer des joueurs.
+
+Aucune donnée de plus : ce sont les parties du classement virtuel (toutes compétitions), cumulées par
+semaine (du lundi au dimanche). Sur une phase, les points virtuels partent des points officiels de la
+phase ; en phase 2, la courbe reprend la phase 1 (ses parties et ses points officiels) puis passe aux
+points officiels de janvier : elle couvre toute la saison. Départ : les points au 1er septembre.
 
 Avec la courbe, le nombre de matchs, de perfs (victoires contre un joueur qui a plus de points) et de
 contres (défaites contre un joueur qui en a moins), points officiels de la phase : une courbe qui
 descend sans aucune contre, c'est un joueur qui n'a perdu que contre plus fort que lui ; des perfs
 avec une courbe qui monte, c'est un joueur en progression.
-
-Aucune donnée de plus : ce sont les parties du classement virtuel (toutes compétitions), cumulées par
-semaine (du lundi au dimanche). Point de départ : les points officiels de la phase.
 """
 
 from datetime import date, datetime, timedelta
 
-RECENT = 4  # « ces dernières semaines » : les 4 dernières
-SEUIL_TENDANCE = 5  # ±5 points sur les dernières semaines : progresse / régresse, sinon stable
+SEUIL_TENDANCE = 10  # ±10 points depuis le début de la saison : progresse / régresse, sinon stable
 
 
 def lundi(iso):
@@ -30,8 +32,13 @@ def semaines(premiere, derniere):
     return sortie
 
 
-def tendance(recent):
-    return "progresse" if recent >= SEUIL_TENDANCE else "régresse" if recent <= -SEUIL_TENDANCE else "stable"
+def debut_saison(saison):
+    """« 2026-2027 » -> 1er septembre 2026."""
+    return date(int(saison[:4]), 9, 1)
+
+
+def tendance(progression):
+    return "progresse" if progression >= SEUIL_TENDANCE else "régresse" if progression <= -SEUIL_TENDANCE else "stable"
 
 
 def lecture(j):
@@ -47,49 +54,67 @@ def lecture(j):
     return "stable"
 
 
+def _phases(j, debut_phase):
+    """Phases de la saison du joueur, dans l'ordre : [(début, points officiels, parties)]."""
+    phases = []
+    if j.get("phase1") and j["phase1"].get("officiels") is not None:
+        phases.append((None, j["phase1"]["officiels"], j["phase1"]["parties"]))
+    phases.append((debut_phase, j["officiels"], j["parties"]))
+    return phases
+
+
+def _valeur(phases, dimanche):
+    """Points virtuels au soir de `dimanche` : ceux de la phase en cours ce jour-là."""
+    for debut, officiels, parties in reversed(phases):
+        if debut is None or dimanche >= debut:
+            return officiels + sum(p["points"] for p in parties if p["date"] <= dimanche)
+    return phases[0][1]
+
+
 def donnees_progression(virtuel, aujourdhui=None):
     """Données de la page à partir de celles du classement virtuel (recuperer_virtuel)."""
     reference = virtuel.get("date_reference") or (aujourdhui.isoformat() if aujourdhui else None)
     fin = date.fromisoformat(reference) if reference else datetime.fromisoformat(virtuel["genere_le"]).date()
-    dates = [p["date"] for j in virtuel["joueurs"] for p in j["parties"]]
-    if not dates:
-        return {**_entete(virtuel), "semaines": [], "joueurs": []}
-    # Une semaine avant la première partie : le point de départ (points officiels de la phase)
-    liste = semaines(date.fromisoformat(min(dates)) - timedelta(days=7), lundi(max(max(dates), fin.isoformat())))
+    debut = debut_saison(virtuel["saison"]) if virtuel.get("saison") else None
+    debut_phase = virtuel.get("debut") or "0000-00-00"
+    joueurs_ok = [j for j in virtuel["joueurs"] if j.get("officiels") is not None]
+    toutes = [p for j in joueurs_ok for _, _, ps in _phases(j, debut_phase) for p in ps
+              if debut is None or p["date"] >= debut.isoformat()]
+    if not toutes:
+        return {**_entete(virtuel, debut), "semaines": [], "joueurs": []}
+    premiere = debut or date.fromisoformat(min(p["date"] for p in toutes))
+    # Une semaine avant celle du 1er septembre : le point de départ (points au début de la saison)
+    liste = semaines(lundi(premiere.isoformat()) - timedelta(days=7), lundi(max(max(p["date"] for p in toutes), fin.isoformat())))
+    debut_compte = liste[1].isoformat()
     index = {d: i for i, d in enumerate(liste)}
     joueurs = []
-    for j in virtuel["joueurs"]:
-        if j.get("officiels") is None:
-            continue
-        gains, nb, victoires = [0.0] * len(liste), [0] * len(liste), [0] * len(liste)
-        perfs, contres = [0] * len(liste), [0] * len(liste)
-        for p in j["parties"]:
-            i = index[lundi(p["date"])]
-            gains[i] += p["points"]
-            nb[i] += 1
-            victoires[i] += bool(p["victoire"])
-            ecart = p.get("ecart") or 0  # points de l'adversaire moins ceux du joueur
-            perfs[i] += bool(p["victoire"] and ecart > 0)
-            contres[i] += bool(not p["victoire"] and ecart < 0)
-        serie, cumul = [], j["officiels"]
-        for g in gains:
-            cumul += g
-            serie.append(round(cumul, 1))
-        recent = round(serie[-1] - (serie[-RECENT - 1] if len(serie) > RECENT else j["officiels"]), 1)
-        joueurs.append({
-            "id": j["id"], "nom": j.get("nom"), "prenom": j.get("prenom"), "equipe": j.get("equipe"),
-            "categorie": j.get("categorie"), "officiels": j["officiels"], "serie": serie, "parties": nb,
-            "victoires": victoires, "perfs": perfs, "contres": contres, "nb_perfs": sum(perfs), "nb_contres": sum(contres),
-            "total": round(serie[-1] - j["officiels"], 1), "recent": recent,
-            "tendance": tendance(recent) if j["parties"] else None, "v": j.get("v", 0), "d": j.get("d", 0),
-        })
-    for x in joueurs:
+    for j in joueurs_ok:
+        phases = _phases(j, debut_phase)
+        n = len(liste)
+        nb, victoires, perfs, contres = [0] * n, [0] * n, [0] * n, [0] * n
+        for _, _, parties in phases:
+            for p in parties:
+                if p["date"] < debut_compte:
+                    continue
+                i = index[lundi(p["date"])]
+                nb[i] += 1
+                victoires[i] += bool(p["victoire"])
+                ecart = p.get("ecart") or 0  # points de l'adversaire moins ceux du joueur
+                perfs[i] += bool(p["victoire"] and ecart > 0)
+                contres[i] += bool(not p["victoire"] and ecart < 0)
+        serie = [round(_valeur(phases, (d + timedelta(days=6)).isoformat()), 1) for d in liste]
+        x = {"id": j["id"], "nom": j.get("nom"), "prenom": j.get("prenom"), "equipe": j.get("equipe"),
+             "categorie": j.get("categorie"), "officiels": j["officiels"], "serie": serie, "parties": nb,
+             "victoires": victoires, "perfs": perfs, "contres": contres, "v": sum(victoires), "d": sum(nb) - sum(victoires),
+             "nb_perfs": sum(perfs), "nb_contres": sum(contres), "total": round(serie[-1] - serie[0], 1)}
+        x["tendance"] = tendance(x["total"]) if sum(nb) else None
         x["lecture"] = lecture(x)
+        joueurs.append(x)
     joueurs.sort(key=lambda x: (-x["serie"][-1], x["nom"] or ""))
-    return {**_entete(virtuel), "semaines": [d.isoformat() for d in liste], "joueurs": joueurs}
+    return {**_entete(virtuel, debut), "semaines": [d.isoformat() for d in liste], "joueurs": joueurs}
 
 
-def _entete(virtuel):
+def _entete(virtuel, debut):
     return {"genere_le": virtuel.get("genere_le"), "saison": virtuel.get("saison"), "phase": virtuel.get("phase"),
-            "debut": virtuel.get("debut"), "club": virtuel.get("club"), "date_reference": virtuel.get("date_reference"),
-            "recent": RECENT, "seuil": SEUIL_TENDANCE}
+            "debut": virtuel.get("debut"), "debut_saison": debut.isoformat() if debut else None, "club": virtuel.get("club"),
+            "date_reference": virtuel.get("date_reference"), "seuil": SEUIL_TENDANCE}
