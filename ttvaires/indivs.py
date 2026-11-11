@@ -68,6 +68,35 @@ def nom_coherent(nom_liste, nom_api):
     return bool(a and b and (a in b or b in a))
 
 
+def officiels(joueur):
+    """Points de la convocation, sinon ceux lus sur ses parties."""
+    return joueur["points"] if joueur.get("points") is not None else (joueur.get("forme") or {}).get("officiels")
+
+
+def virtuels(joueur):
+    """Points officiels + points gagnés ou perdus depuis le début de la phase (sans partie : les officiels)."""
+    f = joueur.get("forme") or {}
+    return f["virtuels"] if f.get("virtuels") is not None else officiels(joueur)
+
+
+def par_virtuels(joueurs):
+    return sorted(joueurs, key=lambda j: (-(virtuels(j) if virtuels(j) is not None else -1), -(officiels(j) or 0)))
+
+
+def niveau(adv, moi):
+    """Niveau d'un adversaire pour un joueur de Vaires (comme la page) : « plus fort » (au moins 50
+    points virtuels de plus), « à surveiller » (à moins de 50 points, ou plus faible mais à +30 points
+    sur la phase), « à sa portée ». None sans points."""
+    a, m = virtuels(adv), virtuels(moi)
+    if a is None or m is None:
+        return None
+    if a - m >= 50:
+        return "plus fort"
+    if a - m > -50 or ((adv.get("forme") or {}).get("points") or 0) >= 30:
+        return "à surveiller"
+    return "à sa portée"
+
+
 def de_vaires(joueur):
     return _simple(joueur.get("club")) == _simple(CLUB_VAIRES) or joueur.get("numero_club") == "08770250"
 

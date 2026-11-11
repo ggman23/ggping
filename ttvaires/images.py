@@ -1020,3 +1020,55 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
         nom_fichier = f"adversaires_{e['id'].upper()}.png"
         sorties.append((_enregistrer(img.image(), dossier, nom_fichier), f"{e['nom_court']} : prochain adversaire"))
     return sorties
+
+
+# ---------------------------------------------------------------------------
+# Individuels (critérium) : une image par poule où joue un joueur de Vaires
+# ---------------------------------------------------------------------------
+
+def images_indivs(donnees, dossier):
+    """Une image par poule, à partager sur téléphone : les joueurs du plus fort au plus faible d'après
+    les points virtuels, ceux de Vaires sur fond bleu ; sous le nom, le club puis le critérium et les
+    tournois joués ; colonne « Pour <prénom> » (plus fort, à surveiller, à sa portée) quand un seul
+    joueur de Vaires est dans la poule. Les titres (liste des images, visible sans mot de passe) ne
+    contiennent aucun nom de joueur : la poule et sa date."""
+    from . import indivs
+
+    _nettoyer(dossier, "indivs_")
+    sorties = []
+    for p in donnees["poules"]:
+        joueurs = indivs.par_virtuels(p["joueurs"])
+        vaires = [j for j in joueurs if j.get("vaires")]
+        moi = vaires[0] if len(vaires) == 1 else None
+        colonnes = [Col("#", 46), Col("Joueur", None, "g"), Col("Pts", 84), Col("Virt.", 90), Col("Phase", 140)]
+        if moi:
+            colonnes.append(Col(f"Pour {moi.get('prenom') or moi.get('nom')}", 170))
+        couleurs = {"plus fort": NEG_TEXTE, "à surveiller": ATT_TEXTE, "à sa portée": POS_TEXTE}
+        lignes = []
+        for i, j in enumerate(joueurs, 1):
+            fond = SECTION if j.get("vaires") else None
+            nom = cel_nom(j.get("nom"), j.get("prenom"), apres=j.get("cat"), gras=bool(j.get("vaires")))
+            nom.sous = " · ".join(t for t in (j.get("club") or "", _hors_championnat(j.get("forme"))) if t) or None
+            nom.fond = fond
+            v, off = indivs.virtuels(j), indivs.officiels(j)
+            phase = _cel_forme(j.get("forme"))
+            phase.fond = fond
+            ligne = [C(i, couleur=DOUX, fond=fond), nom, C(fmt(off) if off is not None else "", couleur=DOUX, fond=fond),
+                     C(fmt(round(v)) if v is not None else "—", gras=True, fond=fond), phase]
+            if moi:
+                n = None if j is moi else indivs.niveau(j, moi)
+                ligne.append(C(n or ("Vaires" if j is moi else ""), couleur=couleurs.get(n, DOUX), gras=bool(n), fond=fond))
+            lignes.append(ligne)
+        quand = jour_fr(p["date"]) if p.get("date") else "date à préciser"
+        titre = f"{p['titre']} · {quand}"
+        sous = " · ".join(t for t in (p.get("competition"), p.get("horaire"), p.get("lieu")) if t)
+        pied = ("Classés par points virtuels : points officiels + points gagnés ou perdus depuis le début de la phase, "
+                "toutes compétitions. Phase : parties gagnées sur parties jouées, et points de la phase. Sous le nom : "
+                "le club, puis le critérium et les tournois joués. Fond bleu : Vaires."
+                + (" Plus fort : au moins 50 points virtuels de plus ; à surveiller : à moins de 50 points, ou plus faible "
+                   "mais à +30 points sur la phase." if moi else ""))
+        public = (donnees.get("publics") or {}).get(p.get("public"), "")
+        sorties += _tableau_pagine(dossier, f"indivs_{p['id']}", titre, sous,
+                                   colonnes_egales(colonnes, LARGEUR - 2 * MARGE), lignes, pied,
+                                   f"{public} · {titre}" if public else titre)
+    return sorties

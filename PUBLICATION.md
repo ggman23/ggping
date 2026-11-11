@@ -394,6 +394,15 @@ parties jouées depuis le début de la phase, les points gagnés ou perdus, les 
 (championnat, critérium, tournois) et un niveau : **plus fort** (au moins 50 points virtuels de plus),
 **à surveiller** (à moins de 50 points, ou plus faible mais à +30 points sur la phase), **à ta portée**.
 
+- **Images à partager** : une image par poule (lisible sur téléphone, comme les autres), dans l'espace
+  club, section « Individuels (poules du critérium) », et sur le site GitHub. Joueurs du plus fort au
+  plus faible, ceux de Vaires sur fond bleu, critérium et tournois sous le nom ; colonne « Pour
+  <prénom> » quand un seul joueur de Vaires est dans la poule. Leurs titres ne donnent que la poule et
+  sa date (la liste des images est visible sans mot de passe ; les images, elles, sont chiffrées).
+  Sur /indivs/, le bouton « Image de la poule à partager » ouvre celle de la poule dans l'espace club.
+- Liens : « Espace club » en haut de /indivs/ (et dans son menu) ; « Individuels » dans « Autres
+  espaces » de /club/ (menu et accueil).
+
 - Les poules viennent des convocations (PDF, captures WhatsApp) : je les recopie à chaque tour
   (licence, nom, points, club, catégorie) dans `ressources/indivs.json.chiffre`, chiffré avec le mot
   de passe du club (joueurs mineurs, dépôt public). Il suffit de m'envoyer les convocations du tour.

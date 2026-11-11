@@ -357,3 +357,5 @@ gauche.
 - Page indivs_vaires.html (gabarit_indivs.html), publiée chiffrée sur le site GitHub (« Individuels »)
   et à son adresse /indivs/ avec le mot de passe du club (clé retenue avec celle de /club/), pas parmi
   les documents de /club/ (lien « Autres espaces »). Faite avec « Tout » et le choix « Individuels ».
+- Images à partager (12/11) : une par poule (images_indivs), section « Individuels » de /club/ ; titres
+  sans nom de joueur. Liens croisés /indivs/ ↔ /club/ (bouton « Espace club », « Autres espaces »).

@@ -23,8 +23,11 @@ a { color: var(--accent); }
 .barre .titres { flex: 1 1 auto; min-width: 0; }
 .barre b { display: block; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .barre .titres span { display: block; font-size: 12.5px; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.barre button { flex: none; border: 1px solid rgba(255, 255, 255, .35); background: rgba(255, 255, 255, .12); color: #fff;
-  border-radius: 9px; padding: 7px 12px; font-size: 14.5px; font-weight: 600; }
+.barre button, .barre a { flex: none; border: 1px solid rgba(255, 255, 255, .35); background: rgba(255, 255, 255, .12); color: #fff;
+  border-radius: 9px; padding: 7px 12px; font-size: 14.5px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.bouton { display: inline-block; margin: 10px 0 0; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--bord);
+  background: var(--surface); color: var(--texte); font-weight: 600; font-size: 14.5px; text-decoration: none; }
+.bouton:hover { border-color: var(--accent); }
 .corps { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 300px 1fr; }
 #menu { overflow-y: auto; background: var(--surface); border-right: 1px solid var(--bord); padding: 8px 10px 24px; }
 #menu h2 { font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--doux); margin: 16px 8px 6px; }
@@ -81,6 +84,7 @@ tr.vaires td:nth-child(2) b::after { content: " · Vaires"; color: var(--accent)
   <header class="barre">
     <button id="retour" aria-label="Retour à la liste des joueurs">‹ Joueurs</button>
     <div class="titres"><b>CVTT Vaires · individuels</b><span id="sous-titre"></span></div>
+    <a id="vers-club" href="../club/" title="Espace club : pages, images, archives">Espace club</a>
   </header>
   <div class="corps">
     <nav id="menu" aria-label="Joueurs de Vaires"></nav>
@@ -113,6 +117,16 @@ function niveau(adv, moi) {
   return { cl: "ok", txt: "à ta portée" };
 }
 
+/* Espace club (pages, images à partager) : /club/ à côté de /indivs/ (même mot de passe, déjà retenu),
+   y compris quand cette page est ouverte depuis le site GitHub (…/ggping/indivs.html) ou /gg/. */
+function adresseClub() {
+  const p = location.pathname, i = p.search(/\/(gg\/)?indivs(\/|\.html)/);
+  return (i >= 0 ? p.slice(0, i) : p.replace(/\/[^/]*$/, "")) + "/club/";
+}
+const CLUB = location.protocol === "file:" ? "../club/" : adresseClub();
+document.getElementById("vers-club").href = CLUB;
+const lienImage = (p) => `${CLUB}#${encodeURIComponent("indivs_" + p.id + ".png")}`;
+
 const ENTREES = [];
 for (const p of D.poules) for (const j of p.joueurs) if (j.vaires) ENTREES.push({ cle: `${p.id}-${j.licence}`, p, j });
 const SECTIONS = Object.entries(D.publics).map(([cle, titre]) => ({ cle, titre, entrees: ENTREES.filter((e) => e.p.public === cle)
@@ -139,7 +153,8 @@ function menu(actif) {
   document.getElementById("menu").innerHTML = `<a class="entree${actif ? "" : " actif"}" href="#ensemble"><b>Vue d'ensemble</b><span>Tous les joueurs de Vaires</span></a>`
     + SECTIONS.map((s) => `<h2>${esc(s.titre)}</h2>` + s.entrees.map((e) =>
       `<a class="entree${e.cle === actif ? " actif" : ""}" href="#j/${encodeURIComponent(e.cle)}"><b>${nomComplet(e.j)}</b>
-        <span>${dateCourte(e.p.date)} · ${esc(e.p.titre)}</span></a>`).join("")).join("");
+        <span>${dateCourte(e.p.date)} · ${esc(e.p.titre)}</span></a>`).join("")).join("")
+    + `<h2>Autres espaces</h2><a class="entree" href="${CLUB}"><b>Espace club</b><span>Pages, images à partager, archives</span></a>`;
 }
 
 function vueEnsemble() {
@@ -185,6 +200,7 @@ function vueJoueur(e) {
       <span class="chiffre ok">À ta portée <b>${b.n.ok}</b></span>
       <span class="chiffre">Sa phase ${formeTxt(moi.forme)}</span>
     </div>
+    <a class="bouton" href="${lienImage(p)}">Image de la poule à partager (espace club)</a>
     ${p.titre.includes("qualifiées") ? '<p class="note">Liste des qualifiées : les poules sont faites sur place.</p>' : ""}
     <div class="carte"><h2>${p.titre.includes("qualifiées") ? "Les qualifiées" : "La poule"}, de la plus forte à la plus faible</h2>
       <div class="defil"><table>

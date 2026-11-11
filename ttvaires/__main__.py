@@ -139,7 +139,8 @@ def page_indivs(client, club, ctx):
     if not poules:
         return [], "pas de page (aucune poule enregistrée : python -m ttvaires.indivs importer)"
     donnees = indivs.recuperer(client, poules, ctx.aujourdhui)
-    return [generer_html(donnees, ctx.sortie / "indivs_vaires.html", GABARIT_INDIVS)], indivs.resume(donnees)
+    html = generer_html(donnees, ctx.sortie / "indivs_vaires.html", GABARIT_INDIVS)
+    return [html, *faire_images("images_indivs", donnees, dossier=ctx.images)], indivs.resume(donnees)
 
 
 def generer_pages(client, club, ctx, a_faire):

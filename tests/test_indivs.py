@@ -89,3 +89,23 @@ def test_page_publiee_a_son_adresse_avec_le_mot_de_passe_du_club(tmp_path):
         donnees = json.loads(re.search(r"const D = (\{.*?\});\n", club, re.S)[1]) if "const D = {" in club else None
         assert '"chemin": "indivs"' in club or (donnees and any(e["chemin"] == "indivs" for e in donnees["espaces"]))
         assert not (dossier / "club" / "fichiers" / "indivs_vaires.html.chiffre").exists()  # pas parmi les documents
+
+
+def test_une_image_par_poule_sans_nom_dans_les_titres(tmp_path):
+    pytest.importorskip("PIL.ImageDraw")
+    from ttvaires.images import images_indivs
+
+    f = lambda pts: {"v": 3, "d": 1, "points": pts, "officiels": 1000, "virtuels": 1000 + pts, "competitions": [
+        {"nom": "Critérium fédéral", "v": 3, "d": 1, "points": pts}], "nom": "X"}
+    j = lambda nom, club, vaires, forme: {"licence": nom, "nom": nom, "prenom": "Paul", "points": 1000, "club": club,
+                                          "cat": "S", "vaires": vaires, "forme": forme, "licence_douteuse": False}
+    donnees = {"genere_le": "2026-11-11T18:00", "publics": indivs.PUBLICS, "poules": [
+        {"id": "p1", "public": "adultes", "competition": "Critérium · Tour 2", "titre": "D3 · groupe 1", "date": "2026-11-15",
+         "horaire": None, "lieu": "COSEC", "joueurs": [j("DUPOND", "CVTT VAIRES", True, f(-4)), j("FORT", "CS MEAUX TT", False, f(60)),
+                                                      {**j("FAIBLE", "ATT QUINCY", False, None), "points": 900}]}]}
+    sorties = images_indivs(donnees, tmp_path)
+    assert [(c.name, t) for c, t in sorties] == [("indivs_p1.png", "Adultes · D3 · groupe 1 · dim. 15/11")]
+    assert "DUPOND" not in sorties[0][1]  # liste des images visible sans mot de passe : pas de nom
+    moi, fort = donnees["poules"][0]["joueurs"][:2]
+    assert indivs.niveau(fort, moi) == "plus fort" and indivs.niveau(moi, fort) == "à sa portée"
+    assert [x["nom"] for x in indivs.par_virtuels(donnees["poules"][0]["joueurs"])] == ["FORT", "DUPOND", "FAIBLE"]
