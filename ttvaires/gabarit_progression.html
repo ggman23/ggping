@@ -37,6 +37,14 @@ select { font: inherit; font-size: 15px; padding: 7px 10px; border: 1px solid va
 .legende { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--doux); margin: 2px 0 4px; }
 .legende span { display: inline-flex; align-items: center; gap: 6px; }
 .graphe { position: relative; }
+.bilans { display: grid; gap: 3px; margin: 2px 0 6px; font-size: 13.5px; }
+.bilan { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; }
+.bilan b { font-weight: 650; }
+.bilan .chiffres { color: var(--doux); }
+.bilan .chiffres strong { color: var(--texte); font-variant-numeric: tabular-nums; }
+.bilan .lecture { color: var(--doux); font-style: italic; }
+.tri-p { color: var(--plus); } .tri-c { color: var(--moins); }
+.cles-graphe { font-size: 12.5px; color: var(--doux); margin: 4px 0 0; }
 .graphe svg { display: block; width: 100%; touch-action: pan-y; }
 .graphe svg:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 .axe { fill: var(--doux); font-size: 11.5px; }
@@ -213,6 +221,21 @@ function graphe() {
     return;
   }
   const series = choix.map((c) => ({ ...c, j: PAR_ID.get(c.id), v: valeurs(PAR_ID.get(c.id)) }));
+  // Sur le graphe : pour chaque joueur, matchs, perfs (▲) et contres (▼) de la phase, et ce qu'en dit la courbe
+  const bilans = document.createElement("div");
+  bilans.className = "bilans";
+  for (const s of series) {
+    const l = document.createElement("div"); l.className = "bilan";
+    const cle = document.createElement("span"); cle.className = "cle"; cle.style.borderColor = `var(--s${s.slot})`;
+    const nom = document.createElement("b"); nom.textContent = series.length > 1 ? nomCourt(s.j) : nomLong(s.j);
+    const ch = document.createElement("span"); ch.className = "chiffres";
+    const m = s.j.v + s.j.d;
+    ch.innerHTML = `<strong>${m}</strong> match${m > 1 ? "s" : ""} · <span class="tri-p">▲</span> <strong>${s.j.nb_perfs}</strong> perf${s.j.nb_perfs > 1 ? "s" : ""} · <span class="tri-c">▼</span> <strong>${s.j.nb_contres}</strong> contre${s.j.nb_contres > 1 ? "s" : ""}`;
+    l.append(cle, nom, ch);
+    if (s.j.lecture) { const lec = document.createElement("span"); lec.className = "lecture"; lec.textContent = s.j.lecture; l.appendChild(lec); }
+    bilans.appendChild(l);
+  }
+  zone.appendChild(bilans);
   // Légende : les étiquettes des joueurs affichés, au-dessus (trait de la couleur de chaque courbe)
   const L = zone.clientWidth || 600, petit = L < 560;
   zone.classList.toggle("petit", petit);
@@ -221,12 +244,17 @@ function graphe() {
   const sc = echelle(Math.min(...toutes, mode === "evolution" ? 0 : Infinity), Math.max(...toutes, mode === "evolution" ? 0 : -Infinity));
   // Étiquettes au bout des courbes (4 joueurs au plus, et si elles ne se chevauchent pas) ; sinon légende et bulle
   let droite = 14, etiquettes = series.length <= 4;
-  const M = { g: 46, h: 10, b: 26 };
+  const M = { g: 46, h: 20, b: 34 };  // place pour les triangles des perfs (en haut) et des contres (en bas)
   const yv = (v, h) => M.h + (sc.haut - v) / (sc.haut - sc.bas) * (h - M.h - M.b);
+  const texteFin = (s) => `${nomCourt(s.j)} ${mode === "evolution" ? signe(s.v[s.v.length - 1]) : fr(s.v[s.v.length - 1])}`;
   if (etiquettes) {
     const ys = series.map((s) => yv(s.v[s.v.length - 1], H)).sort((a, b) => a - b);
-    if (ys.some((y, i) => i && y - ys[i - 1] < 15)) etiquettes = false;
-    else droite = petit ? 92 : 128;
+    // Largeur réelle des étiquettes (sinon coupées au bord sur téléphone) ; trop larges : légende et bulle seulement
+    const mesure = document.createElement("canvas").getContext("2d");
+    mesure.font = `12px ${getComputedStyle(document.body).fontFamily}`;
+    const largeurMax = Math.max(...series.map((s) => mesure.measureText(texteFin(s)).width)) + 18;
+    if (ys.some((y, i) => i && y - ys[i - 1] < 15) || largeurMax > L * 0.4) etiquettes = false;
+    else droite = largeurMax;
   }
   const n = SEM.length, x = (i) => M.g + (n === 1 ? 0 : i / (n - 1) * (L - M.g - droite)), y = (v) => yv(v, H);
   const NS = "http://www.w3.org/2000/svg", el = (nom, attrs) => { const e = document.createElementNS(NS, nom);
@@ -248,6 +276,11 @@ function graphe() {
   for (const s of series) {
     svg.appendChild(el("path", { d: s.v.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(""),
       fill: "none", stroke: `var(--s${s.slot})`, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+    for (let i = 1; i < s.v.length; i++) {
+      const cx = x(i), cy = y(s.v[i]);
+      if (s.j.perfs[i]) svg.appendChild(el("path", { d: `M${cx},${cy - 15} l5.5,9 h-11 z`, fill: "var(--plus)", stroke: "var(--surface)", "stroke-width": 1.5 }));
+      if (s.j.contres[i]) svg.appendChild(el("path", { d: `M${cx},${cy + 15} l5.5,-9 h-11 z`, fill: "var(--moins)", stroke: "var(--surface)", "stroke-width": 1.5 }));
+    }
     const fin = s.v.length - 1;
     svg.appendChild(el("circle", { cx: x(fin), cy: y(s.v[fin]), r: 4.5, fill: `var(--s${s.slot})`, stroke: "var(--surface)", "stroke-width": 2 }));
     if (etiquettes) {
@@ -264,7 +297,9 @@ function graphe() {
   svg.append(trait, ...points);
   const bulle = document.createElement("div");
   bulle.className = "bulle"; bulle.hidden = true;
-  zone.append(svg, bulle);
+  const cles = document.createElement("p"); cles.className = "cles-graphe";
+  cles.innerHTML = '<span class="tri-p">▲</span> semaine avec une perf (victoire contre plus de points) · <span class="tri-c">▼</span> avec une contre (défaite contre moins de points)';
+  zone.append(svg, cles, bulle);
   let courant = null;
   const montrer = (i) => {
     courant = i;
@@ -281,14 +316,16 @@ function graphe() {
       const nom = document.createElement("span"); nom.textContent = nomCourt(s.j);
       const semaine = document.createElement("span"); semaine.className = "doux";
       const np = s.j.parties[i], d = i ? s.j.serie[i] - s.j.serie[i - 1] : 0;
-      semaine.textContent = np ? `${signe(d)} · ${s.j.victoires[i]} gagnée${s.j.victoires[i] > 1 ? "s" : ""} sur ${np}` : i ? "pas de partie" : "";
+      const pc = [s.j.perfs[i] ? `${s.j.perfs[i]} perf${s.j.perfs[i] > 1 ? "s" : ""}` : "", s.j.contres[i] ? `${s.j.contres[i]} contre${s.j.contres[i] > 1 ? "s" : ""}` : ""].filter(Boolean).join(", ");
+      semaine.textContent = np ? `${signe(d)} · ${s.j.victoires[i]} gagnée${s.j.victoires[i] > 1 ? "s" : ""} sur ${np}${pc ? " · " + pc : ""}` : i ? "pas de partie" : "";
       ligne.append(cle, val, nom, semaine); bulle.appendChild(ligne);
     }
     bulle.hidden = false;
     if (!petit) {
       const bx = x(i) / L * zone.clientWidth, w = bulle.offsetWidth;
       bulle.style.left = `${Math.max(0, Math.min(zone.clientWidth - w, bx > zone.clientWidth / 2 ? bx - w - 12 : bx + 12))}px`;
-      bulle.style.top = "8px";
+      // sur le graphe, sous le bilan des joueurs (un élément SVG n'a pas d'offsetTop)
+      bulle.style.top = `${svg.getBoundingClientRect().top - zone.getBoundingClientRect().top + 8}px`;
     }
   };
   const cacher = () => { courant = null; trait.setAttribute("visibility", "hidden"); points.forEach((p) => p.setAttribute("visibility", "hidden")); bulle.hidden = true; };
@@ -313,13 +350,14 @@ function tableChoix() {
   const t = document.getElementById("table-choix");
   if (!choix.length) { t.innerHTML = ""; return; }
   t.innerHTML = `<thead><tr><th>Joueur</th><th class="n">Départ</th><th class="n">Aujourd'hui</th><th class="n">Phase</th>
-    <th class="n">${D.recent} dern. sem.</th><th class="n">Parties</th><th>Tendance</th></tr></thead><tbody>`
+    <th class="n">${D.recent} dern. sem.</th><th class="n">Matchs</th><th class="n">Perfs</th><th class="n">Contres</th><th>Lecture</th></tr></thead><tbody>`
     + choix.map((c) => { const j = PAR_ID.get(c.id); return `<tr>
       <td><span class="cle" style="border-color:var(--s${c.slot})"></span> ${esc(nomLong(j))} <span class="doux">${esc(j.equipe || "")}</span></td>
       <td class="n">${fr(j.serie[0])}</td><td class="n"><b>${fr(j.serie[j.serie.length - 1])}</b></td>
       <td class="n ${classe(j.total)}">${signe(j.total)}</td><td class="n ${classe(j.recent)}">${signe(j.recent)}</td>
-      <td class="n">${j.v + j.d ? `${j.v}/${j.v + j.d}` : "—"}</td>
-      <td>${j.tendance ? `<span class="tend ${j.tendance}">${j.tendance}</span>` : '<span class="doux">aucune partie</span>'}</td></tr>`; }).join("")
+      <td class="n">${j.v + j.d ? `${j.v + j.d} <span class="doux">(${j.v} V)</span>` : "—"}</td>
+      <td class="n">${j.nb_perfs}</td><td class="n">${j.nb_contres}</td>
+      <td>${j.lecture ? esc(j.lecture) : '<span class="doux">aucune partie</span>'}</td></tr>`; }).join("")
     + "</tbody>";
 }
 
@@ -341,11 +379,12 @@ function tableTous() {
   liste.sort((a, b) => tri === "nom" ? nomLong(a).localeCompare(nomLong(b), "fr") : (cles[tri](a) - cles[tri](b)) || nomLong(a).localeCompare(nomLong(b), "fr"));
   const plein = choix.length >= MAX;
   document.getElementById("table-tous").innerHTML = `<thead><tr><th>Joueur</th><th>Courbe</th><th class="n">Virt.</th>
-    <th class="n">Phase</th><th class="n">${D.recent} dern. sem.</th><th>Tendance</th><th></th></tr></thead><tbody>`
+    <th class="n">Phase</th><th class="n">${D.recent} dern. sem.</th><th class="n" title="Matchs · perfs · contres de la phase">M · ▲ · ▼</th><th>Tendance</th><th></th></tr></thead><tbody>`
     + liste.map((j) => { const oui = choix.some((c) => c.id === j.id); return `<tr>
       <td>${esc(nomLong(j))} <span class="doux">${esc([j.equipe, j.categorie].filter(Boolean).join(" · "))}</span></td>
       <td>${mini(j)}</td><td class="n"><b>${fr(j.serie[j.serie.length - 1])}</b></td>
       <td class="n ${classe(j.total)}">${signe(j.total)}</td><td class="n ${classe(j.recent)}">${signe(j.recent)}</td>
+      <td class="n">${j.v + j.d} · <span class="tri-p">${j.nb_perfs}</span> · <span class="tri-c">${j.nb_contres}</span></td>
       <td>${j.tendance ? `<span class="tend ${j.tendance}">${j.tendance}</span>` : '<span class="doux">aucune partie</span>'}</td>
       <td><button type="button" class="comparer${oui ? " oui" : ""}" data-id="${esc(j.id)}" ${!oui && plein ? "disabled" : ""}>${oui ? "✓ affiché" : "Comparer"}</button></td></tr>`; }).join("")
     + "</tbody>";
@@ -367,7 +406,7 @@ filtre.addEventListener("change", tableTous);
 document.getElementById("tri").addEventListener("change", tableTous);
 document.getElementById("ajout").addEventListener("change", (ev) => ajouter(ev.target.value));
 document.querySelectorAll(".bascule button").forEach((b) => b.addEventListener("click", () => { modeChoisi = b.dataset.mode; sauver(); dessinerTout(); }));
-document.getElementById("intro-tous").textContent = `Tendance : d'après les ${D.recent} dernières semaines (progresse : +${D.seuil} points ou plus ; régresse : −${D.seuil} ou moins). « Comparer » ajoute le joueur au graphe (${MAX} au plus).`;
+document.getElementById("intro-tous").textContent = `Tendance : d'après les ${D.recent} dernières semaines (progresse : +${D.seuil} points ou plus ; régresse : −${D.seuil} ou moins). M · ▲ · ▼ : matchs, perfs et contres de la phase. « Comparer » ajoute le joueur au graphe (${MAX} au plus).`;
 document.getElementById("sous-titre").textContent = `${D.club ? D.club.nom + " · " : ""}phase ${D.phase ?? "?"} ${D.saison ?? ""} · `
   + (D.date_reference ? "archive, état au " + new Date(D.date_reference + "T12:00").toLocaleDateString("fr-FR")
      : "données du " + (D.genere_le ? new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "?"));

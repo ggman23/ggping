@@ -1081,7 +1081,7 @@ def images_indivs(donnees, dossier):
 
 COURBE = "#2a78d6"   # trait des courbes (bleu de la page)
 GRILLE = "#e3e6eb"   # ligne du niveau de départ
-PANNEAU_H = 214      # hauteur d'un joueur (nom, chiffres, courbe)
+PANNEAU_H = 240      # hauteur d'un joueur (nom, chiffres, courbe)
 
 
 def _nom_equipe(code):
@@ -1111,12 +1111,21 @@ def _panneaux(rendu, joueurs, recent):
             d.text(((x + 12) * S, (y + 10) * S), nom, font=police(taille, True), fill=NOIR)
             d.text(((x + larg - 12 - ld) * S, (y + 6) * S), delta, font=police(30, True), fill=couleur)
             serie = j["serie"]
-            infos = (f"{fmt(round(serie[0]))} → {fmt(round(serie[-1]))} · {j['v']}/{j['v'] + j['d']} gagnées · "
+            infos = (f"{fmt(round(serie[0]))} → {fmt(round(serie[-1]))} · "
                      f"{recent} dern. sem. {signe(round(j['recent'])) if round(j['recent']) else '±0'}")
             t, tl = ajuster(infos, larg - 24, 16)
             d.text(((x + 12) * S, (y + 42) * S), t, font=police(tl), fill=DOUX)
+            # Matchs, perfs (victoires contre plus de points) et contres (défaites contre moins de points)
+            m, pf, ct = j["v"] + j["d"], j.get("nb_perfs", 0), j.get("nb_contres", 0)
+            morceaux = [(f"{m} match{'s' if m > 1 else ''}", NOIR, False), (" · ", DOUX, False),
+                        (f"{pf} perf{'s' if pf > 1 else ''}", POS_TEXTE if pf else DOUX, bool(pf)), (" · ", DOUX, False),
+                        (f"{ct} contre{'s' if ct > 1 else ''}", NEG_TEXTE if ct else DOUX, bool(ct))]
+            cx = x + 12
+            for texte, couleur, gras in morceaux:
+                d.text((cx * S, (y + 63) * S), texte, font=police(17, gras), fill=couleur)
+                cx += largeur_texte(texte, 17, gras)
             # Courbe
-            gx, gy, gl, gh = x + 16, y + 74, larg - 40, PANNEAU_H - 90
+            gx, gy, gl, gh = x + 16, y + 100, larg - 40, PANNEAU_H - 116
             bas, haut = min(serie), max(serie)
             if haut - bas < 40:
                 milieu = (haut + bas) / 2
@@ -1125,6 +1134,12 @@ def _panneaux(rendu, joueurs, recent):
             py = lambda v: gy + (haut - v) / (haut - bas) * gh
             d.line([gx * S, py(serie[0]) * S, (gx + gl) * S, py(serie[0]) * S], fill=GRILLE, width=2 * S)
             d.line([(px(i) * S, py(v) * S) for i, v in enumerate(serie)], fill=COURBE, width=3 * S, joint="curve")
+            for i in range(1, len(serie)):  # semaines avec une perf (▲ au-dessus) ou une contre (▼ en dessous)
+                cx, cy = px(i), py(serie[i])
+                if (j.get("perfs") or [0] * len(serie))[i]:
+                    d.polygon([(cx * S, (cy - 16) * S), ((cx + 6) * S, (cy - 6) * S), ((cx - 6) * S, (cy - 6) * S)], fill=POS_TEXTE)
+                if (j.get("contres") or [0] * len(serie))[i]:
+                    d.polygon([(cx * S, (cy + 16) * S), ((cx + 6) * S, (cy + 6) * S), ((cx - 6) * S, (cy + 6) * S)], fill=NEG_TEXTE)
             fx, fy = px(len(serie) - 1), py(serie[-1])
             r = 6
             d.ellipse([(fx - r - 2) * S, (fy - r - 2) * S, (fx + r + 2) * S, (fy + r + 2) * S], fill=ZEBRE)
@@ -1157,7 +1172,9 @@ def images_progression(donnees, dossier):
         r.espace(12)
         _panneaux(r, joueurs, donnees.get("recent", 4))
         r.pied("Chiffre en couleur : points gagnés ou perdus depuis le début de la phase, toutes compétitions. Trait fin : "
-               "niveau de départ (points officiels). Chaque courbe a sa propre échelle (au moins 40 points de haut)."
+               "niveau de départ (points officiels). Triangle vert : semaine avec une perf (victoire contre un joueur qui a "
+               "plus de points) ; rouge : avec une contre (défaite contre un joueur qui en a moins). Une courbe qui descend "
+               "sans contre : défaites contre plus fort. Chaque courbe a sa propre échelle (au moins 40 points de haut)."
                + (" Sans partie cette phase : " + ", ".join(f"{x.get('nom') or ''} {x.get('prenom') or ''}".strip() for x in sans) + "."
                   if sans else ""))
         fichier = f"progression_{code.replace(' ', '') or 'autres'}.png"

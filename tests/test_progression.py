@@ -6,10 +6,10 @@ from ttvaires.progression import donnees_progression, tendance
 
 
 def _virtuel():
-    p = lambda jour, pts, v=True: {"date": jour, "points": pts, "victoire": v}
+    p = lambda jour, pts, v=True, ecart=0: {"date": jour, "points": pts, "victoire": v, "ecart": ecart}
     return {"genere_le": "2026-11-11T10:00", "saison": "2026-2027", "phase": 1, "club": {"nom": "CVTT VAIRES"}, "joueurs": [
         {"id": "1", "nom": "DUPOND", "prenom": "Paul", "equipe": "V1", "officiels": 800, "v": 3, "d": 1, "parties": [
-            p("2026-09-25", 10), p("2026-09-26", 2.5), p("2026-10-17", -3, False), p("2026-11-07", 6.5)]},
+            p("2026-09-25", 10, ecart=120), p("2026-09-26", 2.5), p("2026-10-17", -3, False, ecart=-40), p("2026-11-07", 6.5, ecart=30)]},
         {"id": "2", "nom": "DURAND", "prenom": "Léa", "equipe": "V1 F", "officiels": 900, "v": 0, "d": 0, "parties": []},
         {"id": "3", "nom": "SANS", "prenom": "Points", "equipe": None, "officiels": None, "v": 0, "d": 0, "parties": []},
     ]}
@@ -26,6 +26,9 @@ def test_points_virtuels_semaine_apres_semaine():
     assert a["serie"][-1] == 816 and a["total"] == 16
     assert a["parties"][1] == 2 and a["victoires"][1] == 2
     assert a["recent"] == 6.5 and a["tendance"] == "progresse"  # 4 dernières semaines : 809,5 (sem. du 12/10) -> 816
+    # Perfs : victoires contre plus de points ; contres : défaites contre moins de points
+    assert (a["nb_perfs"], a["nb_contres"]) == (2, 1) and a["perfs"][1] == 1 and a["contres"][4] == 1  # défaite du 17/10 : semaine du 12/10
+    assert a["lecture"] == "progression avec 2 perfs" and j["2"]["lecture"] is None
     assert j["2"]["serie"] == [900] * len(d["semaines"]) and j["2"]["tendance"] is None
     assert [x["id"] for x in d["joueurs"]] == ["2", "1"]  # par points virtuels
     assert tendance(5) == "progresse" and tendance(-5) == "régresse" and tendance(4.9) == "stable"

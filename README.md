@@ -78,7 +78,10 @@ Avec elle, la page **Progression des joueurs** (`sortie\progression_vaires.html`
 de la phase. Une liste déroulante choisit le joueur (sa courbe s'affiche) ; on peut en ajouter jusqu'à
 5 pour les comparer (au-delà, les courbes se mélangent), en points virtuels ou en évolution (±, tous
 partent de zéro : utile entre joueurs de niveaux différents) ; survol ou toucher : la valeur de chaque
-joueur pour la semaine choisie. En dessous, tous les joueurs avec leur mini-courbe, leur progression
+joueur pour la semaine choisie. Sur le graphe, pour chaque joueur : ses **matchs**, ses **perfs** (▲,
+victoires contre un joueur qui a plus de points) et ses **contres** (▼, défaites contre un joueur qui en a
+moins), avec une lecture : une courbe qui descend sans contre, ce sont des défaites contre plus fort ;
+des perfs avec une courbe qui monte, c'est un joueur en progression. En dessous, tous les joueurs avec leur mini-courbe, leur progression
 sur la phase et sur les 4 dernières semaines (progresse, stable, régresse), triables et filtrables par
 équipe. Images à partager : une par équipe, une petite courbe par joueur.
 Pour avoir tous les joueurs (y compris les jeunes qui ne jouent pas en championnat), la liste des

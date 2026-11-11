@@ -378,3 +378,8 @@ plusieurs pour les comparer (en restant lisible) ; des images si c'est lisible.
   l'appareil.
 - Images : une par équipe (petits multiples : une courbe par joueur qui a joué, échelle propre d'au
   moins 40 points, niveau de départ en trait fin), groupe « Progression des joueurs ».
+- Ajout (12/11) : sur le même graphe, matchs, perfs et contres (points officiels de la phase : perf =
+  victoire contre plus de points, contre = défaite contre moins de points), par joueur au-dessus de
+  la courbe, ▲ / ▼ sur les semaines concernées, dans la bulle, les tableaux et les images ; lecture :
+  « baisse sans contre : perdu contre plus fort », « baisse avec n contres », « progression avec n
+  perfs », « progression sans perf », « stable ».
