@@ -427,6 +427,19 @@ niveau, plus fort).
   janvier et juillet, repère sur le meilleur, bulle par phase, tableau), colonne et tri « Meilleur »
   dans le tableau du club. Une archive ne montre rien d'après sa date.
 
+## Meilleur classement sur l'image des adversaires (12/11/2026)
+
+Demande : le meilleur classement et son année sur l'image du prochain adversaire (la page l'avait,
+pas l'image), idéalement en points exacts (1452 plutôt que 14), en restant lisible.
+
+- Colonne « Meilleur » après « Pts » (images._cel_meilleur) : « 1 452 (2006) », en orange et en gras
+  quand il dépasse les points actuels d'au moins 200 points (même règle que la page). Retirée si aucun
+  joueur n'a d'historique lu ; note en pied d'image.
+- Place : si l'image (1080 points) n'a pas la place de l'année à côté des points, l'année passe dessous
+  (colonne plus étroite). Au passage : une fiche aux colonnes trop larges (positions « Placé »
+  nombreuses) sortait de l'image ; elle s'élargit maintenant au lieu d'être coupée, et la colonne des
+  remarques ne grandit plus quand elle doit rétrécir.
+
 ## Tournois à venir (11/11/2026)
 
 Demande : la liste des tournois de tennis de table d'Île-de-France ou à 100 km de Vaires, dans une page

@@ -862,6 +862,20 @@ def _hors_championnat(f):
                       for c in (f or {}).get("competitions", []) if c["nom"] != "Championnat")
 
 
+ECART_MEILLEUR = 200  # meilleur classement mis en évidence : au moins deux classements au-dessus d'aujourd'hui (comme la page)
+
+
+def _cel_meilleur(j):
+    """« 1 452 (2006) » : meilleur classement du joueur (points officiels d'une phase) et son année, en
+    orange et en gras quand il a été classé au moins deux classements au-dessus de ses points actuels."""
+    m = j.get("meilleur") or {}
+    if not m.get("points"):
+        return C("")
+    haut = bool(_pts(j)) and m["points"] - _pts(j) >= ECART_MEILLEUR
+    return C(fmt(m["points"]), apres=f"({m['annee']})" if m.get("annee") else None,
+             couleur=ATT_TEXTE if haut else DOUX, gras=haut)
+
+
 def images_adversaires(donnees, dossier, aujourdhui=None):
     _nettoyer(dossier, "adversaires_")
     auj = (aujourdhui or date.today()).isoformat()
@@ -937,6 +951,7 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                     sortie.append([
                         nom_j,
                         C(_clt(j) or "", gras=True), C(fmt(_pts(j)) if _pts(j) else "", couleur=DOUX),
+                        _cel_meilleur(j),
                         C(j.get("categorie") or "", couleur=DOUX),
                         _cel_forme(j.get("forme")),
                         C(resume_joueur(places.get(jid), pl.get("libelles")), couleur=NOIR, align="g"),
@@ -945,7 +960,7 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                 return sortie
 
             def ou_aucun(lignes, texte="aucun"):
-                return lignes or [[C(texte, couleur=DOUX, align="g"), C(), C(), C(), C(), C(), C()]]
+                return lignes or [[C(texte, couleur=DOUX, align="g"), C(), C(), C(), C(), C(), C(), C()]]
 
             num = r["adversaire"].get("numero")
             renforts = {x["id"]: "a joué en " + ", ".join(str(n) for n in x["equipes"])
@@ -968,15 +983,28 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                  ou_aucun(lignes_joueurs(pas_joue[:8]))),
             ]
             toutes = [l for _, _, lignes in tableaux for l in lignes]
-            # Colonnes facultatives (forme, positions déjà occupées, équipes des renforts) : retirées si vides
-            facultatives = [(4, "Phase"), (5, "Placé"), (6, "")]
-            garder = [i for i, _ in facultatives if any(l[i].texte for l in toutes)]
-            larg = {i: max(largeur_naturelle(l[i]) for l in toutes if l[i].texte) for i in garder}
-            tableaux = [(t_, d_, [l[:4] + [l[i] for i in garder] for l in lignes]) for t_, d_, lignes in tableaux]
-            fixes = [Col("Clt", 70), Col("Pts", 90), Col("Cat.", 80)] + [
-                Col(titre_col, max(larg[i], largeur_texte(titre_col, 19)) + 14, "g")
-                for i, titre_col in facultatives if i in garder]
+            # Colonnes : Clt, Pts et Cat. toujours ; les autres (meilleur classement, forme, positions déjà
+            # occupées, équipes des renforts) retirées si elles sont vides. Largeur : celle de leur contenu.
+            colonnes_fiche = [(1, "Clt", 70, "c"), (2, "Pts", 90, "c"), (3, "Meilleur", None, "c"), (4, "Cat.", 80, "c"),
+                              (5, "Phase", None, "g"), (6, "Placé", None, "g"), (7, "", None, "g")]
+            garder = [i for i, _, fixe, _ in colonnes_fiche if fixe or any(l[i].texte for l in toutes)]
             nom = max(NOM_MIN, max(largeur_naturelle(l[0]) for l in toutes) + 6)
+
+            def largeurs():
+                larg = {i: max([largeur_naturelle(l[i]) for l in toutes if l[i].texte] or [0]) for i in garder}
+                return [Col(titre_col, fixe or max(larg[i], largeur_texte(titre_col, 19)) + 14, align)
+                        for i, titre_col, fixe, align in colonnes_fiche if i in garder]
+            fixes = largeurs()
+            # Meilleur classement : l'année à côté des points (« 1 452 (2006) ») si l'image a la place, sinon
+            # dessous (colonne plus étroite, lignes un peu plus hautes) : le nom et les autres colonnes restent lisibles
+            # (la dernière colonne, les remarques, peut céder sa place jusqu'à 140 points : voir plus bas)
+            souple = lambda: max(0, fixes[-1].largeur - 140) if fixes[-1].titre == "" else 0
+            if 3 in garder and nom + sum(c.largeur for c in fixes) + 2 * MARGE - souple() > LARGEUR:
+                for l in toutes:
+                    if l[3].apres:
+                        l[3].sous, l[3].apres = l[3].apres.strip("()"), None
+                fixes = largeurs()
+            tableaux = [(t_, d_, [[l[0]] + [l[i] for i in garder] for l in lignes]) for t_, d_, lignes in tableaux]
             largeur = min(LARGEUR, max(FICHE_MIN, round(nom + sum(c.largeur for c in fixes) + 2 * MARGE)))
             # Où l'adversaire a placé ses joueurs à chacune de ses rencontres (position = A ou W, ...)
             lignes_pl = []
@@ -993,8 +1021,10 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
             # plutôt que de déborder de l'image (le nom garde au moins NOM_MIN)
             trop = NOM_MIN + sum(c.largeur for c in fixes) + 2 * MARGE - largeur
             if trop > 0 and fixes[-1].titre == "":
-                fixes[-1].largeur = max(140, fixes[-1].largeur - trop)
+                fixes[-1].largeur = max(min(140, fixes[-1].largeur), fixes[-1].largeur - trop)
             colonnes = colonnes_egales([Col("Joueur", None, "g")] + fixes, largeur - 2 * MARGE)
+            # Rien ne doit sortir de l'image : si les colonnes ne tiennent toujours pas, l'image s'élargit
+            largeur = max(largeur, round(sum(c.largeur for c in colonnes) + 2 * MARGE))
             img = Rendu(largeur)
             img.titre(titre, sous_titre)
             img.espace(6)
@@ -1010,7 +1040,10 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                 largeur_pl = (largeur - 2 * MARGE - RENC_PL) / pl["format"]
                 img.tableau([Col("Renc.", RENC_PL, "g")] + [Col(l, largeur_pl, "g") for l in pl["libelles"]], lignes_pl)
         avec_forme = any(j.get("forme") for j in club.get("joueurs", []))
+        avec_meilleur = any((j.get("meilleur") or {}).get("points") for j in club.get("joueurs", []))
         img.pied("Composition probable : estimation à partir des rencontres déjà jouées par le club adverse."
+                 + (f" Meilleur : son meilleur classement (points officiels d'une phase) et l'année ; en orange : au moins"
+                    f" {ECART_MEILLEUR} points au-dessus de ses points actuels." if a and avec_meilleur else "")
                  + (" Phase : parties gagnées sur parties jouées et points gagnés ou perdus depuis le début de la phase,"
                     " toutes compétitions (championnat, critérium, tournois)." if a and avec_forme else "")
                  + _note_liste(club, donnees)

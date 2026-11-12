@@ -179,8 +179,10 @@ téléphone et partagées dans les groupes du club (dossier `sortie\images\` sur
 
 - **adversaires** : la prochaine journée (équipes, dates, adversaires, lieux) et, pour chaque
   équipe de Vaires, le prochain adversaire avec sa composition probable, ses renforts possibles et
-  les 8 mieux classés qui n'ont pas encore joué, avec la forme de chacun (« 12/12 +46 ») et le
-  critérium ou les tournois joués ;
+  les 8 mieux classés qui n'ont pas encore joué, avec la forme de chacun (« 12/12 +46 »), le
+  critérium ou les tournois joués, et son **meilleur classement** (colonne « Meilleur » : points exacts
+  et année, en orange quand il est d'au moins 200 points au-dessus de ses points actuels ; l'année
+  passe sous les points quand l'image manque de place) ;
 - **résultats** : la dernière journée (triée par points gagnés sur la journée) et le cumul (trié
   par points gagnés au total) ;
 - **progression des joueurs** : une image par équipe (`progression_V1.png`...), une petite courbe

@@ -111,7 +111,7 @@ def test_effectif_club_disponibles_et_brules_par_equipe(tmp_path, monkeypatch):
                            "effectif_disponibles_V1F": ["JEUNE Léa"]}
 
 
-def test_adversaires_prochaine_journee_et_prochain_adversaire(tmp_path):
+def test_adversaires_prochaine_journee_et_prochain_adversaire(tmp_path, monkeypatch):
     analyse = {"probable": ["1", "2"], "renforts": [{"id": "3", "equipes": [2]}], "non_alignes": ["4", "2"], "brules": []}
     rencontre = {"journee": 4, "date": "2026-11-06", "date_reelle": None, "heure": "20:45", "vaires_domicile": False,
                  "adversaire": {"club": "08779999", "libelle": "AUTRE 3", "numero": 3}, "analyse": analyse}
@@ -137,6 +137,36 @@ def test_adversaires_prochaine_journee_et_prochain_adversaire(tmp_path):
                                                "par_points": False}]}
     sorties = images.images_adversaires(donnees, tmp_path, date(2026, 10, 19))
     assert images.FICHE_MIN <= _ouvrir(sorties[1][0])[0] <= images.LARGEUR
+    sans_meilleur = _ouvrir(sorties[1][0])[0]
+
+    # Meilleur classement (historique pingpocket) : une colonne de plus, l'image s'élargit un peu
+    joueurs = donnees["clubs"]["08779999"]["joueurs"]
+    joueurs[0]["meilleur"] = {"points": 1452, "annee": "2006"}
+    joueurs[1]["meilleur"] = {"points": 898, "annee": "2026"}
+    sorties = images.images_adversaires(donnees, tmp_path, date(2026, 10, 19))
+    assert sans_meilleur < _ouvrir(sorties[1][0])[0] <= images.LARGEUR
+
+    # Beaucoup de colonnes chargées : l'année passe sous les points, et rien ne sort de l'image
+    rencontre["placements"]["joueurs"] = {str(i): [3, 2, 2, 1] for i in range(1, 5)}
+    for j in joueurs:
+        j["nom"], j["prenom"] = "LE BOURHIS-KERGUELEN", "Jean-Baptiste"
+    vues = []
+    vrai_tableau = images.Rendu.tableau
+    monkeypatch.setattr(images.Rendu, "tableau", lambda self, colonnes, lignes, *a, **k: (
+        vues.append((self.largeur, colonnes, lignes)), vrai_tableau(self, colonnes, lignes, *a, **k))[1])
+    sorties = images.images_adversaires(donnees, tmp_path, date(2026, 10, 19))
+    largeur, colonnes, lignes = next(v for v in vues if v[1][3].titre == "Meilleur")
+    assert sum(c.largeur for c in colonnes) + 2 * images.MARGE <= largeur == _ouvrir(sorties[1][0])[0]
+    meilleur = next(l[3] for l in lignes if l[3].texte)
+    assert (meilleur.texte, meilleur.sous, meilleur.apres) == ("1 452", "2006", None)
+
+
+def test_meilleur_classement_d_un_adversaire():
+    c = images._cel_meilleur({"points": 961, "meilleur": {"points": 1452, "annee": "2006"}})
+    assert (c.texte, c.apres, c.gras, c.couleur) == ("1 452", "(2006)", True, images.ATT_TEXTE)  # 491 points de plus : en orange
+    c = images._cel_meilleur({"points": 973, "meilleur": {"points": 1020, "annee": "2024"}})
+    assert (c.texte, c.gras, c.couleur) == ("1 020", False, images.DOUX)
+    assert images._cel_meilleur({"points": 973}).texte == "" and images._cel_meilleur({"meilleur": None}).texte == ""
 
 
 def test_sous_titre_long_sur_deux_lignes():
