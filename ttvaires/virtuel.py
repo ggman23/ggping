@@ -15,11 +15,12 @@ compétitions jeunes...
 
 import json
 import re
+import time
 import unicodedata
 from collections import Counter
 from datetime import date, datetime
 
-from . import fftt
+from . import fftt, pingpocket
 from .effectif import feuilles_du_club, liste_licencies
 from .fftt import API, ENTETES, _q, json_valide
 from .reseau import HEURE, JOUR
@@ -263,6 +264,53 @@ def _nom_du_joueur(licence, parties):
     return None
 
 
+SITE_PINGPOCKET = "www.pingpocket.fr"
+MAX_HISTORIQUES = 120  # historiques téléchargés au plus par lancement (une page toutes les 4 secondes : 8 minutes)
+
+
+def historiques_classement(client, joueurs, aujourdhui=None):
+    """Historique des classements des joueurs du club (fiches des joueurs) : {licence: [[année, mois,
+    points], ...]}, du plus ancien au plus récent, d'après le graphique de leur fiche pingpocket.fr.
+
+    Comme pour les adversaires : une page par joueur, gardée toute la phase (les points officiels ne
+    changent qu'en janvier et en juillet), lue par le PC ; la mise à jour en ligne (pingpocket.fr refuse
+    les serveurs de GitHub) se sert des pages que le PC a envoyées. Les joueurs restés à 500 points sans
+    aucune partie n'ont pas d'historique à montrer : leur page n'est pas demandée.
+    """
+    aujourdhui = aujourdhui or date.today()
+    a_lire = [j["id"] for j in joueurs if (j.get("officiels") or 0) > 500 or j.get("parties")]
+    chemins = {lic: pingpocket.CHEMIN_HISTORIQUE.format(lic) for lic in a_lire}
+    debut_phase = datetime.fromisoformat(fftt.bornes_phase(date.today())[0]).timestamp()
+    ttl = max(JOUR, time.time() - debut_phase)
+    disponible = getattr(client, "disponible", lambda site: True)
+    muet = (not disponible(SITE_PINGPOCKET) or SITE_PINGPOCKET in getattr(client, "sites_cache_seul", ())
+            or getattr(client, "hors_ligne", False))
+    if muet:  # seules les pages déjà en cache servent (même anciennes) : on ne demande pas les autres
+        demandes = [lic for lic in a_lire if client.date(chemins[lic]) is not None]
+    else:
+        en_cache = getattr(client, "en_cache", lambda chemin, ttl: False)
+        nouvelles = [lic for lic in a_lire if not en_cache(chemins[lic], ttl)]
+        reportees = set(nouvelles[MAX_HISTORIQUES:])
+        demandes = [lic for lic in a_lire if lic not in reportees]
+        a_telecharger = len(nouvelles) - len(reportees)
+        if a_telecharger > 30:
+            print(f"  {a_telecharger} historiques à télécharger : environ {a_telecharger * 4 // 60 + 1} minutes "
+                  "(une page toutes les 4 secondes), une seule fois par phase.", flush=True)
+    pages = client.get_plusieurs([chemins[lic] for lic in demandes], ttl=ttl, message="historiques des joueurs",
+                                 perime_si_erreur=True) if demandes else {}
+    limite = (aujourdhui.year, aujourdhui.month)  # une archive ne montre rien d'après sa date
+    res = {}
+    for lic in demandes:
+        html = pages.get(chemins[lic])
+        points = [list(p) for p in sorted(set(pingpocket.lire_historique(html)))] if html else []
+        points = [p for p in points if (p[0], p[1]) <= limite]
+        if points:
+            res[lic] = points
+    print(f"  historiques lus : {len(res)} joueurs sur {len(a_lire)}"
+          + (" (les autres : au prochain lancement sur le PC, lancer.bat)" if len(res) < len(a_lire) and muet else ""), flush=True)
+    return res
+
+
 def controle_parties(joueurs, detail_rencontres, numero_club, source):
     """Contrôles du classement virtuel :
     - joueurs dont les parties n'ont pas pu être lues (API muette) ;
@@ -296,9 +344,9 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
     debut, fin = fftt.bornes_phase(aujourdhui)
     fin = min(fin, aujourdhui.isoformat())  # rien après ce jour (archives : la veille de la journée suivante)
 
-    print(f"1/3 Équipes et feuilles de match du club {numero_club} (phase {phase} {saison}, API FFTT)", flush=True)
+    print(f"1/4 Équipes et feuilles de match du club {numero_club} (phase {phase} {saison}, API FFTT)", flush=True)
     feuilles = feuilles_du_club(client, numero_club, aujourdhui)
-    print("2/3 Licenciés du club (pingpocket.fr ou dossier import)", flush=True)
+    print("2/4 Licenciés du club (pingpocket.fr ou dossier import)", flush=True)
     liste, source = liste_licencies(client, numero_club, dossier_import)
 
     joueurs = {j["id"]: j for j in liste if j["renouvele"] and not j["loisir"]}
@@ -314,7 +362,7 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
         j["alignements"] = sorted(({"journee": p["journee"], "date": p["date"], "equipe": f"V{p['numero']}" + (" F" if p["championnat"] == "F" else "")}
                                    for p in feuilles["parts"].get(lic, [])), key=lambda a: (a["date"], a["journee"], a["equipe"]))
 
-    print(f"3/3 Parties de toutes les compétitions : {len(joueurs)} joueurs (API FFTT)", flush=True)
+    print(f"3/4 Parties de toutes les compétitions : {len(joueurs)} joueurs (API FFTT)", flush=True)
     toutes = _lire_parties(client, sorted(joueurs))
     # En phase 2, les parties de la phase 1 (déjà dans la liste de la saison) servent aussi : la page
     # « Progression des joueurs » suit toute la saison, depuis le 1er septembre
@@ -350,6 +398,11 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
             resultat[-1]["phase1"] = {"officiels": officiels1.most_common(1)[0][0] if officiels1 else None,
                                       "parties": lignes1}
     resultat.sort(key=lambda j: (j["virtuels"] is None, -(j["virtuels"] or 0), j["nom"] or ""))
+
+    print("4/4 Historique des classements des joueurs (pingpocket.fr, pages gardées toute la phase)", flush=True)
+    historiques = historiques_classement(client, resultat, aujourdhui)
+    for j in resultat:
+        j["historique"] = historiques.get(j["id"])
 
     comps = Counter()
     for j in resultat:

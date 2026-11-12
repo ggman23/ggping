@@ -88,6 +88,20 @@ def test_fiche_de_chaque_joueur_avec_sa_courbe():
     assert lea["alignements"] == [{"journee": 1, "date": "2026-09-25", "equipe": "V2"}]
     assert lea["parties"][1]["manches"][0] == [9, 11] and d["seuil_niveau"] == 50
     assert "manches connues : championnat 5/5, autres compétitions 0/2" in fiches.resume(d)
+    assert lea["historique"] is None and "historiques des classements : 0/2" in fiches.resume(d)
+
+
+def test_historique_du_classement_et_meilleur_classement():
+    # juillet et janvier : points officiels des phases ; les autres mois (situation mensuelle) ne comptent pas
+    historique = [[2019, 7, 650], [2020, 1, 702], [2020, 7, 702], [2021, 1, 688], [2026, 7, 640], [2026, 9, 655], [2026, 10, 661]]
+    h = fiches.stats_historique(historique)
+    assert h["phases"] == [[2019, 7, 650], [2020, 1, 702], [2020, 7, 702], [2021, 1, 688], [2026, 7, 640]]
+    assert h["meilleur"] == {"points": 702, "annee": 2020, "mois": 7, "classement": 7, "actuel": False}  # à égalité : le plus récent
+    assert fiches.stats_historique([[2026, 7, 512]])["meilleur"]["actuel"] is True                      # un débutant : son record, maintenant
+    assert fiches.stats_historique([[2026, 9, 530], [2026, 10, 541]])["phases"] == [[2026, 9, 530], [2026, 10, 541]]  # sans point de phase
+    assert fiches.stats_historique(None) is None and fiches.stats_historique([]) is None
+    j = {**_virtuel()["joueurs"][0], "historique": historique}
+    assert fiches.fiche(j)["historique"]["meilleur"]["points"] == 702
 
 
 def test_phase_2_les_parties_de_la_phase_1_comptent_aussi():

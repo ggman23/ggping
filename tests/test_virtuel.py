@@ -86,6 +86,9 @@ def test_classement_virtuel_de_bout_en_bout(tmp_path):
     assert [(a["journee"], a["equipe"]) for a in j["100"]["alignements"]] == [(1, "V4"), (2, "V4"), (2, "V1 F")]  # aussi en féminines
     assert j["300"]["alignements"] == []
 
+    # Historique des classements : aucune page d'historique dans ce faux site, rien n'échoue
+    assert all(x["historique"] is None for x in d["joueurs"])
+
     # Fiches des joueurs : la même récolte, une fiche par joueur, et la page
     from ttvaires import fiches
     from ttvaires.rendu import GABARIT_FICHES, generer_html
@@ -142,3 +145,40 @@ def test_forme_des_joueurs_adverses():
     assert x["points"] == round(sum(c["points"] for c in x["competitions"]), 1) and x["virtuels"] == 750 + x["points"]
     assert x["competitions"][0]["points"] > 0
     assert not [u for u in client.demandes if "/games/" in u]  # détail des parties non demandé
+
+
+def test_historique_des_classements_des_joueurs_du_club():
+    """Lu sur la fiche pingpocket de chaque joueur (une page par joueur) ; pas pour un joueur resté à
+    500 points sans partie ; une archive ne voit rien d'après sa date."""
+    from test_effectif import FauxClient
+    from test_pingpocket import HISTORIQUE
+    from ttvaires.pingpocket import CHEMIN_HISTORIQUE
+    from ttvaires.virtuel import historiques_classement
+
+    class Client(FauxClient):
+        def __init__(self, pages):
+            super().__init__(pages)
+            self.demandes = []
+
+        def get(self, chemin, **options):
+            self.demandes.append(chemin)
+            return super().get(chemin, **options)
+
+    joueurs = [{"id": "100", "officiels": 1014, "parties": []}, {"id": "200", "officiels": 500, "parties": []},
+               {"id": "300", "officiels": 500, "parties": [{"date": "2026-09-27"}]}]
+    client = Client({CHEMIN_HISTORIQUE.format("100"): HISTORIQUE})
+    h = historiques_classement(client, joueurs, date(2026, 11, 12))
+    assert h == {"100": [[2014, 7, 1530], [2015, 1, 1480], [2026, 7, 1014], [2026, 9, 1030]]}  # 300 : page absente
+    assert client.demandes == [CHEMIN_HISTORIQUE.format("100"), CHEMIN_HISTORIQUE.format("300")]  # pas le joueur à 500 sans partie
+    assert historiques_classement(client, joueurs, date(2026, 8, 20))["100"][-1] == [2026, 7, 1014]  # archive d'août
+
+    # Mise à jour en ligne (pingpocket jamais interrogé) : seules les pages envoyées par le PC sont lues
+    class EnLigne(Client):
+        sites_cache_seul = {"www.pingpocket.fr"}
+
+        def date(self, chemin):
+            return 1.0 if chemin.endswith("/100/graphiques/historique-classement") else None
+
+    en_ligne = EnLigne({CHEMIN_HISTORIQUE.format("100"): HISTORIQUE})
+    assert set(historiques_classement(en_ligne, joueurs, date(2026, 11, 12))) == {"100"}
+    assert en_ligne.demandes == [CHEMIN_HISTORIQUE.format("100")]

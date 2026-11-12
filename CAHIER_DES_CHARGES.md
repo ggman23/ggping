@@ -415,6 +415,17 @@ niveau, plus fort).
   triable et filtrable par équipe. Lisible sur téléphone, thème sombre.
 - Au passage : sur l'accueil du site, les pages hors de la liste d'ordre (progression, individuels) se
   plaçaient en tête ; elles suivent maintenant le classement virtuel.
+- Mise à jour n° 60 (données réelles) : 61 fiches ; manches connues pour 315 parties de championnat sur
+  315, pour aucune des 78 parties de critérium et de tournois (le journal liste depuis les champs que
+  l'API donne pour ces parties).
+- Ajout (12/11) : historique du classement. Demande : le meilleur classement du joueur, ou une courbe
+  de tous ses anciens classements. Les deux : virtuel.historiques_classement lit la page « historique
+  classement » de pingpocket.fr de chaque joueur du club (même page et même règle de cache que pour les
+  adversaires : gardée toute la phase, au plus 120 nouvelles pages par lancement, pas pour un joueur à
+  500 points sans partie) ; lue par le PC, servie en ligne par les pages que le PC envoie. Fiche : tuile
+  « Meilleur classement », carte « Historique de son classement » (points officiels de chaque phase,
+  janvier et juillet, repère sur le meilleur, bulle par phase, tableau), colonne et tri « Meilleur »
+  dans le tableau du club. Une archive ne montre rien d'après sa date.
 
 ## Tournois à venir (11/11/2026)
 

@@ -13,10 +13,13 @@ contres :
 Le détail des manches vient des feuilles de match (championnat par équipes) et, pour les autres
 compétitions, de ce que l'API en donne ; une partie saisie sans ses manches compte dans le bilan mais
 pas dans les statistiques de manches (« sans le détail »).
+
+Et l'historique de son classement : les points officiels de chaque phase depuis ses débuts et son
+meilleur classement, d'après l'historique de pingpocket.fr (lu par le PC, voir virtuel.historiques_classement).
 """
 
-from . import progression
-from .virtuel import famille_competition
+from . import pingpocket, progression
+from .virtuel import classement, famille_competition
 
 SEUIL_NIVEAU = 50  # points d'écart (points officiels de la phase) en dessous desquels l'adversaire est « de même niveau »
 NIVEAUX = [("plus_faible", "Contre plus faible"), ("meme", "Contre même niveau"), ("plus_fort", "Contre plus fort")]
@@ -139,6 +142,19 @@ def _extremes(parties, nb=3):
     return len(perfs), [cle(p) for p in perfs[:nb]], len(contres), [cle(p) for p in contres[:nb]]
 
 
+def stats_historique(historique):
+    """Historique du classement : les points officiels de chaque phase ([année, mois, points], janvier :
+    phase 2, juillet : phase 1 de la saison qui commence), du plus ancien au plus récent, et le meilleur
+    classement (à égalité, le plus récent ; « actuel » : c'est celui de la dernière phase). None sans historique."""
+    if not historique:
+        return None
+    phases = [list(p) for p in pingpocket.officiels_historique([tuple(p) for p in historique])]
+    meilleur = max(phases, key=lambda p: (p[2], p[0], p[1]))
+    return {"phases": phases,
+            "meilleur": {"points": meilleur[2], "annee": meilleur[0], "mois": meilleur[1],
+                         "classement": classement(meilleur[2]), "actuel": meilleur == phases[-1]}}
+
+
 def parties_de_la_saison(j):
     """Parties du joueur depuis le début de la saison, dans l'ordre : la phase 1 (en phase 2), puis la phase en cours."""
     return [*((j.get("phase1") or {}).get("parties") or []), *j["parties"]]
@@ -157,7 +173,7 @@ def fiche(j, courbe=None):
         "nb_perfs": nb_perfs, "perfs": perfs, "nb_contres": nb_contres, "contres": contres,
         "manches": stats_manches(parties), "remontees": stats_remontees(parties), "niveaux": stats_niveaux(parties),
         "competitions": stats_competitions(parties), "series": stats_series(parties),
-        "alignements": j.get("alignements") or [],
+        "alignements": j.get("alignements") or [], "historique": stats_historique(j.get("historique")),
         "courbe": ({k: courbe[k] for k in ("serie", "parties", "victoires", "perfs", "contres", "total", "tendance", "lecture")}
                    if courbe else None),
         "parties": [{k: p.get(k) for k in ("date", "competition", "division", "championnat", "coef", "adversaire", "adv_points",
@@ -187,4 +203,5 @@ def resume(donnees):
             c[0] += detail_fiable(p)
             c[1] += 1
     return (f"{len(donnees['joueurs'])} fiches ; manches connues : championnat {compte[True][0]}/{compte[True][1]}, "
-            f"autres compétitions {compte[False][0]}/{compte[False][1]}")
+            f"autres compétitions {compte[False][0]}/{compte[False][1]} ; historiques des classements : "
+            f"{sum(1 for j in donnees['joueurs'] if j['historique'])}/{len(donnees['joueurs'])}")

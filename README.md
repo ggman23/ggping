@@ -102,7 +102,12 @@ points officiels et virtuels, bilan de la saison, série en cours, sa courbe dep
 - **Selon le niveau de l'adversaire** : bilan contre plus faible, de même niveau (à 50 points près,
   points officiels de la phase) et plus fort, avec les points gagnés ou perdus ;
 - bilan par compétition, équipes jouées en championnat, meilleures perfs, contres, et toutes ses
-  parties avec le score de chaque manche.
+  parties avec le score de chaque manche ;
+- **Historique de son classement** : son **meilleur classement** (points, date) et la courbe de ses
+  points officiels à chaque phase depuis ses débuts. Il vient de l'historique de pingpocket.fr, comme le
+  meilleur classement des adversaires : une page par joueur, lue **par le PC** (options 4 ou 5 de
+  `lancer.bat`, quelques minutes la première fois, puis gardée toute la phase) et envoyée au site avec
+  les autres données du PC ; tant que le PC ne l'a pas lue, la fiche indique « historique pas encore lu ».
 
 En bas, un tableau compare tout le club sur ces chiffres (tri par % de victoires, belles gagnées,
 remontées, victoires contre plus fort...). Le détail des manches vient des feuilles de match (une

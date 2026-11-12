@@ -156,6 +156,7 @@ tr.courant td { background: var(--accent-fond); }
         <option value="remontees">Tri : remontées</option>
         <option value="fort">Tri : victoires contre plus fort</option>
         <option value="parties">Tri : nombre de parties</option>
+        <option value="meilleur">Tri : meilleur classement</option>
       </select>
     </div>
     <div class="defil"><table id="table-tous"></table></div>
@@ -184,6 +185,10 @@ const EQUIPES = [...new Set(J.map((j) => j.equipe || ""))].sort((a, b) => (a ===
 /* Ordre de la liste déroulante (et des boutons ‹ ›) : par équipe, puis par nom */
 const ORDRE = EQUIPES.flatMap((eq) => J.filter((j) => (j.equipe || "") === eq));
 const SEUIL = D.seuil_niveau ?? 50;
+const MOIS_COURTS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+const moisAnnee = ([a, m]) => `${MOIS_COURTS[m - 1]} ${a}`;
+/* Points officiels : ceux de juillet valent pour la phase 1 de la saison qui commence, ceux de janvier pour la phase 2 */
+const phaseDe = ([a, m]) => (m === 7 ? `Saison ${a}-${a + 1}, phase 1` : m === 1 ? `Saison ${a - 1}-${a}, phase 2` : moisAnnee([a, m]));
 
 document.getElementById("sous-titre").textContent = [D.saison ? `Saison ${D.saison}` : "", "toutes compétitions depuis le début de la saison",
   D.genere_le ? `mise à jour le ${jjmm(D.genere_le)} à ${D.genere_le.slice(11, 16).replace(":", " h ")}` : ""].filter(Boolean).join(" · ");
@@ -228,7 +233,7 @@ const chiffre = (nom, valeur, detail = "") => `<div class="cle-chiffre"><div cla
 const scoreManches = (m) => [m.filter(([a, b]) => a > b).length, m.filter(([a, b]) => b > a).length];
 
 function carteIdentite(j) {
-  const n = j.bilan.v + j.bilan.d, s = j.series;
+  const n = j.bilan.v + j.bilan.d, s = j.series, h = j.historique;
   const serie = !n ? "—" : s.en_cours_victoires ? pluriel(s.en_cours, "victoire") : pluriel(s.en_cours, "défaite");
   const qui = [equipeLongue(j.equipe), categorie(j.categorie), j.classement != null ? `classé ${j.classement}` : ""].filter(Boolean).join(" · ");
   return `<section class="carte identite"><h2>${esc(nomLong(j))}</h2><p class="qui">${esc(qui)}</p>
@@ -241,6 +246,8 @@ function carteIdentite(j) {
       ${chiffre("Perfs et contres", `<span class="tri-p">▲</span> ${j.nb_perfs} <small>· <span class="tri-c">▼</span> ${j.nb_contres}</small>`,
         `${j.nb_perfs > 1 ? "perfs" : "perf"} · ${j.nb_contres > 1 ? "contres" : "contre"}`)}
       ${chiffre("Série en cours", serie, n ? `meilleure série : ${pluriel(s.meilleure, "victoire")}` : "")}
+      ${chiffre("Meilleur classement", h ? `${fr(h.meilleur.points)} <small>pts</small>` : "—",
+        h ? `${h.meilleur.actuel ? "en ce moment" : moisAnnee([h.meilleur.annee, h.meilleur.mois])} · classé ${h.meilleur.classement}` : "historique pas encore lu")}
     </div>
     ${j.inconnu ? '<p class="note">Les parties de ce joueur n\'ont pas pu être lues à cette mise à jour.</p>' : ""}</section>`;
 }
@@ -436,20 +443,122 @@ function carteCourbe(j) {
   </section>`;
 }
 
+/* ---------- Historique du classement : points officiels de chaque phase depuis ses débuts ---------- */
+function courbeHistorique(zone, j) {
+  const P = j.historique.phases, n = P.length, meilleur = j.historique.meilleur;
+  const L = zone.clientWidth || 600, petit = L < 560, H = petit ? 220 : 250;
+  zone.classList.toggle("petit", petit);
+  const temps = ([a, m]) => a + (m - 1) / 12, t0 = temps(P[0]), t1 = temps(P[n - 1]);
+  const sc = echelle(Math.min(...P.map((p) => p[2])), Math.max(...P.map((p) => p[2])));
+  const M = { g: 46, h: 26, b: 30 };  // en haut : la place de l'étiquette du meilleur classement
+  const mesure = document.createElement("canvas").getContext("2d");
+  mesure.font = `600 12px ${getComputedStyle(document.body).fontFamily}`;
+  const droite = mesure.measureText(fr(P[n - 1][2])).width + 18;
+  const x = (t) => M.g + (t1 === t0 ? 0 : (t - t0) / (t1 - t0) * (L - M.g - droite));
+  const y = (val) => M.h + (sc.haut - val) / (sc.haut - sc.bas) * (H - M.h - M.b);
+  const NS = "http://www.w3.org/2000/svg", el = (nom, attrs) => { const e = document.createElementNS(NS, nom);
+    for (const [k, val] of Object.entries(attrs)) e.setAttribute(k, val); return e; };
+  const svg = el("svg", { viewBox: `0 0 ${L} ${H}`, height: H, tabindex: 0, role: "img",
+    "aria-label": `Points officiels de ${nomLong(j)} à chaque phase, de ${moisAnnee(P[0])} à ${moisAnnee(P[n - 1])} ; meilleur classement : ${fr(meilleur.points)} points` });
+  for (const t of sc.ticks) {
+    svg.appendChild(el("line", { x1: M.g, x2: L - droite, y1: y(t), y2: y(t), stroke: "var(--grille)", "stroke-width": 1 }));
+    const tx = el("text", { x: M.g - 6, y: y(t) + 4, "text-anchor": "end", class: "axe" });
+    tx.textContent = fr(t); svg.appendChild(tx);
+  }
+  // Années sous l'axe : une sur 1, 2, 5 ou 10 selon la place
+  const annees = Math.max(1, Math.ceil(t1) - Math.floor(t0)), place = Math.max(2, Math.floor((L - M.g - droite) / 48));
+  const pasA = [1, 2, 5, 10, 20].find((k) => annees / k <= place) || 20;
+  for (let a = Math.ceil(t0 / pasA) * pasA; a <= t1; a += pasA) {
+    const tx = el("text", { x: x(a), y: H - 8, "text-anchor": x(a) < M.g + 14 ? "start" : "middle", class: "axe" });
+    tx.textContent = a; svg.appendChild(tx);
+  }
+  const trace = P.map((p, i) => `${i ? "L" : "M"}${x(temps(p)).toFixed(1)},${y(p[2]).toFixed(1)}`).join("");
+  svg.appendChild(el("path", { d: `${trace}L${x(t1).toFixed(1)},${y(sc.bas)}L${x(t0).toFixed(1)},${y(sc.bas)}Z`, fill: "var(--s1)", "fill-opacity": 0.1 }));
+  svg.appendChild(el("path", { d: trace, fill: "none", stroke: "var(--s1)", "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+  // Repères : le meilleur classement (étiqueté au-dessus) et la phase en cours (étiquetée au bout)
+  const iM = P.findIndex((p) => p[0] === meilleur.annee && p[1] === meilleur.mois);
+  if (iM >= 0 && iM !== n - 1) {
+    const xm = x(temps(P[iM])), texte = `meilleur : ${fr(meilleur.points)}`, w = mesure.measureText(texte).width;
+    svg.appendChild(el("circle", { cx: xm, cy: y(P[iM][2]), r: 4.5, fill: "var(--s1)", stroke: "var(--surface)", "stroke-width": 2 }));
+    const tx = el("text", { x: Math.max(M.g + w / 2, Math.min(L - droite - w / 2, xm)), y: y(P[iM][2]) - 10, "text-anchor": "middle", class: "etiquette" });
+    tx.textContent = texte; svg.appendChild(tx);
+  }
+  svg.appendChild(el("circle", { cx: x(t1), cy: y(P[n - 1][2]), r: 4.5, fill: "var(--s1)", stroke: "var(--surface)", "stroke-width": 2 }));
+  const fin = el("text", { x: x(t1) + 9, y: y(P[n - 1][2]) + 4, class: "etiquette" });
+  fin.textContent = fr(P[n - 1][2]); svg.appendChild(fin);
+  // Survol, toucher et clavier : la phase la plus proche
+  const trait = el("line", { y1: M.h, y2: H - M.b, stroke: "var(--muet)", "stroke-width": 1, visibility: "hidden" });
+  const point = el("circle", { r: 4.5, fill: "var(--s1)", stroke: "var(--surface)", "stroke-width": 2, visibility: "hidden" });
+  svg.append(trait, point);
+  const bulle = document.createElement("div");
+  bulle.className = "bulle"; bulle.hidden = true;
+  zone.append(svg, bulle);
+  let pos = null;
+  const montrer = (i) => {
+    pos = i;
+    const px = x(temps(P[i]));
+    trait.setAttribute("x1", px); trait.setAttribute("x2", px); trait.setAttribute("visibility", "visible");
+    point.setAttribute("cx", px); point.setAttribute("cy", y(P[i][2])); point.setAttribute("visibility", "visible");
+    bulle.textContent = "";
+    const titre = document.createElement("div"); titre.className = "titre"; titre.textContent = phaseDe(P[i]);
+    const val = document.createElement("b"); val.textContent = fr(P[i][2]);
+    const ligne = document.createElement("div"); ligne.className = "ligne";
+    const d = i ? P[i][2] - P[i - 1][2] : 0;
+    ligne.textContent = [`classé ${Math.max(5, Math.floor(P[i][2] / 100))}`, i ? `${pts(d)} sur la phase précédente` : "premier classement connu",
+      i === iM ? "son meilleur classement" : ""].filter(Boolean).join(" · ");
+    bulle.append(titre, val, ligne);
+    bulle.hidden = false;
+    if (!petit) {
+      const w = bulle.offsetWidth, bx = px / L * zone.clientWidth;
+      bulle.style.left = `${Math.max(0, Math.min(zone.clientWidth - w, bx > zone.clientWidth / 2 ? bx - w - 12 : bx + 12))}px`;
+      bulle.style.top = `${svg.getBoundingClientRect().top - zone.getBoundingClientRect().top + 8}px`;
+    }
+  };
+  const cacher = () => { pos = null; trait.setAttribute("visibility", "hidden"); point.setAttribute("visibility", "hidden"); bulle.hidden = true; };
+  const indice = (ev) => { const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) / r.width * L;
+    let mieux = 0; P.forEach((p, i) => { if (Math.abs(x(temps(p)) - px) < Math.abs(x(temps(P[mieux])) - px)) mieux = i; }); return mieux; };
+  svg.addEventListener("pointermove", (ev) => montrer(indice(ev)));
+  svg.addEventListener("pointerdown", (ev) => montrer(indice(ev)));
+  svg.addEventListener("pointerleave", (ev) => { if (ev.pointerType === "mouse") cacher(); });
+  svg.addEventListener("blur", cacher);
+  svg.addEventListener("keydown", (ev) => {
+    if (ev.key === "ArrowRight" || ev.key === "ArrowLeft") { ev.preventDefault();
+      montrer(Math.max(0, Math.min(n - 1, (pos ?? n - 1) + (ev.key === "ArrowRight" ? 1 : -1)))); }
+    else if (ev.key === "Escape") cacher();
+  });
+}
+function carteHistorique(j) {
+  const h = j.historique;
+  if (!h || h.phases.length < 2) return "";  // un seul classement connu : la tuile « Meilleur classement » suffit
+  const P = h.phases, m = h.meilleur, premier = P[0], dernier = P[P.length - 1];
+  const lignes = P.slice().reverse().map((p, i, tous) => { const avant = tous[i + 1];
+    return `<tr><td>${esc(phaseDe(p))}</td><td class="n">${fr(p[2])}</td><td class="n">${Math.max(5, Math.floor(p[2] / 100))}</td>
+      <td class="n ${avant ? classe(p[2] - avant[2]) : ""}">${avant ? pts(p[2] - avant[2]) : "—"}</td></tr>`; }).join("");
+  return `<section class="carte"><h2>Historique de son classement</h2>
+    <p class="lecture">Points officiels de chaque phase depuis ${esc(moisAnnee(premier))} : de <b>${fr(premier[2])}</b> à <b>${fr(dernier[2])}</b> points.
+      Meilleur classement : <b>${fr(m.points)}</b> points${m.actuel ? ", en ce moment" : ` (${esc(moisAnnee([m.annee, m.mois]))})`}.</p>
+    <div class="graphe" id="graphe-historique"></div>
+    <details><summary>Les points de chaque phase</summary><div class="defil"><table>
+      <tr><th>Phase</th><th class="n">Points officiels</th><th class="n">Classement</th><th class="n">Évolution</th></tr>${lignes}</table></div></details>
+  </section>`;
+}
+
 function dessinerFiche() {
   const j = PAR_ID.get(courant), zone = document.getElementById("fiche");
   if (!j) { zone.innerHTML = '<section class="carte"><p class="vide">Aucun joueur.</p></section>'; return; }
-  zone.innerHTML = carteIdentite(j) + carteCourbe(j) + carteManches(j) + carteRemontees(j) + carteNiveaux(j)
+  zone.innerHTML = carteIdentite(j) + carteCourbe(j) + carteHistorique(j) + carteManches(j) + carteRemontees(j) + carteNiveaux(j)
     + carteCompetitions(j) + cartesPerfs(j) + carteParties(j);
   const g = document.getElementById("graphe");
   if (g) courbe(g, j);
+  const gh = document.getElementById("graphe-historique");
+  if (gh) courbeHistorique(gh, j);
   document.title = `Fiche de ${nomLong(j)} · Vaires`;
 }
 
 /* ---------- Tous les joueurs ---------- */
 const selFiltre = document.getElementById("filtre"), selTri = document.getElementById("tri");
 selFiltre.innerHTML = `<option value="*">Toutes les équipes</option>` + EQUIPES.map((eq) => `<option value="${esc(eq)}">${esc(equipeLongue(eq))}</option>`).join("");
-if (["nom", "victoires", "belles", "remontees", "fort", "parties"].includes(lire("fiche-tri"))) selTri.value = lire("fiche-tri");
+if (["nom", "victoires", "belles", "remontees", "fort", "parties", "meilleur"].includes(lire("fiche-tri"))) selTri.value = lire("fiche-tri");
 const fort = (j) => j.niveaux.find((x) => x.cle === "plus_fort") || { v: 0, d: 0 };
 const taux = (a, b) => (b ? a / b : -1);
 const TRIS = {
@@ -459,20 +568,22 @@ const TRIS = {
   remontees: (a, b) => b.remontees.remontees - a.remontees.remontees || b.remontees.remontees_de_2 - a.remontees.remontees_de_2,
   fort: (a, b) => fort(b).v - fort(a).v || taux(fort(b).v, fort(b).v + fort(b).d) - taux(fort(a).v, fort(a).v + fort(a).d),
   parties: (a, b) => (b.bilan.v + b.bilan.d) - (a.bilan.v + a.bilan.d),
+  meilleur: (a, b) => (b.historique ? b.historique.meilleur.points : -1) - (a.historique ? a.historique.meilleur.points : -1),
 };
 function tableTous() {
   const eq = selFiltre.value;
   const liste = J.filter((j) => eq === "*" || (j.equipe || "") === eq).sort(TRIS[selTri.value] || TRIS.nom);
   const sur = (a, b) => (b ? `${a} sur ${b}` : "—");
   document.getElementById("table-tous").innerHTML = `<tr><th>Joueur</th><th class="equipe">Équipe</th><th class="n">Parties</th><th class="n">% vict.</th>
-      <th class="n">Belles gagnées</th><th class="n">Remontées</th><th class="n">Avances perdues</th><th class="n">Contre plus fort</th><th class="n">Virtuels</th></tr>`
+      <th class="n">Belles gagnées</th><th class="n">Remontées</th><th class="n">Avances perdues</th><th class="n">Contre plus fort</th><th class="n">Virtuels</th><th class="n">Meilleur</th></tr>`
     + liste.map((j) => { const n = j.bilan.v + j.bilan.d, f = fort(j);
       return `<tr${j.id === courant ? ' class="courant"' : ""}><td><button type="button" class="nom-joueur" data-id="${esc(j.id)}">${esc(nomLong(j))}</button></td>
         <td class="equipe">${esc(j.equipe || "—")}</td><td class="n">${n || "—"}</td><td class="n">${n ? pc(j.bilan.v, n) + " %" : "—"}</td>
         <td class="n">${sur(j.manches.belles.gagnees, j.manches.belles.jouees)}</td>
         <td class="n">${j.manches.avec_detail ? j.remontees.remontees : "—"}</td><td class="n">${j.manches.avec_detail ? j.remontees.avances_perdues : "—"}</td>
-        <td class="n">${f.v + f.d ? `${f.v} V – ${f.d} D` : "—"}</td><td class="n">${j.virtuels != null ? fr(j.virtuels) : "—"}</td></tr>`; }).join("");
-  document.getElementById("note-tous").textContent = `Belles : parties allées à la manche décisive. Remontées : victoires après avoir été mené au score des manches ; avances perdues : défaites après avoir mené. Plus fort : plus de ${SEUIL} points de plus. « — » : aucune partie, ou manches non saisies.`;
+        <td class="n">${f.v + f.d ? `${f.v} V – ${f.d} D` : "—"}</td><td class="n">${j.virtuels != null ? fr(j.virtuels) : "—"}</td>
+        <td class="n">${j.historique ? fr(j.historique.meilleur.points) : "—"}</td></tr>`; }).join("");
+  document.getElementById("note-tous").textContent = `Belles : parties allées à la manche décisive. Remontées : victoires après avoir été mené au score des manches ; avances perdues : défaites après avoir mené. Plus fort : plus de ${SEUIL} points de plus. Meilleur : son meilleur classement (points officiels d'une phase). « — » : aucune partie, manches non saisies, ou historique pas encore lu.`;
 }
 document.getElementById("table-tous").addEventListener("click", (ev) => { const b = ev.target.closest("button.nom-joueur"); if (b) choisir(b.dataset.id, true); });
 selFiltre.addEventListener("change", tableTous);

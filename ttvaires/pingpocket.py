@@ -106,9 +106,19 @@ def lire_historique(html):
     return [(int(a), int(m) + 1, round(float(y))) for a, m, y in points]
 
 
+# Historique des classements d'un joueur (graphique de sa fiche pingpocket)
+CHEMIN_HISTORIQUE = "/app/fftt/licencies/{}/graphiques/historique-classement"
+
+
+def officiels_historique(points):
+    """Points officiels de chaque phase (ceux de janvier et de juillet), du plus ancien au plus récent ;
+    à défaut, tous les points de l'historique."""
+    return sorted({(a, m): (a, m, p) for a, m, p in points if m in (1, 7)}.values()) or sorted(points)
+
+
 def resume_historique(points):
     """Points officiels actuels et meilleur classement (points de début de phase : janvier et juillet)."""
-    officiels = [p for p in points if p[1] in (1, 7)] or points
+    officiels = officiels_historique(points)
     if not officiels:
         return None, None
     meilleur = max(officiels, key=lambda p: (p[2], p[0], p[1]))

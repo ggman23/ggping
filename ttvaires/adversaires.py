@@ -413,7 +413,7 @@ def completer_avec_pingpocket(client, donnees, dossier_import=None, tous_les_his
     a_lire = [j for club in clubs.values() for j in club["joueurs"]
               if j["renouvele"] and ((j["points_mensuels"] or j["points"] or 0) > 500 or j["id"] in alignes)]
     a_lire.sort(key=lambda j: (j["id"] not in alignes, -(j["points_mensuels"] or j["points"] or 0)))
-    chemin = "/app/fftt/licencies/{}/graphiques/historique-classement"
+    chemin = pingpocket.CHEMIN_HISTORIQUE
     # Une page toutes les 4 secondes : on en lit au plus MAX_HISTORIQUES par lancement (les joueurs
     # alignés d'abord) ; les suivants sont lus aux lancements suivants.
     # Le meilleur classement et les points officiels ne changent qu'aux changements de phase (janvier et
