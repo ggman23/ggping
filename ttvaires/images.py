@@ -839,7 +839,7 @@ def _note_liste(club, donnees):
     nb = sum(1 for j in club.get("joueurs", []) if j.get("nouveau"))
     return (f" Liste des licenciés du club du {quand:%d/%m}"
             + (f" (il y a {age} jours : relancer la mise à jour depuis le PC pour voir les nouveaux inscrits)" if age > 10 else "")
-            + (f" ; « nouvel inscrit » : inscrit ou réinscrit depuis la liste précédente ({nb})" if nb else "") + ".")
+            + (f" ; « nouvel inscrit » (ou « nouveau ») : inscrit ou réinscrit depuis la liste précédente ({nb})" if nb else "") + ".")
 
 
 def _cel_forme(f):
@@ -943,9 +943,16 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                     j = par_id.get(jid)
                     if not j:
                         continue
-                    # Nouvel inscrit du club (depuis sa liste précédente) : en vert dans la dernière colonne.
+                    # Dernière colonne (remarques) sur deux lignes plutôt que coupée par « … » : l'équipe où il a
+                    # joué en haut, le détail dessous ; nouvel inscrit du club (depuis sa liste précédente) : en vert
+                    # (« nouveau » si la colonne est étroite), ou dessous s'il y a déjà une remarque.
                     # Compétitions individuelles jouées cette phase (critérium, tournois...) : sous le nom.
-                    texte = " · ".join(t for t in ("nouvel inscrit" if j.get("nouveau") else "", (info or {}).get(jid, "")) if t)
+                    remarque, detail = (info or {}).get(jid) or ("", None)
+                    nouveau = bool(j.get("nouveau"))
+                    dessous = " · ".join(t for t in ("nouvel inscrit" if nouveau and remarque else "", detail or "") if t)
+                    cel_remarque = (C(remarque, couleur=DOUX, align="g", sous=dessous or None) if remarque else
+                                    C("nouvel inscrit", couleur=OK_TEXTE, gras=True, align="g", alternatives=("nouveau",))
+                                    if nouveau else C(""))
                     nom_j = cel_nom(j.get("nom"), j.get("prenom"), apres="F" if j.get("sexe") == "F" else None)
                     nom_j.sous = _hors_championnat(j.get("forme")) or None
                     sortie.append([
@@ -955,7 +962,7 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                         C(j.get("categorie") or "", couleur=DOUX),
                         _cel_forme(j.get("forme")),
                         C(resume_joueur(places.get(jid), pl.get("libelles")), couleur=NOIR, align="g"),
-                        C(texte, couleur=OK_TEXTE if j.get("nouveau") else DOUX, gras=bool(j.get("nouveau")), align="g"),
+                        cel_remarque,
                     ])
                 return sortie
 
@@ -963,8 +970,10 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                 return lignes or [[C(texte, couleur=DOUX, align="g"), C(), C(), C(), C(), C(), C(), C()]]
 
             num = r["adversaire"].get("numero")
-            renforts = {x["id"]: "a joué en " + ", ".join(str(n) for n in x["equipes"])
-                        + (f" · {x['dans_equipe']}× en {num}" if x.get("dans_equipe") else "") for x in a.get("renforts", [])}
+            # Renfort : les équipes plus fortes où il a joué, et dessous combien de fois il a déjà joué dans celle-ci
+            renforts = {x["id"]: ("a joué en " + ", ".join(str(n) for n in x["equipes"]),
+                                  f"déjà {x['dans_equipe']}× en {num}" if x.get("dans_equipe") else None)
+                        for x in a.get("renforts", [])}
             pas_joue = [jid for jid in a.get("non_alignes", []) if jid not in a["probable"]]
             autres = a.get("autres_habitues") or []
             montees = a.get("montees") or []
@@ -977,7 +986,7 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                 *([("Peuvent monter des équipes du dessous",
                     f"les 5 mieux classés sur {len(montees)}" if len(montees) > 5 else None,
                     lignes_joueurs([x["id"] for x in montees][:5],
-                                   {x["id"]: "joue en " + ", ".join(str(n) for n in x["equipes"]) for x in montees}))]
+                                   {x["id"]: ("joue en " + ", ".join(str(n) for n in x["equipes"]), None) for x in montees}))]
                   if montees else []),
                 ("Pas encore joué cette phase", f"les 8 mieux classés sur {len(pas_joue)}" if len(pas_joue) > 8 else None,
                  ou_aucun(lignes_joueurs(pas_joue[:8]))),
@@ -1046,6 +1055,8 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
                     f" {ECART_MEILLEUR} points au-dessus de ses points actuels." if a and avec_meilleur else "")
                  + (" Phase : parties gagnées sur parties jouées et points gagnés ou perdus depuis le début de la phase,"
                     " toutes compétitions (championnat, critérium, tournois)." if a and avec_forme else "")
+                 + (f" Renforts : « a joué en 3 » : équipe plus forte où il a joué ; « déjà 1× en {r['adversaire'].get('numero')} » :"
+                    " fois où il a déjà joué dans l'équipe que Vaires rencontre." if a and any(x.get("dans_equipe") for x in a.get("renforts", [])) else "")
                  + _note_liste(club, donnees)
                  + (" Placé : positions occupées dans cette équipe (A/W = A quand elle reçoit, W quand elle se déplace)."
                     " A ne joue jamais Z, B jamais Y, C jamais X, D jamais W." if a and (r.get("placements") or {}).get("format") == 4

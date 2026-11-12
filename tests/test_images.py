@@ -161,6 +161,30 @@ def test_adversaires_prochaine_journee_et_prochain_adversaire(tmp_path, monkeypa
     assert (meilleur.texte, meilleur.sous, meilleur.apres) == ("1 452", "2006", None)
 
 
+def test_remarques_des_renforts_sur_deux_lignes(tmp_path, monkeypatch):
+    """« a joué en 3 » puis, dessous, « déjà 1× en 9 » (au lieu de « a joué en 3 … » coupé) ; un nouvel
+    inscrit : « nouvel inscrit » en vert, ou dessous s'il y a déjà une remarque."""
+    analyse = {"probable": ["1"], "renforts": [{"id": "2", "equipes": [3], "dans_equipe": 1}, {"id": "3", "equipes": [4, 5]}],
+               "non_alignes": ["4"], "brules": []}
+    rencontre = {"journee": 5, "date": "2026-11-20", "date_reelle": None, "heure": "20:45", "vaires_domicile": False,
+                 "adversaire": {"club": "08779999", "libelle": "AUTRE 9", "numero": 9}, "analyse": analyse}
+    joueurs = [{"id": str(i), "nom": f"ADV{i}", "prenom": "Max", "points": 900 - i, "categorie": "S", "sexe": "M",
+                "nouveau": i in (2, 4)} for i in range(1, 5)]
+    donnees = {**CLUB, "equipes": [{"id": "v4", "nom_court": "Vaires 4", "numero": 4, "championnat": "M", "rencontres": [rencontre]}],
+               "clubs": {"08779999": {"nom": "AUTRE", "salle": {"nom": "Gymnase"}, "joueurs": joueurs}}}
+    vues = []
+    vrai_tableau = images.Rendu.tableau
+    monkeypatch.setattr(images.Rendu, "tableau", lambda self, colonnes, lignes, *a, **k: (
+        vues.append(lignes), vrai_tableau(self, colonnes, lignes, *a, **k))[1])
+    images.images_adversaires(donnees, tmp_path, date(2026, 11, 16))
+    remarques = {l[0].texte: (l[-1].texte, l[-1].sous) for lignes in vues for l in lignes if l[0].texte.startswith("ADV")}
+    assert remarques["ADV2 Max"] == ("a joué en 3", "nouvel inscrit · déjà 1× en 9")
+    assert remarques["ADV3 Max"] == ("a joué en 4, 5", None)
+    assert remarques["ADV4 Max"] == ("nouvel inscrit", None)
+    nouveau = next(l[-1] for lignes in vues for l in lignes if l[0].texte == "ADV4 Max")
+    assert nouveau.alternatives == ("nouveau",) and nouveau.couleur == images.OK_TEXTE
+
+
 def test_meilleur_classement_d_un_adversaire():
     c = images._cel_meilleur({"points": 961, "meilleur": {"points": 1452, "annee": "2006"}})
     assert (c.texte, c.apres, c.gras, c.couleur) == ("1 452", "(2006)", True, images.ATT_TEXTE)  # 491 points de plus : en orange

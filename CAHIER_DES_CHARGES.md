@@ -439,6 +439,10 @@ pas l'image), idéalement en points exacts (1452 plutôt que 14), en restant lis
   (colonne plus étroite). Au passage : une fiche aux colonnes trop larges (positions « Placé »
   nombreuses) sortait de l'image ; elle s'élargit maintenant au lieu d'être coupée, et la colonne des
   remarques ne grandit plus quand elle doit rétrécir.
+- Remarques coupées par « … » (« a joué en 3 … », « nouvel ins… ») : sur deux lignes maintenant.
+  Renfort : « a joué en 3 » et dessous « déjà 1× en 9 » (fois où il a déjà joué dans l'équipe que
+  Vaires rencontre) ; nouvel inscrit : « nouvel inscrit » en vert (« nouveau » si la colonne est
+  étroite), ou dessous s'il y a déjà une remarque. Expliqué en pied d'image.
 
 ## Tournois à venir (11/11/2026)
 
