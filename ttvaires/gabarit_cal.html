@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>CVTT Vaires · calendrier</title>
+<style>
+:root { color-scheme: light dark; --fond: #eef1f5; --surface: #fff; --surface2: #f3f5f8; --texte: #1c2330; --doux: #5b6576;
+  --bord: #dde1e7; --grille: #e3e7ec; --accent: #1f5fbf; --accent-fond: #e8f0fc; --bandeau: #173b60; --bandeau-texte: #fff;
+  --hors-mois: #f6f7f9; --att: #8a5a00; --att-fond: #fff4d6;
+  /* Catégories : trois teintes (bleu, orange, vert) + une neutre, et des variantes de remplissage ; chaque
+     pastille porte aussi son nom (la couleur n'est jamais seule à distinguer les compétitions) */
+  --c-bleu: #2a78d6; --c-bleu-clair-fond: #dbe8f8; --c-bleu-clair-texte: #174f94;
+  --c-orange: #eb6834; --c-vert: #1baf7a; --c-neutre: #3b4250; --c-neutre-texte: #fff;
+  --c-contour: #8a93a3; }
+@media (prefers-color-scheme: dark) { :root { --fond: #12151b; --surface: #1b2029; --surface2: #232a35; --texte: #e6e9ef;
+  --doux: #9aa4b5; --bord: #313a48; --grille: #2a313d; --accent: #7fb0ff; --accent-fond: #1d2a40; --bandeau: #0f2236;
+  --hors-mois: #171b22; --att: #f3cd6b; --att-fond: #3a3014;
+  --c-bleu: #3987e5; --c-bleu-clair-fond: #1d2f4a; --c-bleu-clair-texte: #a9c8f2;
+  --c-orange: #d95926; --c-vert: #199e70; --c-neutre: #d5d9e0; --c-neutre-texte: #12151b; --c-contour: #7c8698; } }
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--fond); color: var(--texte); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--accent); }
+button { font: inherit; cursor: pointer; }
+#appli { min-height: 100%; display: flex; flex-direction: column; }
+.barre { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px;
+  padding-top: max(10px, env(safe-area-inset-top)); background: var(--bandeau); color: var(--bandeau-texte); }
+.barre .titres { flex: 1 1 auto; min-width: 0; }
+.barre b { display: block; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barre .titres span { display: block; font-size: 12.5px; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.espaces { display: flex; gap: 8px; flex: none; }
+.espaces a { border: 1px solid rgba(255, 255, 255, .35); background: rgba(255, 255, 255, .12); color: #fff;
+  border-radius: 9px; padding: 7px 11px; font-size: 14.5px; font-weight: 600; text-decoration: none; white-space: nowrap; text-align: center; }
+.corps { flex: 1 1 auto; display: grid; grid-template-columns: 280px minmax(0, 1fr); align-items: start; }
+#menu { background: var(--surface); border-right: 1px solid var(--bord); padding: 8px 10px 24px; align-self: stretch; }
+#menu h2 { font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--doux); margin: 16px 8px 6px; }
+.entree { display: block; padding: 8px 10px; border-radius: 10px; color: inherit; text-decoration: none; }
+.entree:hover { background: var(--surface2); }
+.entree b { display: block; font-size: 15px; font-weight: 600; }
+.entree span { display: block; font-size: 12.5px; color: var(--doux); }
+.prochain { display: grid; grid-template-columns: 82px minmax(0, 1fr); align-items: center; gap: 8px; padding: 6px 10px;
+  font-size: 13.5px; border-radius: 10px; color: inherit; text-decoration: none; }
+.prochain:hover { background: var(--surface2); }
+.prochain .quand { color: var(--doux); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.prochain .pastille { justify-self: start; max-width: 100%; }
+#vue { min-width: 0; padding: 16px 18px 40px; }
+/* Barre d'outils du mois */
+.outils { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+.outils h1 { font-size: 21px; margin: 0 6px 0 4px; font-weight: 650; text-transform: capitalize; flex: 1 1 auto; }
+.outils button { border: 1px solid var(--bord); background: var(--surface); color: var(--texte); border-radius: 9px; padding: 6px 12px; font-size: 14.5px; }
+.outils button:hover { border-color: var(--accent); }
+.outils .fleche { font-size: 18px; line-height: 1; padding: 5px 12px; }
+/* Catégories : légende et filtres à la fois */
+.categories { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.categorie { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--bord); background: var(--surface);
+  border-radius: 99px; padding: 4px 11px 4px 8px; font-size: 13.5px; color: var(--texte); }
+.categorie[aria-pressed="false"] { opacity: .5; }
+.categorie[aria-pressed="false"] .marque { background: transparent !important; border-style: dashed !important; }
+.marque { width: 14px; height: 14px; border-radius: 4px; flex: none; }
+/* Pastilles des évènements, par style de catégorie */
+.st-bleu { background: var(--c-bleu); color: #fff; }
+.st-bleu-clair { background: var(--c-bleu-clair-fond); color: var(--c-bleu-clair-texte); box-shadow: inset 3px 0 0 var(--c-bleu); }
+.st-orange { background: var(--c-orange); color: #fff; }
+.st-vert { background: var(--c-vert); color: #fff; }
+.st-neutre { background: var(--c-neutre); color: var(--c-neutre-texte); }
+.st-contour { background: transparent; color: var(--texte); border: 1px solid var(--c-contour); }
+.st-pointille { background: transparent; color: var(--doux); border: 1px dashed var(--c-contour); }
+.marque.st-bleu-clair { box-shadow: inset 4px 0 0 var(--c-bleu); }
+/* Grille du mois */
+.grille { background: var(--surface); border: 1px solid var(--bord); border-radius: 12px; overflow: hidden; }
+.jours, .semaine { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.jours div { padding: 7px 8px; font-size: 12px; font-weight: 600; color: var(--doux); text-transform: uppercase; letter-spacing: .04em;
+  border-bottom: 1px solid var(--bord); text-align: center; }
+.case { min-height: 104px; border-right: 1px solid var(--grille); border-bottom: 1px solid var(--grille); padding: 4px 4px 6px;
+  text-align: left; background: none; border-top: 0; border-left: 0; color: inherit; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.semaine .case:nth-child(7n) { border-right: 0; }
+.semaine:last-child .case { border-bottom: 0; }
+.case.hors { background: var(--hors-mois); }
+.case.hors .num { color: var(--doux); opacity: .7; }
+.case:hover { background: var(--surface2); }
+.case.choisie { box-shadow: inset 0 0 0 2px var(--accent); }
+.num { font-size: 13px; font-weight: 600; width: 26px; height: 26px; line-height: 26px; text-align: center; border-radius: 99px; align-self: center; flex: none; }
+.case.aujourdhui .num { background: var(--accent); color: var(--surface); }
+.pastille { display: block; font-size: 12px; font-weight: 600; line-height: 1.3; padding: 2px 6px; border-radius: 5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plus { font-size: 12px; color: var(--doux); padding: 0 6px; }
+.points { display: none; }
+/* Liste des dates du mois (et du jour choisi) */
+.liste { margin-top: 16px; }
+.liste h2 { font-size: 16px; margin: 0 0 8px; }
+.jour { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 4px 12px; padding: 9px 4px; border-bottom: 1px solid var(--bord); scroll-margin-top: 12px; }
+.jour.choisi { background: var(--accent-fond); border-radius: 8px; }
+.jour.passe { opacity: .62; }
+.jour .date { font-weight: 650; font-size: 14px; }
+.jour .date small { display: block; font-weight: 500; color: var(--doux); font-size: 12.5px; }
+.evts { display: grid; gap: 6px; }
+.evt { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.evt .pastille { flex: none; }
+.evt .texte { min-width: 0; font-size: 14px; }
+.evt .texte span { color: var(--doux); font-size: 13px; }
+.vide { color: var(--doux); padding: 14px 4px; }
+.note { font-size: 12.5px; color: var(--doux); margin: 14px 2px 0; }
+.note a { white-space: nowrap; }
+@media (max-width: 860px) {
+  .corps { grid-template-columns: 1fr; }
+  #menu { border-right: 0; border-top: 1px solid var(--bord); order: 2; }
+  #vue { padding: 12px 8px 24px; }
+  /* Téléphone : des points de couleur dans les cases, le détail dans la liste dessous */
+  .case { min-height: 52px; align-items: center; padding: 3px 1px 5px; }
+  .case .pastille, .case .plus { display: none; }
+  .points { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; max-width: 100%; }
+  .point { width: 8px; height: 8px; border-radius: 99px; }
+  .point.st-contour, .point.st-pointille { width: 8px; height: 8px; }
+  .jours div { padding: 6px 0; font-size: 11px; }
+  .jour { grid-template-columns: 70px minmax(0, 1fr); gap: 4px 8px; }
+  .outils h1 { font-size: 19px; order: -1; flex-basis: 100%; margin: 0 0 2px 2px; }
+}
+@media (max-width: 520px) {
+  /* En-tête : les liens vers les autres espaces sur leur propre ligne */
+  .espaces { order: 3; flex-basis: 100%; }
+  .espaces a { flex: 1 1 0; padding: 7px 6px; }
+}
+</style>
+</head>
+<body>
+<div id="appli">
+  <header class="barre">
+    <div class="titres"><b>CVTT Vaires · calendrier</b><span id="sous-titre"></span></div>
+    <nav class="espaces" aria-label="Autres espaces">
+      <a id="vers-club" href="../club/" title="Espace club : pages, images, archives">Club</a>
+      <a id="vers-indivs" href="../indivs/" title="Individuels : poules du critérium et adversaires">Indivs</a>
+      <a id="vers-tournois" href="../tournois/" title="Tournois à venir autour de Vaires">Tournois</a>
+    </nav>
+  </header>
+  <div class="corps">
+    <nav id="menu" aria-label="Calendrier"></nav>
+    <main id="vue">
+      <div class="outils">
+        <button type="button" class="fleche" id="prec" aria-label="Mois précédent">‹</button>
+        <button type="button" id="auj">Aujourd'hui</button>
+        <button type="button" class="fleche" id="suiv" aria-label="Mois suivant">›</button>
+        <h1 id="mois" aria-live="polite"></h1>
+      </div>
+      <div class="categories" id="categories" role="group" aria-label="Compétitions affichées"></div>
+      <div class="grille" id="grille"></div>
+      <section class="liste" id="liste" aria-labelledby="titre-liste"></section>
+      <p class="note" id="note"></p>
+    </main>
+  </div>
+</div>
+<script>
+"use strict";
+const D = __DONNEES_JSON__;
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const lire = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const ecrire = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* navigation privée */ } };
+const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+const JOURS_COURTS = ["lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim."];
+const JOURS_LONGS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
+const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const date = (s) => { const [a, m, j] = s.split("-").map(Number); return new Date(a, m - 1, j); };
+const lundiDe = (d) => (d.getDay() + 6) % 7;  // lundi = 0 ... dimanche = 6
+const AUJ = iso(new Date());
+const CATS = new Map(D.categories.map((c) => [c.cle, c]));
+
+/* Espaces voisins (même mot de passe, déjà retenu), y compris sur le site GitHub (…/ggping/cal/) */
+function racine() {
+  const p = location.pathname, i = p.search(/\/(gg\/)?cal(\/|\.html)/);
+  return i >= 0 ? p.slice(0, i) : p.replace(/\/[^/]*$/, "");
+}
+const BASE = location.protocol === "file:" ? ".." : racine();
+const CLUB = `${BASE}/club/`, INDIVS = `${BASE}/indivs/`, TOURNOIS = `${BASE}/tournois/`;
+document.getElementById("vers-club").href = CLUB;
+document.getElementById("vers-indivs").href = INDIVS;
+document.getElementById("vers-tournois").href = TOURNOIS;
+document.getElementById("sous-titre").textContent = `Saison ${D.saison} · dates du comité de Seine-et-Marne`;
+
+/* Évènements de chaque jour (un évènement sur plusieurs jours apparaît chaque jour) */
+const PAR_JOUR = new Map();
+for (const e of D.evenements) {
+  for (let d = date(e.debut); iso(d) <= (e.fin || e.debut); d.setDate(d.getDate() + 1)) {
+    const k = iso(d);
+    if (!PAR_JOUR.has(k)) PAR_JOUR.set(k, []);
+    PAR_JOUR.get(k).push(e);
+  }
+}
+const PREMIER = date(D.evenements[0].debut), DERNIER = date(D.evenements[D.evenements.length - 1].fin || D.evenements[D.evenements.length - 1].debut);
+
+/* Compétitions affichées : celles du réglage, sinon celles prévues au départ (retenu sur l'appareil) */
+let masquees;
+try { masquees = new Set(JSON.parse(lire("cal-masquees"))); } catch (e) { masquees = null; }
+if (!(masquees instanceof Set) || lire("cal-masquees") === null) masquees = new Set(D.categories.filter((c) => !c.affichee).map((c) => c.cle));
+const visibles = (liste) => (liste || []).filter((e) => !masquees.has(e.cat));
+
+/* Mois affiché : celui d'aujourd'hui s'il est dans la saison, sinon le premier (ou celui de l'adresse : #2026-11) */
+const borne = (d) => new Date(Math.min(Math.max(d, new Date(PREMIER.getFullYear(), PREMIER.getMonth(), 1)),
+                                       new Date(DERNIER.getFullYear(), DERNIER.getMonth(), 1)));
+let courant = borne(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+const deLAdresse = /^#(\d{4})-(\d{2})$/.exec(location.hash);
+if (deLAdresse) courant = borne(new Date(+deLAdresse[1], +deLAdresse[2] - 1, 1));
+let choisi = null;  // jour choisi dans la grille
+
+function pastille(e, court = false) {
+  const c = CATS.get(e.cat);
+  return `<span class="pastille st-${c.style}" title="${esc(c.nom)} · ${esc(e.titre)}${e.detail ? " · " + esc(e.detail) : ""}">${esc(court ? e.court : e.titre)}</span>`;
+}
+
+function categories() {
+  document.getElementById("categories").innerHTML = D.categories.map((c) =>
+    `<button type="button" class="categorie" data-cle="${esc(c.cle)}" aria-pressed="${!masquees.has(c.cle)}" title="${esc(c.detail)}">
+      <span class="marque st-${c.style}"></span>${esc(c.nom)}</button>`).join("");
+}
+document.getElementById("categories").addEventListener("click", (ev) => {
+  const b = ev.target.closest(".categorie");
+  if (!b) return;
+  masquees.has(b.dataset.cle) ? masquees.delete(b.dataset.cle) : masquees.add(b.dataset.cle);
+  ecrire("cal-masquees", JSON.stringify([...masquees]));
+  dessiner();
+});
+
+function grille() {
+  const a = courant.getFullYear(), m = courant.getMonth();
+  const debut = new Date(a, m, 1 - lundiDe(new Date(a, m, 1)));
+  const fin = new Date(a, m + 1, 0);
+  const nbSemaines = Math.ceil((lundiDe(new Date(a, m, 1)) + fin.getDate()) / 7);
+  let html = `<div class="jours">${JOURS_COURTS.map((j) => `<div>${j}</div>`).join("")}</div>`;
+  for (let s = 0; s < nbSemaines; s++) {
+    html += '<div class="semaine">';
+    for (let k = 0; k < 7; k++) {
+      const d = new Date(debut.getFullYear(), debut.getMonth(), debut.getDate() + s * 7 + k), cle = iso(d);
+      const evts = visibles(PAR_JOUR.get(cle));
+      const classes = ["case", d.getMonth() !== m ? "hors" : "", cle === AUJ ? "aujourdhui" : "", cle === choisi ? "choisie" : ""].filter(Boolean).join(" ");
+      const libelle = `${JOURS_LONGS[k]} ${d.getDate()} ${MOIS[d.getMonth()]}${evts.length ? " : " + evts.map((e) => CATS.get(e.cat).nom + " " + e.titre).join(", ") : ""}`;
+      html += `<button type="button" class="${classes}" data-jour="${cle}" aria-label="${esc(libelle)}">
+        <span class="num">${d.getDate()}</span>
+        ${evts.slice(0, 3).map((e) => pastille(e, true)).join("")}${evts.length > 3 ? `<span class="plus">+${evts.length - 3} autre${evts.length > 4 ? "s" : ""}</span>` : ""}
+        <span class="points">${evts.map((e) => `<i class="point st-${CATS.get(e.cat).style}"></i>`).join("")}</span></button>`;
+    }
+    html += "</div>";
+  }
+  document.getElementById("grille").innerHTML = html;
+  document.getElementById("mois").textContent = `${MOIS[m]} ${a}`;
+  document.getElementById("prec").disabled = courant <= new Date(PREMIER.getFullYear(), PREMIER.getMonth(), 1);
+  document.getElementById("suiv").disabled = courant >= new Date(DERNIER.getFullYear(), DERNIER.getMonth(), 1);
+}
+
+function dateLongue(cle) {
+  const d = date(cle);
+  return `${JOURS_COURTS[lundiDe(d)]} ${d.getDate()}<small>${MOIS[d.getMonth()]}</small>`;
+}
+function liste() {
+  const a = courant.getFullYear(), m = courant.getMonth();
+  const jours = [...PAR_JOUR.keys()].filter((k) => date(k).getFullYear() === a && date(k).getMonth() === m && visibles(PAR_JOUR.get(k)).length).sort();
+  document.getElementById("liste").innerHTML = `<h2 id="titre-liste">Les dates de ${MOIS[m]} ${a}</h2>`
+    + (jours.length ? jours.map((k) => `<div class="jour${k === choisi ? " choisi" : ""}${k < AUJ ? " passe" : ""}" id="j-${k}">
+        <div class="date">${dateLongue(k)}</div>
+        <div class="evts">${visibles(PAR_JOUR.get(k)).map((e) => { const c = CATS.get(e.cat);
+          return `<div class="evt">${pastille(e)}<span class="texte">${esc(c.nom)}${e.detail ? ` <span>· ${esc(e.detail)}</span>` : ""}${e.fin ? ` <span>· jusqu'au ${date(e.fin).getDate()} ${MOIS[date(e.fin).getMonth()]}</span>` : ""}</span></div>`; }).join("")}</div>
+      </div>`).join("") : '<p class="vide">Aucune date ce mois-ci pour les compétitions choisies.</p>');
+}
+
+function menu() {
+  const prochains = D.evenements.filter((e) => (e.fin || e.debut) >= AUJ && !masquees.has(e.cat)).slice(0, 8);
+  document.getElementById("menu").innerHTML = `<h2>Prochaines dates</h2>
+    ${prochains.length ? prochains.map((e) => { const d = date(e.debut);
+      return `<a class="prochain" href="#${e.debut.slice(0, 7)}" data-jour="${e.debut}"><span class="quand">${JOURS_COURTS[lundiDe(d)]} ${d.getDate()}/${String(d.getMonth() + 1).padStart(2, "0")}</span>
+        ${pastille(e)}</a>`; }).join("")
+      : '<p class="vide">Plus aucune date cette saison.</p>'}
+    <h2>Autres espaces</h2>
+    <a class="entree" href="${CLUB}"><b>Espace club</b><span>Pages, images à partager, archives</span></a>
+    <a class="entree" href="${INDIVS}"><b>Individuels</b><span>Poules du critérium et adversaires</span></a>
+    <a class="entree" href="${TOURNOIS}"><b>Tournois</b><span>Tournois à venir autour de Vaires</span></a>
+    <h2>Calendrier du comité</h2>
+    <a class="entree" href="${esc(D.agenda_cd77)}" target="_blank" rel="noopener"><b>Agenda partagé du CD77</b><span>S'y abonner dans Google Agenda · nouvel onglet</span></a>
+    <a class="entree" href="${esc(D.pdf)}" target="_blank" rel="noopener"><b>Calendrier en PDF</b><span>Celui d'où viennent ces dates · nouvel onglet</span></a>
+    <a class="entree" href="${esc(D.page_cd77)}" target="_blank" rel="noopener"><b>Page sportive du CD77</b><span>Poules, règlements · nouvel onglet</span></a>`;
+}
+
+function dessiner() {
+  categories(); grille(); liste(); menu();
+  document.getElementById("note").innerHTML = `${esc(D.source)} : les dates peuvent changer, le comité fait foi
+    (<a href="${esc(D.page_cd77)}" target="_blank" rel="noopener">cdtt77.fr</a>). Les heures et les lieux des rencontres de Vaires sont dans l'espace club.`;
+}
+function allerA(mois, jour = null) {
+  courant = borne(mois);
+  choisi = jour;
+  try { history.replaceState(null, "", `#${iso(courant).slice(0, 7)}`); } catch (e) { /* page ouverte dans un cadre */ }
+  dessiner();
+}
+document.getElementById("prec").addEventListener("click", () => allerA(new Date(courant.getFullYear(), courant.getMonth() - 1, 1)));
+document.getElementById("suiv").addEventListener("click", () => allerA(new Date(courant.getFullYear(), courant.getMonth() + 1, 1)));
+document.getElementById("auj").addEventListener("click", () => { allerA(new Date(new Date().getFullYear(), new Date().getMonth(), 1), AUJ); });
+/* Un jour de la grille (ou une prochaine date) : il est mis en avant dans la liste, qui défile jusqu'à lui */
+document.addEventListener("click", (ev) => {
+  const c = ev.target.closest("[data-jour]");
+  if (!c) return;
+  ev.preventDefault();
+  const k = c.dataset.jour, d = date(k);
+  allerA(new Date(d.getFullYear(), d.getMonth(), 1), k);
+  const ligne = document.getElementById(`j-${k}`);
+  if (ligne) ligne.scrollIntoView({ behavior: "smooth", block: "nearest" });
+});
+document.addEventListener("keydown", (ev) => {
+  if (ev.target.closest("input, select, textarea")) return;
+  if (ev.key === "ArrowLeft" && ev.altKey) document.getElementById("prec").click();
+  if (ev.key === "ArrowRight" && ev.altKey) document.getElementById("suiv").click();
+});
+dessiner();
+</script>
+</body>
+</html>

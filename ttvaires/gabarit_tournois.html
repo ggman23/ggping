@@ -54,6 +54,13 @@ h1 small { font-size: 15px; color: var(--doux); font-weight: 500; }
   .contenu { padding: 16px 12px 32px; }
 }
 @media (max-width: 420px) { .barre { padding-left: 10px; padding-right: 10px; } .barre a { padding: 7px 9px; font-size: 14px; } }
+.espaces { display: flex; gap: 8px; flex: none; }
+@media (max-width: 520px) {
+  /* En-tête : les liens vers les autres espaces sur leur propre ligne (le titre reste lisible) */
+  .barre { flex-wrap: wrap; }
+  .espaces { order: 3; flex-basis: 100%; }
+  .espaces a { flex: 1 1 0; text-align: center; padding: 7px 6px; }
+}
 </style>
 </head>
 <body>
@@ -61,8 +68,11 @@ h1 small { font-size: 15px; color: var(--doux); font-weight: 500; }
   <header class="barre">
     <a id="retour" href="#menu" aria-label="Choisir une autre liste de tournois">‹ Menu</a>
     <div class="titres"><b>CVTT Vaires · tournois</b><span id="sous-titre">Tournois à venir, par PingRadar</span></div>
-    <a id="vers-club" href="../club/" title="Espace club : pages, images, archives">Club</a>
-    <a id="vers-indivs" href="../indivs/" title="Individuels : poules du critérium et adversaires">Indivs</a>
+    <nav class="espaces" aria-label="Autres espaces">
+      <a id="vers-club" href="../club/" title="Espace club : pages, images, archives">Club</a>
+      <a id="vers-indivs" href="../indivs/" title="Individuels : poules du critérium et adversaires">Indivs</a>
+      <a id="vers-cal" href="../cal/" title="Calendrier de la saison">Calendrier</a>
+    </nav>
   </header>
   <div class="corps">
     <nav id="menu" aria-label="Listes de tournois"></nav>
@@ -103,9 +113,10 @@ function racine() {
   return i >= 0 ? p.slice(0, i) : p.replace(/\/[^/]*$/, "");
 }
 const BASE = location.protocol === "file:" ? ".." : racine();
-const CLUB = `${BASE}/club/`, INDIVS = `${BASE}/indivs/`;
+const CLUB = `${BASE}/club/`, INDIVS = `${BASE}/indivs/`, CAL = `${BASE}/cal/`;
 document.getElementById("vers-club").href = CLUB;
 document.getElementById("vers-indivs").href = INDIVS;
+document.getElementById("vers-cal").href = CAL;
 
 /* Format du bloc : « compact » (jusqu'à 360 px) sur téléphone, « standard » (jusqu'à 640 px) sinon ;
    hauteur donnée par PingRadar pour le nombre de tournois (10, ou 5 pour un week-end). */
@@ -128,7 +139,8 @@ function menu(actif) {
        <a class="entree" href="${FFTT}" target="_blank" rel="noopener"><b>Liste officielle de la FFTT</b><span>Recherche de tournois · nouvel onglet</span></a>
        <h2>Autres espaces</h2>
        <a class="entree" href="${CLUB}"><b>Espace club</b><span>Pages, images à partager, archives</span></a>
-       <a class="entree" href="${INDIVS}"><b>Individuels</b><span>Poules du critérium et adversaires</span></a>`;
+       <a class="entree" href="${INDIVS}"><b>Individuels</b><span>Poules du critérium et adversaires</span></a>
+       <a class="entree" href="${CAL}"><b>Calendrier</b><span>Dates de la saison : championnats, critérium</span></a>`;
 }
 
 function vue(b) {

@@ -42,7 +42,7 @@ from urllib.parse import quote
 
 import requests
 
-from . import publier, ressources
+from . import calendrier, publier, ressources
 
 RACINE = Path(__file__).resolve().parent.parent
 API = "https://api.netlify.com/api/v1"
@@ -67,9 +67,12 @@ ORDRE_CLUB = ["vaires.html", "resultats_vaires.html", "resultats_vaires.xlsx", "
 # Pages du site publiées à leur propre adresse avec le mot de passe du club (et non parmi les documents
 # de /club/, qui y renvoie par « Autres espaces ») : page du site -> (adresse, titre)
 PAGES_A_PART = {"indivs.html": ("indivs", "Individuels")}
-# Pages fixes (aucune donnée de la mise à jour), publiées de même à leur adresse : adresse -> (titre, gabarit).
+# Pages fixes (aucune donnée de la mise à jour), publiées de même à leur adresse : adresse -> (titre, page),
+# la page étant un fichier HTML ou une fonction qui la fabrique.
 # /tournois/ : blocs de PingRadar intégrés (cadres qui se mettent à jour tout seuls, voir le gabarit).
-PAGES_FIXES = {"tournois": ("Tournois", Path(__file__).with_name("gabarit_tournois.html"))}
+# /cal/ : calendrier de la saison (dates du comité de Seine-et-Marne, voir calendrier.py).
+PAGES_FIXES = {"tournois": ("Tournois", Path(__file__).with_name("gabarit_tournois.html")),
+               "cal": ("Calendrier", calendrier.page)}
 
 
 class ErreurNetlify(Exception):
@@ -165,10 +168,10 @@ def publier_pages_a_part(site, dossier, cle_site, cle_club):
         chiffre = chiffrer_stable(_clair(site / publie, cle_site), cle_club)
         page.write_text(publier.page_verrouillee_chiffree(chiffre, titre, ressources.STOCKAGE_CLUB), encoding="utf-8")
         publiees.append(chemin)
-    for chemin, (titre, gabarit) in PAGES_FIXES.items():
+    for chemin, (titre, source) in PAGES_FIXES.items():
         page = dossier / chemin / "index.html"
         page.parent.mkdir(parents=True, exist_ok=True)
-        chiffre = chiffrer_stable(gabarit.read_bytes(), cle_club)
+        chiffre = chiffrer_stable(source.read_bytes() if isinstance(source, Path) else source(), cle_club)
         page.write_text(publier.page_verrouillee_chiffree(chiffre, titre, ressources.STOCKAGE_CLUB), encoding="utf-8")
         publiees.append(chemin)
     return publiees

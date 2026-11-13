@@ -427,6 +427,29 @@ niveau, plus fort).
   janvier et juillet, repère sur le meilleur, bulle par phase, tableau), colonne et tri « Meilleur »
   dans le tableau du club. Une archive ne montre rien d'après sa date.
 
+## Calendrier de la saison : /cal/ (13/11/2026)
+
+Demande : une page /cal/ sur le même principe que /club/ (et /tournois/), qui permet d'aller dans toutes
+les pages sauf /lundi/, et qui affiche un calendrier de type Google Agenda avec toutes les journées du
+championnat de France par équipes 77, du championnat de Paris, du championnat des jeunes 77 et les
+dates des individuels (critérium) ; sources : https://www.cdtt77.fr/sportive et le PDF du calendrier.
+
+- Données (calendrier.py) : le PDF 2026-2027 du CD77 (version du 04/09/2025 V3), recopié : 14 journées
+  du championnat par équipes (vendredi), 14 du championnat féminin 77/94 (samedi), 7 du championnat de
+  Paris et 7 + « T » du championnat des jeunes (les mêmes vendredis), 4 tours du critérium (jeunes
+  samedi, seniors dimanche, D4 dimanche suivant), 27 autres épreuves et 8 dates limites
+  d'inscription. Test : chaque date tombe le jour de la semaine du PDF. Les formations d'arbitrage
+  (dates « ? ») ne sont pas reprises. L'agenda Google partagé du comité n'est pas lu (robots.txt de
+  calendar.google.com : tout interdit) : lien pour s'y abonner.
+- Page fixe gabarit_cal.html (netlify.PAGES_FIXES, comme /tournois/, données intégrées à la
+  publication) : grille du mois (lundi en premier), pastilles nommées sur ordinateur, points sur
+  téléphone, liste des dates du mois, prochaines dates, boutons de catégories (légende et filtre,
+  retenus sur l'appareil ; autres épreuves et dates limites décochées au départ), adresse #2026-11.
+  Couleurs : trois teintes validées entre elles (bleu, orange, vert) plus une neutre et des variantes
+  de remplissage ; chaque pastille porte son nom.
+- Navigation : en-têtes de /indivs/, /tournois/ et /cal/ avec les autres espaces (sur une deuxième
+  ligne sur téléphone), menus « Autres espaces », « Aller à » de /club/. Jamais /lundi/.
+
 ## Meilleur classement sur l'image des adversaires (12/11/2026)
 
 Demande : le meilleur classement et son année sur l'image du prochain adversaire (la page l'avait,

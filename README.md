@@ -39,7 +39,12 @@ critérium, tournois), du plus fort au plus faible : voir PUBLICATION.md.
 **Tournois** (/tournois/, mot de passe du club) : les prochains tournois à 100 km de Vaires, ce week-end
 et le suivant, en Île-de-France et en Seine-et-Marne, avec les blocs de PingRadar (mis à jour en continu,
 sans aucune requête de l'outil) ; liens vers la recherche de PingRadar et la liste de la FFTT. Liens
-directs entre /club/, /indivs/ et /tournois/ : voir PUBLICATION.md.
+directs entre /club/, /indivs/, /tournois/ et /cal/ : voir PUBLICATION.md.
+
+**Calendrier** (/cal/, mot de passe du club) : la saison comme un agenda, mois par mois (‹ › et
+« Aujourd'hui ») : championnat par équipes, championnat féminin, championnat de Paris, championnat des
+jeunes et critérium fédéral (et, si on les coche, les autres épreuves du comité et les dates limites
+d'inscription), d'après le calendrier du comité de Seine-et-Marne (`ttvaires/calendrier.py`).
 
 **Application Android** (APK) : le site (mise à jour), l'espace club, /lundi/ et /indivs/ (GitHub, sinon
 Cloudflare, sinon Netlify) et les deux statistiques en onglets, avec téléchargements et partage d'images : voir

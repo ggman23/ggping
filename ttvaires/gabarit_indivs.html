@@ -79,6 +79,13 @@ tr.vaires td:nth-child(2) b::after { content: " · Vaires"; color: var(--accent)
 }
 @media (max-width: 420px) { .barre { padding-left: 10px; padding-right: 10px; }
   .barre button, .barre a { padding: 7px 9px; font-size: 14px; } }
+.espaces { display: flex; gap: 8px; flex: none; }
+@media (max-width: 520px) {
+  /* En-tête : les liens vers les autres espaces sur leur propre ligne (le titre reste lisible) */
+  .barre { flex-wrap: wrap; }
+  .espaces { order: 3; flex-basis: 100%; }
+  .espaces a { flex: 1 1 0; text-align: center; padding: 7px 6px; }
+}
 </style>
 </head>
 <body>
@@ -86,8 +93,11 @@ tr.vaires td:nth-child(2) b::after { content: " · Vaires"; color: var(--accent)
   <header class="barre">
     <button id="retour" aria-label="Retour à la liste des joueurs">‹ Joueurs</button>
     <div class="titres"><b>CVTT Vaires · individuels</b><span id="sous-titre"></span></div>
-    <a id="vers-club" href="../club/" title="Espace club : pages, images, archives">Club</a>
-    <a id="vers-tournois" href="../tournois/" title="Tournois à venir autour de Vaires">Tournois</a>
+    <nav class="espaces" aria-label="Autres espaces">
+      <a id="vers-club" href="../club/" title="Espace club : pages, images, archives">Club</a>
+      <a id="vers-tournois" href="../tournois/" title="Tournois à venir autour de Vaires">Tournois</a>
+      <a id="vers-cal" href="../cal/" title="Calendrier de la saison">Calendrier</a>
+    </nav>
   </header>
   <div class="corps">
     <nav id="menu" aria-label="Joueurs de Vaires"></nav>
@@ -127,9 +137,10 @@ function racine() {
   return i >= 0 ? p.slice(0, i) : p.replace(/\/[^/]*$/, "");
 }
 const BASE = location.protocol === "file:" ? ".." : racine();
-const CLUB = `${BASE}/club/`, TOURNOIS = `${BASE}/tournois/`;
+const CLUB = `${BASE}/club/`, TOURNOIS = `${BASE}/tournois/`, CAL = `${BASE}/cal/`;
 document.getElementById("vers-club").href = CLUB;
 document.getElementById("vers-tournois").href = TOURNOIS;
+document.getElementById("vers-cal").href = CAL;
 const lienImage = (p) => `${CLUB}#${encodeURIComponent("indivs_" + p.id + ".png")}`;
 
 const ENTREES = [];
@@ -160,7 +171,8 @@ function menu(actif) {
       `<a class="entree${e.cle === actif ? " actif" : ""}" href="#j/${encodeURIComponent(e.cle)}"><b>${nomComplet(e.j)}</b>
         <span>${dateCourte(e.p.date)} · ${esc(e.p.titre)}</span></a>`).join("")).join("")
     + `<h2>Autres espaces</h2><a class="entree" href="${CLUB}"><b>Espace club</b><span>Pages, images à partager, archives</span></a>`
-    + `<a class="entree" href="${TOURNOIS}"><b>Tournois</b><span>Tournois à venir autour de Vaires</span></a>`;
+    + `<a class="entree" href="${TOURNOIS}"><b>Tournois</b><span>Tournois à venir autour de Vaires</span></a>`
+    + `<a class="entree" href="${CAL}"><b>Calendrier</b><span>Dates de la saison : championnats, critérium</span></a>`;
 }
 
 function vueEnsemble() {

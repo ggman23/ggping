@@ -443,6 +443,30 @@ sur PingRadar (tableaux, tarifs, lien d'inscription).
   l'outil), le flux de tournois-tt.fr (arrêté au 18/10/2026), PingMap (extraction automatique
   interdite par le site), MyPing Tournois (application, sans intégration prévue) : à utiliser à la main.
 
+## Calendrier : /cal/ (dates de la saison)
+
+**/cal/** sur chaque site (https://ggping-pap.pages.dev/cal/, https://ggman23.github.io/ggping/cal/,
+https://ggping.netlify.app/cal/), avec le **mot de passe du club** (ouverture directe depuis /club/).
+
+- Un mois à la fois, comme Google Agenda : ‹ ›, « Aujourd'hui », le jour du jour entouré ; sur
+  ordinateur, chaque date porte son nom dans la case (« Équipes J5 », « Paris J1 », « Crit. T2
+  jeunes ») ; sur téléphone, des points de couleur. Dessous, toutes les dates du mois en clair ;
+  toucher un jour le met en avant dans cette liste. À gauche (en bas sur téléphone) : les prochaines
+  dates, les autres espaces (club, individuels, tournois) et les liens du comité (agenda partagé du
+  CD77 pour s'y abonner dans Google Agenda, PDF du calendrier, page sportive).
+- Compétitions (boutons au-dessus du mois, retenus sur l'appareil) : championnat par équipes (le
+  vendredi), championnat féminin (le samedi), championnat de Paris, championnat des jeunes,
+  critérium fédéral (jeunes le samedi, seniors le dimanche, D4 le dimanche suivant) ; et, à cocher,
+  les autres épreuves du comité et les dates limites d'inscription.
+- Les dates viennent du calendrier 2026-2027 du comité (PDF de https://www.cdtt77.fr/sportive),
+  recopiées dans `ttvaires/calendrier.py` ; les tests vérifient que chacune tombe le bon jour de la
+  semaine. Le calendrier est prévisionnel : quand le comité en publie une nouvelle version, il suffit
+  de m'envoyer le PDF. L'agenda partagé du CD77 n'est pas lu par l'outil (Google l'interdit aux
+  robots) ; la page n'a besoin d'aucune mise à jour pour être à jour.
+- Liens : « Club », « Indivs », « Tournois » en haut de /cal/ (et dans son menu) ; « Calendrier » en
+  haut de /indivs/ et de /tournois/ (et dans leur menu) et dans « Aller à » de /club/. Pas de lien
+  vers /lundi/.
+
 ## Sécurité
 
 - Chaque page, l'Excel et les données envoyées par le PC sont chiffrés en AES-256-GCM avec une clé
