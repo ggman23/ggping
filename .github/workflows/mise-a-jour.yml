@@ -18,8 +18,8 @@ on:
       joueurs_77:
         description: "Clubs du 77 : joueurs dont les points virtuels sont relus (les autres gardent leur dernière lecture)"
         type: choice
-        options: [jeunes, adultes, tous, aucun]
-        default: jeunes
+        options: [tous, jeunes, adultes, aucun]
+        default: tous
       netlify:
         description: Envoyer aussi sur Netlify, l'adresse donnée au club (15 crédits Netlify) ; sinon GitHub et Cloudflare seulement
         type: boolean
@@ -92,7 +92,7 @@ jobs:
       - name: Récupération des données
         env:
           CHOIX: ${{ inputs.pages || 'tout' }}
-          JOUEURS_77: ${{ inputs.joueurs_77 || 'jeunes' }}  # clubs du 77 : points virtuels relus (mise à jour du lundi : les jeunes)
+          JOUEURS_77: ${{ inputs.joueurs_77 || 'tous' }}  # clubs du 77 : listes relues une fois par semaine (le lundi : toutes)
           SURNOMS: ${{ secrets.SURNOMS }}  # noms affichés sur le récapitulatif (facultatif, voir PUBLICATION.md)
           # Compte licencié FFTT : l'API de la FFTT demande une connexion depuis le 31/10/2026
           FFTT_IDENTIFIANT: ${{ secrets.FFTT_IDENTIFIANT }}

@@ -15,13 +15,13 @@ n'y figure pas. Seuls les licenciés de la saison (licences renouvelées) compte
 Points virtuels des joueurs (licences compétition) : calculés comme ceux des adversaires
 (virtuel.forme_joueurs : une requête par joueur à l'API de la FFTT, avec le compte licencié), par la mise
 à jour en ligne seulement (la page publiée y est faite ; le PC n'envoie pas les réponses de l'API, le
-faire aussi sur le PC doublerait les requêtes). Le lancement choisit qui relire (PERIMETRES : les jeunes
-par défaut, les adultes, tous, aucun) : un joueur choisi lu il y a moins de TTL_VIRTUELS n'est pas
-redemandé (sa réponse enregistrée sert), au-delà il est relu. Les autres gardent leur dernière réponse
-enregistrée, avec sa date (lus lors d'un lancement précédent, ou comme adversaires de Vaires, relus
-chaque jour). Rien ne disparaît. Environ 4 minutes pour 820 jeunes, 6 à 7 pour tout le département la
-première fois (une mise à jour lit déjà les parties de 800 à 1000 adversaires) ; MAX_VIRTUELS n'est
-qu'une borne de sécurité.
+faire aussi sur le PC doublerait les requêtes). Une liste est lue une fois par semaine : relue si elle
+date d'avant le lundi de la semaine (debut_de_semaine ; les parties se jouent le vendredi soir et le
+week-end), sinon sa réponse enregistrée sert. Le lancement choisit qui relire (PERIMETRES : tous par
+défaut, les jeunes, les adultes, aucun) ; les autres gardent leur dernière réponse enregistrée, avec sa
+date. Rien ne disparaît. Les adversaires d'autres départements (2 349 au 15/11/2026) sont lus de même,
+pour calculer leur valeur mois par mois. Environ 11 minutes pour chacun des deux groupes la première
+fois, puis chaque lundi ; MAX_VIRTUELS et MAX_EXTERIEURS ne sont que des bornes de sécurité.
 
 Force d'une équipe (estimation, pour voir les favoris d'une poule) : la moyenne des points des quatre
 joueurs que son numéro lui donne dans le club, par points décroissants (équipe 1 : joueurs 1 à 4, équipe
@@ -31,7 +31,7 @@ absences : c'est un ordre de grandeur.
 
 import time
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from . import controle_parties, fftt, mensuel, pingpocket
 from .effectif import TRIS
@@ -54,7 +54,35 @@ MAX_VIRTUELS = 2500      # borne de sécurité : joueurs dont les parties sont l
 # requête par partie, gardé pour toujours : au plus MAX_DETAILS nouveaux par lancement (environ 11 minutes),
 # ceux des joueurs choisis, les plus récents d'abord (6 623 parties hors championnat au 15/11/2026)
 MAX_DETAILS = 2500
-TTL_VIRTUELS = 3 * JOUR  # un joueur lu il y a moins de 3 jours n'est pas redemandé (les adversaires, lus chaque jour, servent aussi)
+MAX_EXTERIEURS = 3000    # borne de sécurité : adversaires d'autres départements lus au plus par lancement (2 349 au 15/11/2026)
+
+
+def debut_de_semaine(instant):
+    """Lundi 0 h de la semaine de `instant` (horodatage) : une liste de parties lue avant est relue. Les
+    parties se jouent le vendredi soir (championnat) et le week-end (tournois, critérium) : une lecture par
+    semaine, à la première mise à jour à partir du lundi (la mise à jour automatique du lundi matin)."""
+    jour = datetime.fromtimestamp(instant)
+    return datetime.combine(jour.date() - timedelta(days=jour.weekday()), datetime.min.time()).timestamp()
+
+
+def _a_relire(client, licences, choisis, maintenant, plafond):
+    """(listes à lire, listes déjà lues à garder, dates) : parmi `choisis`, celles jamais lues ou lues avant
+    le lundi de la semaine (jamais lues d'abord, puis les plus anciennes ; `plafond` au plus) ; toutes les
+    autres déjà lues gardent leur réponse enregistrée."""
+    limite = debut_de_semaine(maintenant)
+    dates = {lic: client.date(url_parties(lic)) for lic in licences}
+    perimes = sorted((lic for lic, d in dates.items() if lic in choisis and (d is None or d < limite)),
+                     key=lambda lic: (dates[lic] is not None, dates[lic] or 0, lic))
+    a_lire = perimes[:plafond]
+    pris = set(a_lire)
+    return a_lire, [lic for lic in licences if lic not in pris and dates[lic] is not None], perimes, dates
+
+
+def _lire_listes(client, a_lire, gardes, maintenant, quoi):
+    ttl = max(60, maintenant - debut_de_semaine(maintenant))  # une liste lue avant lundi est redemandée
+    toutes = _lire_parties(client, a_lire, ttl=ttl, message=f"parties {quoi}") if a_lire else {}
+    toutes.update(_lire_parties(client, gardes, ttl=None, message=f"parties {quoi} (déjà lues)") if gardes else {})
+    return toutes
 # Ordre des niveaux, du plus haut au plus bas (pour trier les clubs par leur meilleure équipe)
 ORDRE_NIVEAUX = ["N1", "N2", "N3", "PN", "R1", "R2", "R3", "R4", "PR", "D1", "D2", "D3", "D4", "D5", "D6"]
 
@@ -175,22 +203,36 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
     Points de chaque partie : calcul mois par mois, comme la FFTT (mensuel.py) : les deux joueurs avec
     leur valeur de fin du mois précédent, pas leurs points du début de la phase.
 
-    a_relire : licences à relire si besoin (toutes si None). Relus : parmi elles, ceux jamais lus et ceux
-    lus il y a TTL_VIRTUELS ou plus (au plus MAX_VIRTUELS, jamais lus d'abord, puis les plus anciens).
-    Tous les autres déjà lus gardent leur réponse enregistrée, même ancienne. Sans partie dans la phase :
-    virtuels = points mensuels, 0 gagné."""
+    a_relire : licences à relire si besoin (toutes si None). Relues : parmi elles, celles jamais lues et
+    celles lues avant le lundi de la semaine (au plus MAX_VIRTUELS, jamais lues d'abord, puis les plus
+    anciennes). Toutes les autres déjà lues gardent leur réponse enregistrée, même ancienne. Sans partie
+    dans la phase : virtuels = points mensuels, 0 gagné.
+
+    Adversaires d'autres départements : leurs listes aussi (même règle, MAX_EXTERIEURS au plus ; ceux des
+    joueurs choisis), pour calculer leur valeur mois par mois ; sans elles, ils gardent leurs points de la
+    phase. Le nombre de parties de chaque joueur contre eux est donné (estimation moins sûre)."""
     debut, fin = fftt.bornes_phase(aujourdhui)
     fin = min(fin, aujourdhui.isoformat())
     maintenant = time.time()
     a_relire = set(licences) if a_relire is None else set(a_relire)
-    dates = {lic: client.date(url_parties(lic)) for lic in licences}
-    perimes = sorted((lic for lic, d in dates.items() if lic in a_relire and (d is None or maintenant - d >= TTL_VIRTUELS)),
-                     key=lambda lic: (dates[lic] is not None, dates[lic] or 0, lic))
-    a_lire = perimes[:MAX_VIRTUELS]
-    choisis = set(a_lire)
-    gardes = [lic for lic in licences if lic not in choisis and dates[lic] is not None]
-    toutes = _lire_parties(client, a_lire, ttl=TTL_VIRTUELS, message="parties des joueurs du 77") if a_lire else {}
-    toutes.update(_lire_parties(client, gardes, ttl=None, message="parties des joueurs du 77 (déjà lues)") if gardes else {})
+    a_lire, gardes, perimes, dates = _a_relire(client, licences, a_relire, maintenant, MAX_VIRTUELS)
+    toutes = _lire_listes(client, a_lire, gardes, maintenant, "des joueurs du 77")
+    # Adversaires d'autres départements, et lesquels sont ceux des joueurs choisis
+    du_77, exterieurs, des_choisis = set(licences), set(), set()
+    for lic, parties in toutes.items():
+        for p in parties or []:
+            if _simple(p) and debut <= (p.get("date") or "")[:10] <= fin:
+                h, a = (p.get("homePlayer") or {}).get("identifier"), (p.get("awayPlayer") or {}).get("identifier")
+                adv = a if h == lic else h
+                if adv and adv not in du_77:
+                    exterieurs.add(adv)
+                    if lic in a_relire:
+                        des_choisis.add(adv)
+    exterieurs = sorted(exterieurs)
+    a_lire_ext, gardes_ext, perimes_ext, dates_ext = _a_relire(client, exterieurs, des_choisis, maintenant, MAX_EXTERIEURS)
+    if a_lire_ext:
+        print(f"  adversaires d'autres départements : {len(a_lire_ext)} listes à lire sur {len(exterieurs)}", flush=True)
+    toutes_ext = _lire_listes(client, a_lire_ext, gardes_ext, maintenant, "des adversaires d'autres départements")
     # Parties de simple hors championnat de la phase : date (les plus récentes d'abord) et joueurs choisis
     hors, du_choix = {}, set()
     for lic, parties in toutes.items():
@@ -201,21 +243,28 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
                 if lic in a_relire:
                     du_choix.add(p["id"])
     deja = {i for i in hors if client.date(f"{fftt.API}/games/{i}") is not None}
+    # Parties des adversaires extérieurs : seulement les détails déjà lus (aucune requête)
+    for parties in toutes_ext.values():
+        for p in parties or []:
+            i = p.get("id")
+            if isinstance(i, int) and i not in hors and client.date(f"{fftt.API}/games/{i}") is not None:
+                deja.add(i)
     attente = sorted(du_choix - deja, key=lambda i: (hors[i], i), reverse=True)
     nouveaux = attente[:MAX_DETAILS]
     etats = lire_etats_parties(client, deja, nouveaux, message="détail des parties hors championnat (forfaits)")
-    simples = [p for ps in toutes.values() if ps for p in ps if debut <= (p.get("date") or "")[:10] <= fin and _simple(p)]
+    ensemble = {**toutes_ext, **toutes}  # joueurs du 77 et adversaires d'autres départements
+    simples = [p for ps in ensemble.values() if ps for p in ps if debut <= (p.get("date") or "")[:10] <= fin and _simple(p)]
     competitions = _competitions(client, {(p.get("contest") or {}).get("id") for p in simples} - {None})
-    lignes, depart = mensuel.lignes_des_joueurs(toutes, competitions, etats, debut, fin)
+    lignes, depart = mensuel.lignes_des_joueurs(ensemble, competitions, etats, debut, fin)
     references = {}
     points_m = mensuel.calcul_mensuel(lignes, depart, references)
-    mensuel.enregistrer(client, references)  # pour les pages de Vaires du lancement suivant
+    mensuel.enregistrer(client, {**references, mensuel.CLE_77: sorted(du_77)})  # pour les pages de Vaires du lancement suivant
     variables, avec_parties = mensuel.points_variables(lignes)
-    ecart = sum(abs(sum(points_m[lic]) - sum(l["points"] for l in ls)) for lic, ls in lignes.items()) / max(1, len(lignes))
+    ecart = sum(abs(sum(points_m[lic]) - sum(l["points"] for l in lignes[lic])) for lic in toutes if lic in lignes) / max(1, len(toutes))
     print(f"  points des joueurs lus dans les parties : différents d'une partie à l'autre pour {variables} joueurs sur {avec_parties} ; "
           f"calcul mois par mois : {round(ecart, 1)} points d'écart moyen avec le calcul sur les points du début de phase", flush=True)
     # Gains par période (septembre, juillet et août compris ; octobre...), pour comparer aux situations mensuelles
-    periodes = sorted({mensuel.periode(l["date"]) for ls in lignes.values() for l in ls})
+    periodes = sorted({mensuel.periode(l["date"]) for lic in toutes for l in lignes.get(lic, [])})
     res = {}
     for lic, parties in toutes.items():
         if parties is None:
@@ -230,13 +279,17 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
         if virtuels is not None:
             lu = client.date(url_parties(lic)) or maintenant  # date de la réponse enregistrée
             res[lic] = [round(virtuels), round(sum(gains), 1), v, d, datetime.fromtimestamp(lu).date().isoformat(),
-                        [round(par_periode[x], 1) for x in periodes]]
+                        [round(par_periode[x], 1) for x in periodes],
+                        sum(1 for l in ls if l.get("adv_licence") and l["adv_licence"] not in du_77)]  # contre d'autres départements
     jours = sorted(r[4] for r in res.values())
     return res, {"joueurs": len(licences), "a_relire": len(a_relire), "connus": len(res), "lus": len(a_lire),
                  "reportes": sum(1 for lic in perimes[MAX_VIRTUELS:] if dates[lic] is None),
                  "plus_ancienne": jours[0] if jours else None, "plus_recente": jours[-1] if jours else None,
                  "hors_championnat": len(hors), "verifiees": sum(1 for i in hors if i in etats), "details_lus": len(nouveaux),
-                 "details_restants": len(attente) - len(nouveaux), "methode": "mensuel", "periodes": periodes}
+                 "details_restants": len(attente) - len(nouveaux), "methode": "mensuel", "periodes": periodes,
+                 "exterieurs": len(exterieurs), "exterieurs_connus": sum(1 for x in exterieurs if x in lignes),
+                 "exterieurs_lus": len(a_lire_ext),
+                 "exterieurs_restants": sum(1 for x in perimes_ext[MAX_EXTERIEURS:] if dates_ext[x] is None)}
 
 
 def force_des_equipes(equipes, joueurs):
@@ -254,7 +307,7 @@ def force_des_equipes(equipes, joueurs):
 
 
 def recuperer_departement(client, numero_club="08770250", aujourdhui=None, dossier_import=None, virtuels=None,
-                          perimetre="jeunes"):
+                          perimetre="tous"):
     """virtuels : calculer les points virtuels ; par défaut, seulement dans la mise à jour en ligne
     (pingpocket.fr lu seulement dans les pages envoyées par le PC), pas sur le PC. perimetre : joueurs à
     relire (PERIMETRES : jeunes, adultes, tous, aucun) ; les autres gardent leurs réponses enregistrées."""
@@ -277,7 +330,7 @@ def recuperer_departement(client, numero_club="08770250", aujourdhui=None, dossi
         {lic for lic, j in competition.items() if j["cat"][:1].upper() in PERIMETRES[perimetre]}  # « tous » : catégorie inconnue comprise
     if virtuels:
         print(f"4/4 Points virtuels : {len(choisis)} joueurs à relire ({perimetre}) sur {len(competition)} (API FFTT ; "
-              "ceux lus il y a moins de 3 jours ne sont pas redemandés, les autres gardent leur dernière lecture)", flush=True)
+              "ceux lus depuis lundi ne sont pas redemandés, les autres gardent leur dernière lecture)", flush=True)
         virt, controle_virt = virtuels_des_joueurs(client, sorted(competition), {lic: j["points"] for lic, j in competition.items()},
                                                    aujourdhui, choisis)
         controle_virt["perimetre"] = perimetre

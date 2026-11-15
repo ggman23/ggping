@@ -239,7 +239,7 @@ function carteIdentite(j) {
   return `<section class="carte identite"><h2>${esc(nomLong(j))}</h2><p class="qui">${esc(qui)}</p>
     <div class="cles">
       ${chiffre("Points officiels", j.officiels != null ? fr(j.officiels) : "—", "de la phase")}
-      ${chiffre("Points virtuels", j.virtuels != null ? fr(j.virtuels) : "—",
+      ${chiffre("Points virtuels (estimation)", j.virtuels != null ? fr(j.virtuels) : "—",
         j.virtuels != null ? `<span class="${classe(j.total_phase)}">${pts(j.total_phase || 0)}</span> sur la phase` : "")}
       ${chiffre("Bilan de la saison", n ? `${j.bilan.v} V <small>– ${j.bilan.d} D</small>` : "—",
         n ? `${pc(j.bilan.v, n)} % de victoires · <span class="${classe(j.bilan.points)}">${pts(j.bilan.points)}</span> pts` : "aucune partie comptée")}
@@ -435,7 +435,7 @@ function carteCourbe(j) {
   const lignes = SEM.map((s, i) => `<tr><td>${i ? "Semaine du " + jjmm(s) : "Départ"}</td><td class="n">${fr(c.serie[i], 1)}</td>
     <td class="n">${c.parties[i] ? `${c.victoires[i]} sur ${c.parties[i]}` : "—"}</td><td class="n">${c.perfs[i] || "—"}</td><td class="n">${c.contres[i] || "—"}</td></tr>`).join("");
   return `<section class="carte"><h2>Progression depuis le début de la saison</h2>
-    <p class="lecture">Points virtuels semaine après semaine : <b class="${classe(c.total)}">${pts(c.total)}</b> depuis le début de la saison${c.lecture ? ` · <em>${esc(c.lecture)}</em>` : ""}.</p>
+    <p class="lecture">Points virtuels (estimation) semaine après semaine : <b class="${classe(c.total)}">${pts(c.total)}</b> depuis le début de la saison${c.lecture ? ` · <em>${esc(c.lecture)}</em>` : ""}.</p>
     <div class="graphe" id="graphe"></div>
     <p class="cles-graphe"><span class="tri-p">▲</span> semaine avec une perf (victoire contre plus de points) · <span class="tri-c">▼</span> avec une contre (défaite contre moins de points)</p>
     <details><summary>Les valeurs semaine par semaine</summary><div class="defil"><table>
@@ -575,7 +575,7 @@ function tableTous() {
   const liste = J.filter((j) => eq === "*" || (j.equipe || "") === eq).sort(TRIS[selTri.value] || TRIS.nom);
   const sur = (a, b) => (b ? `${a} sur ${b}` : "—");
   document.getElementById("table-tous").innerHTML = `<tr><th>Joueur</th><th class="equipe">Équipe</th><th class="n">Parties</th><th class="n">% vict.</th>
-      <th class="n">Belles gagnées</th><th class="n">Remontées</th><th class="n">Avances perdues</th><th class="n">Contre plus fort</th><th class="n">Virtuels</th><th class="n">Meilleur</th></tr>`
+      <th class="n">Belles gagnées</th><th class="n">Remontées</th><th class="n">Avances perdues</th><th class="n">Contre plus fort</th><th class="n">Virtuels (estim.)</th><th class="n">Meilleur</th></tr>`
     + liste.map((j) => { const n = j.bilan.v + j.bilan.d, f = fort(j);
       return `<tr${j.id === courant ? ' class="courant"' : ""}><td><button type="button" class="nom-joueur" data-id="${esc(j.id)}">${esc(nomLong(j))}</button></td>
         <td class="equipe">${esc(j.equipe || "—")}</td><td class="n">${n || "—"}</td><td class="n">${n ? pc(j.bilan.v, n) + " %" : "—"}</td>

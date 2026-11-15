@@ -375,6 +375,7 @@ def controle_parties(joueurs, detail_rencontres, numero_club, source):
 def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_import=None):
     from . import mensuel  # (mensuel s'appuie sur ce module)
     references = mensuel.References.lire(client)
+    du_77 = references.du_77()
     aujourdhui = aujourdhui or date.today()
     phase, saison = fftt.phase_et_saison(aujourdhui)
     debut, fin = fftt.bornes_phase(aujourdhui)
@@ -418,6 +419,8 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
         off = officiels.most_common(1)[0][0] if officiels else (j.get("points") or j.get("points_mensuels"))
         if references:  # calcul mois par mois, comme la FFTT (valeurs enregistrées par la page des clubs du 77)
             mensuel.recalculer(lignes, lic, off, references)
+        # Parties contre des joueurs d'autres départements : leur valeur du mois est estimée (repère « * »)
+        exterieurs = sum(1 for l in lignes if du_77 and l.get("adv_licence") and l["adv_licence"] not in du_77)
         championnat = round(sum(l["points"] for l in lignes if l["championnat"]), 3)
         autres = round(sum(l["points"] for l in lignes if not l["championnat"]), 3)
         total = round(championnat + autres, 3)
@@ -428,7 +431,7 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
             "officiels": off, "classement": classement(off), "championnat": championnat, "autres": autres,
             "total": total, "virtuels": virtuels, "classement_virtuel": classement(virtuels),
             "v": sum(l["victoire"] for l in lignes), "d": sum(not l["victoire"] for l in lignes),
-            "parties": lignes, "ecartees": dict(ecartees), "inconnu": parties is None,
+            "parties": lignes, "ecartees": dict(ecartees), "inconnu": parties is None, "exterieurs": exterieurs,
             "alignements": j.get("alignements") or [],
         })
         if debut1:  # phase 1 de la saison : ses points officiels et ses parties (progression depuis septembre)

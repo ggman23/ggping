@@ -31,6 +31,7 @@ from .resultats import points_partie
 from .virtuel import analyser
 
 FICHIER = "references_77.json"  # {licence: {période « AAAA-MM »: valeur du joueur au début de la période}}
+CLE_77 = "_77"                  # dans le même fichier : les licences des joueurs du 77 (les autres sont d'autres départements)
 
 
 def lignes_des_joueurs(toutes, competitions, etats, debut, fin):
@@ -112,6 +113,10 @@ class References:
 
     def __bool__(self):
         return bool(self.table)
+
+    def du_77(self):
+        """Licences des joueurs du 77 (vide si le fichier ne les donne pas)."""
+        return set(self.table.get(CLE_77) or [])
 
     def valeur(self, licence, jour):
         return self.table.get(licence, {}).get(periode(jour))

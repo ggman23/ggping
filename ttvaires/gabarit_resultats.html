@@ -109,7 +109,7 @@ function colonnesCumul() {
     ...D.journees.map((j) => ({ t: `J${j.numero}`, k: (c) => c.journees[j.numero] ?? -99999,
       v: (c) => c.journees[j.numero] == null ? "" : nombre(c.journees[j.numero], 1), cls: (c) => clsTexte(c.journees[j.numero]) })),
     { t: "Total", k: (c) => c.total, v: (c) => nombre(c.total, 1), cls: (c) => clsDelta(c.total) },
-    { t: "Points virtuels", k: (c) => c.virtuels, v: (c) => nombre(c.virtuels, 1) },
+    { t: "Points virtuels (estim.)", k: (c) => c.virtuels, v: (c) => nombre(c.virtuels, 1) },
     { t: "Victoires", k: (c) => c.v / c.matchs + c.matchs / 1000, v: (c) => `${c.v}/${c.matchs}`, cls: (c) => clsVict(c.v, c.matchs) },
   ];
 }

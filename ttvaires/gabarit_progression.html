@@ -410,7 +410,7 @@ document.getElementById("tri").addEventListener("change", tableTous);
 document.getElementById("ajout").addEventListener("change", (ev) => ajouter(ev.target.value));
 document.querySelectorAll(".bascule button").forEach((b) => b.addEventListener("click", () => { modeChoisi = b.dataset.mode; sauver(); dessinerTout(); }));
 document.getElementById("intro-tous").textContent = `Progression et tendance depuis ${DEPART} (progresse : +${D.seuil} points ou plus ; régresse : −${D.seuil} ou moins). M · ▲ · ▼ : matchs, perfs et contres de la saison. « Comparer » ajoute le joueur au graphe (${MAX} au plus).`;
-document.getElementById("intro-graphe").textContent = `Points virtuels semaine après semaine depuis ${DEPART} (toutes compétitions ; en janvier, la courbe continue avec les nouveaux points officiels). Une courbe qui monte : le joueur progresse.`;
+document.getElementById("intro-graphe").textContent = `Points virtuels semaine après semaine depuis ${DEPART} (toutes compétitions ; en janvier, la courbe continue avec les nouveaux points officiels). Une courbe qui monte : le joueur progresse. Estimation : seule la situation mensuelle publiée par la FFTT est officielle.`;
 document.getElementById("sous-titre").textContent = `${D.club ? D.club.nom + " · " : ""}phase ${D.phase ?? "?"} ${D.saison ?? ""} · `
   + (D.date_reference ? "archive, état au " + new Date(D.date_reference + "T12:00").toLocaleDateString("fr-FR")
      : "données du " + (D.genere_le ? new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "?"));

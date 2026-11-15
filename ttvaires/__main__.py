@@ -152,7 +152,7 @@ def page_indivs(client, club, ctx):
     return [html, *faire_images("images_indivs", donnees, dossier=ctx.images)], indivs.resume(donnees)
 
 
-def page_departement(client, club, ctx, perimetre="jeunes"):
+def page_departement(client, club, ctx, perimetre="tous"):
     """Clubs du 77 : licenciés (sexe, catégories, points) et équipes engagées de chaque club du département ;
     perimetre : joueurs dont les points virtuels sont relus (jeunes, adultes, tous, aucun)."""
     print("=== Clubs du 77 : joueurs et équipes de chaque club du département", flush=True)
@@ -204,9 +204,9 @@ def main():
                         help="individuels : poules des joueurs de Vaires et forme de leurs adversaires (mot de passe du club)")
     parser.add_argument("--departement", action="store_true",
                         help="clubs du 77 : joueurs (sexe, catégories, points) et équipes engagées de chaque club")
-    parser.add_argument("--virtuels-77", choices=list(departement.PERIMETRES), default="jeunes",
-                        help="clubs du 77 : joueurs dont les points virtuels sont relus (mise à jour en ligne ; "
-                             "défaut : jeunes ; les autres gardent leur dernière lecture)")
+    parser.add_argument("--virtuels-77", choices=list(departement.PERIMETRES), default="tous",
+                        help="clubs du 77 : joueurs dont les parties sont relues (mise à jour en ligne ; une fois par "
+                             "semaine au plus ; défaut : tous ; les autres gardent leur dernière lecture)")
     parser.add_argument("--demo", action="store_true", help="page des adversaires avec des données fictives")
     parser.add_argument("--hors-ligne", action="store_true",
                         help="n'utilise que les pages déjà téléchargées (refaire pages et images en 30 s, sans envoi au site)")

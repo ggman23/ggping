@@ -507,9 +507,10 @@ def images_virtuel(donnees, dossier):
               icone="monte" if ecart > 0 else "descend" if ecart < 0 else None),
             C(f"{j['v']}/{j['d']}" if j["parties"] else "", couleur=DOUX),
         ])
-    sous = f"{donnees['club']['nom']} · phase {donnees['phase']} {donnees['saison']} · toutes compétitions · {_genere(donnees)}"
-    pied = ("Virt. = points officiels + points gagnés ou perdus depuis le début de la phase (championnat, critérium, "
-            "tournois...). Clt : ▲ ▼ = changement de classement. V/D = victoires / défaites.")
+    sous = f"{donnees['club']['nom']} · phase {donnees['phase']} {donnees['saison']} · toutes compétitions · estimation · {_genere(donnees)}"
+    pied = ("Virt. = estimation des points virtuels : points officiels + points gagnés ou perdus depuis le début de la phase "
+            "(championnat, critérium, tournois...) ; seule la situation mensuelle publiée par la FFTT est officielle. "
+            "Clt : ▲ ▼ = changement de classement. V/D = victoires / défaites.")
     return _tableau_pagine(dossier, "classement_virtuel", "Classement virtuel", sous, colonnes, lignes, pied,
                            "Classement virtuel")
 
@@ -551,7 +552,7 @@ def images_resultats(donnees, dossier):
     sorties += _tableau_pagine(
         dossier, f"resultats_J{j}", f"Résultats de la J{j}", f"{sous_base} · {dates} · {_genere(donnees)}",
         colonnes, lignes,
-        f"Trié par points gagnés sur la journée. Points J{j} = classement virtuel (points officiels + total depuis la J1). "
+        f"Trié par points gagnés sur la journée. Points J{j} = classement virtuel estimé (points officiels + total depuis la J1). "
         "Meilleure victoire = écart avec le mieux classé des joueurs battus (ses points)."
         + (" « + V1F … » : aussi aligné(e) dans cette équipe pour la journée (voir son autre ligne) ; "
            "Points et Total se cumulent dans l'ordre des dates." if any(l.get("autres") for l in lignes_j) else ""),
@@ -1214,7 +1215,7 @@ def images_progression(donnees, dossier):
         nom = _nom_equipe(code)
         r = Rendu()
         r.titre(f"Progression · {nom}",
-                f"Points virtuels semaine après semaine depuis le {depart} (toutes compétitions) · {_genere(donnees)}")
+                f"Points virtuels (estimation) semaine après semaine depuis le {depart} (toutes compétitions) · {_genere(donnees)}")
         r.espace(12)
         _panneaux(r, joueurs, f"au {depart_court}")
         r.pied(f"Chiffre en couleur : points gagnés ou perdus depuis le {depart}, toutes compétitions (en janvier, la "

@@ -78,9 +78,10 @@ navigateur du téléphone, choisir « Version pour ordinateur » si un menu n'ap
 
 En haut de la page d'accueil du site (« Mettre à jour maintenant », avant la liste des pages). Avec
 « Tout » ou « Clubs du 77 », un second choix dit **quels joueurs du 77 relire pour leurs points
-virtuels** : les jeunes (par défaut, environ 820), les adultes (environ 1 500), tous (environ 2 300) ou
-aucun (garder les dernières lectures). Dans GitHub (*Run workflow*) : « joueurs_77 ». Voir « Clubs du
-77 » plus bas.
+virtuels** : tous (par défaut, environ 2 300), les jeunes (environ 820), les adultes (environ 1 500) ou
+aucun (garder les dernières lectures). Chaque liste n'est de toute façon relue qu'une fois par semaine
+(à la première mise à jour à partir du lundi). Dans GitHub (*Run workflow*) : « joueurs_77 ». Voir
+« Clubs du 77 » plus bas.
 
 Deux boutons :
 - **« Mettre à jour GitHub et Cloudflare »** : gratuit, autant de fois qu'il faut (corrections,
@@ -537,14 +538,20 @@ D'où viennent les données :
   site avec les autres données du PC. La première fois, il faut deux ou trois lancements du PC pour
   avoir tous les clubs ; d'ici là, leurs colonnes affichent « — ». Une liste enregistrée depuis un
   navigateur dans le dossier `import\` sert aussi.
-- **Points virtuels** : API de la FFTT (avec le compte licencié), une requête par joueur, calculés
-  comme ceux des adversaires. Seulement par la mise à jour en ligne (le PC n'en a pas besoin : la page
-  publiée est faite en ligne). **Qui relire se choisit au lancement** : les jeunes (par défaut, et la
-  mise à jour du lundi), les adultes, tous ou aucun. Parmi les joueurs choisis, seuls ceux lus il y a
-  plus de 3 jours (ou jamais) sont redemandés à la FFTT, environ 220 par minute : la première fois,
-  environ 4 minutes pour les jeunes, 6 à 7 pour tout le département ; ensuite bien moins. Les autres
-  joueurs gardent leur dernière lecture, avec sa date (« Lu le ») : rien ne disparaît. Les adversaires
-  de Vaires (lus chaque jour pour leur page) ne coûtent rien et apparaissent aussi.
+- **Points virtuels** (des **estimations** : seule la situation mensuelle publiée par la FFTT est
+  officielle ; l'API ne donne ni points mensuels ni points virtuels, même avec un compte Premium,
+  vérifié le 15/11/2026) : API de la FFTT (avec le compte licencié), une requête par joueur. Seulement par
+  la mise à jour en ligne (le PC n'en a pas besoin : la page publiée est faite en ligne). **Une lecture
+  par semaine** : la liste d'un joueur est relue si elle date d'avant le lundi de la semaine (les
+  parties se jouent le vendredi soir et le week-end) ; la mise à jour automatique du lundi matin relit
+  donc tout, les suivantes rien. Au lancement, on peut se limiter aux jeunes, aux adultes ou à aucun
+  (par défaut : tous). Environ 220 listes par minute. Les autres gardent leur dernière lecture, avec sa
+  date (« Lu le ») : rien ne disparaît.
+- **Adversaires d'autres départements** (2 349 au 15/11/2026, rencontrés par 405 joueurs du 77 dans
+  5 695 parties) : leurs listes sont lues de même (une fois par semaine), pour calculer leur valeur
+  mois par mois. Leurs propres adversaires extérieurs gardent leurs points de la phase et leurs forfaits
+  ne sont pas vérifiés : les joueurs qui les ont rencontrés ont un repère **\*** (estimation moins
+  sûre), sur la page des clubs du 77 et sur le classement virtuel de Vaires.
 - **Forfaits** : la liste des parties d'un joueur ne dit pas qu'une partie a été gagnée par forfait
   (la FFTT ne la compte pas) ; seul le détail de la partie le dit. Le détail des parties hors
   championnat (critérium, tournois...) est donc lu une fois puis gardé : au plus 2 500 nouvelles par

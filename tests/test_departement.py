@@ -219,22 +219,29 @@ def _partie(id_, lic, points, adv_points, victoire, jour="2026-10-03"):
             "contest": {"id": 1, "name": "FED_Championnat de France par Equipes Masculin"}}
 
 
-def test_points_virtuels_en_ligne_seulement_jeunes_par_defaut():
+def lues(ttls):
+    """Listes demandées à la FFTT (True) ou reprises du cache (False)."""
+    return {k: v is not None for k, v in ttls.items()}
+
+
+def test_points_virtuels_en_ligne_seulement_choix_des_jeunes():
     from ttvaires.resultats import points_partie
     parties = {"8": [_partie(1, "8", 540, 700, True), _partie(2, "8", 540, 500, False),
                      _partie(3, "8", 540, 900, True, jour="2026-06-10")]}  # phase précédente : ne compte pas
     client = ClientParties(_listes(), parties)
-    d = departement.recuperer_departement(client, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True)
+    d = departement.recuperer_departement(client, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True, perimetre="jeunes")
     v = next(c for c in d["clubs"] if c["numero"] == VAIRES)
     gagne = points_partie(540, 700, True, 1) + points_partie(540, 500, False, 1)
-    # Par défaut, seuls les jeunes sont relus : le benjamin (PETIT Tom, licence 8) ; sa ligne porte [virtuels,
-    # gagnés, victoires, défaites, date de lecture de ses parties]
+    # Les jeunes : le benjamin (PETIT Tom, licence 8) ; sa ligne porte [virtuels, gagnés, victoires, défaites, date de
+    # lecture de ses parties, gains par période, parties contre d'autres départements (999 : hors du 77)]
     lu = date.today().isoformat()
-    assert [j for j in v["joueurs"] if len(j) == 6] == [[540, "M", "B1", 0, "PETIT Tom", [round(540 + gagne), round(gagne, 1), 1, 1, lu, [round(gagne, 1)]]]]
-    assert set(client.ttls) == {"8"}
+    assert [j for j in v["joueurs"] if len(j) == 6] == [[540, "M", "B1", 0, "PETIT Tom",
+                                                         [round(540 + gagne), round(gagne, 1), 1, 1, lu, [round(gagne, 1)], 2]]]
+    assert lues(client.ttls) == {"8": True, "999": True}  # son adversaire d'un autre département aussi
     assert d["virtuels"] == {"joueurs": 7, "a_relire": 1, "connus": 1, "lus": 1, "reportes": 0, "plus_ancienne": lu,
                              "plus_recente": lu, "perimetre": "jeunes", "hors_championnat": 0, "verifiees": 0, "details_lus": 0,
-                             "details_restants": 0, "methode": "mensuel", "periodes": ["2026-10"]}  # 7 licences compétition (Vaires 6, Chelles 1)
+                             "details_restants": 0, "methode": "mensuel", "periodes": ["2026-10"], "exterieurs": 1,
+                             "exterieurs_connus": 0, "exterieurs_lus": 1, "exterieurs_restants": 0}  # 7 licences (Vaires 6, Chelles 1)
     assert "points virtuels de 1 joueurs sur 7 (relus : jeunes)" in departement.resume(d)
     assert "licence" not in json.dumps(d)  # pas de numéro de licence dans la page
     # Par défaut : seulement en ligne (pingpocket.fr lu dans les pages du PC) ; sur le PC, aucune partie demandée
@@ -242,7 +249,7 @@ def test_points_virtuels_en_ligne_seulement_jeunes_par_defaut():
     d = departement.recuperer_departement(pc, VAIRES, aujourdhui=date(2026, 11, 15))
     assert d["virtuels"] is None and not any("/games?" in x for x in pc.demandes)
     en_ligne = ClientParties(_listes(), parties, sites_cache_seul={"www.pingpocket.fr"})
-    assert departement.recuperer_departement(en_ligne, VAIRES, aujourdhui=date(2026, 11, 15))["virtuels"]["connus"] == 1
+    assert departement.recuperer_departement(en_ligne, VAIRES, aujourdhui=date(2026, 11, 15))["virtuels"]["connus"] == 7  # tous
 
 
 def test_choix_des_joueurs_a_relire_les_autres_gardent_leur_derniere_lecture():
@@ -252,10 +259,10 @@ def test_choix_des_joueurs_a_relire_les_autres_gardent_leur_derniere_lecture():
     assert set(client.ttls) == {"1", "2", "3", "6", "7", "9"} and d["virtuels"]["connus"] == 6
     martin = next(j for c in d["clubs"] if c["numero"] == VAIRES for j in c["joueurs"] if j[4] == "MARTIN Paul")
     assert martin[5][:4] == [1450, 0, 0, 0]
-    # « jeunes » ensuite : le benjamin lu ; les adultes, lus il y a moins de 3 jours, gardent leur lecture (sans requête)
+    # « jeunes » ensuite : le benjamin lu ; les adultes, lus cette semaine, gardent leur lecture (sans requête)
     client.ttls.clear()
     d = departement.recuperer_departement(client, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True, perimetre="jeunes")
-    assert client.ttls == {"8": departement.TTL_VIRTUELS, **{l: None for l in ("1", "2", "3", "6", "7", "9")}}
+    assert lues(client.ttls) == {"8": True, **{l: False for l in ("1", "2", "3", "6", "7", "9")}}
     assert d["virtuels"]["connus"] == 7
     # « aucun » : aucune requête, tout ce qui a déjà été lu reste affiché
     client.ttls.clear()
@@ -269,32 +276,33 @@ def test_choix_des_joueurs_a_relire_les_autres_gardent_leur_derniere_lecture():
         departement.recuperer_departement(neuf, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True, perimetre="minimes")
 
 
-def test_virtuels_relus_apres_3_jours_avec_leur_date_et_plafond_de_securite(monkeypatch):
+def test_listes_relues_une_fois_par_semaine_avec_leur_date_et_plafond_de_securite(monkeypatch):
     monkeypatch.setattr(departement, "MAX_VIRTUELS", 3)
     maintenant = time.time()
+    monkeypatch.setattr(departement, "debut_de_semaine", lambda t: t - 2 * 86400)  # lundi : il y a 2 jours
     il_y_a = lambda jours: datetime.fromtimestamp(maintenant - jours * 86400).date().isoformat()
     # a, b : jamais lus ; c : lu il y a 4 jours (périmé) ; d : lu il y a une heure
     client = ClientParties({}, {"a": [_partie(1, "a", 600, 600, True)], "c": [_partie(2, "c", 800, 800, False)]},
                            dates_parties={"c": maintenant - 4 * 86400, "d": maintenant - 3600})
     res, controle = departement.virtuels_des_joueurs(client, ["a", "b", "c", "d"], {"a": 600, "b": 510, "c": 800, "d": 700},
                                                      date(2026, 11, 15))
-    # a, b (jamais lus) et c (lu il y a plus de 3 jours) relus ; d (lu il y a une heure) : sa réponse enregistrée
-    assert client.ttls == {"a": departement.TTL_VIRTUELS, "b": departement.TTL_VIRTUELS, "c": departement.TTL_VIRTUELS, "d": None}
+    # a, b (jamais lus) et c (lu avant lundi) relus ; d (lu il y a une heure) : sa réponse enregistrée ; 999 : adversaire extérieur
+    assert lues(client.ttls) == {"a": True, "b": True, "c": True, "d": False, "999": True}
     assert res["a"][1] > 0 and res["c"][1] < 0
     assert res["b"][:4] == [510, 0, 0, 0] and res["d"][:4] == [700, 0, 0, 0]  # sans partie : virtuels = points mensuels
     assert res["c"][4] == il_y_a(0) and res["d"][4] == il_y_a(1 / 24)  # date de lecture de chacun
     assert (controle["lus"], controle["reportes"], controle["connus"]) == (3, 0, 4)
-    # Hors du choix : jamais lu (b) ignoré ; lu il y a 4 jours (c) gardé tel quel, avec sa date
+    # Hors du choix : jamais lu (b) ignoré ; lu avant lundi (c) gardé tel quel, avec sa date
     client = ClientParties({}, {}, dates_parties={"c": maintenant - 4 * 86400, "d": maintenant - 3600})
     res, controle = departement.virtuels_des_joueurs(client, ["a", "b", "c", "d"], {"a": 600, "b": 510, "c": 800, "d": 700},
                                                      date(2026, 11, 15), a_relire={"a", "d"})
-    assert client.ttls == {"a": departement.TTL_VIRTUELS, "c": None, "d": None} and set(res) == {"a", "c", "d"}
+    assert lues(client.ttls) == {"a": True, "c": False, "d": False} and set(res) == {"a", "c", "d"}
     assert res["c"][4] == il_y_a(4) and controle["a_relire"] == 2
     # Borne de sécurité : au-delà, jamais lus d'abord ; un déjà lu garde sa réponse ancienne (et sa date)
     monkeypatch.setattr(departement, "MAX_VIRTUELS", 1)
     client = ClientParties({}, {}, dates_parties={"c": maintenant - 4 * 86400, "d": maintenant - 3600})
     res, controle = departement.virtuels_des_joueurs(client, ["a", "b", "c", "d"], {"a": 600, "b": 510, "c": 800, "d": 700}, date(2026, 11, 15))
-    assert client.ttls == {"a": departement.TTL_VIRTUELS, "c": None, "d": None} and controle["reportes"] == 1
+    assert lues(client.ttls) == {"a": True, "c": False, "d": False} and controle["reportes"] == 1
     assert set(res) == {"a", "c", "d"} and res["c"][4] == il_y_a(4) and controle["plus_ancienne"] == il_y_a(4)
 
 
@@ -351,3 +359,25 @@ def test_valeurs_mensuelles_enregistrees_pour_les_pages_de_vaires(tmp_path):
     client.dossier = tmp_path
     departement.recuperer_departement(client, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True)
     assert json.loads((tmp_path / "references_77.json").read_text(encoding="utf-8"))["8"] == {"2026-10": 540}
+
+
+def test_debut_de_semaine_lundi_zero_heure():
+    from datetime import datetime as dt
+    for jour in (dt(2026, 11, 16, 7, 0), dt(2026, 11, 18, 12, 0), dt(2026, 11, 22, 23, 59)):  # lundi, mercredi, dimanche
+        assert dt.fromtimestamp(departement.debut_de_semaine(jour.timestamp())) == dt(2026, 11, 16)
+    assert dt.fromtimestamp(departement.debut_de_semaine(dt(2026, 11, 15, 20, 0).timestamp())) == dt(2026, 11, 9)
+
+
+def test_adversaires_d_autres_departements_dans_le_calcul_mensuel():
+    """Un adversaire extérieur au 77 : sa liste est lue et sa valeur calculée mois par mois (il a gagné en
+    septembre) ; la partie d'octobre du joueur du 77 se calcule avec cette valeur, pas ses points de la phase."""
+    from ttvaires.resultats import points_partie
+    sept = _partie(1, "x", 900, 1100, True, jour="2026-09-12")                  # x (extérieur) bat un 1100 : +13
+    octo = {**_partie(2, "8", 540, 900, False, jour="2026-10-03")}              # Tom perd contre x
+    octo["awayPlayer"]["identifier"] = "x"
+    client = ClientParties(_listes(), {"8": [octo], "x": [sept]})
+    d = departement.recuperer_departement(client, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True, perimetre="jeunes")
+    tom = next(j for c in d["clubs"] for j in c["joueurs"] if j[4] == "PETIT Tom")
+    x_octobre = 900 + points_partie(900, 1100, True, 1)
+    assert tom[5][1] == round(points_partie(540, x_octobre, False, 1), 1) and tom[5][6] == 1
+    assert (d["virtuels"]["exterieurs"], d["virtuels"]["exterieurs_connus"]) == (1, 1)

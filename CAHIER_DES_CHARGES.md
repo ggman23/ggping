@@ -581,6 +581,19 @@ pour voir les favoris d'une poule.
   points officiels de la phase : champ « officiels »). Indicateur « mensuel » dans les données, notes
   des pages adaptées. Les pages de Vaires passent avant celle des clubs du 77 : elles utilisent les
   valeurs du lancement précédent (deux mises à jour la première fois).
+- Adversaires d'autres départements et compte Premium (15/11) : contrôle de la mise à jour n° 80 :
+  2 349 adversaires hors du 77, 5 695 parties, 405 joueurs du 77 concernés (sur 1 889 qui ont joué).
+  L'API ne donne pas de points mensuels ni virtuels au compte utilisé (Premium) : un joueur dans une
+  partie = {grade, id, identifier, person, points de la phase} ; fiche de licence refusée ; rubriques
+  de l'API vides. Pas d'exploration de l'application FFTT (accès non documenté), et les données Premium
+  sont celles d'un abonnement personnel. Décision de l'utilisateur : lire les 2 349 adversaires, une
+  fois par semaine (pas de tournoi en semaine hors vacances) ; mentions « estimation » et repère « * ».
+  Réalisation : departement.debut_de_semaine (lundi 0 h ; liste lue avant : relue) pour tous les
+  joueurs, MAX_EXTERIEURS = 3000, adversaires extérieurs des joueurs choisis, dans le calcul mensuel
+  (leurs valeurs aussi dans references_77.json, avec la liste des joueurs du 77 : clé « _77 ») ;
+  nombre de parties contre d'autres départements (7e valeur d'un joueur, « exterieurs » au classement
+  virtuel) ; choix par défaut « tous ». Pages : « estimation » / « estim. » (77, classement virtuel,
+  fiches, progression, résultats, images), repère « * » avec info-bulle.
 
 ## Calendrier de la saison : /cal/ (13/11/2026)
 

@@ -86,13 +86,13 @@ a { color: var(--accent); }
     <div id="bloc-joueurs-77">
       <label for="joueurs-77" class="petit">Clubs du 77 : points virtuels à relire</label>
       <select id="joueurs-77">
+        <option value="tous">Tous les joueurs du 77 (environ 2 300)</option>
         <option value="jeunes">Les jeunes (environ 820)</option>
         <option value="adultes">Les adultes (environ 1 500)</option>
-        <option value="tous">Tous les joueurs du 77 (environ 2 300)</option>
         <option value="aucun">Aucun : garder les dernières lectures</option>
       </select>
-      <p class="petit">Seuls ceux lus il y a plus de 3 jours sont redemandés à la FFTT (environ 1 minute pour 220 joueurs) ;
-        les autres gardent leur dernière lecture, avec sa date.</p>
+      <p class="petit">Chaque joueur (et ses adversaires d'autres départements) est relu à la FFTT une fois par semaine au plus,
+        à la première mise à jour à partir du lundi ; les autres fois, sa dernière lecture sert, avec sa date.</p>
     </div>
     <div class="ligne"><button id="lancer">Mettre à jour GitHub et Cloudflare</button>
       <button id="lancer-netlify" class="second">Mettre à jour les 3 sites (avec Netlify)</button></div>
@@ -101,7 +101,7 @@ a { color: var(--accent); }
       <p class="petit">GitHub et Cloudflare : gratuit, autant de fois qu'il faut (corrections, ajouts).
         Les 3 sites : envoie aussi la version sur Netlify, l'adresse donnée au club (15 crédits Netlify sur 300 par mois ;
         18 envois au plus par mois, au-delà Netlify n'est plus mis à jour jusqu'au 6). Les mises à jour automatiques
-        (tous les lundis, matin et soir) ne font que GitHub et Cloudflare, avec les jeunes du 77.</p>
+        (tous les lundis, matin et soir) ne font que GitHub et Cloudflare ; celle du lundi matin relit tous les joueurs du 77.</p>
     </details>
     <div id="statut" role="status"></div>
     <details id="reglage">

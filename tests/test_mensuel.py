@@ -67,3 +67,14 @@ def test_valeurs_mensuelles_enregistrees_puis_utilisees_par_les_pages_de_vaires(
     class Vide:
         dossier = tmp_path / "absent"
     assert not mensuel.References.lire(Vide) and not mensuel.References.lire(object())
+
+
+def test_liste_des_joueurs_du_77_avec_les_valeurs(tmp_path):
+    """Le fichier des valeurs dit aussi qui est du 77 : un adversaire absent de la liste est d'un autre
+    département (repère « * » : estimation moins sûre)."""
+    class Client:
+        dossier = tmp_path
+    mensuel.enregistrer(Client, {"a": {"2026-09": 1000}, "x": {"2026-09": 900}, mensuel.CLE_77: ["a", "b"]})
+    lues = mensuel.References.lire(Client)
+    assert lues.du_77() == {"a", "b"} and lues.valeur("x", "2026-09-10") == 900
+    assert mensuel.References().du_77() == set()
