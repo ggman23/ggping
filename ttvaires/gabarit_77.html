@@ -191,6 +191,10 @@ const PAR_NUM = new Map(CLUBS.map((c) => [c.numero, c]));
 // Jeunes (poussins à juniors) : points virtuels calculés par la mise à jour (6e élément d'un joueur)
 const JEUNES = ["P", "B", "M", "C", "J"];
 const AVEC_VIRTUELS = CLUBS.some((c) => (c.joueurs || []).some((j) => j[5]));
+// Gains par période (mois ; juillet et août comptent avec septembre) : « sept. +12 · oct. +8 »
+const NOMS_MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+const parMois = (gains) => ((D.virtuels && D.virtuels.periodes) || []).map((p, i) => gains && gains[i] != null
+  ? `${NOMS_MOIS[+p.slice(5, 7) - 1]} ${signe(gains[i])}` : "").filter(Boolean).join(" · ");
 const jourMois = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : "—");
 // Parties lues il y a plus de 7 jours (par rapport à la mise à jour) : date mise en évidence
 const ancien = (iso) => !!iso && (new Date(D.genere_le) - new Date(iso)) / 864e5 > 7;
@@ -432,7 +436,7 @@ const ordreCat = (a, b) => D.categories.indexOf(lettre(a)) - D.categories.indexO
 const JOUEURS = CLUBS.flatMap((c) => (c.joueurs || []).filter((j) => !j[3]).map((j) => (
   { points: j[0], sexe: j[1], cat: j[2], nom: j[4] || "", club: c.numero, clubNom: c.nom, vaires: c.vaires,
     jeune: JEUNES.includes(lettre(j[2])), virt: j[5] ? j[5][0] : null, prog: j[5] ? j[5][1] : null,
-    v: j[5] ? j[5][2] : null, d: j[5] ? j[5][3] : null, lu: j[5] ? j[5][4] : null })));
+    v: j[5] ? j[5][2] : null, d: j[5] ? j[5][3] : null, lu: j[5] ? j[5][4] : null, mois: j[5] ? j[5][5] : null })));
 const sansAccent = (t) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 for (const j of JOUEURS) j.cle = sansAccent(j.nom);
 const CATS_PRECISES = [...new Set(JOUEURS.map((j) => j.cat).filter(Boolean))].sort(ordreCat);
@@ -498,7 +502,7 @@ function vueJoueurs() {
           ? `<span class="lu${ancien(j.lu) ? " ancien" : ""}">lu le ${jourMois(j.lu)}</span>` : ""}</span></td>
         <td class="col-club"><button type="button" class="nom" data-club="${esc(j.club)}">${esc(j.clubNom)}</button></td>
         <td title="${esc(libelleCat(j.cat))}">${esc(j.cat || "—")}</td><td class="col-sexe">${j.sexe === "F" ? "F" : "H"}</td><td class="n col-points">${fr(j.points)}</td>${avecVirt
-          ? `<td class="n">${j.virt != null ? fr(j.virt) : `<span class="virt-absent">—</span><span class="virt-mensuels doux" title="Virtuels pas encore lus : points mensuels">${fr(j.points)}</span>`}</td><td class="n prog"${j.v != null ? ` title="${j.v} victoire${j.v > 1 ? "s" : ""}, ${j.d} défaite${j.d > 1 ? "s" : ""}"` : ""}>${j.prog == null ? "—" : signe(j.prog)}</td>
+          ? `<td class="n">${j.virt != null ? fr(j.virt) : `<span class="virt-absent">—</span><span class="virt-mensuels doux" title="Virtuels pas encore lus : points mensuels">${fr(j.points)}</span>`}</td><td class="n prog"${j.v != null ? ` title="${esc([parMois(j.mois), `${j.v} victoire${j.v > 1 ? "s" : ""}, ${j.d} défaite${j.d > 1 ? "s" : ""}`].filter(Boolean).join(" ; "))}"` : ""}>${j.prog == null ? "—" : signe(j.prog)}</td>
             <td class="n col-parties">${j.v == null ? "—" : `${j.v} V · ${j.d} D`}</td><td class="n col-lu${ancien(j.lu) ? " ancien" : ""}">${jourMois(j.lu)}</td>` : ""}</tr>`).join("")}</table></div>
     ${lignes.length > vj.n ? `<button type="button" class="bouton plus-lignes" id="plus-j">Afficher ${Math.min(200, lignes.length - vj.n)} de plus (${fr(lignes.length - vj.n)} restants)</button>` : ""}
     <p class="note">Points mensuels des listes de licenciés de pingpocket.fr (lues par le PC). ${AVEC_VIRTUELS || V

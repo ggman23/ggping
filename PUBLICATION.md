@@ -557,7 +557,8 @@ D'où viennent les données :
   + gains des mois précédents ; un adversaire hors du 77 garde ses points). Juillet et août comptent
   avec septembre (les périodes de la FFTT commencent en septembre). Vérifié sur la liste des parties
   d'un joueur dans l'application FFTT : ses parties d'octobre ne s'expliquent qu'avec ses points de fin
-  septembre, et ses tournois de fin août sont dans la même situation mensuelle que septembre. Les clubs du 77 passent après les adversaires : si
+  septembre, et ses tournois de fin août sont dans la même situation mensuelle que septembre. Au
+  survol de « +/− » : les points gagnés mois par mois (« sept. +12 · oct. +8 · nov. −2 »). Les clubs du 77 passent après les adversaires : si
   la FFTT refusait des requêtes pendant la lecture des jeunes, la page des adversaires serait déjà faite.
 
 ## Sécurité

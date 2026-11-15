@@ -165,7 +165,7 @@ def joueurs_du_club(listes):
 
 def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire=None):
     """Points virtuels : ({licence: [virtuels, points gagnés depuis le début de la phase, victoires,
-    défaites, date de lecture « AAAA-MM-JJ »]}, {"joueurs", "a_relire", "connus", "lus", "reportes",
+    défaites, date de lecture « AAAA-MM-JJ », [gains de chaque période]]}, {"joueurs", "a_relire", "connus", "lus", "reportes",
     "plus_ancienne", "plus_recente", "hors_championnat", "verifiees", "details_lus", "details_restants"}).
 
     Parties hors championnat : leur détail (forfait, partie non comptée) est lu une fois puis gardé ; ceux
@@ -212,23 +212,29 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
     ecart = sum(abs(sum(points_m[lic]) - sum(l["points"] for l in ls)) for lic, ls in lignes.items()) / max(1, len(lignes))
     print(f"  points des joueurs lus dans les parties : différents d'une partie à l'autre pour {variables} joueurs sur {avec_parties} ; "
           f"calcul mois par mois : {round(ecart, 1)} points d'écart moyen avec le calcul sur les points du début de phase", flush=True)
+    # Gains par période (septembre, juillet et août compris ; octobre...), pour comparer aux situations mensuelles
+    periodes = sorted({mensuel.periode(l["date"]) for ls in lignes.values() for l in ls})
     res = {}
     for lic, parties in toutes.items():
         if parties is None:
             continue
         ls = lignes.get(lic, [])
         gains = points_m.get(lic) or [l["points"] for l in ls]
+        par_periode = dict.fromkeys(periodes, 0.0)
+        for l, g in zip(ls, gains):
+            par_periode[mensuel.periode(l["date"])] += g
         v, d = sum(l["victoire"] for l in ls), sum(not l["victoire"] for l in ls)
         virtuels = depart[lic] + sum(gains) if lic in depart else (points_mensuels.get(lic) if not ls else None)
         if virtuels is not None:
             lu = client.date(url_parties(lic)) or maintenant  # date de la réponse enregistrée
-            res[lic] = [round(virtuels), round(sum(gains), 1), v, d, datetime.fromtimestamp(lu).date().isoformat()]
+            res[lic] = [round(virtuels), round(sum(gains), 1), v, d, datetime.fromtimestamp(lu).date().isoformat(),
+                        [round(par_periode[x], 1) for x in periodes]]
     jours = sorted(r[4] for r in res.values())
     return res, {"joueurs": len(licences), "a_relire": len(a_relire), "connus": len(res), "lus": len(a_lire),
                  "reportes": sum(1 for lic in perimes[MAX_VIRTUELS:] if dates[lic] is None),
                  "plus_ancienne": jours[0] if jours else None, "plus_recente": jours[-1] if jours else None,
                  "hors_championnat": len(hors), "verifiees": sum(1 for i in hors if i in etats), "details_lus": len(nouveaux),
-                 "details_restants": len(attente) - len(nouveaux), "methode": "mensuel"}
+                 "details_restants": len(attente) - len(nouveaux), "methode": "mensuel", "periodes": periodes}
 
 
 def force_des_equipes(equipes, joueurs):

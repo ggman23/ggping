@@ -562,6 +562,11 @@ pour voir les favoris d'une poule.
   avec 1499. L'outil faisait une période d'août (septembre à 1499 + gains d'août, environ 1534 : environ
   -1 point sur chacune des 14 parties de septembre). Correction : mensuel.periode, juillet et août
   comptés avec septembre.
+- Mise à jour n° 76 : +107,6 seulement (au lieu de +108,4) : l'explication d'août n'était pas la
+  bonne (ou pas la seule). Pour mesurer au lieu de supposer : gains de chaque joueur par période
+  (6e valeur de ses points virtuels, périodes dans virtuels.periodes), à comparer aux +33,5 (fin août
+  et septembre), +84,3 (octobre) et +5,3 (novembre) de la FFTT ; affichés au survol de « +/− »
+  (« sept. +12 · oct. +8 »).
 
 ## Calendrier de la saison : /cal/ (13/11/2026)
 
