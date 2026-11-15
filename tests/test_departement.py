@@ -301,10 +301,14 @@ def test_controle_des_parties_en_chiffres_seulement(capsys):
     p41 = {**_partie(41, "a", 600, 500, False), "contest": tournoi}
     client = ClientParties({}, {"a": [p40, p41, p41, _partie(1, "a", 600, 650, True)], "b": [p40]},
                            dates_parties={"a": time.time(), "b": time.time()})
-    client.details = {40: {"notCounted": True, "sportMatch": {"tour": {"division": {"name": "Tableau handicap"}}}}}
+    # Détail : homePoints / awayPoints = barème × coefficient (victoire anormale à 300 points d'écart : 22 × 0,5)
+    client.details = {40: {"notCounted": True, "sportMatch": {"tour": {"division": {"name": "Tableau handicap"}}},
+                           "homePoints": 11, "awayPoints": -8}}
     res = controle_parties.controler(client, ["a", "b", "c"], "2026-07-01", "2026-11-15")
     sortie = capsys.readouterr().out
-    assert res == {"joueurs": 2, "filtres": None, "doublons": 1, "hors_championnat": 2, "echantillon": 1, "non_comptees": 1}
+    assert res == {"joueurs": 2, "filtres": None, "doublons": 1, "hors_championnat": 2, "echantillon": 1, "non_comptees": 1,
+                   "comparees": 1, "egales": 1}
     assert "Tableau handicap (1)" in sortie and "coefficients, Tournois : 0.5 (2 parties)" in sortie
+    assert "homePoints / barème : 0.5 (1)" in sortie and "barème 22, coef 0.5 -> homePoints 11, awayPoints -8" in sortie
     assert "NOM" not in sortie and "Prénom" not in sortie  # aucun nom dans le journal
     assert not any("identifier=c" in d for d in client.demandes)  # joueur jamais lu : pas de requête

@@ -17,6 +17,7 @@ from collections import Counter, defaultdict
 
 from . import fftt
 from .fftt import API, ENTETES, json_valide
+from .resultats import points_partie
 from .virtuel import _competitions, _lire_parties, _simple, est_championnat, famille_competition, url_parties
 
 ECHANTILLON = 40  # une partie hors championnat sur 40 : son détail dit si elle est « non comptée »
@@ -93,10 +94,11 @@ def controler(client, licences, debut, fin):
     pages = client.get_plusieurs(list(urls.values()), ttl=None, message="détail des parties (échantillon du contrôle)",
                                  entetes=ENTETES, valide=json_valide) if urls else {}
     lus, non_comptees, tableaux = Counter(), Counter(), Counter()
+    details = {}
     for i, url in urls.items():
         if not pages.get(url):
             continue
-        g = json.loads(pages[url])
+        g = details[i] = json.loads(pages[url])
         c = competitions.get((hors[i].get("contest") or {}).get("id"), {})
         famille = famille_competition(c.get("nom") or (hors[i].get("contest") or {}).get("name"))
         lus[famille] += 1
@@ -111,4 +113,53 @@ def controler(client, licences, debut, fin):
           + (", ".join(f"{f} {non_comptees[f]}/{n}" for f, n in lus.most_common()) or "—"), flush=True)
     if tableaux:
         print("  tableaux des parties non comptées : " + ", ".join(f"{t} ({n})" for t, n in tableaux.most_common(10))[:500], flush=True)
+    res.update(comparer_au_detail(hors, details, competitions))
     return res
+
+
+def _nombre(x):
+    return isinstance(x, (int, float)) and not isinstance(x, bool)
+
+
+def comparer_au_detail(hors, details, competitions):
+    """Le détail d'une partie (échantillon) comparé au calcul de l'outil, en chiffres : champs présents,
+    valeurs de homePoints / awayPoints, et, par famille de compétitions, leur rapport au barème (si ce
+    sont les points gagnés ou perdus calculés par la FFTT, ce rapport est le coefficient qu'elle applique)."""
+    if not details:
+        return {}
+    n = len(details)
+    champs = Counter(k for g in details.values() for k, v in g.items() if not k.startswith("@") and v not in (None, False, "", []))
+    print(f"  champs remplis du détail (sur {n} parties) : " + ", ".join(f"{k} {c}" for k, c in champs.most_common()), flush=True)
+    valeurs = [g.get(c) for g in details.values() for c in ("homePoints", "awayPoints") if _nombre(g.get(c))]
+    entieres = sum(1 for v in valeurs if float(v).is_integer())
+    print(f"  homePoints / awayPoints : {len(valeurs)} valeurs, dont {entieres} entières ; les plus fréquentes : "
+          + ", ".join(f"{v} ({c})" for v, c in Counter(valeurs).most_common(12)), flush=True)
+    egales, comparees, rapports, exemples = Counter(), Counter(), defaultdict(Counter), []
+    speciales = Counter()
+    for i, g in details.items():
+        p = hors[i]
+        h, a = p.get("homePlayer") or {}, p.get("awayPlayer") or {}
+        c = competitions.get((p.get("contest") or {}).get("id"), {})
+        famille = famille_competition(c.get("nom") or (p.get("contest") or {}).get("name"))
+        for drapeau in ("forfeit", "abandonment", "penalty", "draw", "notCounted"):
+            if g.get(drapeau):
+                speciales[f"{drapeau} (homePoints {g.get('homePoints')}, awayPoints {g.get('awayPoints')})"] += 1
+        if not (_nombre(h.get("points")) and _nombre(a.get("points")) and p.get("winner") in ("home", "away")
+                and _nombre(g.get("homePoints"))):
+            continue
+        bareme = points_partie(h["points"], a["points"], p["winner"] == "home", 1)
+        comparees[famille] += 1
+        if c.get("coef") is not None and abs(bareme * c["coef"] - g["homePoints"]) < 0.01:
+            egales[famille] += 1
+        if bareme:
+            rapports[famille][round(g["homePoints"] / bareme, 3)] += 1
+        if len(exemples) < 8:
+            exemples.append(f"écart {round(a['points'] - h['points'])}, {'victoire' if p['winner'] == 'home' else 'défaite'}, "
+                            f"barème {bareme}, coef {c.get('coef')} -> homePoints {g['homePoints']}, awayPoints {g.get('awayPoints')}")
+    for famille, k in comparees.most_common():
+        print(f"  {famille} : {k} parties comparées, homePoints = barème × coefficient de la FFTT pour {egales[famille]} ; "
+              f"homePoints / barème : " + ", ".join(f"{r} ({c})" for r, c in rapports[famille].most_common(5)), flush=True)
+    for e in exemples:
+        print(f"    exemple (joueur à domicile) : {e}", flush=True)
+    print("  parties particulières de l'échantillon : " + (", ".join(f"{s} : {c}" for s, c in speciales.most_common(10)) or "aucune"), flush=True)
+    return {"comparees": sum(comparees.values()), "egales": sum(egales.values())}
