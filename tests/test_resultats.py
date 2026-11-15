@@ -1,6 +1,6 @@
 """Calcul des points virtuels et synthèse par journée (cas réel de la J1 de Vaires 3, noms fictifs)."""
 
-from ttvaires.resultats import feuille_de_match, points_partie, synthese
+from ttvaires.resultats import donnees_page, feuille_de_match, points_partie, synthese
 
 
 def test_bareme_fftt():
@@ -102,3 +102,7 @@ def test_cumul_depuis_les_points_de_la_phase_avec_la_valeur_du_mois():
     p["officiels"] = 780
     lignes, cumuls = synthese([p])
     assert lignes[0]["points"] == 780 and lignes[0]["apres"] == 780 + p["gain"] and p["gain"] == points_partie(800, 700, True)
+
+    # La page sait quel calcul a été utilisé (sa note le dit)
+    base = {"genere_le": "2026-11-15T20:00", "saison": "2026-2027", "phase": 1, "club": {}, "parties": [p]}
+    assert donnees_page({**base, "mensuel": True})["mensuel"] is True and donnees_page(base)["mensuel"] is False

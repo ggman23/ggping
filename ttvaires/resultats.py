@@ -267,7 +267,7 @@ def donnees_page(resultats):
     journees = sorted({l["journee"] for l in lignes})
     return {
         **{k: resultats[k] for k in ("genere_le", "saison", "phase", "club")},
-        "verification": resultats.get("verification"),
+        "verification": resultats.get("verification"), "mensuel": bool(resultats.get("mensuel")),
         "journees": [{"numero": j, "dates": sorted({l["date"] for l in lignes if l["journee"] == j and l["date"]})}
                      for j in journees],
         "lignes": lignes, "cumuls": cumuls,
