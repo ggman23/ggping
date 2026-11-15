@@ -508,9 +508,8 @@ function vueJoueurs() {
         Qui relire se choisit au lancement de la mise à jour : les jeunes (par défaut), les adultes, tous ou aucun${V && V.perimetre ? ` (dernière : ${esc(V.perimetre)})` : ""} ;
         les autres gardent leur dernière lecture, et les adversaires de Vaires sont relus chaque jour.
         « Lu le » : date à laquelle ses parties ont été lues ; un joueur lu il y a moins de 3 jours n'est pas redemandé à la FFTT${V && V.plus_ancienne ? ` ; lus entre le ${jourMois(V.plus_ancienne)} et le ${jourMois(V.plus_recente)}` : ""}.
-        En orange : lu il y a plus de 7 jours.${V && V.methode === "mensuel" ? ` Calcul mois par mois, comme la FFTT : chaque partie avec les
-        points de fin du mois précédent des deux joueurs${V.erreurs && V.erreurs.mensuel ? ` (écart moyen avec les points mensuels publiés :
-        ${String(V.erreurs.mensuel.erreur).replace(".", ",")} point${V.erreurs.mensuel.erreur > 1 ? "s" : ""})` : ""}.` : ""}${V && V.hors_championnat ? ` Parties hors championnat (critérium, tournois…) vérifiées une à une, pour
+        En orange : lu il y a plus de 7 jours.${V && V.methode === "mensuel" ? ` Calcul mois par mois, comme la FFTT : chaque partie avec la valeur des
+        deux joueurs à la fin du mois précédent (joueurs du 77 ; un adversaire d'un autre département garde ses points de début de phase).` : ""}${V && V.hors_championnat ? ` Parties hors championnat (critérium, tournois…) vérifiées une à une, pour
         écarter les victoires par forfait comme la FFTT : ${fr(V.verifiees)} sur ${fr(V.hors_championnat)}${V.details_restants
           ? ` ; les autres aux prochaines mises à jour (en attendant, un forfait peut y compter comme une victoire)` : ""}.` : ""}`
       : "Points virtuels : calculés par la mise à jour en ligne du site."}

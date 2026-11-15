@@ -163,7 +163,7 @@ def joueurs_du_club(listes):
     return sortie
 
 
-def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire=None, dates_listes=None):
+def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire=None):
     """Points virtuels : ({licence: [virtuels, points gagnés depuis le début de la phase, victoires,
     défaites, date de lecture « AAAA-MM-JJ »]}, {"joueurs", "a_relire", "connus", "lus", "reportes",
     "plus_ancienne", "plus_recente", "hors_championnat", "verifiees", "details_lus", "details_restants"}).
@@ -172,9 +172,8 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
     déjà lus servent pour tous les joueurs, les nouveaux sont lus pour les joueurs choisis (MAX_DETAILS
     au plus, les plus récents d'abord). Une victoire par forfait ne rapporte rien (comme à la FFTT).
 
-    Points de chaque partie : calcul mois par mois comme la FFTT (mensuel.py) s'il est nettement plus
-    proche des points mensuels publiés (dates_listes : date de la liste de chaque joueur), sinon avec les
-    points du début de la phase.
+    Points de chaque partie : calcul mois par mois, comme la FFTT (mensuel.py) : les deux joueurs avec
+    leur valeur de fin du mois précédent, pas leurs points du début de la phase.
 
     a_relire : licences à relire si besoin (toutes si None). Relus : parmi elles, ceux jamais lus et ceux
     lus il y a TTL_VIRTUELS ou plus (au plus MAX_VIRTUELS, jamais lus d'abord, puis les plus anciens).
@@ -209,19 +208,16 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
     competitions = _competitions(client, {(p.get("contest") or {}).get("id") for p in simples} - {None})
     lignes, depart = mensuel.lignes_des_joueurs(toutes, competitions, etats, debut, fin)
     points_m = mensuel.calcul_mensuel(lignes, depart)
-    methode, meilleur = mensuel.choisir(mensuel.comparer_aux_mensuels(lignes, depart, points_mensuels, dates_listes or {}, points_m))
     variables, avec_parties = mensuel.points_variables(lignes)
-    print(f"  points des joueurs lus dans les parties : différents d'une partie à l'autre pour {variables} joueurs sur {avec_parties}", flush=True)
-    for calcul, (n, erreur, part, decalage) in sorted(meilleur.items()):
-        print(f"  calcul {calcul} : face aux points mensuels publiés ({n} joueurs, situation de fin du mois -{decalage}), "
-              f"erreur moyenne {erreur} points, {round(100 * part)} % à 2 points près", flush=True)
-    print(f"  calcul retenu : {methode}", flush=True)
+    ecart = sum(abs(sum(points_m[lic]) - sum(l["points"] for l in ls)) for lic, ls in lignes.items()) / max(1, len(lignes))
+    print(f"  points des joueurs lus dans les parties : différents d'une partie à l'autre pour {variables} joueurs sur {avec_parties} ; "
+          f"calcul mois par mois : {round(ecart, 1)} points d'écart moyen avec le calcul sur les points du début de phase", flush=True)
     res = {}
     for lic, parties in toutes.items():
         if parties is None:
             continue
         ls = lignes.get(lic, [])
-        gains = points_m[lic] if methode == "mensuel" and lic in points_m else [l["points"] for l in ls]
+        gains = points_m.get(lic) or [l["points"] for l in ls]
         v, d = sum(l["victoire"] for l in ls), sum(not l["victoire"] for l in ls)
         virtuels = depart[lic] + sum(gains) if lic in depart else (points_mensuels.get(lic) if not ls else None)
         if virtuels is not None:
@@ -232,8 +228,7 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
                  "reportes": sum(1 for lic in perimes[MAX_VIRTUELS:] if dates[lic] is None),
                  "plus_ancienne": jours[0] if jours else None, "plus_recente": jours[-1] if jours else None,
                  "hors_championnat": len(hors), "verifiees": sum(1 for i in hors if i in etats), "details_lus": len(nouveaux),
-                 "details_restants": len(attente) - len(nouveaux), "methode": methode,
-                 "erreurs": {calcul: {"joueurs": n, "erreur": e, "a_2_points": part} for calcul, (n, e, part, _) in meilleur.items()}}
+                 "details_restants": len(attente) - len(nouveaux), "methode": "mensuel"}
 
 
 def force_des_equipes(equipes, joueurs):
@@ -275,9 +270,8 @@ def recuperer_departement(client, numero_club="08770250", aujourdhui=None, dossi
     if virtuels:
         print(f"4/4 Points virtuels : {len(choisis)} joueurs à relire ({perimetre}) sur {len(competition)} (API FFTT ; "
               "ceux lus il y a moins de 3 jours ne sont pas redemandés, les autres gardent leur dernière lecture)", flush=True)
-        dates_listes = {j["licence"]: listes[num][1] for num, js in joueurs_par_club.items() for j in js if j.get("licence")}
         virt, controle_virt = virtuels_des_joueurs(client, sorted(competition), {lic: j["points"] for lic, j in competition.items()},
-                                                   aujourdhui, choisis, dates_listes)
+                                                   aujourdhui, choisis)
         controle_virt["perimetre"] = perimetre
         try:  # écarts signalés avec la FFTT : mesures dans le journal (chiffres seulement) ; jamais bloquant
             controle_parties.controler(client, sorted(competition), debut, min(fin, aujourdhui.isoformat()))

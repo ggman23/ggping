@@ -544,6 +544,16 @@ pour voir les favoris d'une poule.
   (listes pingpocket : situation de fin du mois -1 ou -2 selon la date de la liste) ; retenu s'il est
   nettement plus juste (erreur moyenne ≤ 80 % de l'autre, 50 joueurs au moins). Journal : erreur des
   deux calculs, variabilité des points lus dans les parties.
+- Mise à jour n° 74 : points lus dans les parties constants pour les 1 889 joueurs qui ont joué (ce sont
+  bien les points de la phase) ; comparaison aux « points mensuels » des listes sans valeur : pour le
+  joueur signalé, la liste donne 1499 (la FFTT 1532,5) ; les deux calculs à 9 points d'erreur moyenne,
+  le constant gardé. Captures de la liste des parties de l'application FFTT (99 parties : 75 validées,
+  24 non validées ; forfait 11-0 ×3 à 0 point) : au critérium du 11/10 (coef 1,5), +8,25 contre un 15xx,
+  +12 contre un 16xx, +19,5 contre un 17xx ne sont possibles qu'avec 1532,5 (situation de fin
+  septembre), pas avec 1499. Le calcul mois par mois est donc appliqué sans condition ; la comparaison
+  automatique est retirée. Restent hors du calcul : les adversaires d'autres départements (points de
+  début de phase, faute de leur situation mensuelle), le classement virtuel de Vaires, la page
+  Résultats et la forme des adversaires (encore sur les points de début de phase).
 
 ## Calendrier de la saison : /cal/ (13/11/2026)
 

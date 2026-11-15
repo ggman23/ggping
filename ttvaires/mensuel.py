@@ -10,20 +10,18 @@ Calcul mensuel : mois après mois, la référence de chaque joueur du 77 est ses
 phase plus ce qu'il a gagné les mois précédents ; un adversaire hors du 77 garde les points donnés par
 la partie. Les parties d'un mois sont calculées avec les références de la fin du mois précédent.
 
-Les points mensuels publiés par la FFTT (listes de licenciés) servent de juge : pour chaque joueur, ce
-qu'il a gagné jusqu'à la fin du dernier mois publié, selon chaque calcul, est comparé à « points
-mensuels − points du début de la phase ». Le journal donne l'erreur des deux calculs (chiffres
-seulement) et la page prend le plus juste.
+Vérifié le 15/11/2026 sur la liste des parties de l'application FFTT du joueur signalé (1499 en début
+de saison, 1532,5 à la situation de fin septembre) : au critérium du 11/10 (coefficient 1,5), +8,25
+contre un 15xx (victoire normale, écart 25 à 49), +12 contre un 16xx et +19,5 contre un 17xx
+(victoires anormales, écarts 50 à 99 et 150 à 199) ne sont possibles qu'avec 1532,5, pas avec 1499.
+(Les « points mensuels » des listes de licenciés de pingpocket ne donnent pas cette situation : 1499
+pour ce joueur ; ils ne peuvent pas servir à vérifier le calcul.)
 """
 
 from collections import defaultdict
-from datetime import datetime, timedelta
 
 from .resultats import points_partie
 from .virtuel import analyser
-
-ECART_SIGNIFICATIF = 0.8  # le calcul mensuel n'est retenu que si son erreur moyenne est au plus 80 % de l'autre
-MINIMUM_COMPARES = 50      # joueurs comparés au moins pour décider
 
 
 def lignes_des_joueurs(toutes, competitions, etats, debut, fin):
@@ -66,50 +64,6 @@ def calcul_mensuel(lignes, depart):
         for lic, g in gains.items():
             cumul[lic] += g
     return points
-
-
-def _fin_du_mois_avant(jour, mois_en_arriere):
-    """Dernier jour du mois situé `mois_en_arriere` mois avant celui de `jour` (1 : le mois précédent)."""
-    d = jour.replace(day=1)
-    for _ in range(mois_en_arriere - 1):
-        d = (d - timedelta(days=1)).replace(day=1)
-    return (d - timedelta(days=1)).isoformat()
-
-
-def comparer_aux_mensuels(lignes, depart, mensuels, dates_listes, points_mensuel):
-    """Erreur de chaque calcul face aux points mensuels publiés : {(calcul, décalage): (joueurs, erreur
-    moyenne, part à 2 points près)} ; décalage : la liste lue donne la situation de la fin du mois
-    précédent (1) ou du mois d'avant (2), selon la date de publication."""
-    res = {}
-    for decalage in (1, 2):
-        erreurs = {"constant": [], "mensuel": []}
-        for lic, ls in lignes.items():
-            if lic not in depart or mensuels.get(lic) is None or not dates_listes.get(lic):
-                continue
-            borne = _fin_du_mois_avant(datetime.fromtimestamp(dates_listes[lic]).date(), decalage)
-            avant = [k for k, l in enumerate(ls) if l["date"] <= borne]
-            if not avant:
-                continue
-            fftt = mensuels[lic] - depart[lic]
-            erreurs["constant"].append(sum(ls[k]["points"] for k in avant) - fftt)
-            erreurs["mensuel"].append(sum(points_mensuel[lic][k] for k in avant) - fftt)
-        for calcul, e in erreurs.items():
-            if e:
-                res[(calcul, decalage)] = (len(e), round(sum(abs(x) for x in e) / len(e), 2),
-                                           round(sum(1 for x in e if abs(x) <= 2) / len(e), 3))
-    return res
-
-
-def choisir(comparaison):
-    """'mensuel' si le calcul mensuel est nettement plus proche des points publiés par la FFTT (au
-    meilleur décalage de chacun), sinon 'constant' ; et le résumé de la comparaison."""
-    meilleur = {}
-    for (calcul, decalage), (n, erreur, part) in comparaison.items():
-        if n >= MINIMUM_COMPARES and (calcul not in meilleur or erreur < meilleur[calcul][1]):
-            meilleur[calcul] = (n, erreur, part, decalage)
-    if "constant" in meilleur and "mensuel" in meilleur and meilleur["mensuel"][1] <= ECART_SIGNIFICATIF * meilleur["constant"][1]:
-        return "mensuel", meilleur
-    return "constant", meilleur
 
 
 def points_variables(lignes):
