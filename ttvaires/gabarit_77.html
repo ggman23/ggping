@@ -508,7 +508,8 @@ function vueJoueurs() {
         Qui relire se choisit au lancement de la mise à jour : les jeunes (par défaut), les adultes, tous ou aucun${V && V.perimetre ? ` (dernière : ${esc(V.perimetre)})` : ""} ;
         les autres gardent leur dernière lecture, et les adversaires de Vaires sont relus chaque jour.
         « Lu le » : date à laquelle ses parties ont été lues ; un joueur lu il y a moins de 3 jours n'est pas redemandé à la FFTT${V && V.plus_ancienne ? ` ; lus entre le ${jourMois(V.plus_ancienne)} et le ${jourMois(V.plus_recente)}` : ""}.
-        En orange : lu il y a plus de 7 jours.`
+        En orange : lu il y a plus de 7 jours. <b>Vérification en cours</b> : pour des joueurs qui font beaucoup de tournois, un écart
+        avec la FFTT a été signalé (parties « non comptées » peut-être prises en compte) ; les joueurs de Vaires ne sont pas concernés.`
       : "Points virtuels : calculés par la mise à jour en ligne du site."}
       Catégories de la FFTT : P poussins, B1 et B2 benjamins, M1 et M2 minimes, C1 et C2 cadets,
       J1 à J3 juniors, S seniors, V40… vétérans. Sans les licences loisir. ${CLUBS.filter((c) => !c.joueurs).length ? `${CLUBS.filter((c) => !c.joueurs).length} club(s) sans liste pour l'instant.` : ""}</p>

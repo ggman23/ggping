@@ -33,7 +33,7 @@ import time
 from collections import Counter
 from datetime import datetime
 
-from . import fftt, pingpocket
+from . import controle_parties, fftt, pingpocket
 from .effectif import TRIS
 from .reseau import JOUR
 from .virtuel import forme_joueurs, url_parties
@@ -236,6 +236,10 @@ def recuperer_departement(client, numero_club="08770250", aujourdhui=None, dossi
         virt, controle_virt = virtuels_des_joueurs(client, sorted(competition), {lic: j["points"] for lic, j in competition.items()},
                                                    aujourdhui, choisis)
         controle_virt["perimetre"] = perimetre
+        try:  # écarts signalés avec la FFTT : mesures dans le journal (chiffres seulement) ; jamais bloquant
+            controle_parties.controler(client, sorted(competition), debut, min(fin, aujourdhui.isoformat()))
+        except Exception as e:  # noqa: BLE001
+            print(f"  contrôle des parties impossible : {e}", flush=True)
     else:
         print("4/4 Points virtuels : calculés par la mise à jour en ligne seulement", flush=True)
         virt, controle_virt = {}, None

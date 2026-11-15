@@ -173,7 +173,7 @@ class ClientParties(Client):
 
     def __init__(self, listes, parties, dates_parties=None, **options):
         super().__init__(listes, **options)
-        self.parties, self.dates_parties, self.ttls = parties, dates_parties or {}, {}
+        self.parties, self.dates_parties, self.ttls, self.details = parties, dates_parties or {}, {}, {}
 
     def date(self, chemin):
         if "/games?" in chemin:
@@ -184,12 +184,17 @@ class ClientParties(Client):
         if "/games?" in chemin:
             self.demandes.append(chemin)
             lic = chemin.split("identifier=")[1].split("&")[0]
-            self.ttls[lic] = ttl
+            if ttl is not None or lic not in self.ttls:  # une relecture du cache (contrôle) n'efface pas la lecture
+                self.ttls[lic] = ttl
             if ttl is not None:  # nouvelle réponse enregistrée maintenant (ttl None : réponse déjà enregistrée)
                 self.dates_parties[lic] = time.time()
             return json.dumps({"hydra:member": self.parties.get(lic, [])})
         if "/contests/" in chemin:
-            return json.dumps({"name": "FED_Championnat de France par Equipes Masculin", "coefficient": 1})
+            return json.dumps({"name": "FED_Championnat de France par Equipes Masculin", "coefficient": 1} if chemin.endswith("/1")
+                              else {"name": "Tournoi de Lagny", "coefficient": 0.5})
+        if "/games/" in chemin:
+            self.demandes.append(chemin)
+            return json.dumps(self.details[int(chemin.rsplit("/", 1)[1])])
         return super().get(chemin, ttl, entetes, valide, perime_si_erreur)
 
     def get_plusieurs(self, chemins, ttl=None, message=None, **options):
@@ -285,3 +290,21 @@ def test_virtuels_relus_apres_3_jours_avec_leur_date_et_plafond_de_securite(monk
     res, controle = departement.virtuels_des_joueurs(client, ["a", "b", "c", "d"], {"a": 600, "b": 510, "c": 800, "d": 700}, date(2026, 11, 15))
     assert client.ttls == {"a": departement.TTL_VIRTUELS, "c": None, "d": None} and controle["reportes"] == 1
     assert set(res) == {"a", "c", "d"} and res["c"][4] == il_y_a(4) and controle["plus_ancienne"] == il_y_a(4)
+
+
+def test_controle_des_parties_en_chiffres_seulement(capsys):
+    """Écarts signalés avec la FFTT : le journal mesure doublons, coefficients et parties « non comptées »
+    (échantillon lu en détail), sans nom ni numéro de licence."""
+    from ttvaires import controle_parties
+    tournoi = {"id": 2, "name": "Tournoi de Lagny"}
+    p40 = {**_partie(40, "a", 600, 900, True), "contest": tournoi, "effectiveDate": "2026-10-01T00:00:00"}
+    p41 = {**_partie(41, "a", 600, 500, False), "contest": tournoi}
+    client = ClientParties({}, {"a": [p40, p41, p41, _partie(1, "a", 600, 650, True)], "b": [p40]},
+                           dates_parties={"a": time.time(), "b": time.time()})
+    client.details = {40: {"notCounted": True, "sportMatch": {"tour": {"division": {"name": "Tableau handicap"}}}}}
+    res = controle_parties.controler(client, ["a", "b", "c"], "2026-07-01", "2026-11-15")
+    sortie = capsys.readouterr().out
+    assert res == {"joueurs": 2, "filtres": None, "doublons": 1, "hors_championnat": 2, "echantillon": 1, "non_comptees": 1}
+    assert "Tableau handicap (1)" in sortie and "coefficients, Tournois : 0.5 (2 parties)" in sortie
+    assert "NOM" not in sortie and "Prénom" not in sortie  # aucun nom dans le journal
+    assert not any("identifier=c" in d for d in client.demandes)  # joueur jamais lu : pas de requête

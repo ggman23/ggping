@@ -508,6 +508,18 @@ pour voir les favoris d'une poule.
   montre ses points mensuels en gris ; note : connus pour x jeunes sur y et z adultes sur w. Accueil :
   « Mettre à jour maintenant » avant « Pages » ; l'explication des deux boutons repliée (« Quel bouton
   choisir ? »).
+- Écart signalé (15/11) : un V40 d'un autre club : l'outil 99 parties (59 V, 40 D) et +203,2, la FFTT 98
+  parties (58 V, 40 D) et +123,1 (début de saison 1499, virtuels 1622,1). Le barème est celui de la
+  FFTT. Pistes : (1) parties « non comptées » (tableaux handicap...) : le drapeau n'est que dans le
+  détail d'une partie (une requête par partie), que forme_joueurs ne lit pas (adversaires et joueurs du
+  77) ; la liste ne donne que id, date, effectiveDate, contest, joueurs, winner, sportMatch,
+  doubleOpposition ; (2) coefficients des compétitions (jamais confrontés à la FFTT hors championnat) ;
+  (3) parties en double ; (4) date de prise en compte. Pas d'accès direct à l'API (compte du club) :
+  controle_parties.controler mesure tout cela à chaque mise à jour en ligne et l'écrit dans le journal en
+  chiffres seulement (filtres acceptés par l'API, doublons, effectiveDate, nombre de parties hors
+  championnat, coefficients par famille, part de « non comptées » sur un échantillon d'une partie sur
+  40 lue en détail et gardée). Les joueurs de Vaires (classement virtuel) lisent déjà ce détail. Note
+  « vérification en cours » sur la page en attendant la correction.
 
 ## Calendrier de la saison : /cal/ (13/11/2026)
 
