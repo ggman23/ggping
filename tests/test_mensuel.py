@@ -26,3 +26,14 @@ def test_les_parties_d_un_mois_avec_les_references_de_fin_du_mois_precedent():
 def test_points_lus_dans_les_parties_constants():
     lignes = {"a": [_ligne("2026-09-10", "x", 1115, True), _ligne("2026-10-05", "x", 1115, True)], "b": []}
     assert mensuel.points_variables(lignes) == (0, 1)
+
+
+def test_juillet_et_aout_comptent_avec_septembre():
+    """Tournois de fin août et parties de septembre : une seule période FFTT (la première de la saison),
+    calculée avec les points du début de saison ; octobre avec les gains d'août et de septembre."""
+    assert [mensuel.periode(j) for j in ("2026-07-04", "2026-08-30", "2026-09-19", "2026-10-11", "2027-01-09")] == \
+        ["2026-09", "2026-09", "2026-09", "2026-10", "2027-01"]
+    lignes = {"a": [_ligne("2026-08-30", "x", 1115, True), _ligne("2026-09-05", "x", 1115, True),
+                    _ligne("2026-10-05", "x", 1115, True)]}
+    points = mensuel.calcul_mensuel(lignes, {"a": 1000})
+    assert points["a"] == [10, 10, 8]  # septembre encore à 1000 (écart 115) ; octobre à 1020 (écart 95)

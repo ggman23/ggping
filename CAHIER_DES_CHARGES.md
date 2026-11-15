@@ -554,6 +554,14 @@ pour voir les favoris d'une poule.
   automatique est retirée. Restent hors du calcul : les adversaires d'autres départements (points de
   début de phase, faute de leur situation mensuelle), le classement virtuel de Vaires, la page
   Résultats et la forme des adversaires (encore sur les points de début de phase).
+- Mise à jour n° 75 (calcul mensuel, toutes les parties hors championnat vérifiées : 6 538 lues) : le
+  joueur signalé passe à +108,4 (FFTT +123,1 ; 1607 contre 1622,1). D'après les captures : octobre
+  (critérium +42,75, Troyes +46,5, Vittel -2, championnat -3) = +84,3 = « Premium » de la FFTT ; fin
+  août et septembre = +33,5 = « Mensuels » : la FFTT met les tournois des 29-30 août dans la même
+  période que septembre (périodes : 1 = septembre ... 4 = décembre, 10 = juin), et calcule septembre
+  avec 1499. L'outil faisait une période d'août (septembre à 1499 + gains d'août, environ 1534 : environ
+  -1 point sur chacune des 14 parties de septembre). Correction : mensuel.periode, juillet et août
+  comptés avec septembre.
 
 ## Calendrier de la saison : /cal/ (13/11/2026)
 

@@ -6,9 +6,10 @@ partie, les points officiels de la phase des deux joueurs : calculer toutes les 
 points-là surestime les gains d'un joueur qui progresse (signalé le 15/11/2026 : +186 dans l'outil,
 +123 à la FFTT, à nombre de parties égal).
 
-Calcul mensuel : mois après mois, la référence de chaque joueur du 77 est ses points du début de la
-phase plus ce qu'il a gagné les mois précédents ; un adversaire hors du 77 garde les points donnés par
-la partie. Les parties d'un mois sont calculées avec les références de la fin du mois précédent.
+Calcul mensuel : période après période (un mois ; juillet et août comptent avec septembre), la
+référence de chaque joueur du 77 est ses points du début de la phase plus ce qu'il a gagné les périodes
+précédentes ; un adversaire hors du 77 garde les points donnés par la partie. Les parties d'une période
+sont calculées avec les références de la fin de la période précédente.
 
 Vérifié le 15/11/2026 sur la liste des parties de l'application FFTT du joueur signalé (1499 en début
 de saison, 1532,5 à la situation de fin septembre) : au critérium du 11/10 (coefficient 1,5), +8,25
@@ -44,10 +45,20 @@ def lignes_des_joueurs(toutes, competitions, etats, debut, fin):
     return lignes, depart
 
 
+def periode(jour):
+    """Période FFTT d'une partie (« AAAA-MM ») : son mois, sauf juillet et août, comptés avec septembre.
+    Les périodes de la saison commencent en septembre (période 4 : décembre, période 10 : juin) : le joueur
+    signalé a ses tournois des 29-30 août et ses parties de septembre dans la même situation mensuelle
+    (+33,5), et ses parties de septembre sont calculées avec ses points du début de saison."""
+    annee, mois = jour[:4], jour[5:7]
+    return f"{annee}-09" if mois in ("07", "08") else jour[:7]
+
+
 def calcul_mensuel(lignes, depart):
-    """{licence: [points de chaque partie, dans l'ordre de ses lignes]} : parties d'un mois calculées avec
-    les références de fin du mois précédent (début de phase + gains des mois précédents)."""
-    mois = sorted({l["date"][:7] for ls in lignes.values() for l in ls})
+    """{licence: [points de chaque partie, dans l'ordre de ses lignes]} : parties d'une période (un mois,
+    juillet et août avec septembre) calculées avec les références de la fin de la période précédente
+    (début de phase + gains des périodes précédentes)."""
+    mois = sorted({periode(l["date"]) for ls in lignes.values() for l in ls})
     cumul = defaultdict(float)
     points = {lic: [None] * len(ls) for lic, ls in lignes.items()}
     for m in mois:
@@ -55,7 +66,7 @@ def calcul_mensuel(lignes, depart):
         gains = defaultdict(float)
         for lic, ls in lignes.items():
             for k, l in enumerate(ls):
-                if l["date"][:7] != m:
+                if periode(l["date"]) != m:
                     continue
                 moi = reference.get(lic, l["pts_joueur"])
                 adv = reference.get(l["adv_licence"], l["adv_points"])
