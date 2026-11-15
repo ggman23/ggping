@@ -108,6 +108,14 @@ dialog::backdrop { background: rgba(10, 15, 25, .45); }
 .tuile b { display: block; font-size: 20px; }
 .repart { display: flex; height: 10px; border-radius: 99px; overflow: hidden; margin: 6px 0 4px; gap: 2px; background: var(--surface); }
 .repart i { display: block; height: 100%; }
+/* Classement des joueurs */
+#table-joueurs td.joueur { white-space: normal; min-width: 150px; }
+#table-joueurs .club-sous { display: none; }
+.plus-lignes { margin: 12px 0 0; }
+@media (max-width: 700px) {
+  #table-joueurs .col-club { display: none; }
+  #table-joueurs .club-sous { display: block; }
+}
 @media (max-width: 700px) {
   main { padding: 10px 8px 32px; }
   .carte { padding: 12px 10px; }
@@ -138,6 +146,7 @@ dialog::backdrop { background: rgba(10, 15, 25, .45); }
   <a href="#classements" data-vue="classements">Classements</a>
   <a href="#comparer" data-vue="comparer">Comparer</a>
   <a href="#poules" data-vue="poules">Poules</a>
+  <a href="#joueurs" data-vue="joueurs">Joueurs</a>
 </nav>
 <main>
   <section class="carte" id="filtres-joueurs" aria-label="Joueurs comptés">
@@ -225,13 +234,13 @@ function calculer() {
     const s = { club: c, equipes: c.equipes.length, equipesM: eqM.length, equipesF: eqF.length,
       niveau: c.meilleur_niveau, rangNiveau: rangNiveau(c.meilleur_niveau), connu: !!c.joueurs };
     if (c.joueurs) {
-      const js = c.joueurs.filter(([p, sx, cat, lo]) => (filtre.sexe === "T" || sx === filtre.sexe) && filtre.cats.has(cat)
+      const js = c.joueurs.filter(([p, sx, cat, lo]) => (filtre.sexe === "T" || sx === filtre.sexe) && filtre.cats.has(lettre(cat))
         && (filtre.loisir === "1" || !lo));
       const pts = js.map((j) => j[0]).filter((p) => p).sort((a, b) => b - a);
       const moy = (n) => (pts.length ? Math.round(pts.slice(0, n).reduce((a, b) => a + b, 0) / Math.min(n, pts.length)) : null);
       Object.assign(s, { joueurs: js.length, loisir: js.filter((j) => j[3]).length,
         F: js.filter((j) => j[1] === "F").length, M: js.filter((j) => j[1] === "M").length,
-        cats: Object.fromEntries(D.categories.map((k) => [k, js.filter((j) => j[2] === k).length])),
+        cats: Object.fromEntries(D.categories.map((k) => [k, js.filter((j) => lettre(j[2]) === k).length])),
         meilleur: pts[0] ?? null, top4: moy(4), top10: moy(10), mille: pts.filter((p) => p >= 1000).length });
     }
     S.set(c.numero, s);
@@ -383,12 +392,73 @@ function vuePoules() {
     <p class="note">${esc(p.division)}${p.nom ? " · " + esc(p.nom) : ""} · points mensuels des listes de licenciés · « — » : club hors du 77 ou sans liste.</p></section>`;
 }
 
+/* ---------- Catégories précises de la FFTT : « M1 » = minimes 1, « V45 » = vétérans 45 ---------- */
+const lettre = (cat) => (cat || "").charAt(0).toUpperCase();
+const libelleCat = (cat) => { const l = lettre(cat), reste = (cat || "").slice(1); return CATS[l] ? `${CATS[l]}${reste ? " " + reste : ""}` : cat || "—"; };
+const ordreCat = (a, b) => D.categories.indexOf(lettre(a)) - D.categories.indexOf(lettre(b))
+  || (parseInt(a.slice(1), 10) || 0) - (parseInt(b.slice(1), 10) || 0) || a.localeCompare(b);
+
+/* ---------- Vue « Joueurs » : tous les joueurs du département, triables et filtrables ---------- */
+// Licences compétition seulement (les licences loisir n'ont pas de points) ; une ligne par joueur
+const JOUEURS = CLUBS.flatMap((c) => (c.joueurs || []).filter((j) => !j[3]).map((j) => (
+  { points: j[0], sexe: j[1], cat: j[2], nom: j[4] || "", club: c.numero, clubNom: c.nom, vaires: c.vaires })));
+const sansAccent = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+for (const j of JOUEURS) j.cle = sansAccent(j.nom);
+const CATS_PRECISES = [...new Set(JOUEURS.map((j) => j.cat).filter(Boolean))].sort(ordreCat);
+let vj = { sexe: "T", cat: "", club: "", q: "", tri: { cle: "points", sens: -1 }, n: 200 };
+function vueJoueurs() {
+  const q = sansAccent(vj.q.trim());
+  const garde = JOUEURS.filter((j) => (vj.sexe === "T" || j.sexe === vj.sexe)
+    && (!vj.cat || (vj.cat.endsWith("*") ? lettre(j.cat) === vj.cat[0] : j.cat === vj.cat))
+    && (!vj.club || j.club === vj.club) && (!q || j.cle.includes(q)));
+  // Rang : par points dans la sélection (ex aequo : même rang), quel que soit le tri affiché
+  const parPoints = garde.slice().sort((a, b) => (b.points || 0) - (a.points || 0));
+  const rang = new Map();
+  parPoints.forEach((j, i) => rang.set(j, i && (parPoints[i - 1].points || 0) === (j.points || 0) ? rang.get(parPoints[i - 1]) : i + 1));
+  const cle = vj.tri.cle, sens = vj.tri.sens;
+  const lignes = cle === "points" && sens < 0 ? parPoints : garde.slice().sort((a, b) =>
+    (cle === "nom" ? a.nom.localeCompare(b.nom, "fr") : cle === "club" ? a.clubNom.localeCompare(b.clubNom, "fr")
+      : cle === "cat" ? ordreCat(a.cat || "Z", b.cat || "Z") : (a.points || 0) - (b.points || 0)) * sens || (b.points || 0) - (a.points || 0));
+  const groupes = D.categories.filter((l) => CATS_PRECISES.some((c) => lettre(c) === l));
+  const optionsCat = `<option value="">Toutes les catégories</option>` + groupes.map((l) => {
+    const fines = CATS_PRECISES.filter((c) => lettre(c) === l);
+    return `<optgroup label="${esc(CATS[l])}"><option value="${l}*"${vj.cat === l + "*" ? " selected" : ""}>${esc(CATS[l])} (toutes)</option>`
+      + (fines.length > 1 || fines[0] !== l ? fines.map((c) => `<option value="${esc(c)}"${vj.cat === c ? " selected" : ""}>${esc(libelleCat(c))}</option>`).join("") : "")
+      + "</optgroup>"; }).join("");
+  const optionsClub = `<option value="">Tous les clubs</option>` + CLUBS.slice().sort((a, b) => a.nom.localeCompare(b.nom, "fr"))
+    .filter((c) => c.joueurs).map((c) => `<option value="${esc(c.numero)}"${vj.club === c.numero ? " selected" : ""}>${esc(c.nom)}</option>`).join("");
+  const th = (k, titre, cls = "") => `<th class="${cls}" aria-sort="${cle === k ? (sens > 0 ? "ascending" : "descending") : "none"}"><button type="button" data-tri-j="${k}">${titre}</button></th>`;
+  const vaires = parPoints.filter((j) => j.vaires);
+  const affiche = lignes.slice(0, vj.n);
+  return `<section class="carte"><h2>Les joueurs du 77</h2>
+    <p class="intro">Tous les licenciés compétition des clubs du département, classés par points mensuels (le classement officiel du mois).
+      Les joueurs de Vaires sont en jaune.</p>
+    <div class="filtres">
+      <span class="bascule" id="sexe-j"><button type="button" data-v="T" aria-pressed="${vj.sexe === "T"}">Femmes et hommes</button><button type="button" data-v="F" aria-pressed="${vj.sexe === "F"}">Femmes</button><button type="button" data-v="M" aria-pressed="${vj.sexe === "M"}">Hommes</button></span>
+      <label>Catégorie <select id="cat-j">${optionsCat}</select></label>
+      <label>Club <select id="club-j">${optionsClub}</select></label>
+      <input type="search" id="recherche-j" placeholder="Chercher un joueur" value="${esc(vj.q)}" aria-label="Chercher un joueur">
+    </div>
+    <p class="position">${fr(garde.length)} joueur${garde.length > 1 ? "s" : ""}${vaires.length && !vj.club ? ` · Vaires : ${vaires.length}, le mieux classé ${rang.get(vaires[0])}<sup>${rang.get(vaires[0]) === 1 ? "er" : "e"}</sup>` : ""}</p>
+    <div class="defil"><table id="table-joueurs"><tr><th class="n">#</th>${th("nom", "Joueur")}${th("club", "Club", "col-club")}${th("cat", "Cat.")}<th>Sexe</th>${th("points", "Points", "n")}</tr>
+      ${affiche.map((j) => `<tr class="${j.vaires ? "vaires" : ""}"><td class="n rang">${rang.get(j)}</td>
+        <td class="joueur">${esc(j.nom)}<span class="club-sous doux">${esc(j.clubNom)}</span></td>
+        <td class="col-club"><button type="button" class="nom" data-club="${esc(j.club)}">${esc(j.clubNom)}</button></td>
+        <td title="${esc(libelleCat(j.cat))}">${esc(j.cat || "—")}</td><td>${j.sexe === "F" ? "F" : "H"}</td><td class="n">${fr(j.points)}</td></tr>`).join("")}</table></div>
+    ${lignes.length > vj.n ? `<button type="button" class="bouton plus-lignes" id="plus-j">Afficher ${Math.min(200, lignes.length - vj.n)} de plus (${fr(lignes.length - vj.n)} restants)</button>` : ""}
+    <p class="note">Points mensuels des listes de licenciés de pingpocket.fr (lues par le PC) : ce ne sont pas les points virtuels, qui demanderaient
+      une requête par joueur à la FFTT. Catégories de la FFTT : P poussins, B1 et B2 benjamins, M1 et M2 minimes, C1 et C2 cadets,
+      J1 à J3 juniors, S seniors, V40… vétérans. Sans les licences loisir. ${CLUBS.filter((c) => !c.joueurs).length ? `${CLUBS.filter((c) => !c.joueurs).length} club(s) sans liste pour l'instant.` : ""}</p>
+  </section>`;
+}
+
 /* ---------- Fiche d'un club ---------- */
 function ficheClub(num) {
   const c = PAR_NUM.get(num), s = S.get(num);
   if (!c) return;
   const tuile = (n, v) => `<div class="tuile"><span class="n">${esc(n)}</span><b>${v}</b></div>`;
   const cats = s.cats ? D.categories.map((k) => `<span class="niv" title="${esc(CATS[k])}">${k} ${s.cats[k]}</span>`).join("") : "";
+  const meilleurs = (c.joueurs || []).filter((j) => !j[3]).sort((a, b) => (b[0] || 0) - (a[0] || 0)).slice(0, 10);
   document.getElementById("fiche-corps").innerHTML = `<h2 id="fiche-titre">${esc(c.nom)}</h2>
     <p class="intro">N° ${esc(c.numero)}${c.date_liste ? ` · liste des licenciés du ${c.date_liste.slice(8, 10)}/${c.date_liste.slice(5, 7)}` : " · liste des licenciés pas encore lue"}</p>
     <div class="tuiles">${tuile("Joueurs comptés", s.connu ? fr(s.joueurs) : "—")}${tuile("Femmes / hommes", s.connu ? `${s.F} / ${s.M}` : "—")}
@@ -396,28 +466,42 @@ function ficheClub(num) {
     ${cats ? `<p>${cats}</p>` : ""}
     <h3>Équipes</h3>${c.equipes.length ? `<table><tr><th>Équipe</th><th>Division</th><th class="n">Force estimée</th></tr>${c.equipes.map((e) =>
       `<tr><td>${esc(e.nom)}${e.feminin ? ' <span class="doux">féminine</span>' : ""}</td><td>${esc(e.division)}</td><td class="n">${fr(e.force)}</td></tr>`).join("")}</table>` : '<p class="vide">Aucune.</p>'}
-    <h3>Meilleurs joueurs</h3>${c.meilleurs.length ? `<table><tr><th>Joueur</th><th>Cat.</th><th class="n">Points</th></tr>${c.meilleurs.map((j) =>
-      `<tr><td>${esc(j.nom)} ${esc(j.prenom)}${j.sexe === "F" ? ' <span class="doux">F</span>' : ""}</td><td>${esc(j.cat)}</td><td class="n">${fr(j.points)}</td></tr>`).join("")}</table>` : '<p class="vide">Liste des licenciés pas encore lue.</p>'}`;
+    <h3>Meilleurs joueurs</h3>${meilleurs.length ? `<table><tr><th>Joueur</th><th>Cat.</th><th class="n">Points</th></tr>${meilleurs.map((j) =>
+      `<tr><td>${esc(j[4])}${j[1] === "F" ? ' <span class="doux">F</span>' : ""}</td><td>${esc(j[2] || "—")}</td><td class="n">${fr(j[0])}</td></tr>`).join("")}</table>
+      <p class="note"><a href="#joueurs" data-voir-club="${esc(c.numero)}">Tous les joueurs du club</a></p>` : '<p class="vide">Liste des licenciés pas encore lue.</p>'}`;
   const d = document.getElementById("fiche");
   if (d.showModal) d.showModal(); else d.setAttribute("open", "");
 }
 document.querySelector("#fiche .fermer").addEventListener("click", () => document.getElementById("fiche").close());
+document.getElementById("fiche").addEventListener("click", (ev) => {
+  const a = ev.target.closest("[data-voir-club]");
+  if (!a) return;
+  vj = { ...vj, club: a.dataset.voirClub, cat: "", q: "", n: 200 };
+  document.getElementById("fiche").close();
+  if (location.hash === "#joueurs") afficher();
+});
 
 /* ---------- Affichage et évènements ---------- */
-const VUES = { clubs: vueClubs, classements: vueClassements, comparer: vueComparer, poules: vuePoules };
+const VUES = { clubs: vueClubs, classements: vueClassements, comparer: vueComparer, poules: vuePoules, joueurs: vueJoueurs };
 let vue = "clubs";
 function afficher() {
   const h = location.hash.slice(1);
   vue = VUES[h] ? h : (VUES[lire("77-vue")] ? lire("77-vue") : "clubs");
   ecrire("77-vue", vue);
   document.querySelectorAll(".onglets a").forEach((a) => a.setAttribute("aria-current", a.dataset.vue === vue ? "page" : "false"));
-  document.getElementById("filtres-joueurs").hidden = vue === "poules";
+  document.getElementById("filtres-joueurs").hidden = vue === "poules" || vue === "joueurs";
   document.getElementById("vue").innerHTML = VUES[vue]();
   const r = document.getElementById("recherche");
   if (r) r.addEventListener("input", () => { recherche = r.value; const pos = r.selectionStart; afficher(); const n = document.getElementById("recherche"); n.focus(); n.setSelectionRange(pos, pos); });
+  const rj = document.getElementById("recherche-j");
+  if (rj) rj.addEventListener("input", () => { vj.q = rj.value; vj.n = 200; const pos = rj.selectionStart; afficher(); const n = document.getElementById("recherche-j"); n.focus(); n.setSelectionRange(pos, pos); });
 }
 document.getElementById("vue").addEventListener("click", (ev) => {
   if (ev.target.closest("[data-tout-compter]")) { filtre = PAR_DEFAUT(); changer(); return; }
+  const tj = ev.target.closest("[data-tri-j]");
+  if (tj) { const k = tj.dataset.triJ; vj.tri = { cle: k, sens: vj.tri.cle === k ? -vj.tri.sens : k === "points" ? -1 : 1 }; afficher(); return; }
+  const sj = ev.target.closest("#sexe-j button"); if (sj) { vj.sexe = sj.dataset.v; vj.n = 200; afficher(); return; }
+  if (ev.target.id === "plus-j") { vj.n += 200; afficher(); return; }
   const t = ev.target.closest("[data-tri]");
   if (t) { const cle = t.dataset.tri; tri = { cle, sens: tri.cle === cle ? -tri.sens : cle === "nom" ? 1 : -1 }; ecrire("77-tri", JSON.stringify(tri)); afficher(); return; }
   const c = ev.target.closest("[data-club]"); if (c) { ficheClub(c.dataset.club); return; }
@@ -438,6 +522,8 @@ document.getElementById("vue").addEventListener("change", (ev) => {
   else if (t.id === "ajout" && t.value) { if (choisis.length < MAX) choisis.push(t.value); sauverChoix(); afficher(); }
   else if (t.id === "poule-comparer" && t.value) { prendrePoule(t.value); afficher(); }
   else if (t.id === "poule") { pouleChoisie = t.value; ecrire("77-poule", t.value); afficher(); }
+  else if (t.id === "cat-j") { vj.cat = t.value; vj.n = 200; afficher(); }
+  else if (t.id === "club-j") { vj.club = t.value; vj.n = 200; afficher(); }
 });
 window.addEventListener("hashchange", afficher);
 calculer(); colonnes(); boutonsFiltres(); afficher();

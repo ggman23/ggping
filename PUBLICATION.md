@@ -495,6 +495,14 @@ chaque mise à jour « Tout » (ou « Clubs du 77 » dans la liste des pages), e
   (équipe 1 : les 4 meilleurs, équipe 2 : les 4 suivants...), parmi les joueuses pour une équipe
   féminine ; ni les brûlages ni les absences ne comptent : c'est un ordre de grandeur. En phase 2, les
   nouvelles poules apparaissent dès que la FFTT les publie (une mise à jour suffit).
+- **Joueurs** : tous les licenciés compétition des clubs du 77, classés par **points mensuels** (le
+  classement officiel du mois, pas les points virtuels : il faudrait une requête FFTT par joueur, des
+  milliers). Filtres : femmes et hommes, femmes ou hommes ; catégorie, toute la catégorie (« Minimes »)
+  ou précise (« Minimes 1 », « Minimes 2 », « Vétérans 45 »...) ; club ; recherche par nom (accents
+  ignorés). Toucher un en-tête trie (nom, club, catégorie, points) ; les ex aequo ont la même place ;
+  200 lignes, puis « afficher plus ». Joueurs de Vaires en jaune, avec leur nombre et la place du
+  mieux classé. La fiche d'un club mène à ses joueurs (« Tous les joueurs du club »). Les noms ne sont que
+  dans la page chiffrée (mot de passe du club).
 
 D'où viennent les données :
 

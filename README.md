@@ -51,7 +51,9 @@ ses joueurs (nombre, femmes et hommes, catégories de poussins à vétérans, ni
 moyenne des 4 et des 10 meilleurs, joueurs à 1000 points ou plus) et ses équipes par division (nationale,
 régionale, D1, D2...). Tableau triable et filtrable (sexe, catégories, licences loisir, division,
 recherche), ligne de Vaires en jaune ; classements avec la place de Vaires ; comparaison de 8 clubs au
-plus ; « favoris d'une poule » (équipes classées par force estimée). Voir PUBLICATION.md.
+plus ; « favoris d'une poule » (équipes classées par force estimée) ; **Joueurs** : tous les joueurs du
+77 classés par points mensuels, filtrables par sexe, catégorie précise (« Minimes » ou « Minimes 1 »,
+« Minimes 2 »...), club et nom. Voir PUBLICATION.md.
 
 **Application Android** (APK) : le site (mise à jour), l'espace club, /lundi/ et /indivs/ (GitHub, sinon
 Cloudflare, sinon Netlify) et les deux statistiques en onglets, avec téléchargements et partage d'images : voir

@@ -95,10 +95,13 @@ def test_clubs_du_77_equipes_divisions_et_licencies():
         [("CVTT VAIRES 1", "R3", False), ("CVTT VAIRES 2", "D1", False), ("CVTT VAIRES 1", "D1", True)]
     assert v["niveaux"] == {"R3": 1, "D1": 1, "F:D1": 1} and v["meilleur_niveau"] == "R3"
     # Licenciés de la saison : sans le non renouvelé ; loisir compté à part ; catégories P, B, M... V
+    # Catégorie précise (« V45 », « B1 ») et nom de chaque joueur, pour le classement des joueurs du département
     cle = lambda x: (x[0] or 0, x[1], x[2], x[3])
-    assert sorted(v["joueurs"], key=cle) == sorted([[1450, "M", "S", 0], [1210, "M", "S", 0], [980, "F", "S", 0], [None, "M", "S", 1],
-                                                    [1105, "M", "V", 0], [830, "F", "V", 0], [540, "M", "B", 0]], key=cle)
-    assert [m["points"] for m in v["meilleurs"]][:3] == [1450, 1210, 1105] and v["date_liste"]
+    assert sorted(v["joueurs"], key=cle) == sorted([
+        [1450, "M", "S", 0, "MARTIN Paul"], [1210, "M", "S", 0, "DUPOND Luc"], [980, "F", "S", 0, "PETIT Anne"],
+        [None, "M", "S", 1, "LOISIR Jean"], [1105, "M", "V45", 0, "BERNARD Eric"], [830, "F", "V45", 0, "SIMON Lucie"],
+        [540, "M", "B1", 0, "PETIT Tom"]], key=cle)
+    assert v["date_liste"]
     # Force estimée : équipe 1 = les 4 meilleurs (1450, 1210, 1105, 980), équipe 2 = les suivants ; féminine : les joueuses
     forces = {(e["nom"], e["feminin"]): (e["force"], e["nb"]) for e in v["equipes"]}
     assert forces[("CVTT VAIRES 1", False)] == (round((1450 + 1210 + 1105 + 980) / 4), 4)

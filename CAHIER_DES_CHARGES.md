@@ -440,8 +440,8 @@ pour voir les favoris d'une poule.
   féminine peut porter le même nom qu'une masculine : clé nom + féminine) ; poules et leurs équipes ;
   listes pingpocket (catégories, état ; licences de la saison), au plus MAX_LISTES = 60 pages nouvelles
   par lancement sur le PC, 30 jours de cache, en ligne seulement le cache envoyé par le PC. Joueurs
-  envoyés à la page sans nom ([points, sexe, catégorie, loisir]) ; les 10 meilleurs avec leur nom pour
-  la fiche du club. Force estimée d'une équipe : moyenne des 4 joueurs de son rang.
+  envoyés à la page : [points, sexe, catégorie précise, loisir, « NOM Prénom »] (voir l'onglet Joueurs
+  ci-dessous). Force estimée d'une équipe : moyenne des 4 joueurs de son rang.
 - Page departement_77.html (gabarit_77.html), publiée « Clubs du 77 » et à /77/ (PAGES_A_PART, mot de
   passe du club) : onglets Clubs, Classements, Comparer, Poules ; filtres de joueurs communs ; tri par
   colonne, recherche, filtre de division ; classement par mesure avec la place de Vaires ;
@@ -459,6 +459,16 @@ pour voir les favoris d'une poule.
 - Mise à jour : option --departement, dans « Tout » (workflow, PC option 5 et option 9) et seule
   (« Clubs du 77 »). Navigation : « 77 » en haut et dans le menu de /indivs/, /tournois/, /cal/ ;
   « Aller à » de /club/.
+- Onglet Joueurs (15/11) : demande : les noms et classements de chaque joueur du 77, un classement
+  triable et filtrable par catégorie et par sexe (par exemple tous les minimes du 77), aussi précis que
+  possible (minimes 1, minimes 2...). Les listes pingpocket donnent nom, sexe, catégorie précise (« M1 »,
+  « V45 ») et points mensuels : departement.joueurs_du_club garde la catégorie précise, la page reçoit le nom.
+  Points virtuels non repris : une requête FFTT par joueur (des milliers), à envisager seulement pour un
+  sous-ensemble si on le demande. Onglet « Joueurs » : licences compétition, place par points (ex aequo
+  à la même place), filtres sexe / catégorie (groupe « M* » ou précise « M1 ») / club / nom sans
+  accents, tri par colonne, 200 lignes puis « afficher plus », Vaires en jaune avec sa meilleure place ;
+  lien depuis la fiche d'un club. Les statistiques par club utilisent la lettre de la catégorie.
+  Rien à relancer sur le PC : les pages déjà envoyées contiennent ces informations.
 
 ## Calendrier de la saison : /cal/ (13/11/2026)
 

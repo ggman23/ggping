@@ -129,14 +129,16 @@ def listes_licencies(client, clubs, dossier_import=None):
 
 
 def joueurs_du_club(listes):
-    """Licenciés de la saison (licences renouvelées) : [{nom, prenom, sexe, cat, points, loisir}]."""
+    """Licenciés de la saison (licences renouvelées) : [{nom, prenom, sexe, cat, points, loisir}] ; cat :
+    la catégorie précise de la FFTT (« M1 » pour minime 1, « V45 » pour vétéran 45, « S » pour senior)."""
     sortie = []
     for j in pingpocket.licencies(listes, {t: t for t in TRIS}):
         if not j.get("renouvele"):
             continue
-        cat = (j.get("categorie") or "")[:1].upper()
+        cat = (j.get("categorie") or "").replace(" ", "")
         sortie.append({"nom": j.get("nom"), "prenom": j.get("prenom"), "sexe": j.get("sexe") or "M",
-                       "cat": cat if cat in CATEGORIES else "", "points": j.get("points_mensuels"), "loisir": bool(j.get("loisir"))})
+                       "cat": cat if cat[:1].upper() in CATEGORIES else "", "points": j.get("points_mensuels"),
+                       "loisir": bool(j.get("loisir"))})
     return sortie
 
 
@@ -173,17 +175,15 @@ def recuperer_departement(client, numero_club="08770250", aujourdhui=None, dossi
             sans_liste.append(club["nom"])
         forces = force_des_equipes(eqs, joueurs or [])
         niveaux = Counter(("F:" if e["feminin"] else "") + (e["niveau"] or "?") for e in eqs)
-        competition = sorted((j for j in joueurs or [] if not j["loisir"]), key=lambda j: -(j["points"] or 0))
         sortie.append({
             "numero": num, "nom": club["nom"], "vaires": num == numero_club,
             "date_liste": datetime.fromtimestamp(listes[num][1]).isoformat(timespec="minutes") if num in listes else None,
             "equipes": [{**e, **forces[(e["nom"], e["feminin"])]} for e in eqs], "niveaux": dict(niveaux),
             "meilleur_niveau": min((e["niveau"] for e in eqs if not e["feminin"]), key=rang_niveau, default=None),
-            # Joueurs : [points, sexe, catégorie, loisir] (sans nom) pour les statistiques de la page ; les noms
-            # des 10 meilleurs seulement, pour la fiche du club
-            "joueurs": [[j["points"], j["sexe"], j["cat"], 1 if j["loisir"] else 0] for j in joueurs] if joueurs is not None else None,
-            "meilleurs": [{"nom": j["nom"], "prenom": j["prenom"], "sexe": j["sexe"], "cat": j["cat"], "points": j["points"]}
-                          for j in competition[:10]],
+            # Joueurs : [points mensuels, sexe, catégorie précise, loisir, « NOM Prénom »], pour les statistiques,
+            # la fiche du club et le classement des joueurs du département (page chiffrée : mot de passe du club)
+            "joueurs": [[j["points"], j["sexe"], j["cat"], 1 if j["loisir"] else 0, f"{j['nom'] or ''} {j['prenom'] or ''}".strip()]
+                        for j in joueurs] if joueurs is not None else None,
         })
     poules_sortie = []
     for p in poules.values():
