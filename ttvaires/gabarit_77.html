@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>CVTT Vaires · clubs du 77</title>
+<style>
+:root { color-scheme: light dark; --fond: #eef1f5; --surface: #fff; --surface2: #f3f5f8; --texte: #1c2330; --doux: #5b6576;
+  --bord: #dde1e7; --grille: #e8ebef; --accent: #1f5fbf; --accent-fond: #e8f0fc; --bandeau: #173b60; --bandeau-texte: #fff;
+  /* Vaires : ligne surlignée en jaune, barre jaune ; les autres clubs en gris (mise en avant d'un seul club) */
+  --vaires-fond: #fff1b8; --vaires-bord: #e0a800; --barre-vaires: #eda100; --barre: #b9c0cb; --barre-choisie: #2a78d6;
+  --att: #8a5a00; --att-fond: #fff4d6; }
+@media (prefers-color-scheme: dark) { :root { --fond: #12151b; --surface: #1b2029; --surface2: #232a35; --texte: #e6e9ef;
+  --doux: #9aa4b5; --bord: #313a48; --grille: #2a313d; --accent: #7fb0ff; --accent-fond: #1d2a40; --bandeau: #0f2236;
+  --vaires-fond: #3d3214; --vaires-bord: #c98500; --barre-vaires: #c98500; --barre: #4a5361; --barre-choisie: #3987e5;
+  --att: #f3cd6b; --att-fond: #3a3014; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--accent); }
+button, select, input { font: inherit; }
+.barre { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px; padding-top: max(10px, env(safe-area-inset-top));
+  background: var(--bandeau); color: var(--bandeau-texte); }
+.barre .titres { flex: 1 1 auto; min-width: 0; }
+.barre b { display: block; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barre .titres span { display: block; font-size: 12.5px; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.espaces { display: flex; gap: 8px; flex: none; }
+.espaces a { border: 1px solid rgba(255, 255, 255, .35); background: rgba(255, 255, 255, .12); color: #fff;
+  border-radius: 9px; padding: 7px 11px; font-size: 14.5px; font-weight: 600; text-decoration: none; white-space: nowrap; text-align: center; }
+/* Onglets */
+.onglets { position: sticky; top: 0; z-index: 5; display: flex; gap: 4px; padding: 8px 14px 0; background: var(--fond); border-bottom: 1px solid var(--bord);
+  overflow-x: auto; }
+.onglets a { padding: 8px 14px; border-radius: 9px 9px 0 0; color: var(--doux); text-decoration: none; font-weight: 600; white-space: nowrap; border: 1px solid transparent; border-bottom: 0; }
+.onglets a[aria-current="page"] { background: var(--surface); color: var(--texte); border-color: var(--bord); margin-bottom: -1px; }
+main { max-width: 1240px; margin: 0 auto; padding: 14px 14px 40px; }
+.carte { background: var(--surface); border: 1px solid var(--bord); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+.carte h2 { font-size: 17px; margin: 0 0 4px; }
+.intro { color: var(--doux); font-size: 13.5px; margin: 0 0 10px; }
+/* Filtres : une ligne au-dessus du contenu qu'ils filtrent */
+.filtres { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin: 0 0 12px; }
+.filtres label { font-size: 13px; color: var(--doux); display: inline-flex; align-items: center; gap: 6px; }
+select, input[type=search] { font-size: 14.5px; padding: 7px 10px; border: 1px solid var(--bord); border-radius: 8px; background: var(--surface); color: var(--texte); max-width: 100%; }
+input[type=search] { width: 190px; }
+.bascule { display: inline-flex; border: 1px solid var(--bord); border-radius: 8px; overflow: hidden; }
+.bascule button { border: 0; padding: 6px 11px; background: var(--surface); color: var(--texte); cursor: pointer; font-size: 13.5px; }
+.bascule button + button { border-left: 1px solid var(--bord); }
+.bascule button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.cats { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.cats button { border: 1px solid var(--bord); background: var(--surface); color: var(--texte); border-radius: 99px; padding: 3px 10px; font-size: 13px; cursor: pointer; }
+.cats button[aria-pressed="true"] { background: var(--accent-fond); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+/* Tableau des clubs */
+.defil { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--bord); text-align: left; white-space: nowrap; }
+th { color: var(--doux); font-weight: 600; font-size: 12.5px; position: sticky; top: 0; background: var(--surface); }
+th button { all: unset; cursor: pointer; }
+th button:focus-visible { outline: 2px solid var(--accent); }
+th[aria-sort="descending"] button::after { content: " ▼"; font-size: 10px; }
+th[aria-sort="ascending"] button::after { content: " ▲"; font-size: 10px; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+td.club { position: sticky; left: 0; background: var(--surface); }
+tr.vaires td { background: var(--vaires-fond); font-weight: 650; }
+tr.vaires td:first-child { box-shadow: inset 4px 0 0 var(--vaires-bord); }
+td .doux, .doux { color: var(--doux); font-size: 12.5px; font-weight: 400; }
+button.nom { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; font-weight: 600; text-align: left; }
+button.nom:hover { text-decoration: underline; }
+.rang { color: var(--doux); font-variant-numeric: tabular-nums; }
+.niv { display: inline-block; font-size: 12px; font-weight: 600; padding: 0 6px; border-radius: 5px; background: var(--surface2); margin-right: 3px; }
+.vide { color: var(--doux); padding: 10px 2px; }
+.note { font-size: 12.5px; color: var(--doux); margin: 10px 2px 0; }
+/* Classement : barres horizontales, une par club */
+.barres { display: grid; grid-template-columns: 34px minmax(110px, 230px) minmax(0, 1fr); gap: 4px 10px; align-items: center; font-size: 13.5px; }
+.barres .r { color: var(--doux); text-align: right; font-variant-numeric: tabular-nums; }
+.barres .nomb { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barres .ligne { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.barres .b { height: 16px; border-radius: 0 4px 4px 0; background: var(--barre); min-width: 2px; }
+.barres .v { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.barres .vaires { background: var(--vaires-fond); font-weight: 650; border-radius: 4px; }
+.barres .vaires .b { background: var(--barre-vaires); }
+.barres .choisi .b { background: var(--barre-choisie); }
+.position { font-size: 15px; margin: 0 0 10px; }
+.position b { background: var(--vaires-fond); padding: 1px 6px; border-radius: 5px; }
+/* Comparaison */
+.choix { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.puce { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--bord); border-radius: 99px; padding: 3px 4px 3px 11px; font-size: 13.5px; background: var(--surface2); }
+.puce.vaires { background: var(--vaires-fond); border-color: var(--vaires-bord); }
+.puce button { border: 0; background: none; color: var(--doux); cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: 99px; }
+.bouton { border: 1px solid var(--bord); background: var(--surface); color: var(--texte); border-radius: 9px; padding: 6px 12px; cursor: pointer; font-size: 14px; }
+.bouton:hover { border-color: var(--accent); }
+.mesures { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; margin-top: 12px; }
+.mesure { border: 1px solid var(--bord); border-radius: 10px; padding: 10px 12px; }
+.mesure h3 { font-size: 14px; margin: 0 0 8px; }
+.mesure .barres { grid-template-columns: minmax(80px, 140px) minmax(0, 1fr); }
+/* Fiche d'un club */
+dialog { border: 1px solid var(--bord); border-radius: 14px; padding: 0; width: min(760px, calc(100vw - 24px)); max-height: calc(100vh - 40px);
+  background: var(--surface); color: var(--texte); }
+dialog::backdrop { background: rgba(10, 15, 25, .45); }
+.fiche { padding: 16px 18px 18px; }
+.fiche h2 { margin: 0 32px 2px 0; font-size: 20px; }
+.fermer { position: absolute; right: 10px; top: 10px; border: 0; background: var(--surface2); border-radius: 99px; width: 34px; height: 34px; cursor: pointer; font-size: 18px; color: var(--texte); }
+.tuiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin: 10px 0; }
+.tuile { background: var(--surface2); border-radius: 10px; padding: 8px 10px; }
+.tuile .n { font-size: 12.5px; color: var(--doux); }
+.tuile b { display: block; font-size: 20px; }
+.repart { display: flex; height: 10px; border-radius: 99px; overflow: hidden; margin: 6px 0 4px; gap: 2px; background: var(--surface); }
+.repart i { display: block; height: 100%; }
+@media (max-width: 700px) {
+  main { padding: 10px 8px 32px; }
+  .carte { padding: 12px 10px; }
+  th, td { padding: 6px 6px; }
+  .barres { grid-template-columns: 28px minmax(90px, 40%) minmax(0, 1fr); gap: 4px 6px; }
+  input[type=search] { width: 100%; }
+  .filtres label { flex: 1 1 100%; flex-wrap: wrap; min-width: 0; }
+  .filtres label select { flex: 1 1 auto; min-width: 0; width: 100%; }
+}
+@media (max-width: 520px) {
+  .espaces { order: 3; flex-basis: 100%; }
+  .espaces a { flex: 1 1 0; padding: 7px 6px; }
+}
+</style>
+</head>
+<body>
+<header class="barre">
+  <div class="titres"><b>CVTT Vaires · clubs du 77</b><span id="sous-titre"></span></div>
+  <nav class="espaces" aria-label="Autres espaces">
+    <a id="vers-club" href="../club/">Club</a>
+    <a id="vers-indivs" href="../indivs/">Indivs</a>
+    <a id="vers-tournois" href="../tournois/">Tournois</a>
+    <a id="vers-cal" href="../cal/">Calendrier</a>
+  </nav>
+</header>
+<nav class="onglets" aria-label="Vues">
+  <a href="#clubs" data-vue="clubs">Clubs</a>
+  <a href="#classements" data-vue="classements">Classements</a>
+  <a href="#comparer" data-vue="comparer">Comparer</a>
+  <a href="#poules" data-vue="poules">Poules</a>
+</nav>
+<main>
+  <section class="carte" id="filtres-joueurs" aria-label="Joueurs comptés">
+    <div class="filtres">
+      <label>Joueurs
+        <span class="bascule" id="sexe"><button type="button" data-v="T">Tous</button><button type="button" data-v="F">Femmes</button><button type="button" data-v="M">Hommes</button></span></label>
+      <label>Catégories <span class="cats" id="cats"></span></label>
+      <label>Licences loisir
+        <span class="bascule" id="loisir"><button type="button" data-v="0">Sans</button><button type="button" data-v="1">Avec</button></span></label>
+    </div>
+    <p class="intro" id="resume-filtres" style="margin:0"></p>
+  </section>
+  <div id="vue"></div>
+</main>
+<dialog id="fiche" aria-labelledby="fiche-titre"><button class="fermer" type="button" aria-label="Fermer">×</button><div class="fiche" id="fiche-corps"></div></dialog>
+<script>
+"use strict";
+const D = __DONNEES_JSON__;
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const lire = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const ecrire = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* navigation privée */ } };
+const fr = (x) => (x == null ? "—" : Number(x).toLocaleString("fr-FR", { maximumFractionDigits: 0 }));
+const CATS = { P: "Poussins", B: "Benjamins", M: "Minimes", C: "Cadets", J: "Juniors", S: "Seniors", V: "Vétérans" };
+const ORDRE = D.ordre_niveaux || [];
+const rangNiveau = (n) => (ORDRE.includes(n) ? ORDRE.indexOf(n) : ORDRE.length);
+const CLUBS = D.clubs || [];
+const PAR_NUM = new Map(CLUBS.map((c) => [c.numero, c]));
+const nomCourt = (c) => c.nom;
+
+/* Espaces voisins (même mot de passe), y compris sur le site GitHub (…/ggping/77/) */
+function racine() { const p = location.pathname, i = p.search(/\/(gg\/)?77(\/|\.html)/); return i >= 0 ? p.slice(0, i) : p.replace(/\/[^/]*$/, ""); }
+const BASE = location.protocol === "file:" ? ".." : racine();
+for (const [id, chemin] of [["vers-club", "club"], ["vers-indivs", "indivs"], ["vers-tournois", "tournois"], ["vers-cal", "cal"]])
+  document.getElementById(id).href = `${BASE}/${chemin}/`;
+document.getElementById("sous-titre").textContent = `Saison ${D.saison} · phase ${D.phase} · ${CLUBS.length} clubs engagés en championnat`
+  + (D.genere_le ? ` · données du ${D.genere_le.slice(8, 10)}/${D.genere_le.slice(5, 7)}` : "");
+
+/* ---------- Joueurs comptés : sexe, catégories, licences loisir (retenus sur l'appareil) ---------- */
+let filtre = { sexe: "T", cats: new Set(D.categories), loisir: "0" };
+try { const f = JSON.parse(lire("77-filtre") || "null"); if (f) filtre = { sexe: f.sexe || "T", cats: new Set(f.cats || D.categories), loisir: f.loisir || "0" }; } catch (e) { /* réglage illisible */ }
+const sauverFiltre = () => ecrire("77-filtre", JSON.stringify({ sexe: filtre.sexe, cats: [...filtre.cats], loisir: filtre.loisir }));
+function boutonsFiltres() {
+  for (const id of ["sexe", "loisir"]) document.querySelectorAll(`#${id} button`).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === filtre[id])));
+  const tous = D.categories.every((c) => filtre.cats.has(c)), jeunes = ["P", "B", "M", "C", "J"], adultes = ["S", "V"];
+  const egal = (l) => filtre.cats.size === l.length && l.every((c) => filtre.cats.has(c));
+  document.getElementById("cats").innerHTML =
+    `<button type="button" data-p="tous" aria-pressed="${tous}">Toutes</button><button type="button" data-p="jeunes" aria-pressed="${egal(jeunes)}">Jeunes</button>`
+    + `<button type="button" data-p="adultes" aria-pressed="${egal(adultes)}">Adultes</button>`
+    + D.categories.map((c) => `<button type="button" data-c="${c}" aria-pressed="${!tous && filtre.cats.has(c)}" title="${esc(CATS[c])}">${c}</button>`).join("");
+  const morceaux = [filtre.sexe === "F" ? "joueuses" : filtre.sexe === "M" ? "joueurs (hommes)" : "joueuses et joueurs",
+    tous ? "toutes catégories" : [...filtre.cats].map((c) => CATS[c].toLowerCase()).join(", "),
+    filtre.loisir === "1" ? "licences loisir comprises" : "licences compétition seulement"];
+  document.getElementById("resume-filtres").textContent = `Comptés : ${morceaux.join(" · ")} (licences de la saison).`;
+}
+document.getElementById("sexe").addEventListener("click", (ev) => { const b = ev.target.closest("button"); if (b) { filtre.sexe = b.dataset.v; changer(); } });
+document.getElementById("loisir").addEventListener("click", (ev) => { const b = ev.target.closest("button"); if (b) { filtre.loisir = b.dataset.v; changer(); } });
+document.getElementById("cats").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button"); if (!b) return;
+  if (b.dataset.p) filtre.cats = new Set(b.dataset.p === "jeunes" ? ["P", "B", "M", "C", "J"] : b.dataset.p === "adultes" ? ["S", "V"] : D.categories);
+  else {
+    const tous = D.categories.every((c) => filtre.cats.has(c));
+    if (tous) filtre.cats = new Set([b.dataset.c]);
+    else { filtre.cats.has(b.dataset.c) ? filtre.cats.delete(b.dataset.c) : filtre.cats.add(b.dataset.c); if (!filtre.cats.size) filtre.cats = new Set(D.categories); }
+  }
+  changer();
+});
+function changer() { sauverFiltre(); calculer(); boutonsFiltres(); afficher(); }
+
+/* ---------- Statistiques de chaque club, pour les joueurs comptés ---------- */
+let S = new Map();
+function calculer() {
+  S = new Map();
+  for (const c of CLUBS) {
+    const eqM = c.equipes.filter((e) => !e.feminin), eqF = c.equipes.filter((e) => e.feminin);
+    const s = { club: c, equipes: c.equipes.length, equipesM: eqM.length, equipesF: eqF.length,
+      niveau: c.meilleur_niveau, rangNiveau: rangNiveau(c.meilleur_niveau), connu: !!c.joueurs };
+    if (c.joueurs) {
+      const js = c.joueurs.filter(([p, sx, cat, lo]) => (filtre.sexe === "T" || sx === filtre.sexe) && filtre.cats.has(cat)
+        && (filtre.loisir === "1" || !lo));
+      const pts = js.map((j) => j[0]).filter((p) => p).sort((a, b) => b - a);
+      const moy = (n) => (pts.length ? Math.round(pts.slice(0, n).reduce((a, b) => a + b, 0) / Math.min(n, pts.length)) : null);
+      Object.assign(s, { joueurs: js.length, F: js.filter((j) => j[1] === "F").length, M: js.filter((j) => j[1] === "M").length,
+        cats: Object.fromEntries(D.categories.map((k) => [k, js.filter((j) => j[2] === k).length])),
+        meilleur: pts[0] ?? null, top4: moy(4), top10: moy(10), mille: pts.filter((p) => p >= 1000).length });
+    }
+    S.set(c.numero, s);
+  }
+}
+
+/* ---------- Vue « Clubs » : tableau triable et filtrable ---------- */
+const COLONNES = [
+  { cle: "joueurs", titre: "Joueurs", n: true }, { cle: "F", titre: "Femmes", n: true }, { cle: "M", titre: "Hommes", n: true },
+  ...D.categories.map((k) => ({ cle: "cat:" + k, titre: k, n: true, aide: CATS[k] })),
+  { cle: "meilleur", titre: "Meilleur", n: true, aide: "Points du meilleur joueur" },
+  { cle: "top4", titre: "Top 4", n: true, aide: "Moyenne des points des 4 meilleurs" },
+  { cle: "top10", titre: "Top 10", n: true, aide: "Moyenne des points des 10 meilleurs" },
+  { cle: "mille", titre: "≥ 1000", n: true, aide: "Joueurs à 1000 points ou plus" },
+  { cle: "equipes", titre: "Équipes", n: true, aide: "Équipes engagées (masculines et féminines)" },
+  { cle: "niveau", titre: "Divisions", n: false, aide: "Équipes par division (F : féminines) ; tri : la division de la meilleure équipe" },
+];
+const valeur = (s, cle) => (cle === "nom" ? s.club.nom : cle === "niveau" ? (s.niveau ? -s.rangNiveau : null)
+  : cle.startsWith("cat:") ? (s.cats ? s.cats[cle.slice(4)] : null) : s[cle]);
+let tri = { cle: "top4", sens: -1 }, recherche = "", niveauFiltre = "";
+try { const t = JSON.parse(lire("77-tri") || "null"); if (t && t.cle) tri = t; } catch (e) { /* réglage illisible */ }
+function trier(liste) {
+  return liste.slice().sort((a, b) => {
+    const va = valeur(a, tri.cle), vb = valeur(b, tri.cle);
+    if (va == null && vb == null) return a.club.nom.localeCompare(b.club.nom, "fr");
+    if (va == null) return 1; if (vb == null) return -1;
+    return (typeof va === "string" ? va.localeCompare(vb, "fr") : va - vb) * tri.sens || a.club.nom.localeCompare(b.club.nom, "fr");
+  });
+}
+const niveaux = (c) => Object.entries(c.niveaux).sort((a, b) => (a[0].startsWith("F:") - b[0].startsWith("F:")) || rangNiveau(a[0].replace("F:", "")) - rangNiveau(b[0].replace("F:", "")))
+  .map(([n, k]) => `<span class="niv" title="${k} équipe${k > 1 ? "s" : ""}${n.startsWith("F:") ? " féminine" + (k > 1 ? "s" : "") : ""} en ${esc(n.replace("F:", ""))}">${esc(n.replace("F:", "F "))}${k > 1 ? " ×" + k : ""}</span>`).join("");
+function vueClubs() {
+  const niveauxConnus = [...new Set(CLUBS.flatMap((c) => c.equipes.filter((e) => !e.feminin).map((e) => e.niveau)))].filter(Boolean).sort((a, b) => rangNiveau(a) - rangNiveau(b));
+  let liste = [...S.values()].filter((s) => (!recherche || s.club.nom.toLowerCase().includes(recherche.toLowerCase()))
+    && (!niveauFiltre || s.club.equipes.some((e) => !e.feminin && e.niveau === niveauFiltre)));
+  liste = trier(liste);
+  const entete = `<tr><th>#</th><th aria-sort="${tri.cle === "nom" ? (tri.sens > 0 ? "ascending" : "descending") : "none"}"><button type="button" data-tri="nom">Club</button></th>`
+    + COLONNES.map((c) => `<th class="${c.n ? "n" : ""}" aria-sort="${tri.cle === c.cle ? (tri.sens > 0 ? "ascending" : "descending") : "none"}"${c.aide ? ` title="${esc(c.aide)}"` : ""}><button type="button" data-tri="${c.cle}">${esc(c.titre)}</button></th>`).join("") + "</tr>";
+  const lignes = liste.map((s, i) => `<tr class="${s.club.vaires ? "vaires" : ""}"><td class="rang">${i + 1}</td>
+      <td class="club"><button type="button" class="nom" data-club="${esc(s.club.numero)}">${esc(s.club.nom)}</button></td>
+      ${COLONNES.map((c) => c.cle === "niveau" ? `<td>${niveaux(s.club) || "—"}</td>` : `<td class="n">${s.connu || c.cle === "equipes" ? fr(valeur(s, c.cle)) : "—"}</td>`).join("")}</tr>`).join("");
+  return `<section class="carte"><h2>Les clubs du 77</h2>
+    <p class="intro">Touche un en-tête pour trier, un club pour sa fiche. La ligne de Vaires est en jaune. Points : points mensuels des joueurs comptés.</p>
+    <div class="filtres">
+      <input type="search" id="recherche" placeholder="Chercher un club" value="${esc(recherche)}" aria-label="Chercher un club">
+      <label>Division <select id="niveau"><option value="">Toutes</option>${niveauxConnus.map((n) => `<option${n === niveauFiltre ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></label>
+    </div>
+    <div class="defil"><table id="table-clubs">${entete}${lignes}</table></div>
+    ${noteDonnees()}</section>`;
+}
+function noteDonnees() {
+  const sans = CLUBS.filter((c) => !c.joueurs).length;
+  return `<p class="note">Équipes : API de la FFTT (phase ${D.phase}). Joueurs : listes de licenciés de pingpocket.fr lues par le PC (licences de la saison).`
+    + (sans ? ` ${sans} club${sans > 1 ? "s" : ""} sans liste pour l'instant (« — ») : ${sans > 1 ? "elles arrivent" : "elle arrive"} aux prochains lancements sur le PC.` : "") + "</p>";
+}
+
+/* ---------- Vue « Classements » : un club par barre, Vaires en jaune ---------- */
+const MESURES = [
+  { cle: "joueurs", titre: "Nombre de joueurs" }, { cle: "top4", titre: "Niveau : moyenne des 4 meilleurs (points)" },
+  { cle: "top10", titre: "Niveau : moyenne des 10 meilleurs (points)" }, { cle: "meilleur", titre: "Meilleur joueur (points)" },
+  { cle: "mille", titre: "Joueurs à 1000 points ou plus" }, { cle: "F", titre: "Nombre de joueuses" },
+  { cle: "equipes", titre: "Équipes engagées" }, { cle: "niveau", titre: "Division de la meilleure équipe" },
+];
+let mesure = MESURES.some((m) => m.cle === lire("77-mesure")) ? lire("77-mesure") : "top4";
+function barres(liste, cle, avecRang = true, choisis = new Set()) {
+  const vals = liste.map((s) => valeur(s, cle)).filter((v) => v != null);
+  const max = cle === "niveau" ? 0 : Math.max(1, ...vals), min = cle === "niveau" ? Math.min(...vals) : 0;
+  return `<div class="barres">${liste.map((s, i) => {
+    const v = valeur(s, cle);
+    const largeur = v == null ? 0 : cle === "niveau" ? 100 * (v - min + 1) / (1 - min) : 100 * v / max;
+    const texte = cle === "niveau" ? (s.niveau || "—") : fr(v);
+    const cls = s.club.vaires ? "vaires" : choisis.has(s.club.numero) ? "choisi" : "";
+    return `${avecRang ? `<span class="r ${cls}">${i + 1}</span>` : ""}<span class="nomb ${cls}" title="${esc(s.club.nom)}">${esc(s.club.nom)}</span>
+      <span class="ligne ${cls}"><span class="b" style="width:${Math.max(0, Math.min(100, largeur)) * 0.82}%"></span><span class="v">${texte}</span></span>`;
+  }).join("")}</div>`;
+}
+function vueClassements() {
+  const tries = [...S.values()].filter((s) => valeur(s, mesure) != null)
+    .sort((a, b) => valeur(b, mesure) - valeur(a, mesure) || a.club.nom.localeCompare(b.club.nom, "fr"));
+  const i = tries.findIndex((s) => s.club.vaires), m = MESURES.find((x) => x.cle === mesure);
+  return `<section class="carte"><h2>Où se situe Vaires</h2>
+    <div class="filtres"><label>Classer selon <select id="mesure">${MESURES.map((x) => `<option value="${x.cle}"${x.cle === mesure ? " selected" : ""}>${esc(x.titre)}</option>`).join("")}</select></label></div>
+    <p class="position">${i >= 0 ? `Vaires : <b>${i + 1}<sup>${i ? "e" : "er"}</sup> sur ${tries.length}</b> · ${esc(m.titre.toLowerCase())} : ${mesure === "niveau" ? esc(tries[i].niveau) : fr(valeur(tries[i], mesure))}` : "Vaires n'a pas encore de données pour ce classement."}</p>
+    ${barres(tries, mesure)}${noteDonnees()}</section>`;
+}
+
+/* ---------- Vue « Comparer » : jusqu'à 8 clubs, ou ceux d'une poule ---------- */
+const MAX = 8;
+let choisis = [];
+try { choisis = JSON.parse(lire("77-choisis") || "[]").filter((n) => PAR_NUM.has(n)).slice(0, MAX); } catch (e) { choisis = []; }
+if (!choisis.length) { const v = CLUBS.find((c) => c.vaires); if (v) choisis = [v.numero]; }
+const sauverChoix = () => ecrire("77-choisis", JSON.stringify(choisis));
+function vueComparer() {
+  const options = CLUBS.slice().sort((a, b) => a.nom.localeCompare(b.nom, "fr")).map((c) => `<option value="${esc(c.numero)}"${choisis.includes(c.numero) ? " disabled" : ""}>${esc(c.nom)}</option>`).join("");
+  const poules = (D.poules || []).filter((p) => p.equipes.some((e) => e.dans_le_77));
+  const sel = choisis.map((n) => S.get(n)).filter(Boolean);
+  const mesures = ["top4", "top10", "joueurs", "meilleur", "mille", "F", "equipes"];
+  const titres = { top4: "Moyenne des 4 meilleurs", top10: "Moyenne des 10 meilleurs", joueurs: "Joueurs", meilleur: "Meilleur joueur",
+    mille: "Joueurs à 1000 points ou plus", F: "Joueuses", equipes: "Équipes engagées" };
+  return `<section class="carte"><h2>Comparer des clubs</h2>
+    <p class="intro">Jusqu'à ${MAX} clubs : choisis-les un par un, ou prends d'un coup ceux d'une poule.</p>
+    <div class="filtres">
+      <select id="ajout" aria-label="Ajouter un club"${choisis.length >= MAX ? " disabled" : ""}><option value="">${choisis.length >= MAX ? `${MAX} clubs au plus` : "Ajouter un club…"}</option>${options}</select>
+      <select id="poule-comparer" aria-label="Prendre les clubs d'une poule"><option value="">Prendre les clubs d'une poule…</option>${optionsPoules(poules)}</select>
+      ${choisis.length ? '<button type="button" class="bouton" id="vider">Tout retirer</button>' : ""}
+    </div>
+    <div class="choix">${sel.map((s) => `<span class="puce${s.club.vaires ? " vaires" : ""}">${esc(s.club.nom)}<button type="button" data-retirer="${esc(s.club.numero)}" aria-label="Retirer ${esc(s.club.nom)}">×</button></span>`).join("")}</div>
+    ${sel.length ? `<div class="defil"><table><tr><th>Club</th>${COLONNES.filter((c) => c.cle !== "niveau").map((c) => `<th class="n"${c.aide ? ` title="${esc(c.aide)}"` : ""}>${esc(c.titre)}</th>`).join("")}<th>Équipes par division</th></tr>
+      ${sel.map((s) => `<tr class="${s.club.vaires ? "vaires" : ""}"><td class="club"><button type="button" class="nom" data-club="${esc(s.club.numero)}">${esc(s.club.nom)}</button></td>
+        ${COLONNES.filter((c) => c.cle !== "niveau").map((c) => `<td class="n">${s.connu || c.cle === "equipes" ? fr(valeur(s, c.cle)) : "—"}</td>`).join("")}<td>${niveaux(s.club) || "—"}</td></tr>`).join("")}</table></div>
+      ${sel.length > 1 ? `<div class="mesures">${mesures.map((k) => { const l = sel.filter((s) => valeur(s, k) != null).sort((a, b) => valeur(b, k) - valeur(a, k));
+        return `<div class="mesure"><h3>${esc(titres[k])}</h3>${l.length ? barres(l, k, false) : '<p class="vide">Pas de données.</p>'}</div>`; }).join("")}</div>` : ""}`
+      : '<p class="vide">Aucun club choisi.</p>'}
+    ${noteDonnees()}</section>`;
+}
+function optionsPoules(poules, choisie) {
+  const groupes = new Map();
+  for (const p of poules) {
+    const g = `${p.feminin ? "Féminines · " : ""}${p.division}`;
+    if (!groupes.has(g)) groupes.set(g, []);
+    groupes.get(g).push(p);
+  }
+  return [...groupes].map(([g, ps]) => `<optgroup label="${esc(g)}">${ps.map((p) => `<option value="${esc(p.id)}"${String(p.id) === String(choisie) ? " selected" : ""}>${esc(p.nom || "Poule " + p.id)}${p.equipes.some((e) => e.vaires) ? " · avec Vaires" : ""}</option>`).join("")}</optgroup>`).join("");
+}
+
+/* ---------- Vue « Poules » : les équipes d'une poule par force estimée (les favoris d'abord) ---------- */
+let pouleChoisie = lire("77-poule");
+function vuePoules() {
+  const poules = (D.poules || []).filter((p) => p.equipes.some((e) => e.dans_le_77));
+  if (!poules.length) return '<section class="carte"><p class="vide">Aucune poule pour l\'instant.</p></section>';
+  let p = poules.find((x) => String(x.id) === String(pouleChoisie)) || poules.find((x) => x.equipes.some((e) => e.vaires)) || poules[0];
+  const forces = p.equipes.map((e) => e.force).filter((x) => x != null), max = Math.max(1, ...forces);
+  const lignes = p.equipes.map((e, i) => { const club = PAR_NUM.get(e.club);
+    return `<tr class="${e.vaires ? "vaires" : ""}"><td class="rang">${e.force != null ? i + 1 : ""}</td>
+      <td class="club">${club ? `<button type="button" class="nom" data-club="${esc(e.club)}">${esc(e.nom)}</button>` : `${esc(e.nom)} <span class="doux">hors 77</span>`}</td>
+      <td class="n">${e.force != null ? fr(e.force) : "—"}${e.force != null && e.nb < D.joueurs_par_equipe ? ` <span class="doux">(${e.nb} j.)</span>` : ""}</td>
+      <td style="width:45%">${e.force != null ? `<div class="barres" style="grid-template-columns:1fr"><span class="ligne ${e.vaires ? "vaires" : ""}"><span class="b" style="width:${82 * e.force / max}%"></span></span></div>` : ""}</td></tr>`; }).join("");
+  return `<section class="carte"><h2>Les favoris d'une poule</h2>
+    <p class="intro">Équipes classées par force estimée : la moyenne des points des ${D.joueurs_par_equipe} joueurs que son numéro donne à l'équipe dans son club
+      (équipe 1 : les ${D.joueurs_par_equipe} meilleurs, équipe 2 : les suivants…, parmi les joueuses pour une équipe féminine). Ni les brûlages ni les absences
+      ne sont comptés : c'est un ordre de grandeur. En phase 2, les nouvelles poules apparaissent dès que la FFTT les publie.</p>
+    <div class="filtres"><select id="poule" aria-label="Poule">${optionsPoules(poules, p.id)}</select>
+      <button type="button" class="bouton" id="comparer-poule" data-poule="${esc(p.id)}">Comparer ces clubs</button></div>
+    <div class="defil"><table><tr><th>#</th><th>Équipe</th><th class="n">Force estimée</th><th></th></tr>${lignes}</table></div>
+    <p class="note">${esc(p.division)}${p.nom ? " · " + esc(p.nom) : ""} · points mensuels des listes de licenciés · « — » : club hors du 77 ou sans liste.</p></section>`;
+}
+
+/* ---------- Fiche d'un club ---------- */
+function ficheClub(num) {
+  const c = PAR_NUM.get(num), s = S.get(num);
+  if (!c) return;
+  const tuile = (n, v) => `<div class="tuile"><span class="n">${esc(n)}</span><b>${v}</b></div>`;
+  const cats = s.cats ? D.categories.map((k) => `<span class="niv" title="${esc(CATS[k])}">${k} ${s.cats[k]}</span>`).join("") : "";
+  document.getElementById("fiche-corps").innerHTML = `<h2 id="fiche-titre">${esc(c.nom)}</h2>
+    <p class="intro">N° ${esc(c.numero)}${c.date_liste ? ` · liste des licenciés du ${c.date_liste.slice(8, 10)}/${c.date_liste.slice(5, 7)}` : " · liste des licenciés pas encore lue"}</p>
+    <div class="tuiles">${tuile("Joueurs comptés", s.connu ? fr(s.joueurs) : "—")}${tuile("Femmes / hommes", s.connu ? `${s.F} / ${s.M}` : "—")}
+      ${tuile("Moyenne des 4 meilleurs", fr(s.top4))}${tuile("Moyenne des 10 meilleurs", fr(s.top10))}${tuile("Équipes", s.equipes)}</div>
+    ${cats ? `<p>${cats}</p>` : ""}
+    <h3>Équipes</h3>${c.equipes.length ? `<table><tr><th>Équipe</th><th>Division</th><th class="n">Force estimée</th></tr>${c.equipes.map((e) =>
+      `<tr><td>${esc(e.nom)}${e.feminin ? ' <span class="doux">féminine</span>' : ""}</td><td>${esc(e.division)}</td><td class="n">${fr(e.force)}</td></tr>`).join("")}</table>` : '<p class="vide">Aucune.</p>'}
+    <h3>Meilleurs joueurs</h3>${c.meilleurs.length ? `<table><tr><th>Joueur</th><th>Cat.</th><th class="n">Points</th></tr>${c.meilleurs.map((j) =>
+      `<tr><td>${esc(j.nom)} ${esc(j.prenom)}${j.sexe === "F" ? ' <span class="doux">F</span>' : ""}</td><td>${esc(j.cat)}</td><td class="n">${fr(j.points)}</td></tr>`).join("")}</table>` : '<p class="vide">Liste des licenciés pas encore lue.</p>'}`;
+  const d = document.getElementById("fiche");
+  if (d.showModal) d.showModal(); else d.setAttribute("open", "");
+}
+document.querySelector("#fiche .fermer").addEventListener("click", () => document.getElementById("fiche").close());
+
+/* ---------- Affichage et évènements ---------- */
+const VUES = { clubs: vueClubs, classements: vueClassements, comparer: vueComparer, poules: vuePoules };
+let vue = "clubs";
+function afficher() {
+  const h = location.hash.slice(1);
+  vue = VUES[h] ? h : (VUES[lire("77-vue")] ? lire("77-vue") : "clubs");
+  ecrire("77-vue", vue);
+  document.querySelectorAll(".onglets a").forEach((a) => a.setAttribute("aria-current", a.dataset.vue === vue ? "page" : "false"));
+  document.getElementById("filtres-joueurs").hidden = vue === "poules";
+  document.getElementById("vue").innerHTML = VUES[vue]();
+  const r = document.getElementById("recherche");
+  if (r) r.addEventListener("input", () => { recherche = r.value; const pos = r.selectionStart; afficher(); const n = document.getElementById("recherche"); n.focus(); n.setSelectionRange(pos, pos); });
+}
+document.getElementById("vue").addEventListener("click", (ev) => {
+  const t = ev.target.closest("[data-tri]");
+  if (t) { const cle = t.dataset.tri; tri = { cle, sens: tri.cle === cle ? -tri.sens : cle === "nom" ? 1 : -1 }; ecrire("77-tri", JSON.stringify(tri)); afficher(); return; }
+  const c = ev.target.closest("[data-club]"); if (c) { ficheClub(c.dataset.club); return; }
+  const r = ev.target.closest("[data-retirer]"); if (r) { choisis = choisis.filter((n) => n !== r.dataset.retirer); sauverChoix(); afficher(); return; }
+  if (ev.target.id === "vider") { choisis = []; sauverChoix(); afficher(); return; }
+  if (ev.target.id === "comparer-poule") { prendrePoule(ev.target.dataset.poule); location.hash = "#comparer"; }
+});
+function prendrePoule(id) {
+  const p = (D.poules || []).find((x) => String(x.id) === String(id));
+  if (!p) return;
+  choisis = [...new Set(p.equipes.filter((e) => PAR_NUM.has(e.club)).map((e) => e.club))].slice(0, MAX);
+  sauverChoix();
+}
+document.getElementById("vue").addEventListener("change", (ev) => {
+  const t = ev.target;
+  if (t.id === "niveau") { niveauFiltre = t.value; afficher(); }
+  else if (t.id === "mesure") { mesure = t.value; ecrire("77-mesure", mesure); afficher(); }
+  else if (t.id === "ajout" && t.value) { if (choisis.length < MAX) choisis.push(t.value); sauverChoix(); afficher(); }
+  else if (t.id === "poule-comparer" && t.value) { prendrePoule(t.value); afficher(); }
+  else if (t.id === "poule") { pouleChoisie = t.value; ecrire("77-poule", t.value); afficher(); }
+});
+window.addEventListener("hashchange", afficher);
+calculer(); boutonsFiltres(); afficher();
+</script>
+</body>
+</html>

@@ -72,6 +72,7 @@ h1 small { font-size: 15px; color: var(--doux); font-weight: 500; }
       <a id="vers-club" href="../club/" title="Espace club : pages, images, archives">Club</a>
       <a id="vers-indivs" href="../indivs/" title="Individuels : poules du critérium et adversaires">Indivs</a>
       <a id="vers-cal" href="../cal/" title="Calendrier de la saison">Calendrier</a>
+      <a id="vers-77" href="../77/" title="Clubs du 77 : joueurs, niveau et équipes de chaque club">77</a>
     </nav>
   </header>
   <div class="corps">
@@ -117,6 +118,7 @@ const CLUB = `${BASE}/club/`, INDIVS = `${BASE}/indivs/`, CAL = `${BASE}/cal/`;
 document.getElementById("vers-club").href = CLUB;
 document.getElementById("vers-indivs").href = INDIVS;
 document.getElementById("vers-cal").href = CAL;
+document.getElementById("vers-77").href = `${BASE}/77/`;
 
 /* Format du bloc : « compact » (jusqu'à 360 px) sur téléphone, « standard » (jusqu'à 640 px) sinon ;
    hauteur donnée par PingRadar pour le nombre de tournois (10, ou 5 pour un week-end). */
@@ -140,7 +142,8 @@ function menu(actif) {
        <h2>Autres espaces</h2>
        <a class="entree" href="${CLUB}"><b>Espace club</b><span>Pages, images à partager, archives</span></a>
        <a class="entree" href="${INDIVS}"><b>Individuels</b><span>Poules du critérium et adversaires</span></a>
-       <a class="entree" href="${CAL}"><b>Calendrier</b><span>Dates de la saison : championnats, critérium</span></a>`;
+       <a class="entree" href="${CAL}"><b>Calendrier</b><span>Dates de la saison : championnats, critérium</span></a>
+       <a class="entree" href="${BASE}/77/"><b>Clubs du 77</b><span>Joueurs, niveau et équipes de chaque club</span></a>`;
 }
 
 function vue(b) {

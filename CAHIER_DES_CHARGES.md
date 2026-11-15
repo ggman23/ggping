@@ -427,6 +427,30 @@ niveau, plus fort).
   janvier et juillet, repère sur le meilleur, bulle par phase, tableau), colonne et tri « Meilleur »
   dans le tableau du club. Une archive ne montre rien d'après sa date.
 
+## Clubs du 77 : /77/ (15/11/2026)
+
+Demande : une page 77 avec les statistiques des clubs du département pour voir le niveau de Vaires :
+les joueurs de chaque club, leur nombre, par sexe et par catégorie (poussins à vétérans), triable et
+filtrable, la ligne de Vaires surlignée en jaune dans les classements ; le nombre d'équipes engagées et
+leurs divisions (nationale, régionale, D1, D2...) ; comparer jusqu'à 8 clubs ; s'en servir en phase 2
+pour voir les favoris d'une poule.
+
+- Données (departement.py, testé) : clubs du comité (rencontres J1 et J2 des divisions D77, numéros
+  0877…) ; équipes de chaque club par fftt.rencontres_club (division, niveau court, poule ; une équipe
+  féminine peut porter le même nom qu'une masculine : clé nom + féminine) ; poules et leurs équipes ;
+  listes pingpocket (catégories, état ; licences de la saison), au plus MAX_LISTES = 60 pages nouvelles
+  par lancement sur le PC, 30 jours de cache, en ligne seulement le cache envoyé par le PC. Joueurs
+  envoyés à la page sans nom ([points, sexe, catégorie, loisir]) ; les 10 meilleurs avec leur nom pour
+  la fiche du club. Force estimée d'une équipe : moyenne des 4 joueurs de son rang.
+- Page departement_77.html (gabarit_77.html), publiée « Clubs du 77 » et à /77/ (PAGES_A_PART, mot de
+  passe du club) : onglets Clubs, Classements, Comparer, Poules ; filtres de joueurs communs ; tri par
+  colonne, recherche, filtre de division ; classement par mesure avec la place de Vaires ;
+  comparaison de 8 clubs (ou ceux d'une poule) ; favoris d'une poule ; fiche de club. Vaires : ligne
+  et barre en jaune, les autres en gris.
+- Mise à jour : option --departement, dans « Tout » (workflow, PC option 5 et option 9) et seule
+  (« Clubs du 77 »). Navigation : « 77 » en haut et dans le menu de /indivs/, /tournois/, /cal/ ;
+  « Aller à » de /club/.
+
 ## Calendrier de la saison : /cal/ (13/11/2026)
 
 Demande : une page /cal/ sur le même principe que /club/ (et /tournois/), qui permet d'aller dans toutes

@@ -12,6 +12,7 @@ GABARIT_CLASSEMENTS = Path(__file__).with_name("gabarit_classements.html")
 GABARIT_INDIVS = Path(__file__).with_name("gabarit_indivs.html")
 GABARIT_PROGRESSION = Path(__file__).with_name("gabarit_progression.html")
 GABARIT_FICHES = Path(__file__).with_name("gabarit_fiches.html")
+GABARIT_77 = Path(__file__).with_name("gabarit_77.html")
 
 
 def generer_html(donnees, chemin, gabarit=GABARIT):

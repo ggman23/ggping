@@ -132,6 +132,7 @@ button { font: inherit; cursor: pointer; }
       <a id="vers-club" href="../club/" title="Espace club : pages, images, archives">Club</a>
       <a id="vers-indivs" href="../indivs/" title="Individuels : poules du critérium et adversaires">Indivs</a>
       <a id="vers-tournois" href="../tournois/" title="Tournois à venir autour de Vaires">Tournois</a>
+      <a id="vers-77" href="../77/" title="Clubs du 77 : joueurs, niveau et équipes de chaque club">77</a>
     </nav>
   </header>
   <div class="corps">
@@ -175,6 +176,7 @@ const CLUB = `${BASE}/club/`, INDIVS = `${BASE}/indivs/`, TOURNOIS = `${BASE}/to
 document.getElementById("vers-club").href = CLUB;
 document.getElementById("vers-indivs").href = INDIVS;
 document.getElementById("vers-tournois").href = TOURNOIS;
+document.getElementById("vers-77").href = `${BASE}/77/`;
 document.getElementById("sous-titre").textContent = `Saison ${D.saison} · dates du comité de Seine-et-Marne`;
 
 /* Évènements de chaque jour (un évènement sur plusieurs jours apparaît chaque jour) */
@@ -272,6 +274,7 @@ function menu() {
     <a class="entree" href="${CLUB}"><b>Espace club</b><span>Pages, images à partager, archives</span></a>
     <a class="entree" href="${INDIVS}"><b>Individuels</b><span>Poules du critérium et adversaires</span></a>
     <a class="entree" href="${TOURNOIS}"><b>Tournois</b><span>Tournois à venir autour de Vaires</span></a>
+    <a class="entree" href="${BASE}/77/"><b>Clubs du 77</b><span>Joueurs, niveau et équipes de chaque club</span></a>
     <h2>Calendrier du comité</h2>
     <a class="entree" href="${esc(D.agenda_cd77)}" target="_blank" rel="noopener"><b>Agenda partagé du CD77</b><span>S'y abonner dans Google Agenda · nouvel onglet</span></a>
     <a class="entree" href="${esc(D.pdf)}" target="_blank" rel="noopener"><b>Calendrier en PDF</b><span>Celui d'où viennent ces dates · nouvel onglet</span></a>

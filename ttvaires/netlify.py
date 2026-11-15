@@ -66,7 +66,7 @@ ORDRE_CLUB = ["vaires.html", "resultats_vaires.html", "resultats_vaires.xlsx", "
               "fiches_vaires.html"]
 # Pages du site publiées à leur propre adresse avec le mot de passe du club (et non parmi les documents
 # de /club/, qui y renvoie par « Autres espaces ») : page du site -> (adresse, titre)
-PAGES_A_PART = {"indivs.html": ("indivs", "Individuels")}
+PAGES_A_PART = {"indivs.html": ("indivs", "Individuels"), "77.html": ("77", "Clubs du 77")}
 # Pages fixes (aucune donnée de la mise à jour), publiées de même à leur adresse : adresse -> (titre, page),
 # la page étant un fichier HTML ou une fonction qui la fabrique.
 # /tournois/ : blocs de PingRadar intégrés (cadres qui se mettent à jour tout seuls, voir le gabarit).

@@ -46,6 +46,13 @@ directs entre /club/, /indivs/, /tournois/ et /cal/ : voir PUBLICATION.md.
 jeunes et critérium fédéral (et, si on les coche, les autres épreuves du comité et les dates limites
 d'inscription), d'après le calendrier du comité de Seine-et-Marne (`ttvaires/calendrier.py`).
 
+**Clubs du 77** (/77/, mot de passe du club) : chaque club de Seine-et-Marne engagé en championnat, avec
+ses joueurs (nombre, femmes et hommes, catégories de poussins à vétérans, niveau : meilleur joueur,
+moyenne des 4 et des 10 meilleurs, joueurs à 1000 points ou plus) et ses équipes par division (nationale,
+régionale, D1, D2...). Tableau triable et filtrable (sexe, catégories, licences loisir, division,
+recherche), ligne de Vaires en jaune ; classements avec la place de Vaires ; comparaison de 8 clubs au
+plus ; « favoris d'une poule » (équipes classées par force estimée). Voir PUBLICATION.md.
+
 **Application Android** (APK) : le site (mise à jour), l'espace club, /lundi/ et /indivs/ (GitHub, sinon
 Cloudflare, sinon Netlify) et les deux statistiques en onglets, avec téléchargements et partage d'images : voir
 `android/LISEZ-MOI.md`. Lien direct :

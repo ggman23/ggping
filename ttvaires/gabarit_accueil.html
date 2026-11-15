@@ -90,6 +90,7 @@ a { color: var(--accent); }
       <option value="virtuel">Classement virtuel</option>
       <option value="adversaires">Adversaires</option>
       <option value="indivs">Individuels (critérium)</option>
+      <option value="departement">Clubs du 77</option>
     </select>
     <div class="ligne"><button id="lancer">Mettre à jour GitHub et Cloudflare</button>
       <button id="lancer-netlify" class="second">Mettre à jour les 3 sites (avec Netlify)</button></div>
@@ -136,7 +137,7 @@ a { color: var(--accent); }
 const E = JSON.parse(document.getElementById("etat").textContent);
 const CLE = "cvtt-vaires-cle", JETON = "cvtt-vaires-jeton-github";
 const ORDRE = ["adversaires.html", "resultats.html", "resultats_vaires.xlsx.chiffre", "rencontres.html", "classements.html", "effectif.html", "classement_virtuel.html",
-  "progression.html", "fiches.html", "indivs.html"];
+  "progression.html", "fiches.html", "indivs.html", "77.html"];
 const rang = (nom) => (ORDRE.includes(nom) ? ORDRE.indexOf(nom) : ORDRE.length);  // une page inconnue : à la fin
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const lire = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };

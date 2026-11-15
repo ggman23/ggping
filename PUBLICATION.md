@@ -467,6 +467,44 @@ https://ggping.netlify.app/cal/), avec le **mot de passe du club** (ouverture di
   haut de /indivs/ et de /tournois/ (et dans leur menu) et dans « Aller à » de /club/. Pas de lien
   vers /lundi/.
 
+## Clubs du 77 : /77/ (niveau de Vaires parmi les clubs du département)
+
+**/77/** sur chaque site, avec le **mot de passe du club** (ouverture directe depuis /club/). Faite à
+chaque mise à jour « Tout » (ou « Clubs du 77 » dans la liste des pages), et par l'option 5 du PC.
+
+- **Clubs** : un tableau, une ligne par club (Vaires en jaune) : joueurs, femmes, hommes, poussins
+  (P), benjamins (B), minimes (M), cadets (C), juniors (J), seniors (S), vétérans (V), meilleur
+  joueur, moyenne des 4 et des 10 meilleurs (points mensuels), joueurs à 1000 points ou plus,
+  équipes, et les équipes par division (« D2 ×3 », « F D1 » pour une équipe féminine). Toucher un
+  en-tête trie, toucher un club ouvre sa fiche (équipes avec leur force estimée, 10 meilleurs joueurs).
+  Recherche par nom et filtre par division.
+- **Joueurs comptés** (en haut, pour toutes les vues ; retenu sur l'appareil) : tous, femmes ou hommes ;
+  toutes les catégories, les jeunes (P à J), les adultes (S et V) ou des catégories au choix ; licences
+  loisir comprises ou non. Seules les licences de la saison comptent.
+- **Classements** : tous les clubs selon une mesure (joueurs, moyenne des 4 ou des 10 meilleurs,
+  meilleur joueur, joueurs à 1000 points, joueuses, équipes, division de la meilleure équipe), Vaires
+  en jaune, et sa place (« 34e sur 54 »).
+- **Comparer** : 8 clubs au plus, choisis un à un ou d'un coup ceux d'une poule ; le tableau et une
+  barre par mesure.
+- **Poules** : les équipes d'une poule classées par **force estimée**, les favoris d'abord. Force
+  estimée : la moyenne des points des 4 joueurs que le numéro de l'équipe lui donne dans son club
+  (équipe 1 : les 4 meilleurs, équipe 2 : les 4 suivants...), parmi les joueuses pour une équipe
+  féminine ; ni les brûlages ni les absences ne comptent : c'est un ordre de grandeur. En phase 2, les
+  nouvelles poules apparaissent dès que la FFTT les publie (une mise à jour suffit).
+
+D'où viennent les données :
+
+- **Équipes et divisions** : API de la FFTT. Les clubs sont ceux des rencontres des journées 1 et 2
+  des divisions du comité (un club sans aucune équipe départementale n'apparaît donc pas) ; puis, pour
+  chacun, ses rencontres de la phase (toutes ses équipes, toutes divisions). Environ 70 requêtes,
+  gardées une semaine.
+- **Joueurs** : listes de licenciés de pingpocket.fr (par catégorie et par état de licence), comme
+  pour les clubs adverses : **lues par le PC** (option 5 de `lancer.bat`), une page toutes les 4
+  secondes, au plus 60 nouvelles par lancement (environ 4 minutes), gardées un mois, puis envoyées au
+  site avec les autres données du PC. La première fois, il faut deux ou trois lancements du PC pour
+  avoir tous les clubs ; d'ici là, leurs colonnes affichent « — ». Une liste enregistrée depuis un
+  navigateur dans le dossier `import\` sert aussi.
+
 ## Sécurité
 
 - Chaque page, l'Excel et les données envoyées par le PC sont chiffrés en AES-256-GCM avec une clé

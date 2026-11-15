@@ -12,12 +12,12 @@ from .demo import donnees_demo
 from .adversaires import donnees_classements, recuperer
 from .effectif import recuperer_effectif
 from .progression import donnees_progression
-from .rendu import (GABARIT_CLASSEMENTS, GABARIT_EFFECTIF, GABARIT_FICHES, GABARIT_INDIVS, GABARIT_PROGRESSION, GABARIT_RENCONTRES,
+from .rendu import (GABARIT_77, GABARIT_CLASSEMENTS, GABARIT_EFFECTIF, GABARIT_FICHES, GABARIT_INDIVS, GABARIT_PROGRESSION, GABARIT_RENCONTRES,
                     GABARIT_RESULTATS, GABARIT_VIRTUEL, generer_html)
 from .reseau import Client, ErreurReseau
 from .resultats import donnees_page, ecrire_xlsx, recuperer_parties, recuperer_rencontres
 from .virtuel import recuperer_virtuel
-from . import compte_fftt, fiches, indivs, synchro, verifications
+from . import compte_fftt, departement, fiches, indivs, synchro, verifications
 
 RACINE = Path(__file__).resolve().parent.parent
 SORTIE = RACINE / "sortie"
@@ -152,6 +152,14 @@ def page_indivs(client, club, ctx):
     return [html, *faire_images("images_indivs", donnees, dossier=ctx.images)], indivs.resume(donnees)
 
 
+def page_departement(client, club, ctx):
+    """Clubs du 77 : licenciés (sexe, catégories, points) et équipes engagées de chaque club du département."""
+    print("=== Clubs du 77 : joueurs et équipes de chaque club du département", flush=True)
+    donnees = departement.recuperer_departement(client, club, ctx.aujourdhui, dossier_import=IMPORT)
+    html = generer_html(donnees, ctx.sortie / "departement_77.html", GABARIT_77)
+    return [html], departement.resume(donnees)
+
+
 def generer_pages(client, club, ctx, a_faire):
     """Fait les pages demandées [(nom, fonction)] dans ctx.sortie. Renvoie (fichiers, bilans)."""
     ctx.sortie.mkdir(parents=True, exist_ok=True)
@@ -193,6 +201,8 @@ def main():
     parser.add_argument("--virtuel", action="store_true", help="classement virtuel du club, toutes compétitions")
     parser.add_argument("--indivs", action="store_true",
                         help="individuels : poules des joueurs de Vaires et forme de leurs adversaires (mot de passe du club)")
+    parser.add_argument("--departement", action="store_true",
+                        help="clubs du 77 : joueurs (sexe, catégories, points) et équipes engagées de chaque club")
     parser.add_argument("--demo", action="store_true", help="page des adversaires avec des données fictives")
     parser.add_argument("--hors-ligne", action="store_true",
                         help="n'utilise que les pages déjà téléchargées (refaire pages et images en 30 s, sans envoi au site)")
@@ -228,7 +238,10 @@ def main():
             a_faire.append(("classement virtuel", page_virtuel))
         if args.indivs:
             a_faire.append(("individuels", page_indivs))
-        if args.adversaires or not (args.resultats or args.rencontres or args.effectif or args.virtuel or args.indivs):
+        if args.departement:
+            a_faire.append(("clubs du 77", page_departement))
+        if args.adversaires or not (args.resultats or args.rencontres or args.effectif or args.virtuel or args.indivs
+                                    or args.departement):
             a_faire.append(("adversaires", lambda c, club, ctx: page_adversaires(c, club, ctx, args.tous_les_historiques)))
         ctx = Contexte()
         pages, bilans = generer_pages(client, args.club, ctx, a_faire)

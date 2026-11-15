@@ -53,7 +53,7 @@ echo    1. Adversaires : effectifs, brulages, calendrier
 echo    2. Resultats des joueurs de Vaires : page + Excel + feuilles de match
 echo    3. Effectif de Vaires : brulages par joueur et par equipe
 echo    4. Classement virtuel du club : toutes competitions
-echo    5. Tout : les quatre pages
+echo    5. Tout : les quatre pages et les clubs du 77
 echo    6. Page de demonstration, donnees fictives
 echo    7. Lien avec le telephone : reglage et envoi des donnees au site
 echo    8. Adversaires en lisant tous les meilleurs classements manquants - long, une fois
@@ -73,7 +73,7 @@ if errorlevel 2 goto resultats
 python -m ttvaires --adversaires
 goto fin
 :images
-python -m ttvaires --resultats --effectif --virtuel --adversaires --hors-ligne
+python -m ttvaires --resultats --effectif --virtuel --adversaires --departement --hors-ligne
 goto fin
 :historiques
 python -m ttvaires --adversaires --tous-les-historiques
@@ -85,7 +85,7 @@ goto fin
 python -m ttvaires --demo
 goto fin
 :tout
-python -m ttvaires --resultats --effectif --virtuel --adversaires
+python -m ttvaires --resultats --effectif --virtuel --adversaires --departement
 goto fin
 :virtuel
 python -m ttvaires --virtuel
