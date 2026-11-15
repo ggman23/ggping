@@ -5,7 +5,7 @@ import time
 from datetime import date, datetime
 
 from test_effectif import _liste
-from ttvaires import departement, fftt
+from ttvaires import departement, fftt, mensuel
 from ttvaires.reseau import ErreurReseau
 
 VAIRES, CHELLES, LAGNY, CRETEIL = "08770250", "08770001", "08770002", "08940001"
@@ -233,15 +233,17 @@ def test_points_virtuels_en_ligne_seulement_choix_des_jeunes():
     v = next(c for c in d["clubs"] if c["numero"] == VAIRES)
     gagne = points_partie(540, 700, True, 1) + points_partie(540, 500, False, 1)
     # Les jeunes : le benjamin (PETIT Tom, licence 8) ; sa ligne porte [virtuels, gagnés, victoires, défaites, date de
-    # lecture de ses parties, gains par période, parties contre d'autres départements (999 : hors du 77)]
+    # lecture de ses parties, gains par période, parties contre d'autres départements (999 : hors du 77), parties
+    # contre un adversaire à valeur du mois estimée (999 n'a pas de partie lue : ses gains sont inconnus)]
     lu = date.today().isoformat()
     assert [j for j in v["joueurs"] if len(j) == 6] == [[540, "M", "B1", 0, "PETIT Tom",
-                                                         [round(540 + gagne), round(gagne, 1), 1, 1, lu, [round(gagne, 1)], 2]]]
+                                                         [round(540 + gagne), round(gagne, 1), 1, 1, lu, [round(gagne, 1)], 2, 2]]]
     assert lues(client.ttls) == {"8": True, "999": True}  # son adversaire d'un autre département aussi
     assert d["virtuels"] == {"joueurs": 7, "a_relire": 1, "connus": 1, "lus": 1, "reportes": 0, "plus_ancienne": lu,
                              "plus_recente": lu, "perimetre": "jeunes", "hors_championnat": 0, "verifiees": 0, "details_lus": 0,
                              "details_restants": 0, "methode": "mensuel", "periodes": ["2026-10"], "exterieurs": 1,
-                             "exterieurs_connus": 0, "exterieurs_lus": 1, "exterieurs_restants": 0}  # 7 licences (Vaires 6, Chelles 1)
+                             "exterieurs_connus": 0, "exterieurs_lus": 1, "exterieurs_restants": 0,
+                             "seuils": [5, 20], "fiabilite": [0, 1, 0, 0]}  # 7 licences (Vaires 6, Chelles 1)
     assert "points virtuels de 1 joueurs sur 7 (relus : jeunes)" in departement.resume(d)
     assert "licence" not in json.dumps(d)  # pas de numéro de licence dans la page
     # Par défaut : seulement en ligne (pingpocket.fr lu dans les pages du PC) ; sur le PC, aucune partie demandée
@@ -381,3 +383,24 @@ def test_adversaires_d_autres_departements_dans_le_calcul_mensuel():
     x_octobre = 900 + points_partie(900, 1100, True, 1)
     assert tom[5][1] == round(points_partie(540, x_octobre, False, 1), 1) and tom[5][6] == 1
     assert (d["virtuels"]["exterieurs"], d["virtuels"]["exterieurs_connus"]) == (1, 1)
+
+
+def test_fiabilite_parties_contre_un_adversaire_a_valeur_estimee(tmp_path):
+    """x (extérieur, lu) n'a joué qu'un joueur non lu en septembre : sa valeur d'octobre est exacte ; il en
+    rejoue un en octobre : sa valeur de novembre est estimée. Tom : 2 parties contre x, 1 seule estimée."""
+    sept = _partie(1, "x", 900, 1100, True, jour="2026-09-12")
+    octo_x = _partie(2, "x", 900, 1000, False, jour="2026-10-10")
+    tom = []
+    for i, jour in ((3, "2026-10-03"), (4, "2026-11-07")):
+        p = _partie(i, "8", 540, 900, False, jour=jour)
+        p["awayPlayer"]["identifier"] = "x"
+        tom.append(p)
+    client = ClientParties(_listes(), {"8": tom, "x": [sept, octo_x]})
+    client.dossier = tmp_path
+    d = departement.recuperer_departement(client, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True, perimetre="jeunes")
+    j = next(j for c in d["clubs"] for j in c["joueurs"] if j[4] == "PETIT Tom")
+    assert (j[5][6], j[5][7]) == (2, 1)
+    assert d["virtuels"]["seuils"] == [5, 20] and d["virtuels"]["fiabilite"][1] == 1
+    ref = mensuel.References.lire(client)
+    assert ref.estimee("x", "2026-10-03") is False and ref.estimee("x", "2026-11-07") is True
+    assert ref.estimee("inconnu", "2026-09-20") is False and ref.estimee("inconnu", "2026-10-20") is True

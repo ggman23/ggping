@@ -10,11 +10,13 @@
   --bord: #dde1e7; --grille: #e8ebef; --accent: #1f5fbf; --accent-fond: #e8f0fc; --bandeau: #173b60; --bandeau-texte: #fff;
   /* Vaires : ligne surlignée en jaune, barre jaune ; les autres clubs en gris (mise en avant d'un seul club) */
   --vaires-fond: #fff1b8; --vaires-bord: #e0a800; --barre-vaires: #eda100; --barre: #b9c0cb; --barre-choisie: #2a78d6;
-  --att: #8a5a00; --att-fond: #fff4d6; }
+  --att: #8a5a00; --att-fond: #fff4d6;
+  /* Fiabilité d'une estimation de points virtuels : très proche, quelques points d'écart possibles, moins sûre */
+  --fiab1: #1e7b34; --fiab2: #c06a00; --fiab3: #c62828; }
 @media (prefers-color-scheme: dark) { :root { --fond: #12151b; --surface: #1b2029; --surface2: #232a35; --texte: #e6e9ef;
   --doux: #9aa4b5; --bord: #313a48; --grille: #2a313d; --accent: #7fb0ff; --accent-fond: #1d2a40; --bandeau: #0f2236;
   --vaires-fond: #3d3214; --vaires-bord: #c98500; --barre-vaires: #c98500; --barre: #4a5361; --barre-choisie: #3987e5;
-  --att: #f3cd6b; --att-fond: #3a3014; } }
+  --att: #f3cd6b; --att-fond: #3a3014; --fiab1: #5cc977; --fiab2: #f0a33c; --fiab3: #ff7b72; } }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--fond); color: var(--texte); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 a { color: var(--accent); }
@@ -116,6 +118,8 @@ dialog::backdrop { background: rgba(10, 15, 25, .45); }
 .lu { display: block; white-space: nowrap; }
 .virt-mensuels { display: none; }
 .moins-sur { color: var(--att); font-weight: 700; cursor: help; }
+.fiab { font-size: 10px; vertical-align: 2px; margin-left: 3px; cursor: help; }
+.fiab-1 { color: var(--fiab1); } .fiab-2 { color: var(--fiab2); } .fiab-3 { color: var(--fiab3); }
 th .estim { display: block; font-size: 11px; font-weight: 500; color: var(--doux); }
 .plus-lignes { margin: 12px 0 0; }
 .lien { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); text-decoration: underline; cursor: pointer; }
@@ -439,9 +443,24 @@ const JOUEURS = CLUBS.flatMap((c) => (c.joueurs || []).filter((j) => !j[3]).map(
   { points: j[0], sexe: j[1], cat: j[2], nom: j[4] || "", club: c.numero, clubNom: c.nom, vaires: c.vaires,
     jeune: JEUNES.includes(lettre(j[2])), virt: j[5] ? j[5][0] : null, prog: j[5] ? j[5][1] : null,
     v: j[5] ? j[5][2] : null, d: j[5] ? j[5][3] : null, lu: j[5] ? j[5][4] : null, mois: j[5] ? j[5][5] : null,
-    ext: j[5] ? j[5][6] || 0 : 0 })));
-// Repère « * » : parties contre des joueurs d'autres départements (leur valeur du mois est estimée) : estimation moins sûre
-const repere = (n) => (n ? `<sup class="moins-sur" title="${n} partie${n > 1 ? "s" : ""} contre des joueurs d'autres départements : estimation moins sûre">*</sup>` : "");
+    ext: j[5] ? j[5][6] || 0 : 0, est: j[5] && j[5][7] != null ? j[5][7] : null })));
+// Fiabilité d'une estimation (pastille) : nombre de parties contre un adversaire dont la valeur du mois est elle-même
+// estimée (D.virtuels.seuils : très proche, quelques points d'écart possibles, moins sûre). Sans ce nombre (données
+// d'avant le 15/11/2026) : repère « * » pour les parties contre des joueurs d'autres départements.
+const SEUILS = (D.virtuels && D.virtuels.seuils) || [5, 20];
+const FIAB = ["", "estimation très proche", "quelques points d'écart possibles", "estimation moins sûre"];
+const niveauFiab = (n) => (!n ? 0 : n <= SEUILS[0] ? 1 : n <= SEUILS[1] ? 2 : 3);
+const pastille = (k, titre) => `<span class="fiab fiab-${k}" title="${esc(titre)}" aria-label="${esc(FIAB[k])}">●</span>`;
+const repere = (j) => {
+  if (j.est == null) return j.ext ? `<sup class="moins-sur" title="${j.ext} partie${j.ext > 1 ? "s" : ""} contre des joueurs d'autres départements : estimation moins sûre">*</sup>` : "";
+  const k = niveauFiab(j.est);
+  return k ? pastille(k, `${j.est} partie${j.est > 1 ? "s" : ""} contre un adversaire dont la valeur du mois est estimée (${j.ext} contre des joueurs d'autres départements) : ${FIAB[k]}`) : "";
+};
+const legendeFiab = () => `Pastille : fiabilité de l'estimation, d'après le nombre de parties contre un adversaire dont la valeur du mois est
+  elle-même estimée (un joueur d'un autre département qui a joué des joueurs que l'outil ne lit pas ; les parties du premier mois de la phase,
+  calculées avec les points du début de phase de tous les joueurs, n'en font jamais partie) : ${pastille(1, FIAB[1])} 1 à ${SEUILS[0]}, très proche ;
+  ${pastille(2, FIAB[2])} ${SEUILS[0] + 1} à ${SEUILS[1]}, quelques points d'écart possibles ; ${pastille(3, FIAB[3])} plus de ${SEUILS[1]}, moins sûre.
+  Sans pastille : toutes ses parties sont calculées avec des valeurs connues.`;
 const sansAccent = (t) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 for (const j of JOUEURS) j.cle = sansAccent(j.nom);
 const CATS_PRECISES = [...new Set(JOUEURS.map((j) => j.cat).filter(Boolean))].sort(ordreCat);
@@ -507,14 +526,14 @@ function vueJoueurs() {
           ? `<span class="lu${ancien(j.lu) ? " ancien" : ""}">lu le ${jourMois(j.lu)}</span>` : ""}</span></td>
         <td class="col-club"><button type="button" class="nom" data-club="${esc(j.club)}">${esc(j.clubNom)}</button></td>
         <td title="${esc(libelleCat(j.cat))}">${esc(j.cat || "—")}</td><td class="col-sexe">${j.sexe === "F" ? "F" : "H"}</td><td class="n col-points">${fr(j.points)}</td>${avecVirt
-          ? `<td class="n">${j.virt != null ? fr(j.virt) + repere(j.ext) : `<span class="virt-absent">—</span><span class="virt-mensuels doux" title="Virtuels pas encore lus : points mensuels">${fr(j.points)}</span>`}</td><td class="n prog"${j.v != null ? ` title="${esc([parMois(j.mois), `${j.v} victoire${j.v > 1 ? "s" : ""}, ${j.d} défaite${j.d > 1 ? "s" : ""}`].filter(Boolean).join(" ; "))}"` : ""}>${j.prog == null ? "—" : signe(j.prog)}</td>
+          ? `<td class="n">${j.virt != null ? fr(j.virt) + repere(j) : `<span class="virt-absent">—</span><span class="virt-mensuels doux" title="Virtuels pas encore lus : points mensuels">${fr(j.points)}</span>`}</td><td class="n prog"${j.v != null ? ` title="${esc([parMois(j.mois), `${j.v} victoire${j.v > 1 ? "s" : ""}, ${j.d} défaite${j.d > 1 ? "s" : ""}`].filter(Boolean).join(" ; "))}"` : ""}>${j.prog == null ? "—" : signe(j.prog)}</td>
             <td class="n col-parties">${j.v == null ? "—" : `${j.v} V · ${j.d} D`}</td><td class="n col-lu${ancien(j.lu) ? " ancien" : ""}">${jourMois(j.lu)}</td>` : ""}</tr>`).join("")}</table></div>
     ${lignes.length > vj.n ? `<button type="button" class="bouton plus-lignes" id="plus-j">Afficher ${Math.min(200, lignes.length - vj.n)} de plus (${fr(lignes.length - vj.n)} restants)</button>` : ""}
     <p class="note">Points mensuels des listes de licenciés de pingpocket.fr (lues par le PC). ${AVEC_VIRTUELS || V
       ? `Points virtuels (licences compétition) : <b>estimations</b>, calculées comme la FFTT d'après les parties de la saison qu'elle a enregistrées
         (championnat, critérium, tournois…) ; seule la situation mensuelle qu'elle publie est officielle. Calcul mois par mois : chaque partie avec la
-        valeur des deux joueurs à la fin du mois précédent (juillet et août comptent avec septembre). <b>*</b> : parties contre des joueurs d'autres
-        départements, dont la valeur du mois est elle-même estimée d'après leurs parties : estimation moins sûre.
+        valeur des deux joueurs à la fin du mois précédent (juillet et août comptent avec septembre) ; les joueurs d'autres départements rencontrés
+        aussi, d'après leurs parties. ${JOUEURS.some((j) => j.est != null) ? legendeFiab() : "<b>*</b> : parties contre des joueurs d'autres départements, estimation moins sûre."}
         Connus pour ${fr(NB_VIRT.jeunesV)} jeunes sur ${fr(NB_VIRT.jeunes)} et ${fr(NB_VIRT.adultesV)} adultes sur ${fr(NB_VIRT.adultes)}${V && V.reportes
           ? `, ${fr(V.reportes)} à la prochaine mise à jour` : ""}${sansVirt ? ` (« — » : ${fr(sansVirt)} pas encore lus dans cette liste)` : ""}.
         Les parties de chaque joueur sont relues à la FFTT une fois par semaine, à la première mise à jour à partir du lundi (on peut s'y limiter

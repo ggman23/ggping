@@ -193,7 +193,8 @@ def joueurs_du_club(listes):
 
 def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire=None):
     """Points virtuels : ({licence: [virtuels, points gagnés depuis le début de la phase, victoires,
-    défaites, date de lecture « AAAA-MM-JJ », [gains de chaque période]]}, {"joueurs", "a_relire", "connus", "lus", "reportes",
+    défaites, date de lecture « AAAA-MM-JJ », [gains de chaque période], parties contre d'autres départements,
+    parties contre un adversaire dont la valeur du mois est estimée]}, {"joueurs", "a_relire", "connus", "lus", "reportes",
     "plus_ancienne", "plus_recente", "hors_championnat", "verifiees", "details_lus", "details_restants"}).
 
     Parties hors championnat : leur détail (forfait, partie non comptée) est lu une fois puis gardé ; ceux
@@ -210,7 +211,8 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
 
     Adversaires d'autres départements : leurs listes aussi (même règle, MAX_EXTERIEURS au plus ; ceux des
     joueurs choisis), pour calculer leur valeur mois par mois ; sans elles, ils gardent leurs points de la
-    phase. Le nombre de parties de chaque joueur contre eux est donné (estimation moins sûre)."""
+    phase. Le nombre de parties de chaque joueur contre eux est donné, et celui des parties contre un
+    adversaire dont la valeur du mois est estimée (fiabilité : mensuel.niveau)."""
     debut, fin = fftt.bornes_phase(aujourdhui)
     fin = min(fin, aujourdhui.isoformat())
     maintenant = time.time()
@@ -258,7 +260,11 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
     lignes, depart = mensuel.lignes_des_joueurs(ensemble, competitions, etats, debut, fin)
     references = {}
     points_m = mensuel.calcul_mensuel(lignes, depart, references)
-    mensuel.enregistrer(client, {**references, mensuel.CLE_77: sorted(du_77)})  # pour les pages de Vaires du lancement suivant
+    # Fiabilité : valeur du mois estimée des joueurs qui ont joué, après la première période, un joueur non lu
+    premiere = mensuel.periode(debut)
+    estime = mensuel.incertitudes(lignes, depart, premiere)
+    mensuel.enregistrer(client, {**references, mensuel.CLE_77: sorted(du_77), mensuel.CLE_PREMIERE: premiere,
+                                 mensuel.CLE_ESTIME: estime})  # pour les pages de Vaires du lancement suivant
     variables, avec_parties = mensuel.points_variables(lignes)
     ecart = sum(abs(sum(points_m[lic]) - sum(l["points"] for l in lignes[lic])) for lic in toutes if lic in lignes) / max(1, len(toutes))
     print(f"  points des joueurs lus dans les parties : différents d'une partie à l'autre pour {variables} joueurs sur {avec_parties} ; "
@@ -280,8 +286,15 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
             lu = client.date(url_parties(lic)) or maintenant  # date de la réponse enregistrée
             res[lic] = [round(virtuels), round(sum(gains), 1), v, d, datetime.fromtimestamp(lu).date().isoformat(),
                         [round(par_periode[x], 1) for x in periodes],
-                        sum(1 for l in ls if l.get("adv_licence") and l["adv_licence"] not in du_77)]  # contre d'autres départements
+                        sum(1 for l in ls if l.get("adv_licence") and l["adv_licence"] not in du_77),  # contre d'autres départements
+                        sum(1 for l in ls if mensuel.valeur_estimee(l.get("adv_licence"), l["date"], depart, estime, premiere))]
     jours = sorted(r[4] for r in res.values())
+    fiabilite = Counter(mensuel.niveau(r[7]) for r in res.values())
+    ext_estimes = sum(1 for x in exterieurs if x in estime)
+    print(f"  fiabilité (parties contre un adversaire dont la valeur du mois est estimée) : {fiabilite[0]} joueurs sans, "
+          f"{fiabilite[1]} de 1 à {mensuel.SEUILS[0]}, {fiabilite[2]} jusqu'à {mensuel.SEUILS[1]}, {fiabilite[3]} au-delà "
+          f"(au plus {max((r[7] for r in res.values()), default=0)}) ; adversaires d'autres départements à valeur estimée "
+          f"après une période : {ext_estimes} sur {len(exterieurs)}", flush=True)
     return res, {"joueurs": len(licences), "a_relire": len(a_relire), "connus": len(res), "lus": len(a_lire),
                  "reportes": sum(1 for lic in perimes[MAX_VIRTUELS:] if dates[lic] is None),
                  "plus_ancienne": jours[0] if jours else None, "plus_recente": jours[-1] if jours else None,
@@ -289,7 +302,8 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
                  "details_restants": len(attente) - len(nouveaux), "methode": "mensuel", "periodes": periodes,
                  "exterieurs": len(exterieurs), "exterieurs_connus": sum(1 for x in exterieurs if x in lignes),
                  "exterieurs_lus": len(a_lire_ext),
-                 "exterieurs_restants": sum(1 for x in perimes_ext[MAX_EXTERIEURS:] if dates_ext[x] is None)}
+                 "exterieurs_restants": sum(1 for x in perimes_ext[MAX_EXTERIEURS:] if dates_ext[x] is None),
+                 "seuils": list(mensuel.SEUILS), "fiabilite": [fiabilite[k] for k in range(4)]}
 
 
 def force_des_equipes(equipes, joueurs):

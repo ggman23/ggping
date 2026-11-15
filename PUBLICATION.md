@@ -549,9 +549,21 @@ D'où viennent les données :
   date (« Lu le ») : rien ne disparaît.
 - **Adversaires d'autres départements** (2 349 au 15/11/2026, rencontrés par 405 joueurs du 77 dans
   5 695 parties) : leurs listes sont lues de même (une fois par semaine), pour calculer leur valeur
-  mois par mois. Leurs propres adversaires extérieurs gardent leurs points de la phase et leurs forfaits
-  ne sont pas vérifiés : les joueurs qui les ont rencontrés ont un repère **\*** (estimation moins
-  sûre), sur la page des clubs du 77 et sur le classement virtuel de Vaires.
+  mois par mois. Leur liste est refaite à chaque lecture des joueurs du 77 : un nouvel adversaire (jamais
+  lu) est lu en premier, sans rien faire. MAX_EXTERIEURS (3 000) borne seulement le nombre lu en une
+  mise à jour : au-delà, le reste l'est à la suivante.
+- **Fiabilité d'une estimation** (pastille de couleur à côté des points virtuels, page des clubs du 77
+  et classement virtuel de Vaires, avec une info-bulle) : le nombre de parties du joueur contre un
+  adversaire dont la valeur du mois est elle-même estimée. Les parties du premier mois de la phase
+  (septembre, avec juillet et août ; janvier en phase 2) sont calculées avec les points du début de
+  phase de tous les joueurs : jamais estimées. La valeur d'un joueur lu reste exacte tant qu'il n'a joué
+  que des joueurs lus ; dès qu'il a joué, après le premier mois, un joueur que l'outil ne lit pas (le
+  plus souvent pour un joueur d'un autre département), elle est estimée pour les mois suivants.
+  Vert : 1 à 5 parties, très proche ; orange : 6 à 20, quelques points d'écart possibles ; rouge : plus
+  de 20, moins sûre ; sans pastille : toutes ses parties avec des valeurs connues. Une partie ne change
+  que si l'erreur sur la valeur de l'adversaire fait passer l'écart dans une autre tranche du barème.
+  Seuils (mensuel.SEUILS) à revoir en comparant quelques joueurs de chaque couleur à la FFTT ; le
+  journal donne le nombre de joueurs de chaque couleur.
 - **Forfaits** : la liste des parties d'un joueur ne dit pas qu'une partie a été gagnée par forfait
   (la FFTT ne la compte pas) ; seul le détail de la partie le dit. Le détail des parties hors
   championnat (critérium, tournois...) est donc lu une fois puis gardé : au plus 2 500 nouvelles par

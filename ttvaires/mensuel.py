@@ -18,6 +18,16 @@ contre un 15xx (victoire normale, écart 25 à 49), +12 contre un 16xx et +19,5 
 (Les « points mensuels » des listes de licenciés de pingpocket ne donnent pas cette situation : 1499
 pour ce joueur ; ils ne peuvent pas servir à vérifier le calcul.)
 
+Fiabilité d'une estimation (incertitudes, valeur_estimee, niveau) : les parties de la première période
+de la phase sont calculées avec les points du début de phase de tous les joueurs, connus exactement. La
+valeur d'un joueur lu reste exacte tant qu'il n'a joué que des joueurs lus ; dès qu'il a joué, après la
+première période, un adversaire non lu (dont les gains sont inconnus : points de la phase), sa valeur
+des périodes suivantes est estimée. Pour chaque joueur, l'outil compte ses parties contre un adversaire
+dont la valeur du mois est estimée : de 1 à SEUILS[0], estimation très proche ; jusqu'à SEUILS[1],
+quelques points d'écart possibles ; au-delà, moins sûre (une partie ne change que si l'erreur sur la
+valeur de l'adversaire fait passer l'écart dans une autre tranche du barème). Seuils à revoir d'après
+des comparaisons avec la FFTT.
+
 Les pages de Vaires (classement virtuel, fiches, progression, résultats, forme des adversaires) se
 servent des valeurs mensuelles ainsi calculées pour les joueurs du 77 : la page des clubs du 77 les
 enregistre (FICHIER, dans le cache de la mise à jour en ligne) et les pages les relisent au lancement
@@ -32,6 +42,9 @@ from .virtuel import analyser
 
 FICHIER = "references_77.json"  # {licence: {période « AAAA-MM »: valeur du joueur au début de la période}}
 CLE_77 = "_77"                  # dans le même fichier : les licences des joueurs du 77 (les autres sont d'autres départements)
+CLE_PREMIERE = "_premiere"      # première période de la phase (« AAAA-MM »)
+CLE_ESTIME = "_estime"          # {licence: période} : sa valeur est estimée pour les périodes qui suivent celle-ci
+SEUILS = (5, 20)                # parties contre un adversaire à valeur estimée : très proche, quelques points, moins sûre
 
 
 def lignes_des_joueurs(toutes, competitions, etats, debut, fin):
@@ -84,6 +97,32 @@ def calcul_mensuel(lignes, depart, references=None):
     return points
 
 
+def incertitudes(lignes, connus, premiere):
+    """{licence: période} : pour chaque joueur lu, la première période après `premiere` où il a joué un
+    adversaire absent de `connus` (gains inconnus : points de la phase) ; sa valeur est estimée ensuite."""
+    res = {}
+    for lic, ls in lignes.items():
+        for l in ls:
+            p = periode(l["date"])
+            if p > premiere and l.get("adv_licence") not in connus and (lic not in res or p < res[lic]):
+                res[lic] = p
+    return res
+
+
+def valeur_estimee(adv, jour, connus, estime, premiere):
+    """La valeur du mois de l'adversaire est-elle estimée pour une partie de ce jour ?"""
+    p = periode(jour)
+    if p <= premiere:
+        return False  # première période : points du début de phase, connus pour tous
+    return adv not in connus or (adv in estime and p > estime[adv])
+
+
+def niveau(estimees):
+    """0 : aucune partie contre un adversaire à valeur estimée ; 1 : très proche ; 2 : quelques points
+    d'écart possibles ; 3 : moins sûre."""
+    return 0 if not estimees else 1 if estimees <= SEUILS[0] else 2 if estimees <= SEUILS[1] else 3
+
+
 def points_variables(lignes):
     """Joueurs dont les points lus dans leurs parties changent d'une partie à l'autre (contrôle : l'API
     donne-t-elle les points de la phase, constants, ou ceux du mois ?)."""
@@ -120,6 +159,14 @@ class References:
 
     def valeur(self, licence, jour):
         return self.table.get(licence, {}).get(periode(jour))
+
+    def estimee(self, adv, jour):
+        """La valeur du mois de l'adversaire est-elle estimée pour cette partie ? None si le fichier ne le
+        dit pas (enregistré avant le 15/11/2026)."""
+        premiere = self.table.get(CLE_PREMIERE)
+        if not premiere:
+            return None
+        return valeur_estimee(adv, jour, self.table, self.table.get(CLE_ESTIME) or {}, premiere)
 
 
 def recalculer(lignes, licence, depart, references):

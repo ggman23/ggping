@@ -594,6 +594,17 @@ pour voir les favoris d'une poule.
   nombre de parties contre d'autres départements (7e valeur d'un joueur, « exterieurs » au classement
   virtuel) ; choix par défaut « tous ». Pages : « estimation » / « estim. » (77, classement virtuel,
   fiches, progression, résultats, images), repère « * » avec info-bulle.
+- Nouveaux adversaires et fiabilité (15/11) : « dans un mois on aura peut-être 2 600 joueurs hors
+  département, l'outil ira interroger leur fiche ? » Oui : la liste des adversaires extérieurs est
+  refaite à chaque lecture des listes du 77 (chaque lundi) ; un nouveau, jamais lu, passe en premier ;
+  MAX_EXTERIEURS borne une mise à jour, pas le total. « Différencier par une couleur une estimation
+  proche du résultat officiel ou très loin (1 adversaire hors 77 : très proche ; 80 : plus éloignée). »
+  Réalisation : mensuel.incertitudes / valeur_estimee / niveau ; parties du premier mois de la phase
+  jamais estimées (points du début de phase de tous) ; valeur d'un joueur lu estimée après le premier
+  mois où il a joué un joueur non lu ; 8e valeur d'un joueur du 77 (parties contre un adversaire à
+  valeur estimée), « estimees » au classement virtuel (fichier des valeurs : clés _premiere et _estime) ;
+  pastille verte (1 à 5), orange (6 à 20), rouge (plus de 20), seuils à revoir d'après des
+  comparaisons avec la FFTT ; journal : nombre de joueurs de chaque couleur.
 
 ## Calendrier de la saison : /cal/ (13/11/2026)
 

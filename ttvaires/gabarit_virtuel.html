@@ -76,6 +76,8 @@ table.perfs th:hover { filter: none; }
 @media print { header { position: static; } nav, .outils, details.aide, .plus { display: none; } }
 th .estim { display: block; font-size: 11px; font-weight: 500; opacity: .75; }
 .moins-sur { color: #b26a00; font-weight: 700; cursor: help; }
+.fiab { font-size: 10px; vertical-align: 2px; margin-left: 3px; cursor: help; }
+.fiab-1 { color: #1e7b34; } .fiab-2 { color: #c06a00; } .fiab-3 { color: #c62828; }
 </style>
 </head>
 <body>
@@ -94,6 +96,17 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const nombre = (x, dec) => x == null ? "" : x.toLocaleString("fr-FR", { minimumFractionDigits: dec, maximumFractionDigits: dec });
 const pts = (x) => x == null ? "" : (x > 0 ? "+" : "") + nombre(x, Number.isInteger(x) ? 0 : (Number.isInteger(x * 2) ? 1 : 2));
 const virt = (x) => x == null ? "—" : nombre(x, Number.isInteger(x) ? 0 : 1);
+// Fiabilité d'une estimation (pastille) : parties contre un adversaire dont la valeur du mois est elle-même estimée
+// (D.seuils : très proche, quelques points d'écart possibles, moins sûre) ; sans ce nombre, repère « * »
+const SEUILS = D.seuils || [5, 20];
+const FIAB = ["", "estimation très proche", "quelques points d'écart possibles", "estimation moins sûre"];
+const niveauFiab = (n) => (!n ? 0 : n <= SEUILS[0] ? 1 : n <= SEUILS[1] ? 2 : 3);
+const pastille = (k, titre) => `<span class="fiab fiab-${k}" title="${esc(titre)}" aria-label="${esc(FIAB[k])}">●</span>`;
+const repere = (j) => {
+  if (j.estimees == null) return j.exterieurs ? `<sup class="moins-sur" title="${j.exterieurs} partie${j.exterieurs > 1 ? "s" : ""} contre des joueurs d'autres départements : estimation moins sûre">*</sup>` : "";
+  const k = niveauFiab(j.estimees);
+  return k ? pastille(k, `${j.estimees} partie${j.estimees > 1 ? "s" : ""} contre un adversaire dont la valeur du mois est estimée (${j.exterieurs} contre des joueurs d'autres départements) : ${FIAB[k]}`) : "";
+};
 const clsTexte = (x) => x > 0 ? "t-pos" : x < 0 ? "t-neg" : "";
 const clsFond = (x) => x > 0 ? "pos" : x < 0 ? "neg" : "";
 function fmtDate(iso) { const d = new Date(iso + "T12:00:00"); return `${JOURS[d.getDay()]} ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`; }
@@ -116,7 +129,7 @@ const COLONNES = [
   { t: "Autre", titre: "Autres compétitions : critérium, tournois, compétitions jeunes...", c: "n col-option", k: (j) => j.autres, v: (j) => autresComp(j) ? pts(j.autres) : "", cls: (j) => clsTexte(j.autres) },
   { t: "Total", c: "n", k: (j) => j.total, v: (j) => j.parties.length ? pts(j.total) : "", cls: (j) => clsFond(j.total) },
   { t: 'Virt.<span class="estim">estim.</span>', titre: "Estimation des points virtuels = points officiels + total", k: (j) => j.virtuels ?? -1,
-    v: (j) => virt(j.virtuels) + (j.exterieurs ? `<sup class="moins-sur" title="${j.exterieurs} partie${j.exterieurs > 1 ? "s" : ""} contre des joueurs d'autres départements : estimation moins sûre">*</sup>` : ""), c: "n virt" },
+    v: (j) => virt(j.virtuels) + repere(j), c: "n virt" },
   { t: "Clt", titre: "Classement virtuel (▲ ▼ : changement par rapport au classement officiel)", c: "n", k: (j) => j.classement_virtuel ?? -1, v: (j) => {
       if (j.classement_virtuel == null) return "";
       const e = j.classement_virtuel - j.classement;
@@ -199,7 +212,10 @@ function vueClassement() {
   return `${bandeaux()}
     <p class="sous">Points virtuels (<b>estimation</b> : seule la situation mensuelle publiée par la FFTT est officielle) = points officiels
       de la phase + points gagnés ou perdus depuis le ${fmtDate(D.debut)} dans toutes les compétitions.
-      ${D.joueurs.some((j) => j.exterieurs) ? "<b>*</b> : parties contre des joueurs d'autres départements, estimation moins sûre. " : ""}Clique sur un joueur pour le détail de ses parties.</p>
+      ${D.joueurs.some((j) => j.estimees) ? `Pastille : fiabilité de l'estimation (parties contre un adversaire dont la valeur du mois est elle-même
+      estimée) : ${pastille(1, FIAB[1])} 1 à ${SEUILS[0]}, très proche ; ${pastille(2, FIAB[2])} ${SEUILS[0] + 1} à ${SEUILS[1]}, quelques points
+      d'écart possibles ; ${pastille(3, FIAB[3])} plus de ${SEUILS[1]}, moins sûre. `
+        : D.joueurs.some((j) => j.estimees == null && j.exterieurs) ? "<b>*</b> : parties contre des joueurs d'autres départements, estimation moins sûre. " : ""}Clique sur un joueur pour le détail de ses parties.</p>
     ${comps ? `<ul class="comps">${comps}</ul>` : ""}
     <div class="outils"><input type="search" id="recherche" placeholder="Rechercher un joueur" value="${esc(recherche)}">
       ${[["tous", "Tous"], ["joue", "Ont joué"], ["autres", "Autres compétitions"]].map(([f, t]) =>

@@ -78,3 +78,17 @@ def test_liste_des_joueurs_du_77_avec_les_valeurs(tmp_path):
     lues = mensuel.References.lire(Client)
     assert lues.du_77() == {"a", "b"} and lues.valeur("x", "2026-09-10") == 900
     assert mensuel.References().du_77() == set()
+
+
+def test_incertitudes_et_niveaux_de_fiabilite():
+    l = lambda jour, adv: {"date": jour, "adv_licence": adv}
+    lignes = {"a": [l("2026-08-30", "z"), l("2026-10-04", "b")], "b": [l("2026-10-04", "a"), l("2026-10-20", "z"), l("2026-11-08", "z")]}
+    connus = {"a": 1, "b": 1}
+    estime = mensuel.incertitudes(lignes, connus, "2026-09")
+    assert estime == {"b": "2026-10"}  # a : z seulement en août (première période) ; b : z en octobre
+    assert not mensuel.valeur_estimee("b", "2026-10-25", connus, estime, "2026-09")
+    assert mensuel.valeur_estimee("b", "2026-11-02", connus, estime, "2026-09")
+    assert not mensuel.valeur_estimee("z", "2026-09-30", connus, estime, "2026-09")
+    assert mensuel.valeur_estimee("z", "2026-10-01", connus, estime, "2026-09")
+    assert [mensuel.niveau(n) for n in (0, 1, 5, 6, 20, 21)] == [0, 1, 1, 2, 2, 3]
+    assert mensuel.References({"a": {}}).estimee("a", "2026-11-02") is None  # fichier d'avant : on ne sait pas

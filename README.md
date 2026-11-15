@@ -54,8 +54,8 @@ recherche), ligne de Vaires en jaune ; classements avec la place de Vaires ; com
 plus ; « favoris d'une poule » (équipes classées par force estimée) ; **Joueurs** : tous les joueurs du
 77 classés par points mensuels, filtrables par sexe, catégorie précise (« Minimes » ou « Minimes 1 »,
 « Minimes 2 »...), club et nom ; **points virtuels estimés** et points gagnés depuis le début de la
-phase, calculés mois par mois comme la FFTT (adversaires d'autres départements compris ; repère « * »
-quand l'estimation est moins sûre), pour repérer ceux qui progressent. Listes relues une fois par
+phase, calculés mois par mois comme la FFTT (adversaires d'autres départements compris ; pastille verte,
+orange ou rouge selon la fiabilité de l'estimation), pour repérer ceux qui progressent. Listes relues une fois par
 semaine (au choix lors de la mise à jour : tous, jeunes, adultes ou aucun). Voir PUBLICATION.md.
 
 **Application Android** (APK) : le site (mise à jour), l'espace club, /lundi/ et /indivs/ (GitHub, sinon

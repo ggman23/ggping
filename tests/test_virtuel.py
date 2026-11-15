@@ -74,6 +74,8 @@ def test_classement_virtuel_de_bout_en_bout(tmp_path):
     d = recuperer_virtuel(FauxClient(pages), VAIRES, aujourdhui=date(2026, 10, 6), dossier_import=dossier)
     j = {x["id"]: x for x in d["joueurs"]}
     assert set(j) == {"100", "200", "300"}  # licence loisir et non réinscrit écartés
+    # Sans les valeurs de la page des clubs du 77 : fiabilité inconnue (pas de pastille), seuils donnés à la page
+    assert all(x["estimees"] is None for x in d["joueurs"]) and d["seuils"] == [5, 20]
     assert (j["100"]["championnat"], j["100"]["virtuels"], j["100"]["equipe"]) == (10, 810, "V4")
     assert (j["200"]["officiels"], j["200"]["total"], j["200"]["virtuels"], j["200"]["parties"]) == (900, 0, 900, [])
     assert (j["300"]["autres"], j["300"]["virtuels"], j["300"]["categorie"]) == (2, 702, "S")
