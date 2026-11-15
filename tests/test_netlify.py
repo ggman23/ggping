@@ -334,3 +334,31 @@ def test_netlify_seulement_si_demande(monkeypatch, capsys, tmp_path):
     netlify.main()
     assert "pas demandé" in capsys.readouterr().out
     assert (tmp_path / "copie" / netlify.SIGNATURE).exists()  # la copie sert quand même à Cloudflare
+
+
+def test_actions_des_pages_envoyees_aux_compteurs():
+    """Événements des pages /77/, /cal/... (« 77/onglet/joueurs ») : pour Umami, nommés par l'action, le
+    détail rangé sous son nom ; ceux de l'espace club gardent « fichier ». Exécuté avec Node s'il est là."""
+    import shutil
+    import subprocess
+    node = shutil.which("node")
+    html = netlify.avec_compteurs("<head></head>", "", "uuid-essai")
+    script = html.split("<script>\n", 1)[1].split("\n</script>", 1)[0]
+    assert "__ACTIONS_PAGES__" not in script and '"onglet"' in script
+    if not node:
+        return
+    essai = """
+const envois = [];
+global.window = { umami: { track: (...a) => envois.push(a) } };
+global.navigator = {}; global.location = { hash: "" }; global.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+global.alert = () => {};
+""" + script + """
+window.compteurPret("umami");
+window.compteur("77/onglet/joueurs", "Clubs du 77 · onglet Joueurs", true);
+window.compteur("cal/mois/2026-12", "Calendrier · mois", true);
+window.compteur("club/telechargement/resultats_vaires.xlsx", "Téléchargement", true);
+console.log(JSON.stringify(envois));
+"""
+    sortie = json.loads(subprocess.run([node, "-e", essai], capture_output=True, text=True, check=True).stdout)
+    assert sortie == [["onglet", {"espace": "77", "onglet": "joueurs"}], ["mois", {"espace": "cal", "mois": "2026-12"}],
+                      ["telechargement", {"espace": "club", "fichier": "resultats_vaires.xlsx"}]]

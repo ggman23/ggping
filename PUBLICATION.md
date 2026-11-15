@@ -298,7 +298,19 @@ Ce que l'on voit sur le tableau de bord :
 - **événements** (onglet *Events*) : `club/connexion`, `club/connexion-refusee`,
   `club/telechargement/<fichier>`, `club/partage/<fichier>`, `club/tout-telecharger` ; sur /gg/ :
   `gg/ouverture/<page>`, `gg/telechargement/<fichier>`, `gg/image/<fichier>`, `gg/partage/<fichier>`,
-  `gg/tout-telecharger`, `gg/mise-a-jour` ;
+  `gg/tout-telecharger`, `gg/mise-a-jour` ; dans les pages à part (une page vue par ouverture, puis
+  ce qu'on y fait) :
+  - `/77/` : `77/onglet/<clubs, classements, comparer, poules, joueurs>`, `77/fiche/<club>` (fiche
+    d'un club ouverte), `77/classement/<mesure choisie>`, `77/filtre/<…>` (femmes ou hommes, licences
+    loisir, catégories, division ; dans Joueurs : catégorie, club, femmes ou hommes), `77/tri/<onglet>-<colonne>`,
+    `77/bouton/<…>` (jeunes par progression, tous les jeunes ou joueurs d'un club, afficher plus,
+    comparer les clubs d'une poule), `77/comparer/<…>`, `77/poule/<poule choisie>`, `77/lien/<page>` ;
+  - `/cal/` : `cal/mois/<AAAA-MM>`, `cal/jour/<date>`, `cal/categorie/<compétition>-<affichee ou masquee>`,
+    `cal/lien/<lien>` (agenda partagé, PDF, autres espaces) ;
+  - `/indivs/` : `indivs/vue/ensemble`, `indivs/vue/joueur` (fiche d'un joueur, sans dire lequel),
+    `indivs/lien/<lien>` ; `/tournois/` : `tournois/liste/<liste>`, `tournois/lien/<lien>` (un tournoi
+    ouvert dans les cadres de PingRadar ne peut pas être compté) ;
+  jamais un nom de joueur ni un texte tapé (recherche) ;
 - les **appareils différents** (taper `appareils` dans *Filter paths*) : chaque téléphone ou
   navigateur de PC se signale une seule fois par jour, par semaine et par mois, d'où :
   `appareils/jour` (vu par jour : combien d'appareils différents chaque jour), `appareils/semaine`,
@@ -326,7 +338,10 @@ les **parcours** (*Journeys* : accueil → connexion → téléchargement...), l
 semaine après semaine (*Retention*), les **entonnoirs** (*Funnels*) et la vitesse de chargement de
 l'accueil public. Les actions y sont des événements nommés `connexion`, `connexion-refusee`,
 `telechargement`, `partage`, `tout-telecharger`, `ouverture`, `image`, `mise-a-jour`, avec en détail
-l'espace (club, gg...) et le fichier.
+l'espace (club, gg...) et le fichier ; ceux des pages à part sont nommés par l'action (`onglet`,
+`fiche`, `classement`, `filtre`, `tri`, `bouton`, `comparer`, `poule`, `lien`, `mois`, `jour`,
+`categorie`, `vue`, `liste`), avec en détail l'espace (77, cal...) et la valeur sous le nom de
+l'action (onglet = joueurs, mois = 2026-12...).
 
 Tableau de bord : https://cloud.umami.is, site « CVTT Vaires ». L'identifiant du site
 (`data-website-id`) est déjà dans le workflow ; une variable ou un secret `UMAMI` le remplace. Le

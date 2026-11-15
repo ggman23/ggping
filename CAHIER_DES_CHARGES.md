@@ -605,6 +605,12 @@ pour voir les favoris d'une poule.
   valeur estimée), « estimees » au classement virtuel (fichier des valeurs : clés _premiere et _estime) ;
   pastille verte (1 à 5), orange (6 à 20), rouge (plus de 20), seuils à revoir d'après des
   comparaisons avec la FFTT ; journal : nombre de joueurs de chaque couleur.
+- Statistiques (15/11) : vérifié en ligne, toutes les pages de la copie Cloudflare ont GoatCounter et
+  Umami (accueil, /club/, /gg/ et ses archives, /77/, /indivs/, /tournois/, /cal/, /lundi/). Demande :
+  compter aussi ce qu'on fait dans les pages (« plus il y a d'informations, plus c'est intéressant »).
+  Réalisation : compterAction dans gabarit_77, gabarit_cal, gabarit_indivs, gabarit_tournois →
+  window.compteur(« espace/action/détail », titre, événement) ; netlify.ACTIONS_PAGES pour Umami.
+  Onglet compté à son changement (pas à chaque filtre), jamais un nom de joueur ni une recherche.
 
 ## Calendrier de la saison : /cal/ (13/11/2026)
 

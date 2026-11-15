@@ -108,6 +108,19 @@ tr.vaires td:nth-child(2) b::after { content: " · Vaires"; color: var(--accent)
 <script>
 const D = __DONNEES_JSON__;
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+/* Statistiques de visite (GoatCounter et Umami, sur les copies du site qui en ont) : ce qu'on fait dans la page,
+   en événements « indivs/<action>/<détail> » (vue, lien). Jamais un nom de joueur. */
+const compterAction = (action, detail, titre) => {
+  try { if (window.compteur) window.compteur(`indivs/${action}/${String(detail).replace(/\//g, "-").slice(0, 80)}`, `Individuels · ${titre}`, true); }
+  catch (e) { /* sans compteur */ }
+};
+document.addEventListener("click", (ev) => {  // liens vers une autre page (pas les liens internes « #… »)
+  const a = ev.target.closest("a[href]");
+  if (a && !a.getAttribute("href").startsWith("#")) {
+    const nom = a.dataset.lien || (a.querySelector("b") || a).textContent.trim();
+    compterAction("lien", nom, `lien ${nom}`);
+  }
+});
 const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
 const dateCourte = (iso) => { if (!iso) return "date à préciser"; const d = new Date(iso + "T12:00:00");
   return `${JOURS[d.getDay()]} ${iso.slice(8, 10)}/${iso.slice(5, 7)}`; };
@@ -209,7 +222,7 @@ function vueJoueur(e) {
       <td class="num">${ecart}</td>
       <td>${detail(j.forme)}</td></tr>`;
   }).join("");
-  const lieu = p.lieu ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.lieu)}" target="_blank" rel="noopener">${esc(p.lieu)}</a>` : "lieu à préciser";
+  const lieu = p.lieu ? `<a data-lien="plan du lieu" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.lieu)}" target="_blank" rel="noopener">${esc(p.lieu)}</a>` : "lieu à préciser";
   return `<div class="contenu">
     <h1>${nomComplet(moi)} <small>${esc(p.titre)}</small></h1>
     <p class="infos">${esc(p.competition)} · <b>${dateCourte(p.date)}</b>${p.horaire ? " · " + esc(p.horaire) : ""}</p>
@@ -245,9 +258,13 @@ function notes(courtes) {
     + (!courtes && (c.licences_douteuses || []).length ? `<p class="note">Licences à vérifier (l'API donne un autre nom) : ${c.licences_douteuses.map(esc).join(" ; ")}.</p>` : "");
 }
 
+let vueComptee = null;
 function route() {
   const h = decodeURIComponent(location.hash.slice(1));
   const e = h.startsWith("j/") ? ENTREES.find((x) => x.cle === h.slice(2)) : null;
+  const quoi = e ? "joueur" : h === "ensemble" ? "ensemble" : "accueil";  // un joueur : jamais lequel
+  if (quoi !== "accueil" && (quoi === "joueur" || quoi !== vueComptee)) compterAction("vue", quoi, quoi === "joueur" ? "fiche d'un joueur" : "vue d'ensemble");
+  vueComptee = quoi;
   menu(e ? e.cle : null);
   document.getElementById("vue").innerHTML = e ? vueJoueur(e) : vueEnsemble();
   // Téléphone : la liste des joueurs d'abord, puis un joueur (ou la vue d'ensemble) en plein écran

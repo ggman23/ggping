@@ -221,18 +221,23 @@ def code_goatcounter(valeur):
 # appelé par l'espace club et les accueils de /gg/ ; ce qui arrive avant le chargement d'un compteur
 # attend. Pour Umami, un événement est nommé par son action (telechargement, partage...), avec
 # l'espace et le fichier en détail. « #toggle-goatcounter » coupe (ou rétablit) aussi Umami.
+# Actions dans les pages /77/, /cal/, /indivs/ et /tournois/ (ACTIONS_PAGES, « 77/onglet/joueurs ») : le
+# détail est rangé sous le nom de l'action (Umami : onglet = joueurs), jamais un nom de joueur.
+ACTIONS_PAGES = ["onglet", "fiche", "classement", "filtre", "tri", "bouton", "comparer", "poule", "lien",
+                 "mois", "jour", "categorie", "vue", "liste"]
 COMPTEURS_JS = """(() => {
   const ACTIFS = __ACTIFS__;
   const ACTIONS = ["connexion", "connexion-refusee", "telechargement", "partage", "tout-telecharger", "ouverture",
                    "image", "mise-a-jour"];
+  const ACTIONS_PAGES = __ACTIONS_PAGES__;
   const ENVOIS = {
     goatcounter: (chemin, titre, evenement) => window.goatcounter.count({ path: chemin, title: titre, event: evenement }),
     umami: (chemin, titre, evenement) => {
       if (!evenement) return window.umami.track((p) => ({ ...p, url: chemin, title: titre }));
-      const morceaux = chemin.split("/"), i = morceaux.findIndex((m) => ACTIONS.includes(m));
+      const morceaux = chemin.split("/"), i = morceaux.findIndex((m) => ACTIONS.includes(m) || ACTIONS_PAGES.includes(m));
       if (i < 0) return window.umami.track(chemin);
-      const fichier = morceaux.slice(i + 1).join("/");
-      window.umami.track(morceaux[i], { espace: morceaux.slice(0, i).join("/") || "accueil", ...(fichier && { fichier }) });
+      const fichier = morceaux.slice(i + 1).join("/"), cle = ACTIONS.includes(morceaux[i]) ? "fichier" : morceaux[i];
+      window.umami.track(morceaux[i], { espace: morceaux.slice(0, i).join("/") || "accueil", ...(fichier && { [cle]: fichier }) });
     },
   };
   // Pas d'envoi à Umami pour un navigateur piloté par un programme (robot : Umami ne sait pas l'écarter
@@ -305,7 +310,7 @@ def avec_compteurs(html, goatcounter="", umami="", manuel=False, umami_src="/" +
     actifs = [nom for nom, code in (("goatcounter", goatcounter), ("umami", umami)) if code]
     if not actifs:
         return html
-    js = [COMPTEURS_JS.replace("__ACTIFS__", json.dumps(actifs))]
+    js = [COMPTEURS_JS.replace("__ACTIFS__", json.dumps(actifs)).replace("__ACTIONS_PAGES__", json.dumps(ACTIONS_PAGES))]
     balises = []
     if goatcounter:
         js[:0] = ['window.goatcounter = { path: (p) => p.split("?")[0] || "/" };', VISITEURS_JS]

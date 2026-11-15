@@ -242,10 +242,26 @@ function boutonsFiltres() {
     filtre.loisir === "1" ? "toutes les licences, loisir comprises (le nombre de licenciés de la FFTT)" : "licences compétition seulement (sans les licences loisir)"];
   document.getElementById("resume-filtres").textContent = `Comptés : ${morceaux.join(" · ")} (licences de la saison).`;
 }
-document.getElementById("sexe").addEventListener("click", (ev) => { const b = ev.target.closest("button"); if (b) { filtre.sexe = b.dataset.v; changer(); } });
-document.getElementById("loisir").addEventListener("click", (ev) => { const b = ev.target.closest("button"); if (b) { filtre.loisir = b.dataset.v; changer(); } });
+/* ---------- Statistiques de visite (GoatCounter et Umami, sur les copies du site qui en ont) ----------
+   Ce qu'on fait dans la page, en événements « 77/<action>/<détail> » : onglet, fiche d'un club, classement,
+   filtre, tri, bouton, comparaison, poule, lien. Jamais un nom de joueur ni un texte tapé (recherche). */
+const compterAction = (action, detail, titre) => {
+  try { if (window.compteur) window.compteur(`77/${action}/${String(detail).replace(/\//g, "-").slice(0, 80)}`, `Clubs du 77 · ${titre}`, true); }
+  catch (e) { /* sans compteur */ }
+};
+const texteChoisi = (select) => (select.options[select.selectedIndex] || {}).text || select.value;
+document.addEventListener("click", (ev) => {  // liens vers une autre page (pas les liens internes « #… »)
+  const a = ev.target.closest("a[href]");
+  if (a && !a.getAttribute("href").startsWith("#")) {
+    const nom = (a.querySelector("b") || a).textContent.trim();
+    compterAction("lien", nom, `lien ${nom}`);
+  }
+});
+document.getElementById("sexe").addEventListener("click", (ev) => { const b = ev.target.closest("button"); if (b) { filtre.sexe = b.dataset.v; compterAction("filtre", `sexe-${b.dataset.v}`, `comptés : ${b.textContent.trim()}`); changer(); } });
+document.getElementById("loisir").addEventListener("click", (ev) => { const b = ev.target.closest("button"); if (b) { filtre.loisir = b.dataset.v; compterAction("filtre", `loisir-${b.dataset.v}`, `comptés : ${b.textContent.trim()}`); changer(); } });
 document.getElementById("cats").addEventListener("click", (ev) => {
   const b = ev.target.closest("button"); if (!b) return;
+  compterAction("filtre", `categories-${b.dataset.p || b.dataset.c}`, `comptés : ${b.textContent.trim()}`);
   if (b.dataset.p) filtre.cats = new Set(b.dataset.p === "jeunes" ? ["P", "B", "M", "C", "J"] : b.dataset.p === "adultes" ? ["S", "V"] : D.categories);
   else {
     const tous = D.categories.every((c) => filtre.cats.has(c));
@@ -551,6 +567,7 @@ function vueJoueurs() {
 function ficheClub(num) {
   const c = PAR_NUM.get(num), s = S.get(num);
   if (!c) return;
+  compterAction("fiche", c.nom, `fiche de ${c.nom}`);
   const tuile = (n, v) => `<div class="tuile"><span class="n">${esc(n)}</span><b>${v}</b></div>`;
   const cats = s.cats ? D.categories.map((k) => `<span class="niv" title="${esc(CATS[k])}">${k} ${s.cats[k]}</span>`).join("") : "";
   const meilleurs = (c.joueurs || []).filter((j) => !j[3]).sort((a, b) => (b[0] || 0) - (a[0] || 0)).slice(0, 10);
@@ -579,6 +596,7 @@ document.querySelector("#fiche .fermer").addEventListener("click", () => documen
 document.getElementById("fiche").addEventListener("click", (ev) => {
   const a = ev.target.closest("[data-voir-club]");
   if (!a) return;
+  compterAction("bouton", "jeunes" in a.dataset ? "fiche-tous-les-jeunes" : "fiche-tous-les-joueurs", `fiche : ${a.textContent.trim()}`);
   vj = { ...vj, club: a.dataset.voirClub, q: "", n: 200, ...("jeunes" in a.dataset ? { cat: "jeunes", tri: { cle: "prog", sens: -1 } } : { cat: "" }) };
   document.getElementById("fiche").close();
   if (location.hash === "#joueurs") afficher();
@@ -586,11 +604,13 @@ document.getElementById("fiche").addEventListener("click", (ev) => {
 
 /* ---------- Affichage et évènements ---------- */
 const VUES = { clubs: vueClubs, classements: vueClassements, comparer: vueComparer, poules: vuePoules, joueurs: vueJoueurs };
-let vue = "clubs";
+let vue = "clubs", vueComptee = null;
+const NOMS_VUES = { clubs: "Clubs", classements: "Classements", comparer: "Comparer", poules: "Poules", joueurs: "Joueurs" };
 function afficher() {
   const h = location.hash.slice(1);
   vue = VUES[h] ? h : (VUES[lire("77-vue")] ? lire("77-vue") : "clubs");
   ecrire("77-vue", vue);
+  if (vue !== vueComptee) { vueComptee = vue; compterAction("onglet", vue, `onglet ${NOMS_VUES[vue]}`); }  // pas à chaque filtre
   document.querySelectorAll(".onglets a").forEach((a) => a.setAttribute("aria-current", a.dataset.vue === vue ? "page" : "false"));
   document.getElementById("filtres-joueurs").hidden = vue === "poules" || vue === "joueurs";
   document.getElementById("vue").innerHTML = VUES[vue]();
@@ -602,16 +622,16 @@ function afficher() {
 document.getElementById("vue").addEventListener("click", (ev) => {
   if (ev.target.closest("[data-tout-compter]")) { filtre = PAR_DEFAUT(); changer(); return; }
   const tj = ev.target.closest("[data-tri-j]");
-  if (tj) { const k = tj.dataset.triJ; vj.tri = { cle: k, sens: vj.tri.cle === k ? -vj.tri.sens : ["points", "virt", "prog"].includes(k) ? -1 : 1 }; afficher(); return; }
-  if (ev.target.closest("[data-jeunes-prog]")) { vj = { ...vj, cat: "jeunes", tri: { cle: "prog", sens: -1 }, n: 200 }; afficher(); return; }
-  const sj = ev.target.closest("#sexe-j button"); if (sj) { vj.sexe = sj.dataset.v; vj.n = 200; afficher(); return; }
-  if (ev.target.id === "plus-j") { vj.n += 200; afficher(); return; }
+  if (tj) { const k = tj.dataset.triJ; compterAction("tri", `joueurs-${k}`, `Joueurs : tri par ${tj.textContent.trim()}`); vj.tri = { cle: k, sens: vj.tri.cle === k ? -vj.tri.sens : ["points", "virt", "prog"].includes(k) ? -1 : 1 }; afficher(); return; }
+  if (ev.target.closest("[data-jeunes-prog]")) { compterAction("bouton", "jeunes-par-progression", "Voir les jeunes classés par progression"); vj = { ...vj, cat: "jeunes", tri: { cle: "prog", sens: -1 }, n: 200 }; afficher(); return; }
+  const sj = ev.target.closest("#sexe-j button"); if (sj) { compterAction("filtre", `joueurs-sexe-${sj.dataset.v}`, `Joueurs : ${sj.textContent.trim()}`); vj.sexe = sj.dataset.v; vj.n = 200; afficher(); return; }
+  if (ev.target.id === "plus-j") { compterAction("bouton", "plus-de-joueurs", "Joueurs : afficher plus"); vj.n += 200; afficher(); return; }
   const t = ev.target.closest("[data-tri]");
-  if (t) { const cle = t.dataset.tri; tri = { cle, sens: tri.cle === cle ? -tri.sens : cle === "nom" ? 1 : -1 }; ecrire("77-tri", JSON.stringify(tri)); afficher(); return; }
+  if (t) { const cle = t.dataset.tri; compterAction("tri", `${vue}-${cle}`, `${NOMS_VUES[vue]} : tri par ${t.textContent.trim()}`); tri = { cle, sens: tri.cle === cle ? -tri.sens : cle === "nom" ? 1 : -1 }; ecrire("77-tri", JSON.stringify(tri)); afficher(); return; }
   const c = ev.target.closest("[data-club]"); if (c) { ficheClub(c.dataset.club); return; }
   const r = ev.target.closest("[data-retirer]"); if (r) { choisis = choisis.filter((n) => n !== r.dataset.retirer); sauverChoix(); afficher(); return; }
-  if (ev.target.id === "vider") { choisis = []; sauverChoix(); afficher(); return; }
-  if (ev.target.id === "comparer-poule") { prendrePoule(ev.target.dataset.poule); location.hash = "#comparer"; }
+  if (ev.target.id === "vider") { compterAction("comparer", "vider", "Comparer : tout retirer"); choisis = []; sauverChoix(); afficher(); return; }
+  if (ev.target.id === "comparer-poule") { compterAction("bouton", "comparer-ces-clubs", "Poules : comparer ces clubs"); prendrePoule(ev.target.dataset.poule); location.hash = "#comparer"; }
 });
 function prendrePoule(id) {
   const p = (D.poules || []).find((x) => String(x.id) === String(id));
@@ -621,6 +641,11 @@ function prendrePoule(id) {
 }
 document.getElementById("vue").addEventListener("change", (ev) => {
   const t = ev.target;
+  if (t.tagName === "SELECT" && t.value) {
+    const quoi = { niveau: ["filtre", "niveau"], mesure: ["classement", ""], ajout: ["comparer", "ajout"], "poule-comparer": ["comparer", "poule"],
+                   poule: ["poule", ""], "cat-j": ["filtre", "joueurs-categorie"], "club-j": ["filtre", "joueurs-club"] }[t.id];
+    if (quoi) compterAction(quoi[0], [quoi[1], texteChoisi(t)].filter(Boolean).join("-"), `${NOMS_VUES[vue]} : ${texteChoisi(t)}`);
+  }
   if (t.id === "niveau") { niveauFiltre = t.value; afficher(); }
   else if (t.id === "mesure") { mesure = t.value; ecrire("77-mesure", mesure); afficher(); }
   else if (t.id === "ajout" && t.value) { if (choisis.length < MAX) choisis.push(t.value); sauverChoix(); afficher(); }

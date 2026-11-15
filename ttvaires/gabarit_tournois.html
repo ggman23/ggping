@@ -106,6 +106,19 @@ const BLOCS = [
 const RECHERCHE = `${PINGRADAR}/tournois?commune=${VAIRES}&radius_km=100`;
 const FFTT = "https://monclub.fftt.com/tournaments/search";
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+/* Statistiques de visite (GoatCounter et Umami, sur les copies du site qui en ont) : ce qu'on fait dans la page,
+   en événements « tournois/<action>/<détail> » (liste, lien). Jamais un nom de joueur. */
+const compterAction = (action, detail, titre) => {
+  try { if (window.compteur) window.compteur(`tournois/${action}/${String(detail).replace(/\//g, "-").slice(0, 80)}`, `Tournois · ${titre}`, true); }
+  catch (e) { /* sans compteur */ }
+};
+document.addEventListener("click", (ev) => {  // liens vers une autre page (pas les liens internes « #… »)
+  const a = ev.target.closest("a[href]");
+  if (a && !a.getAttribute("href").startsWith("#")) {
+    const nom = a.dataset.lien || (a.querySelector("b") || a).textContent.trim();
+    compterAction("lien", nom, `lien ${nom}`);
+  }
+});
 
 /* Espace club et individuels à côté de /tournois/ (même mot de passe, déjà retenu), y compris sur le
    site GitHub (…/ggping/tournois/). */
@@ -162,10 +175,12 @@ function vue(b) {
   </div>`;
 }
 
+let listeComptee = null;
 function route() {
   const h = decodeURIComponent(location.hash.slice(1));
   const surMenu = h === "menu" && TELEPHONE.matches;
   const b = BLOCS.find((x) => x.cle === h) || BLOCS[0];
+  if (!surMenu && b.cle !== listeComptee) { listeComptee = b.cle; compterAction("liste", b.cle, `liste ${b.titre}`); }
   document.getElementById("appli").classList.toggle("sur-menu", surMenu);
   menu(surMenu ? null : b.cle);
   if (!surMenu) vue(b);

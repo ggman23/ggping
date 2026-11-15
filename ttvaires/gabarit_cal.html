@@ -155,6 +155,19 @@ button { font: inherit; cursor: pointer; }
 "use strict";
 const D = __DONNEES_JSON__;
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+/* Statistiques de visite (GoatCounter et Umami, sur les copies du site qui en ont) : ce qu'on fait dans la page,
+   en événements « cal/<action>/<détail> » (mois, jour, categorie, lien). Jamais un nom de joueur. */
+const compterAction = (action, detail, titre) => {
+  try { if (window.compteur) window.compteur(`cal/${action}/${String(detail).replace(/\//g, "-").slice(0, 80)}`, `Calendrier · ${titre}`, true); }
+  catch (e) { /* sans compteur */ }
+};
+document.addEventListener("click", (ev) => {  // liens vers une autre page (pas les liens internes « #… »)
+  const a = ev.target.closest("a[href]");
+  if (a && !a.getAttribute("href").startsWith("#")) {
+    const nom = a.dataset.lien || (a.querySelector("b") || a).textContent.trim();
+    compterAction("lien", nom, `lien ${nom}`);
+  }
+});
 const lire = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const ecrire = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* navigation privée */ } };
 const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
@@ -218,6 +231,8 @@ document.getElementById("categories").addEventListener("click", (ev) => {
   const b = ev.target.closest(".categorie");
   if (!b) return;
   masquees.has(b.dataset.cle) ? masquees.delete(b.dataset.cle) : masquees.add(b.dataset.cle);
+  compterAction("categorie", `${b.dataset.cle}-${masquees.has(b.dataset.cle) ? "masquee" : "affichee"}`,
+                `${b.textContent.trim()} ${masquees.has(b.dataset.cle) ? "masqué" : "affiché"}`);
   ecrire("cal-masquees", JSON.stringify([...masquees]));
   dessiner();
 });
@@ -287,7 +302,10 @@ function dessiner() {
     (<a href="${esc(D.page_cd77)}" target="_blank" rel="noopener">cdtt77.fr</a>). Les heures et les lieux des rencontres de Vaires sont dans l'espace club.`;
 }
 function allerA(mois, jour = null) {
+  const avant = iso(courant).slice(0, 7);
   courant = borne(mois);
+  if (iso(courant).slice(0, 7) !== avant) compterAction("mois", iso(courant).slice(0, 7), `mois ${MOIS[courant.getMonth()]} ${courant.getFullYear()}`);
+  if (jour) compterAction("jour", jour, `jour ${jour.split("-").reverse().join("/")}`);
   choisi = jour;
   try { history.replaceState(null, "", `#${iso(courant).slice(0, 7)}`); } catch (e) { /* page ouverte dans un cadre */ }
   dessiner();
