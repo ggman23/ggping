@@ -234,7 +234,7 @@ def test_points_virtuels_en_ligne_seulement_jeunes_par_defaut():
     assert set(client.ttls) == {"8"}
     assert d["virtuels"] == {"joueurs": 7, "a_relire": 1, "connus": 1, "lus": 1, "reportes": 0, "plus_ancienne": lu,
                              "plus_recente": lu, "perimetre": "jeunes", "hors_championnat": 0, "verifiees": 0, "details_lus": 0,
-                             "details_restants": 0}  # 7 licences compétition (Vaires 6, Chelles 1)
+                             "details_restants": 0, "methode": "constant", "erreurs": {}}  # 7 licences compétition (Vaires 6, Chelles 1)
     assert "points virtuels de 1 joueurs sur 7 (relus : jeunes)" in departement.resume(d)
     assert "licence" not in json.dumps(d)  # pas de numéro de licence dans la page
     # Par défaut : seulement en ligne (pingpocket.fr lu dans les pages du PC) ; sur le PC, aucune partie demandée

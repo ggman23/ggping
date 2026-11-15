@@ -550,7 +550,13 @@ D'où viennent les données :
   championnat (critérium, tournois...) est donc lu une fois puis gardé : au plus 2 500 nouvelles par
   mise à jour (environ 11 minutes), celles des joueurs choisis, les plus récentes d'abord (6 600
   environ au 15/11 : trois mises à jour « tous » pour tout vérifier, ensuite seulement les nouvelles).
-  La note de la page dit combien sont vérifiées. Les clubs du 77 passent après les adversaires : si
+  La note de la page dit combien sont vérifiées.
+- **Calcul mois par mois** : pour chaque partie, la FFTT prend la valeur des deux joueurs à la fin du
+  mois précédent, pas leurs points du début de saison (que l'API donne dans chaque partie). L'outil
+  refait donc le calcul mois après mois pour les joueurs du 77 (référence : points du début de phase
+  + gains des mois précédents ; un adversaire hors du 77 garde ses points). À chaque mise à jour, les
+  deux calculs sont comparés aux points mensuels publiés par la FFTT (listes de licenciés) ; le plus
+  juste est retenu, et le journal donne l'erreur moyenne de chacun. Les clubs du 77 passent après les adversaires : si
   la FFTT refusait des requêtes pendant la lecture des jeunes, la page des adversaires serait déjà faite.
 
 ## Sécurité

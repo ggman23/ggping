@@ -531,6 +531,19 @@ pour voir les favoris d'une poule.
   joueurs choisis, les plus récents d'abord ; les détails déjà lus servent à tous ; calcul par virtuel.
   formes_depuis_parties (forme_joueurs le réutilise). Les coefficients restent ceux de la FFTT, faute de
   barème officiel trouvé : à confirmer en comparant ensuite le joueur signalé.
+- Après la lecture des forfaits (mise à jour n° 73, « tous », 2 657 parties vérifiées sur 6 623) : le
+  joueur signalé passe à 58 V / 40 D (comme la FFTT) et +186,2 (FFTT +123,1) : reste 63 points. Le
+  nombre de parties étant juste, le calcul de chaque partie est en cause. Coefficients de l'API
+  conformes à ceux cités par un guide récent (championnat et tournois nationaux A 1, autres nationaux
+  0,75, régionaux et départementaux 0,5, critérium 1,5). En revanche, la FFTT calcule chaque partie avec
+  « la valeur du joueur à la fin de la période précédant la partie » (situation mensuelle), et non ses
+  points officiels de la phase, que l'API donne dans les parties : pour un joueur qui progresse, tous les
+  cas jouent contre lui (victoire contre plus fort ou plus faible, défaite...), environ 1 point par
+  partie. Correction : mensuel.py, calcul mois par mois (référence = début de phase + gains des mois
+  précédents, adversaires hors du 77 : points de la partie), comparé aux points mensuels publiés
+  (listes pingpocket : situation de fin du mois -1 ou -2 selon la date de la liste) ; retenu s'il est
+  nettement plus juste (erreur moyenne ≤ 80 % de l'autre, 50 joueurs au moins). Journal : erreur des
+  deux calculs, variabilité des points lus dans les parties.
 
 ## Calendrier de la saison : /cal/ (13/11/2026)
 
