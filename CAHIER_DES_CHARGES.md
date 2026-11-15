@@ -567,6 +567,20 @@ pour voir les favoris d'une poule.
   (6e valeur de ses points virtuels, périodes dans virtuels.periodes), à comparer aux +33,5 (fin août
   et septembre), +84,3 (octobre) et +5,3 (novembre) de la FFTT ; affichés au survol de « +/− »
   (« sept. +12 · oct. +8 »).
+- Mise à jour n° 77 : outil +33,5 / +80,8 / -6,6 ; FFTT +33,5 / +84,3 / +5,3. Fin août + septembre
+  exacts : parties, forfaits, barème, coefficients et périodes justes. Octobre (-3,5) et novembre
+  (-11,9, parties non validées) : adversaires d'autres départements (Troyes, Vittel, Compiègne...)
+  comptés avec leurs points de début de phase, la FFTT avec leur valeur du mois (jeunes en progression).
+  Non corrigé (des milliers de listes de plus).
+- Calcul mois par mois sur les pages de Vaires (demande du 15/11) : la page des clubs du 77 enregistre
+  les valeurs de début de période de ses joueurs (mensuel.enregistrer, references_77.json dans le
+  cache) ; mensuel.References et mensuel.recalculer (valeur du joueur et de l'adversaire si connues,
+  sinon début de phase + gains des périodes précédentes / points de la partie) servent au classement
+  virtuel (et donc aux fiches, à la progression et à leurs images), à la forme des adversaires et des
+  individuels (formes_depuis_parties) et aux résultats (points de chaque partie ; le cumul part des
+  points officiels de la phase : champ « officiels »). Indicateur « mensuel » dans les données, notes
+  des pages adaptées. Les pages de Vaires passent avant celle des clubs du 77 : elles utilisent les
+  valeurs du lancement précédent (deux mises à jour la première fois).
 
 ## Calendrier de la saison : /cal/ (13/11/2026)
 

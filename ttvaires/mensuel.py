@@ -17,12 +17,20 @@ contre un 15xx (victoire normale, écart 25 à 49), +12 contre un 16xx et +19,5 
 (victoires anormales, écarts 50 à 99 et 150 à 199) ne sont possibles qu'avec 1532,5, pas avec 1499.
 (Les « points mensuels » des listes de licenciés de pingpocket ne donnent pas cette situation : 1499
 pour ce joueur ; ils ne peuvent pas servir à vérifier le calcul.)
+
+Les pages de Vaires (classement virtuel, fiches, progression, résultats, forme des adversaires) se
+servent des valeurs mensuelles ainsi calculées pour les joueurs du 77 : la page des clubs du 77 les
+enregistre (FICHIER, dans le cache de la mise à jour en ligne) et les pages les relisent au lancement
+suivant (References). Sans ce fichier (PC, première fois), le calcul reste sur les points de la phase.
 """
 
+import json
 from collections import defaultdict
 
 from .resultats import points_partie
 from .virtuel import analyser
+
+FICHIER = "references_77.json"  # {licence: {période « AAAA-MM »: valeur du joueur au début de la période}}
 
 
 def lignes_des_joueurs(toutes, competitions, etats, debut, fin):
@@ -32,13 +40,7 @@ def lignes_des_joueurs(toutes, competitions, etats, debut, fin):
     for lic, parties in toutes.items():
         if not parties:
             continue
-        adverses = {}
-        for p in parties:
-            h, a = (p.get("homePlayer") or {}).get("identifier"), (p.get("awayPlayer") or {}).get("identifier")
-            adverses[p.get("id")] = a if h == lic else h
         ls, officiels, _ = analyser(lic, parties, competitions, etats, debut, fin)
-        for l in ls:
-            l["adv_licence"] = adverses.get(l["id"])
         lignes[lic] = ls
         if officiels:
             depart[lic] = officiels.most_common(1)[0][0]
@@ -54,15 +56,19 @@ def periode(jour):
     return f"{annee}-09" if mois in ("07", "08") else jour[:7]
 
 
-def calcul_mensuel(lignes, depart):
+def calcul_mensuel(lignes, depart, references=None):
     """{licence: [points de chaque partie, dans l'ordre de ses lignes]} : parties d'une période (un mois,
     juillet et août avec septembre) calculées avec les références de la fin de la période précédente
-    (début de phase + gains des périodes précédentes)."""
+    (début de phase + gains des périodes précédentes). references (dict) : rempli avec la valeur de
+    chaque joueur au début de chaque période, {licence: {période: valeur}}."""
     mois = sorted({periode(l["date"]) for ls in lignes.values() for l in ls})
     cumul = defaultdict(float)
     points = {lic: [None] * len(ls) for lic, ls in lignes.items()}
     for m in mois:
         reference = {lic: depart[lic] + cumul[lic] for lic in depart}
+        if references is not None:
+            for lic, valeur in reference.items():
+                references.setdefault(lic, {})[m] = round(valeur, 2)
         gains = defaultdict(float)
         for lic, ls in lignes.items():
             for k, l in enumerate(ls):
@@ -81,3 +87,52 @@ def points_variables(lignes):
     """Joueurs dont les points lus dans leurs parties changent d'une partie à l'autre (contrôle : l'API
     donne-t-elle les points de la phase, constants, ou ceux du mois ?)."""
     return sum(1 for ls in lignes.values() if len({l["pts_joueur"] for l in ls}) > 1), sum(1 for ls in lignes.values() if ls)
+
+
+def enregistrer(client, references):
+    """Valeurs mensuelles des joueurs du 77, pour les pages du lancement suivant (dossier du cache)."""
+    dossier = getattr(client, "dossier", None)
+    if dossier is not None and references:
+        (dossier / FICHIER).write_text(json.dumps(references, separators=(",", ":")), encoding="utf-8")
+
+
+class References:
+    """Valeur mensuelle connue des joueurs du 77 (enregistrée par la page des clubs du 77)."""
+
+    def __init__(self, table=None):
+        self.table = table or {}
+
+    @classmethod
+    def lire(cls, client):
+        dossier = getattr(client, "dossier", None)
+        try:
+            return cls(json.loads((dossier / FICHIER).read_text(encoding="utf-8"))) if dossier is not None else cls()
+        except (OSError, ValueError):
+            return cls()
+
+    def __bool__(self):
+        return bool(self.table)
+
+    def valeur(self, licence, jour):
+        return self.table.get(licence, {}).get(periode(jour))
+
+
+def recalculer(lignes, licence, depart, references):
+    """Points de chaque partie d'un joueur (lignes de virtuel.analyser, dans l'ordre des dates) avec les
+    valeurs mensuelles : la sienne et celle de l'adversaire si elles sont connues ; à défaut, la sienne
+    vaut son début de phase + ses gains des périodes précédentes, celle de l'adversaire ses points de la
+    partie. Met à jour pts_joueur, adv_points, ecart et points de chaque ligne."""
+    cumul, avant, courante = 0.0, 0.0, None
+    base = depart if depart is not None else (lignes[0]["pts_joueur"] if lignes else None)
+    for l in lignes:
+        p = periode(l["date"])
+        if p != courante:
+            avant, courante = cumul, p
+        moi = references.valeur(licence, l["date"])
+        moi = moi if moi is not None else base + avant
+        adv = references.valeur(l.get("adv_licence"), l["date"])
+        adv = adv if adv is not None else l["adv_points"]
+        l["pts_joueur"], l["adv_points"], l["ecart"] = round(moi, 1), round(adv, 1), round(adv - moi, 1)
+        l["points"] = round(points_partie(moi, adv, l["victoire"], l["coef"]), 3)
+        cumul += l["points"]
+    return lignes

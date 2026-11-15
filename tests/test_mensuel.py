@@ -37,3 +37,33 @@ def test_juillet_et_aout_comptent_avec_septembre():
                     _ligne("2026-10-05", "x", 1115, True)]}
     points = mensuel.calcul_mensuel(lignes, {"a": 1000})
     assert points["a"] == [10, 10, 8]  # septembre encore à 1000 (écart 115) ; octobre à 1020 (écart 95)
+
+
+def test_valeurs_mensuelles_enregistrees_puis_utilisees_par_les_pages_de_vaires(tmp_path):
+    """La page des clubs du 77 enregistre la valeur de chaque joueur au début de chaque période ; les pages
+    de Vaires la relisent pour calculer chaque partie (le joueur et son adversaire)."""
+    class Client:
+        dossier = tmp_path
+    lignes = {"a": [_ligne("2026-08-30", "b", 1200, True), _ligne("2026-10-05", "b", 1200, True)],
+              "b": [_ligne("2026-08-30", "a", 1000, False, pts=1200), _ligne("2026-10-05", "a", 1000, False, pts=1200)]}
+    references = {}
+    mensuel.calcul_mensuel(lignes, {"a": 1000, "b": 1200}, references)
+    g = points_partie(1000, 1200, True, 1)  # août (période de septembre), avec les points du début de saison
+    assert references["a"] == {"2026-09": 1000, "2026-10": 1000 + g}
+    assert references["b"] == {"2026-09": 1200, "2026-10": 1200 + points_partie(1200, 1000, False, 1)}
+    mensuel.enregistrer(Client, references)
+    lues = mensuel.References.lire(Client)
+    assert lues.valeur("a", "2026-10-20") == 1000 + g and lues.valeur("a", "2026-07-02") == 1000
+    assert lues.valeur("inconnu", "2026-10-01") is None
+    # Recalcul d'un joueur : sa valeur et celle de l'adversaire du 77 (b) ; un adversaire inconnu (x) garde ses points
+    ls = [_ligne("2026-09-10", "b", 1200, True), _ligne("2026-10-06", "b", 1200, False), _ligne("2026-10-07", "x", 1100, False)]
+    mensuel.recalculer(ls, "a", 1000, lues)
+    assert (ls[0]["pts_joueur"], ls[0]["adv_points"], ls[0]["points"]) == (1000, 1200, g)
+    b_oct = references["b"]["2026-10"]
+    assert (ls[1]["pts_joueur"], ls[1]["adv_points"]) == (round(1000 + g, 1), round(b_oct, 1))
+    assert ls[1]["points"] == round(points_partie(1000 + g, b_oct, False, 1), 3) and ls[1]["ecart"] == round(b_oct - 1000 - g, 1)
+    assert (ls[2]["adv_points"], ls[2]["points"]) == (1100, round(points_partie(1000 + g, 1100, False, 1), 3))
+    # Sans fichier (PC, première fois) : aucune valeur, les pages gardent les points de la phase
+    class Vide:
+        dossier = tmp_path / "absent"
+    assert not mensuel.References.lire(Vide) and not mensuel.References.lire(object())

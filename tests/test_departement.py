@@ -343,3 +343,10 @@ def test_victoire_par_forfait_ecartee_grace_au_detail_des_parties(monkeypatch):
     assert res["a"][1:4] == [points_partie(600, 620, True, 0.5), 1, 0] and controle["details_restants"] == 0
     assert [d for d in client.demandes if "/games/" in d].count(f"{fftt.API}/games/41") == 1
     assert f"{fftt.API}/games/42" not in client.demandes  # joueur hors du choix : pas de requête de détail
+
+
+def test_valeurs_mensuelles_enregistrees_pour_les_pages_de_vaires(tmp_path):
+    client = ClientParties(_listes(), {"8": [_partie(1, "8", 540, 700, True)]})
+    client.dossier = tmp_path
+    departement.recuperer_departement(client, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True)
+    assert json.loads((tmp_path / "references_77.json").read_text(encoding="utf-8"))["8"] == {"2026-10": 540}

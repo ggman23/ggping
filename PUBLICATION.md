@@ -558,7 +558,14 @@ D'où viennent les données :
   avec septembre (les périodes de la FFTT commencent en septembre). Vérifié sur la liste des parties
   d'un joueur dans l'application FFTT : ses parties d'octobre ne s'expliquent qu'avec ses points de fin
   septembre, et ses tournois de fin août sont dans la même situation mensuelle que septembre. Au
-  survol de « +/− » : les points gagnés mois par mois (« sept. +12 · oct. +8 · nov. −2 »). Les clubs du 77 passent après les adversaires : si
+  survol de « +/− » : les points gagnés mois par mois (« sept. +12 · oct. +8 · nov. −2 »).
+- **Pages de Vaires** (classement virtuel, fiches des joueurs, progression, résultats, forme des
+  adversaires et des individuels) : même calcul mois par mois. La page des clubs du 77 enregistre la
+  valeur de chaque joueur du 77 au début de chaque mois (fichier `references_77.json` du cache de la
+  mise à jour en ligne) ; les pages de Vaires la relisent à la mise à jour suivante (elles passent
+  avant la page des clubs du 77). La page Résultats garde son cumul à partir des points officiels de
+  la phase. Sans ce fichier (PC, ou avant la première mise à jour des clubs du 77), le calcul reste sur
+  les points de la phase ; la note de chaque page dit lequel est utilisé. Les clubs du 77 passent après les adversaires : si
   la FFTT refusait des requêtes pendant la lecture des jeunes, la page des adversaires serait déjà faite.
 
 ## Sécurité

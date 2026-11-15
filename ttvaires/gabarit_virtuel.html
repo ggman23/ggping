@@ -202,8 +202,9 @@ function vueClassement() {
         `<button class="puce ${filtre === f ? "actif" : ""}" data-filtre="${f}">${t} (${compte(f)})</button>`).join("")}</div>
     ${lignes.length ? `<div class="defil"><table><thead><tr>${tete}</tr></thead><tbody>${corps}</tbody></table></div>`
       : '<p class="vide">Aucun joueur.</p>'}
-    <p class="note">Points d'une partie = barème FFTT × coefficient de la compétition, calculés avec les points officiels
-      de la phase des deux joueurs (parties lues sur l'API publique de la FFTT). Les doubles, les victoires par forfait et
+    <p class="note">Points d'une partie = barème FFTT × coefficient de la compétition, calculés ${D.mensuel
+      ? "mois par mois comme la FFTT : avec la valeur des deux joueurs à la fin du mois précédent (juillet et août comptent avec septembre ; un adversaire d'un autre département garde ses points de la phase)"
+      : "avec les points officiels de la phase des deux joueurs"} (parties lues sur l'API publique de la FFTT). Les doubles, les victoires par forfait et
       les parties non comptées ne rapportent rien. Les points mensuels publiés par la FFTT peuvent différer un peu
       (parties saisies en retard, corrections). Clique sur un titre de colonne pour trier.</p>`;
 }
@@ -254,7 +255,7 @@ function vuePerfs(type) {
       : `<p class="vide">${gagne ? "Aucune victoire" : "Aucune défaite"} qui ${gagne ? "rapporte" : "coûte"} des points pour le moment.</p>`}
     ${coupe ? `<button class="puce plus" id="tout-voir">Afficher les ${toutes.length} parties</button>` : ""}
     <p class="note">Points d'une partie = barème FFTT × coefficient de la compétition (critérium 1,5, tournois 0,5…).
-      Entre parenthèses : points officiels de la phase.</p>`;
+      Entre parenthèses : ${D.mensuel ? "valeur du joueur à la fin du mois précédent" : "points officiels de la phase"}.</p>`;
 }
 
 function afficher() {

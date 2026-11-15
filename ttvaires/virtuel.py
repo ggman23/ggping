@@ -188,7 +188,8 @@ def analyser(licence, parties, competitions, etats, debut, fin):
             lignes.append({
                 "id": g["id"], "date": jour, "competition": libelle_competition(nom), "division": etat.get("division"),
                 "championnat": est_championnat(nom), "coef": comp["coef"],
-                "pts_joueur": moi["points"], "adversaire": adversaire["nom"], "adv_points": adv["points"],
+                "pts_joueur": moi["points"], "adversaire": adversaire["nom"], "adv_licence": adversaire["licence"],
+                "adv_points": adv["points"],
                 "ecart": adv["points"] - moi["points"], "victoire": victoire,
                 "points": round(points_partie(moi["points"], adv["points"], victoire, comp["coef"]), 3),
                 "manches": manches, "abandon": bool(g.get("abandonment") or etat.get("abandon")),
@@ -270,6 +271,8 @@ def lire_etats_parties(client, ids, a_lire=(), message="détail des parties"):
 def formes_depuis_parties(client, toutes, etats, debut, fin):
     """{licence: resume_forme(...) avec le nom, ou None} à partir des listes de parties déjà lues ;
     etats : ce que l'on sait de chaque partie (feuilles de match, détail lu) : non comptée, forfait."""
+    from . import mensuel  # (mensuel s'appuie sur ce module)
+    references = mensuel.References.lire(client)
     simples = [p for ps in toutes.values() if ps for p in ps if debut <= (p.get("date") or "")[:10] <= fin and _simple(p)]
     competitions = _competitions(client, {(p.get("contest") or {}).get("id") for p in simples} - {None})
     res = {}
@@ -278,6 +281,8 @@ def formes_depuis_parties(client, toutes, etats, debut, fin):
             res[lic] = None
             continue
         lignes, officiels, _ = analyser(lic, parties, competitions, etats, debut, fin)
+        if references:  # calcul mois par mois, comme la FFTT
+            mensuel.recalculer(lignes, lic, officiels.most_common(1)[0][0] if officiels else None, references)
         res[lic] = resume_forme(lignes, officiels)
         res[lic]["nom"] = _nom_du_joueur(lic, parties)
     return res
@@ -368,6 +373,8 @@ def controle_parties(joueurs, detail_rencontres, numero_club, source):
 
 
 def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_import=None):
+    from . import mensuel  # (mensuel s'appuie sur ce module)
+    references = mensuel.References.lire(client)
     aujourdhui = aujourdhui or date.today()
     phase, saison = fftt.phase_et_saison(aujourdhui)
     debut, fin = fftt.bornes_phase(aujourdhui)
@@ -409,6 +416,8 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
         sans_reponse += parties is None
         lignes, officiels, ecartees = analyser(lic, parties or [], competitions, etats, debut, fin)
         off = officiels.most_common(1)[0][0] if officiels else (j.get("points") or j.get("points_mensuels"))
+        if references:  # calcul mois par mois, comme la FFTT (valeurs enregistrées par la page des clubs du 77)
+            mensuel.recalculer(lignes, lic, off, references)
         championnat = round(sum(l["points"] for l in lignes if l["championnat"]), 3)
         autres = round(sum(l["points"] for l in lignes if not l["championnat"]), 3)
         total = round(championnat + autres, 3)
@@ -440,6 +449,7 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
     return {
         "genere_le": datetime.now().isoformat(timespec="minutes"), "saison": saison, "phase": phase,
         "debut": debut, "club": {"numero": numero_club, "nom": feuilles["nom_club"]}, "source": source,
+        "mensuel": bool(references),  # calcul mois par mois (valeurs de la page des clubs du 77)
         "verification": feuilles["verification"],
         "controle": controle_parties(resultat, feuilles["detail"], numero_club, source),
         "competitions": [{"nom": n, "coef": c, "championnat": ch, "parties": nb}

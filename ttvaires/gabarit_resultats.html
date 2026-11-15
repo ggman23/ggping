@@ -167,8 +167,9 @@ function afficher() {
   }));
 }
 function note() {
-  return `<p class="note">Points virtuels calculés avec le barème FFTT (coefficient 1, championnat par équipes), à partir des points
-    inscrits sur les feuilles de match. Clique sur un titre de colonne pour trier.</p>`;
+  return `<p class="note">Points virtuels calculés avec le barème FFTT (coefficient 1, championnat par équipes), ${D.mensuel
+    ? "mois par mois comme la FFTT : chaque partie avec la valeur des deux joueurs à la fin du mois précédent (le cumul part des points officiels de la phase)"
+    : "à partir des points inscrits sur les feuilles de match"}. Clique sur un titre de colonne pour trier.</p>`;
 }
 function route() {
   const h = location.hash.slice(1);

@@ -93,3 +93,12 @@ def test_feuille_de_match_vue_de_vaires_a_l_exterieur():
     assert forfait["forfait"] and forfait["gagne"] is False
     # Bilan des simples joués (le double n'y compte pas)
     assert [(b["nom"], b["v"], b["n"]) for b in f["bilan"]] == [("GUITTON", 1, 1), ("LARDE", 0, 1)]
+
+
+def test_cumul_depuis_les_points_de_la_phase_avec_la_valeur_du_mois():
+    """Calcul mois par mois : la partie se calcule avec la valeur du mois (800), mais le cumul part des
+    points de la phase (780), sinon les gains des mois passés compteraient deux fois."""
+    p = _partie("DELOBELLE", 800, "A", 700, True)
+    p["officiels"] = 780
+    lignes, cumuls = synthese([p])
+    assert lignes[0]["points"] == 780 and lignes[0]["apres"] == 780 + p["gain"] and p["gain"] == points_partie(800, 700, True)

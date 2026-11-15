@@ -207,7 +207,9 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
     simples = [p for ps in toutes.values() if ps for p in ps if debut <= (p.get("date") or "")[:10] <= fin and _simple(p)]
     competitions = _competitions(client, {(p.get("contest") or {}).get("id") for p in simples} - {None})
     lignes, depart = mensuel.lignes_des_joueurs(toutes, competitions, etats, debut, fin)
-    points_m = mensuel.calcul_mensuel(lignes, depart)
+    references = {}
+    points_m = mensuel.calcul_mensuel(lignes, depart, references)
+    mensuel.enregistrer(client, references)  # pour les pages de Vaires du lancement suivant
     variables, avec_parties = mensuel.points_variables(lignes)
     ecart = sum(abs(sum(points_m[lic]) - sum(l["points"] for l in ls)) for lic, ls in lignes.items()) / max(1, len(lignes))
     print(f"  points des joueurs lus dans les parties : différents d'une partie à l'autre pour {variables} joueurs sur {avec_parties} ; "

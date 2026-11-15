@@ -74,6 +74,8 @@ def recuperer_parties(client, numero_club="08770250", aujourdhui=None):
     phase, saison = fftt.phase_et_saison(aujourdhui)
     print(f"Résultats des équipes du club {numero_club} (phase {phase} {saison}, API FFTT)", flush=True)
     club = _rencontres_jouees(client, numero_club, aujourdhui)
+    from . import mensuel  # valeurs mois par mois des joueurs du 77 (page des clubs du 77) ; sans elles, points de la phase
+    references = mensuel.References.lire(client)
     parties = []
     for r, domicile in club["jouees"]:
         d = club["details"].get(r["id"])
@@ -89,11 +91,14 @@ def recuperer_parties(client, numero_club="08770250", aujourdhui=None):
                 continue
             j, a = fftt.joueur(g[f"{nous}Player"]), fftt.joueur(g[f"{eux}Player"])
             pts, pts_adv = j["points"] or 500, a["points"] or 500
+            officiels = pts  # points de la phase : départ du cumul
+            pts = round(references.valeur(j["licence"], d["date"][:10]) or pts, 1)      # calcul mois par mois, comme la FFTT
+            pts_adv = round(references.valeur(a["licence"], d["date"][:10]) or pts_adv, 1)
             victoire = g["winner"] == nous
             parties.append({
                 "journee": d["day"]["position"], "date": d["date"][:10],
                 "equipe": nom, "ordre": club["ordres"][notre_equipe], "adversaires": d[f"{eux}Opponent"]["team"]["name"],
-                "licence": j["licence"], "joueur": j["nom"], "points": pts,
+                "licence": j["licence"], "joueur": j["nom"], "points": pts, "officiels": officiels,
                 "adversaire": a["nom"], "points_adv": pts_adv,
                 "ecart": pts_adv - pts, "victoire": victoire,
                 "gain": points_partie(pts, pts_adv, victoire),
@@ -102,7 +107,7 @@ def recuperer_parties(client, numero_club="08770250", aujourdhui=None):
     return {
         "genere_le": datetime.now().isoformat(timespec="minutes"), "saison": saison, "phase": phase,
         "club": {"numero": numero_club, "nom": "CVTT VAIRES" if numero_club == "08770250" else numero_club},
-        "parties": parties,
+        "parties": parties, "mensuel": bool(references),
         "verification": bilan_club(club["rencontres"], club["etats"], aujourdhui.isoformat(), numero_club, "CVTT VAIRES"),
     }
 
@@ -209,12 +214,13 @@ def synthese(parties):
         lignes.append({
             "journee": journee, "date": ps[0]["date"], "equipe": ps[0]["equipe"], "ordre": ordre,
             "adversaires": ps[0]["adversaires"], "licence": lic, "joueur": ps[0]["joueur"],
-            "points": ps[0]["points"], "delta": delta, "v": len(victoires), "matchs": len(ps),
+            "points": ps[0]["points"], "officiels": ps[0].get("officiels", ps[0]["points"]), "delta": delta,
+            "v": len(victoires), "matchs": len(ps),
             "meilleure": meilleure["ecart"] if meilleure else None,
             "meilleure_adv": meilleure["points_adv"] if meilleure else None,
             "apres": ps[0]["points"] + delta,
             "detail": [
-                f"{'bat' if p['victoire'] else 'perd contre'} {p['adversaire']} ({p['points_adv']}) : "
+                f"{'bat' if p['victoire'] else 'perd contre'} {p['adversaire']} ({round(p['points_adv'])}) : "
                 + f"{p['gain']:+g}".replace(".", ",")
                 for p in ps
             ],
@@ -228,7 +234,7 @@ def synthese(parties):
         par_joueur[ligne["licence"]].append(ligne)
     for rencontres in par_joueur.values():
         rencontres.sort(key=lambda l: (l["date"] or "", l["journee"], l["ordre"]))
-        officiels = rencontres[0]["points"]
+        officiels = rencontres[0]["officiels"]  # points de la phase (pas la valeur du mois, qui compte déjà des gains)
         total = 0.0
         for ligne in rencontres:
             total += ligne["delta"]

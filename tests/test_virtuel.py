@@ -155,6 +155,17 @@ def test_forme_des_joueurs_adverses():
     client.details_lus = {f"{API}/games/22": json.dumps({"forfeit": True, "homePoints": 2, "awayPoints": 0})}
     y = forme_joueurs(client, ["50"], {}, "2026-07-01", "2026-12-31")["50"]
     assert (y["v"], y["d"]) == (2, 1) and not [u for u in client.demandes if "/games/" in u]
+    # Valeurs mensuelles connues (page des clubs du 77) : en octobre, 50 vaut 800 et non 750 (critérium, coef 1,5)
+    import tempfile
+    from pathlib import Path
+    from ttvaires.resultats import points_partie
+    client.details_lus = {}
+    client.dossier = Path(tempfile.mkdtemp())
+    (client.dossier / "references_77.json").write_text(json.dumps({"50": {"2026-10": 800}}), encoding="utf-8")
+    z = forme_joueurs(client, ["50"], {}, "2026-07-01", "2026-12-31")["50"]
+    crit = next(c for c in z["competitions"] if c["nom"] == "Critérium fédéral")
+    assert crit["points"] == round(points_partie(800, 700, True, 1.5) + points_partie(800, 900, False, 1.5), 1) == 1.5
+    assert next(c for c in x["competitions"] if c["nom"] == "Critérium fédéral")["points"] == 4.5  # sans : avec 750
 
 
 def test_historique_des_classements_des_joueurs_du_club():
