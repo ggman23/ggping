@@ -290,8 +290,9 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
                         sum(1 for l in ls if mensuel.valeur_estimee(l.get("adv_licence"), l["date"], depart, estime, premiere))]
     jours = sorted(r[4] for r in res.values())
     fiabilite = Counter(mensuel.niveau(r[7]) for r in res.values())
+    gris = sum(1 for r in res.values() if r[6] and not r[7])  # d'autres départements, valeurs calculées
     ext_estimes = sum(1 for x in exterieurs if x in estime)
-    print(f"  fiabilité (parties contre un adversaire dont la valeur du mois est estimée) : {fiabilite[0]} joueurs sans, "
+    print(f"  fiabilité (parties contre un adversaire dont la valeur du mois est estimée) : {fiabilite[0]} joueurs sans ({gris} avec des adversaires d'autres départements : pastille grise), "
           f"{fiabilite[1]} de 1 à {mensuel.SEUILS[0]}, {fiabilite[2]} jusqu'à {mensuel.SEUILS[1]}, {fiabilite[3]} au-delà "
           f"(au plus {max((r[7] for r in res.values()), default=0)}) ; adversaires d'autres départements à valeur estimée "
           f"après une période : {ext_estimes} sur {len(exterieurs)}", flush=True)
@@ -303,7 +304,7 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
                  "exterieurs": len(exterieurs), "exterieurs_connus": sum(1 for x in exterieurs if x in lignes),
                  "exterieurs_lus": len(a_lire_ext),
                  "exterieurs_restants": sum(1 for x in perimes_ext[MAX_EXTERIEURS:] if dates_ext[x] is None),
-                 "seuils": list(mensuel.SEUILS), "fiabilite": [fiabilite[k] for k in range(4)]}
+                 "seuils": list(mensuel.SEUILS), "fiabilite": [fiabilite[k] for k in range(4)], "fiabilite_gris": gris}
 
 
 def force_des_equipes(equipes, joueurs):

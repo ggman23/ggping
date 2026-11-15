@@ -611,6 +611,10 @@ pour voir les favoris d'une poule.
   Réalisation : compterAction dans gabarit_77, gabarit_cal, gabarit_indivs, gabarit_tournois →
   window.compteur(« espace/action/détail », titre, événement) ; netlify.ACTIONS_PAGES pour Umami.
   Onglet compté à son changement (pas à chaque filtre), jamais un nom de joueur ni une recherche.
+- Pastille grise (15/11) : 405 joueurs ont joué hors du 77, 187 ont une pastille ; les 218 autres
+  (adversaires extérieurs tous à valeur calculée) ont maintenant une pastille grise (« presque sûre »),
+  journal : fiabilite_gris. France entière (125 000 licenciés) : écartée avec l'utilisateur
+  (extraction de toute la base avec un compte personnel ; accès officiel peu probable).
 
 ## Calendrier de la saison : /cal/ (13/11/2026)
 

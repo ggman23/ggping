@@ -243,7 +243,7 @@ def test_points_virtuels_en_ligne_seulement_choix_des_jeunes():
                              "plus_recente": lu, "perimetre": "jeunes", "hors_championnat": 0, "verifiees": 0, "details_lus": 0,
                              "details_restants": 0, "methode": "mensuel", "periodes": ["2026-10"], "exterieurs": 1,
                              "exterieurs_connus": 0, "exterieurs_lus": 1, "exterieurs_restants": 0,
-                             "seuils": [5, 20], "fiabilite": [0, 1, 0, 0]}  # 7 licences (Vaires 6, Chelles 1)
+                             "seuils": [5, 20], "fiabilite": [0, 1, 0, 0], "fiabilite_gris": 0}  # 7 licences (Vaires 6, Chelles 1)
     assert "points virtuels de 1 joueurs sur 7 (relus : jeunes)" in departement.resume(d)
     assert "licence" not in json.dumps(d)  # pas de numéro de licence dans la page
     # Par défaut : seulement en ligne (pingpocket.fr lu dans les pages du PC) ; sur le PC, aucune partie demandée
@@ -383,6 +383,7 @@ def test_adversaires_d_autres_departements_dans_le_calcul_mensuel():
     x_octobre = 900 + points_partie(900, 1100, True, 1)
     assert tom[5][1] == round(points_partie(540, x_octobre, False, 1), 1) and tom[5][6] == 1
     assert (d["virtuels"]["exterieurs"], d["virtuels"]["exterieurs_connus"]) == (1, 1)
+    assert tom[5][7] == 0 and d["virtuels"]["fiabilite_gris"] == 1  # x lu, octobre : valeur calculée (pastille grise)
 
 
 def test_fiabilite_parties_contre_un_adversaire_a_valeur_estimee(tmp_path):

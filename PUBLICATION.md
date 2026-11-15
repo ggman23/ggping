@@ -574,8 +574,12 @@ D'où viennent les données :
   phase de tous les joueurs : jamais estimées. La valeur d'un joueur lu reste exacte tant qu'il n'a joué
   que des joueurs lus ; dès qu'il a joué, après le premier mois, un joueur que l'outil ne lit pas (le
   plus souvent pour un joueur d'un autre département), elle est estimée pour les mois suivants.
-  Vert : 1 à 5 parties, très proche ; orange : 6 à 20, quelques points d'écart possibles ; rouge : plus
-  de 20, moins sûre ; sans pastille : toutes ses parties avec des valeurs connues. Une partie ne change
+  Gris : aucune partie de ce genre, mais des joueurs d'autres départements rencontrés, tous avec une
+  valeur calculée d'après leurs parties, presque sûre (un forfait non vérifié chez eux peut laisser un
+  petit écart) ; vert : 1 à 5 parties, très proche ; orange : 6 à 20, quelques points d'écart
+  possibles ; rouge : plus de 20, moins sûre ; sans pastille : que des joueurs du 77, valeurs connues.
+  Au 15/11/2026 : 2 332 joueurs, 2 145 sans pastille verte, orange ou rouge (dont 218 gris), 151
+  verts, 32 orange, 4 rouges. Une partie ne change
   que si l'erreur sur la valeur de l'adversaire fait passer l'écart dans une autre tranche du barème.
   Seuils (mensuel.SEUILS) à revoir en comparant quelques joueurs de chaque couleur à la FFTT ; le
   journal donne le nombre de joueurs de chaque couleur.

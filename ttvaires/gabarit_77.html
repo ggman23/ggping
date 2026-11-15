@@ -12,11 +12,11 @@
   --vaires-fond: #fff1b8; --vaires-bord: #e0a800; --barre-vaires: #eda100; --barre: #b9c0cb; --barre-choisie: #2a78d6;
   --att: #8a5a00; --att-fond: #fff4d6;
   /* Fiabilité d'une estimation de points virtuels : très proche, quelques points d'écart possibles, moins sûre */
-  --fiab1: #1e7b34; --fiab2: #c06a00; --fiab3: #c62828; }
+  --fiab0: #8a93a0; --fiab1: #1e7b34; --fiab2: #c06a00; --fiab3: #c62828; }
 @media (prefers-color-scheme: dark) { :root { --fond: #12151b; --surface: #1b2029; --surface2: #232a35; --texte: #e6e9ef;
   --doux: #9aa4b5; --bord: #313a48; --grille: #2a313d; --accent: #7fb0ff; --accent-fond: #1d2a40; --bandeau: #0f2236;
   --vaires-fond: #3d3214; --vaires-bord: #c98500; --barre-vaires: #c98500; --barre: #4a5361; --barre-choisie: #3987e5;
-  --att: #f3cd6b; --att-fond: #3a3014; --fiab1: #5cc977; --fiab2: #f0a33c; --fiab3: #ff7b72; } }
+  --att: #f3cd6b; --att-fond: #3a3014; --fiab0: #8f99a8; --fiab1: #5cc977; --fiab2: #f0a33c; --fiab3: #ff7b72; } }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--fond); color: var(--texte); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 a { color: var(--accent); }
@@ -119,7 +119,7 @@ dialog::backdrop { background: rgba(10, 15, 25, .45); }
 .virt-mensuels { display: none; }
 .moins-sur { color: var(--att); font-weight: 700; cursor: help; }
 .fiab { font-size: 10px; vertical-align: 2px; margin-left: 3px; cursor: help; }
-.fiab-1 { color: var(--fiab1); } .fiab-2 { color: var(--fiab2); } .fiab-3 { color: var(--fiab3); }
+.fiab-0 { color: var(--fiab0); } .fiab-1 { color: var(--fiab1); } .fiab-2 { color: var(--fiab2); } .fiab-3 { color: var(--fiab3); }
 th .estim { display: block; font-size: 11px; font-weight: 500; color: var(--doux); }
 .plus-lignes { margin: 12px 0 0; }
 .lien { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); text-decoration: underline; cursor: pointer; }
@@ -464,19 +464,22 @@ const JOUEURS = CLUBS.flatMap((c) => (c.joueurs || []).filter((j) => !j[3]).map(
 // estimée (D.virtuels.seuils : très proche, quelques points d'écart possibles, moins sûre). Sans ce nombre (données
 // d'avant le 15/11/2026) : repère « * » pour les parties contre des joueurs d'autres départements.
 const SEUILS = (D.virtuels && D.virtuels.seuils) || [5, 20];
-const FIAB = ["", "estimation très proche", "quelques points d'écart possibles", "estimation moins sûre"];
+const FIAB = ["valeurs calculées, presque sûre", "estimation très proche", "quelques points d'écart possibles", "estimation moins sûre"];
 const niveauFiab = (n) => (!n ? 0 : n <= SEUILS[0] ? 1 : n <= SEUILS[1] ? 2 : 3);
 const pastille = (k, titre) => `<span class="fiab fiab-${k}" title="${esc(titre)}" aria-label="${esc(FIAB[k])}">●</span>`;
 const repere = (j) => {
   if (j.est == null) return j.ext ? `<sup class="moins-sur" title="${j.ext} partie${j.ext > 1 ? "s" : ""} contre des joueurs d'autres départements : estimation moins sûre">*</sup>` : "";
   const k = niveauFiab(j.est);
-  return k ? pastille(k, `${j.est} partie${j.est > 1 ? "s" : ""} contre un adversaire dont la valeur du mois est estimée (${j.ext} contre des joueurs d'autres départements) : ${FIAB[k]}`) : "";
+  if (k) return pastille(k, `${j.est} partie${j.est > 1 ? "s" : ""} contre un adversaire dont la valeur du mois est estimée (${j.ext} contre des joueurs d'autres départements) : ${FIAB[k]}`);
+  // Gris : joueurs d'autres départements rencontrés, tous avec une valeur du mois calculée d'après leurs parties (pas estimée)
+  return j.ext ? pastille(0, `${j.ext} partie${j.ext > 1 ? "s" : ""} contre des joueurs d'autres départements, leur valeur du mois calculée d'après leurs parties (pas estimée) : ${FIAB[0]}`) : "";
 };
 const legendeFiab = () => `Pastille : fiabilité de l'estimation, d'après le nombre de parties contre un adversaire dont la valeur du mois est
   elle-même estimée (un joueur d'un autre département qui a joué des joueurs que l'outil ne lit pas ; les parties du premier mois de la phase,
-  calculées avec les points du début de phase de tous les joueurs, n'en font jamais partie) : ${pastille(1, FIAB[1])} 1 à ${SEUILS[0]}, très proche ;
+  calculées avec les points du début de phase de tous les joueurs, n'en font jamais partie) : ${pastille(0, FIAB[0])} aucune : il a joué des joueurs
+  d'autres départements, tous avec une valeur calculée d'après leurs parties, presque sûre ; ${pastille(1, FIAB[1])} 1 à ${SEUILS[0]}, très proche ;
   ${pastille(2, FIAB[2])} ${SEUILS[0] + 1} à ${SEUILS[1]}, quelques points d'écart possibles ; ${pastille(3, FIAB[3])} plus de ${SEUILS[1]}, moins sûre.
-  Sans pastille : toutes ses parties sont calculées avec des valeurs connues.`;
+  Sans pastille : il n'a joué que des joueurs du 77, avec des valeurs connues.`;
 const sansAccent = (t) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 for (const j of JOUEURS) j.cle = sansAccent(j.nom);
 const CATS_PRECISES = [...new Set(JOUEURS.map((j) => j.cat).filter(Boolean))].sort(ordreCat);
