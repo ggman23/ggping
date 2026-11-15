@@ -479,8 +479,10 @@ chaque mise à jour « Tout » (ou « Clubs du 77 » dans la liste des pages), e
   en-tête trie, toucher un club ouvre sa fiche (équipes avec leur force estimée, 10 meilleurs joueurs).
   Recherche par nom et filtre par division.
 - **Joueurs comptés** (en haut, pour toutes les vues ; retenu sur l'appareil) : tous, femmes ou hommes ;
-  toutes les catégories, les jeunes (P à J), les adultes (S et V) ou des catégories au choix ; licences
-  loisir comprises ou non. Seules les licences de la saison comptent.
+  toutes les catégories, les jeunes (P à J), les adultes (S et V) ou des catégories au choix ; toutes
+  les licences (par défaut : le nombre de licenciés affiché par la FFTT et pingpocket, avec une colonne
+  « dont loisir ») ou seulement les licences compétition. Seules les licences de la saison comptent.
+  Les points (meilleur, moyennes, joueurs à 1000 points) ne concernent que les licences compétition.
 - **Classements** : tous les clubs selon une mesure (joueurs, moyenne des 4 ou des 10 meilleurs,
   meilleur joueur, joueurs à 1000 points, joueuses, équipes, division de la meilleure équipe), Vaires
   en jaune, et sa place (« 34e sur 54 »).

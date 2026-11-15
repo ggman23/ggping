@@ -141,8 +141,8 @@ dialog::backdrop { background: rgba(10, 15, 25, .45); }
       <label>Joueurs
         <span class="bascule" id="sexe"><button type="button" data-v="T">Tous</button><button type="button" data-v="F">Femmes</button><button type="button" data-v="M">Hommes</button></span></label>
       <label>Catégories <span class="cats" id="cats"></span></label>
-      <label>Licences loisir
-        <span class="bascule" id="loisir"><button type="button" data-v="0">Sans</button><button type="button" data-v="1">Avec</button></span></label>
+      <label>Licences
+        <span class="bascule" id="loisir"><button type="button" data-v="1" title="Compétition et loisir : le nombre de licenciés de la FFTT">Toutes</button><button type="button" data-v="0" title="Sans les licences loisir (pas de points, pas de compétition)">Compétition</button></span></label>
     </div>
     <p class="intro" id="resume-filtres" style="margin:0"></p>
   </section>
@@ -172,9 +172,9 @@ document.getElementById("sous-titre").textContent = `Saison ${D.saison} · phase
   + (D.genere_le ? ` · données du ${D.genere_le.slice(8, 10)}/${D.genere_le.slice(5, 7)}` : "");
 
 /* ---------- Joueurs comptés : sexe, catégories, licences loisir (retenus sur l'appareil) ---------- */
-let filtre = { sexe: "T", cats: new Set(D.categories), loisir: "0" };
-try { const f = JSON.parse(lire("77-filtre") || "null"); if (f) filtre = { sexe: f.sexe || "T", cats: new Set(f.cats || D.categories), loisir: f.loisir || "0" }; } catch (e) { /* réglage illisible */ }
-const sauverFiltre = () => ecrire("77-filtre", JSON.stringify({ sexe: filtre.sexe, cats: [...filtre.cats], loisir: filtre.loisir }));
+let filtre = { sexe: "T", cats: new Set(D.categories), loisir: "1" };
+try { const f = JSON.parse(lire("77-filtre-2") || "null"); if (f) filtre = { sexe: f.sexe || "T", cats: new Set(f.cats || D.categories), loisir: f.loisir || "1" }; } catch (e) { /* réglage illisible */ }
+const sauverFiltre = () => ecrire("77-filtre-2", JSON.stringify({ sexe: filtre.sexe, cats: [...filtre.cats], loisir: filtre.loisir }));
 function boutonsFiltres() {
   for (const id of ["sexe", "loisir"]) document.querySelectorAll(`#${id} button`).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === filtre[id])));
   const tous = D.categories.every((c) => filtre.cats.has(c)), jeunes = ["P", "B", "M", "C", "J"], adultes = ["S", "V"];
@@ -185,7 +185,7 @@ function boutonsFiltres() {
     + D.categories.map((c) => `<button type="button" data-c="${c}" aria-pressed="${!tous && filtre.cats.has(c)}" title="${esc(CATS[c])}">${c}</button>`).join("");
   const morceaux = [filtre.sexe === "F" ? "joueuses" : filtre.sexe === "M" ? "joueurs (hommes)" : "joueuses et joueurs",
     tous ? "toutes catégories" : [...filtre.cats].map((c) => CATS[c].toLowerCase()).join(", "),
-    filtre.loisir === "1" ? "licences loisir comprises" : "licences compétition seulement"];
+    filtre.loisir === "1" ? "toutes les licences, loisir comprises (le nombre de licenciés de la FFTT)" : "licences compétition seulement (sans les licences loisir)"];
   document.getElementById("resume-filtres").textContent = `Comptés : ${morceaux.join(" · ")} (licences de la saison).`;
 }
 document.getElementById("sexe").addEventListener("click", (ev) => { const b = ev.target.closest("button"); if (b) { filtre.sexe = b.dataset.v; changer(); } });
@@ -200,7 +200,7 @@ document.getElementById("cats").addEventListener("click", (ev) => {
   }
   changer();
 });
-function changer() { sauverFiltre(); calculer(); boutonsFiltres(); afficher(); }
+function changer() { sauverFiltre(); calculer(); colonnes(); boutonsFiltres(); afficher(); }
 
 /* ---------- Statistiques de chaque club, pour les joueurs comptés ---------- */
 let S = new Map();
@@ -215,7 +215,8 @@ function calculer() {
         && (filtre.loisir === "1" || !lo));
       const pts = js.map((j) => j[0]).filter((p) => p).sort((a, b) => b - a);
       const moy = (n) => (pts.length ? Math.round(pts.slice(0, n).reduce((a, b) => a + b, 0) / Math.min(n, pts.length)) : null);
-      Object.assign(s, { joueurs: js.length, F: js.filter((j) => j[1] === "F").length, M: js.filter((j) => j[1] === "M").length,
+      Object.assign(s, { joueurs: js.length, loisir: js.filter((j) => j[3]).length,
+        F: js.filter((j) => j[1] === "F").length, M: js.filter((j) => j[1] === "M").length,
         cats: Object.fromEntries(D.categories.map((k) => [k, js.filter((j) => j[2] === k).length])),
         meilleur: pts[0] ?? null, top4: moy(4), top10: moy(10), mille: pts.filter((p) => p >= 1000).length });
     }
@@ -224,8 +225,10 @@ function calculer() {
 }
 
 /* ---------- Vue « Clubs » : tableau triable et filtrable ---------- */
-const COLONNES = [
-  { cle: "joueurs", titre: "Joueurs", n: true }, { cle: "F", titre: "Femmes", n: true }, { cle: "M", titre: "Hommes", n: true },
+const TOUTES_COLONNES = [
+  { cle: "joueurs", titre: "Joueurs", n: true, aide: "Licenciés de la saison comptés (voir « Licences »)" },
+  { cle: "loisir", titre: "dont loisir", n: true, aide: "Licences loisir : ni points ni compétition", loisir: true },
+  { cle: "F", titre: "Femmes", n: true }, { cle: "M", titre: "Hommes", n: true },
   ...D.categories.map((k) => ({ cle: "cat:" + k, titre: k, n: true, aide: CATS[k] })),
   { cle: "meilleur", titre: "Meilleur", n: true, aide: "Points du meilleur joueur" },
   { cle: "top4", titre: "Top 4", n: true, aide: "Moyenne des points des 4 meilleurs" },
@@ -234,6 +237,8 @@ const COLONNES = [
   { cle: "equipes", titre: "Équipes", n: true, aide: "Équipes engagées (masculines et féminines)" },
   { cle: "niveau", titre: "Divisions", n: false, aide: "Équipes par division (F : féminines) ; tri : la division de la meilleure équipe" },
 ];
+let COLONNES = [];
+const colonnes = () => { COLONNES = TOUTES_COLONNES.filter((c) => !c.loisir || filtre.loisir === "1"); };
 const valeur = (s, cle) => (cle === "nom" ? s.club.nom : cle === "niveau" ? (s.niveau ? -s.rangNiveau : null)
   : cle.startsWith("cat:") ? (s.cats ? s.cats[cle.slice(4)] : null) : s[cle]);
 let tri = { cle: "top4", sens: -1 }, recherche = "", niveauFiltre = "";
@@ -420,7 +425,7 @@ document.getElementById("vue").addEventListener("change", (ev) => {
   else if (t.id === "poule") { pouleChoisie = t.value; ecrire("77-poule", t.value); afficher(); }
 });
 window.addEventListener("hashchange", afficher);
-calculer(); boutonsFiltres(); afficher();
+calculer(); colonnes(); boutonsFiltres(); afficher();
 </script>
 </body>
 </html>

@@ -447,6 +447,10 @@ pour voir les favoris d'une poule.
   colonne, recherche, filtre de division ; classement par mesure avec la place de Vaires ;
   comparaison de 8 clubs (ou ceux d'une poule) ; favoris d'une poule ; fiche de club. Vaires : ligne
   et barre en jaune, les autres en gris.
+- Correction (15/11) : Vaires affichait 62 joueurs pour 89 licenciés sur la FFTT et pingpocket : les 27
+  licences loisir n'étaient pas comptées par défaut. Par défaut maintenant : toutes les licences, avec
+  une colonne « dont loisir » ; bouton « Compétition » pour les retirer (réglage retenu sous un
+  nouveau nom pour que tout le monde reparte de ce défaut).
 - Mise à jour : option --departement, dans « Tout » (workflow, PC option 5 et option 9) et seule
   (« Clubs du 77 »). Navigation : « 77 » en haut et dans le menu de /indivs/, /tournois/, /cal/ ;
   « Aller à » de /club/.
