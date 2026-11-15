@@ -166,3 +166,82 @@ def test_page_publiee_a_son_adresse_avec_le_mot_de_passe_du_club(tmp_path):
     assert all(f'href="../{e}/"' in html for e in ("club", "indivs", "tournois", "cal")) and "/lundi/" not in html
     for gabarit in ("gabarit_indivs.html", "gabarit_tournois.html", "gabarit_cal.html"):
         assert 'id="vers-77"' in netlify.Path(netlify.__file__).with_name(gabarit).read_text(encoding="utf-8")
+
+
+class ClientParties(Client):
+    """Répond aussi aux parties des joueurs (API FFTT) ; dates des réponses déjà en cache réglables."""
+
+    def __init__(self, listes, parties, dates_parties=None, **options):
+        super().__init__(listes, **options)
+        self.parties, self.dates_parties, self.ttls = parties, dates_parties or {}, {}
+
+    def date(self, chemin):
+        if "/games?" in chemin:
+            return self.dates_parties.get(chemin.split("identifier=")[1].split("&")[0])
+        return super().date(chemin)
+
+    def get(self, chemin, ttl=None, entetes=None, valide=None, perime_si_erreur=False):
+        if "/games?" in chemin:
+            self.demandes.append(chemin)
+            lic = chemin.split("identifier=")[1].split("&")[0]
+            self.ttls[lic] = ttl
+            return json.dumps({"hydra:member": self.parties.get(lic, [])})
+        if "/contests/" in chemin:
+            return json.dumps({"name": "FED_Championnat de France par Equipes Masculin", "coefficient": 1})
+        return super().get(chemin, ttl, entetes, valide, perime_si_erreur)
+
+    def get_plusieurs(self, chemins, ttl=None, message=None, **options):
+        res = {}
+        for c in chemins:
+            try:
+                res[c] = self.get(c, ttl)
+            except ErreurReseau:
+                res[c] = None
+        return res
+
+
+def _partie(id_, lic, points, adv_points, victoire, jour="2026-10-03"):
+    joueur = lambda l, p: {"identifier": l, "points": p, "person": {"familyName": "NOM", "givenName": "Prénom"}}
+    return {"id": id_, "date": jour + "T00:00:00", "homePlayer": joueur(lic, points), "awayPlayer": joueur("999", adv_points),
+            "winner": "home" if victoire else "away", "doubleOpposition": False,
+            "contest": {"id": 1, "name": "FED_Championnat de France par Equipes Masculin"}}
+
+
+def test_points_virtuels_des_jeunes_en_ligne_seulement():
+    from ttvaires.resultats import points_partie
+    parties = {"8": [_partie(1, "8", 540, 700, True), _partie(2, "8", 540, 500, False),
+                     _partie(3, "8", 540, 900, True, jour="2026-06-10")]}  # phase précédente : ne compte pas
+    client = ClientParties(_listes(), parties)
+    d = departement.recuperer_departement(client, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True)
+    v = next(c for c in d["clubs"] if c["numero"] == VAIRES)
+    gagne = points_partie(540, 700, True, 1) + points_partie(540, 500, False, 1)
+    # Seul le benjamin (PETIT Tom, licence 8) est un jeune : sa ligne porte [virtuels, gagnés, victoires, défaites]
+    assert [j for j in v["joueurs"] if len(j) == 6] == [[540, "M", "B1", 0, "PETIT Tom", [round(540 + gagne), round(gagne, 1), 1, 1]]]
+    assert d["virtuels_jeunes"] == {"jeunes": 1, "connus": 1, "lus": 1, "reportes": 0}
+    assert "points virtuels de 1 jeunes sur 1" in departement.resume(d)
+    assert "licence" not in json.dumps(d)  # pas de numéro de licence dans la page
+    # Par défaut : seulement en ligne (pingpocket.fr lu dans les pages du PC) ; sur le PC, aucune partie demandée
+    pc = ClientParties(_listes(), parties)
+    d = departement.recuperer_departement(pc, VAIRES, aujourdhui=date(2026, 11, 15))
+    assert d["virtuels_jeunes"] is None and not any("/games?" in x for x in pc.demandes)
+    en_ligne = ClientParties(_listes(), parties, sites_cache_seul={"www.pingpocket.fr"})
+    assert departement.recuperer_departement(en_ligne, VAIRES, aujourdhui=date(2026, 11, 15))["virtuels_jeunes"]["connus"] == 1
+
+
+def test_virtuels_plafonnes_par_lancement_jamais_lus_d_abord(monkeypatch):
+    monkeypatch.setattr(departement, "MAX_VIRTUELS", 2)
+    maintenant = time.time()
+    # a, b : jamais lus ; c : lu il y a 4 jours (périmé) ; d : lu il y a une heure
+    client = ClientParties({}, {"a": [_partie(1, "a", 600, 600, True)], "c": [_partie(2, "c", 800, 800, False)]},
+                           dates_parties={"c": maintenant - 4 * 86400, "d": maintenant - 3600})
+    res, controle = departement.virtuels_des_jeunes(client, ["a", "b", "c", "d"], {"a": 600, "b": 510, "c": 800, "d": 700},
+                                                    date(2026, 11, 15))
+    # a et b lus (cache 3 jours) ; c et d : leur dernière réponse, même ancienne (aucune requête : ttl None)
+    assert client.ttls == {"a": departement.TTL_VIRTUELS, "b": departement.TTL_VIRTUELS, "c": None, "d": None}
+    assert res["a"][1] > 0 and res["c"][1] < 0
+    assert res["b"] == [510, 0, 0, 0] and res["d"] == [700, 0, 0, 0]  # sans partie : virtuels = points mensuels
+    assert controle == {"jeunes": 4, "connus": 4, "lus": 2, "reportes": 0}
+    monkeypatch.setattr(departement, "MAX_VIRTUELS", 1)
+    client = ClientParties({}, {}, dates_parties={"d": maintenant - 3600})
+    res, controle = departement.virtuels_des_jeunes(client, ["a", "b", "d"], {"a": 600, "b": 510, "d": 700}, date(2026, 11, 15))
+    assert set(client.ttls) == {"a", "d"} and controle["reportes"] == 1 and set(res) == {"a", "d"}  # b : au prochain lancement

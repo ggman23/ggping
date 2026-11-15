@@ -232,14 +232,14 @@ def resume_forme(lignes, officiels):
     }
 
 
-def forme_joueurs(client, licences, detail_rencontres, debut, fin, ttl=JOUR):
+def forme_joueurs(client, licences, detail_rencontres, debut, fin, ttl=JOUR, message="parties des joueurs adverses"):
     """Forme de joueurs d'autres clubs (page adversaires) : {licence: resume_forme(...), ou None si
     l'API n'a pas répondu pour ce joueur}. Même calcul que le classement virtuel, avec une économie :
     seules les feuilles de match déjà lues disent si une partie est non comptée ou perdue par forfait.
     Le détail des parties hors championnat n'est pas demandé (une requête par partie) : une partie de
     compétition individuelle abandonnée par forfait alors que les deux joueurs sont inscrits compterait
     (cas rare ; une partie sans adversaire, elle, est bien écartée)."""
-    toutes = _lire_parties(client, sorted(licences), ttl=ttl, message="parties des joueurs adverses")
+    toutes = _lire_parties(client, sorted(licences), ttl=ttl, message=message)
     simples = [p for ps in toutes.values() if ps for p in ps if debut <= (p.get("date") or "")[:10] <= fin and _simple(p)]
     competitions = _competitions(client, {(p.get("contest") or {}).get("id") for p in simples} - {None})
     etats = etats_des_feuilles(detail_rencontres)

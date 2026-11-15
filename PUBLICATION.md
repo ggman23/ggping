@@ -503,6 +503,13 @@ chaque mise à jour « Tout » (ou « Clubs du 77 » dans la liste des pages), e
   200 lignes, puis « afficher plus ». Joueurs de Vaires en jaune, avec leur nombre et la place du
   mieux classé. La fiche d'un club mène à ses joueurs (« Tous les joueurs du club »). Les noms ne sont que
   dans la page chiffrée (mot de passe du club).
+- **Jeunes : points virtuels et progression** : avec la catégorie « Jeunes (poussins à juniors) » ou une
+  catégorie de jeunes (lien « Voir les jeunes classés par progression »), trois colonnes de plus :
+  **Virtuels**, **+/−** (points gagnés ou perdus depuis le début de la phase, toutes compétitions :
+  championnat, critérium, tournois...) et **Parties** (victoires, défaites). Toucher « +/− » classe les
+  jeunes qui progressent le plus. Sur téléphone, les points mensuels s'effacent pour laisser la place.
+  La fiche d'un club montre ses jeunes les plus en progression ; **Classements** et **Comparer** ont deux
+  mesures de plus : moyenne des 4 meilleurs jeunes (virtuels) et points gagnés par tous les jeunes du club.
 
 D'où viennent les données :
 
@@ -516,6 +523,13 @@ D'où viennent les données :
   site avec les autres données du PC. La première fois, il faut deux ou trois lancements du PC pour
   avoir tous les clubs ; d'ici là, leurs colonnes affichent « — ». Une liste enregistrée depuis un
   navigateur dans le dossier `import\` sert aussi.
+- **Points virtuels des jeunes** : API de la FFTT (avec le compte licencié), une requête par jeune
+  (environ 820 jeunes en compétition dans le 77), calculés comme ceux des adversaires. Seulement par la
+  mise à jour en ligne (le PC n'en a pas besoin : la page publiée est faite en ligne). Au plus 300 jeunes
+  lus par mise à jour (jamais lus d'abord, puis les plus anciens), réponses gardées 3 jours : les
+  premières fois, il faut trois mises à jour pour les avoir tous ; ensuite, chaque mise à jour en relit
+  au plus 300. Les jeunes déjà lus comme adversaires ne coûtent rien. Pour comparaison, une mise à jour
+  « Tout » lit déjà les parties de 800 à 1000 adversaires.
 
 ## Sécurité
 

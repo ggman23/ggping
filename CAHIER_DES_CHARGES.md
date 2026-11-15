@@ -469,6 +469,22 @@ pour voir les favoris d'une poule.
   accents, tri par colonne, 200 lignes puis « afficher plus », Vaires en jaune avec sa meilleure place ;
   lien depuis la fiche d'un club. Les statistiques par club utilisent la lettre de la catégorie.
   Rien à relancer sur le PC : les pages déjà envoyées contiennent ces informations.
+- Points virtuels des jeunes (15/11) : demande : estimer combien de jeunes (catégories sous senior)
+  cela concernerait et, si c'est acceptable, les calculer, pour voir les jeunes en pleine progression et
+  les clubs qui investissent dans leurs jeunes. Données réelles du 15/11 : 824 jeunes en licence
+  compétition dans les 55 clubs (P 63, B 137, M 208, C 212, J 204 ; 1974 avec les licences loisir). Une
+  mise à jour « Tout » lisait déjà les parties de 789 à 985 adversaires (1191 pages téléchargées) :
+  même ordre de grandeur, donc retenu, étalé. departement.virtuels_des_jeunes : virtuel.forme_joueurs
+  (même calcul que les adversaires ; même adresse, donc le cache des adversaires sert), au plus
+  MAX_VIRTUELS = 300 jeunes lus par lancement (jamais lus d'abord, puis les réponses les plus anciennes),
+  TTL_VIRTUELS = 3 jours, les autres déjà lus gardent leur dernière réponse ; sans partie dans la phase,
+  virtuels = points mensuels. Seulement dans la mise à jour en ligne (pingpocket lu dans le cache du PC) :
+  le PC n'envoie pas les réponses de l'API, le faire aussi sur le PC doublerait les requêtes. Page :
+  [virtuels, gagnés depuis le début de la phase, V, D] en 6e élément d'un jeune (pas de numéro de
+  licence) ; onglet Joueurs : catégorie « Jeunes », colonnes Virtuels, +/−, Parties (catégorie de jeunes
+  choisie ; sur téléphone sans les points mensuels), rang selon la colonne triée ; fiche du club : jeunes
+  les plus en progression ; Classements et Comparer : moyenne des 4 meilleurs jeunes (virtuels), points
+  gagnés par tous les jeunes du club. Tests : plafond, ordre de lecture, en ligne seulement.
 
 ## Calendrier de la saison : /cal/ (13/11/2026)
 

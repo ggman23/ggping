@@ -53,7 +53,8 @@ régionale, D1, D2...). Tableau triable et filtrable (sexe, catégories, licence
 recherche), ligne de Vaires en jaune ; classements avec la place de Vaires ; comparaison de 8 clubs au
 plus ; « favoris d'une poule » (équipes classées par force estimée) ; **Joueurs** : tous les joueurs du
 77 classés par points mensuels, filtrables par sexe, catégorie précise (« Minimes » ou « Minimes 1 »,
-« Minimes 2 »...), club et nom. Voir PUBLICATION.md.
+« Minimes 2 »...), club et nom ; pour les jeunes (poussins à juniors), **points virtuels** et points gagnés
+depuis le début de la phase, pour repérer ceux qui progressent. Voir PUBLICATION.md.
 
 **Application Android** (APK) : le site (mise à jour), l'espace club, /lundi/ et /indivs/ (GitHub, sinon
 Cloudflare, sinon Netlify) et les deux statistiques en onglets, avec téléchargements et partage d'images : voir
