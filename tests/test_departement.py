@@ -173,11 +173,13 @@ class ClientParties(Client):
 
     def __init__(self, listes, parties, dates_parties=None, **options):
         super().__init__(listes, **options)
-        self.parties, self.dates_parties, self.ttls, self.details = parties, dates_parties or {}, {}, {}
+        self.parties, self.dates_parties, self.ttls, self.details, self.details_lus = parties, dates_parties or {}, {}, {}, set()
 
     def date(self, chemin):
         if "/games?" in chemin:
             return self.dates_parties.get(chemin.split("identifier=")[1].split("&")[0])
+        if "/games/" in chemin:  # détail d'une partie déjà lu (gardé pour toujours)
+            return time.time() if int(chemin.rsplit("/", 1)[1]) in self.details_lus else None
         return super().date(chemin)
 
     def get(self, chemin, ttl=None, entetes=None, valide=None, perime_si_erreur=False):
@@ -193,8 +195,11 @@ class ClientParties(Client):
             return json.dumps({"name": "FED_Championnat de France par Equipes Masculin", "coefficient": 1} if chemin.endswith("/1")
                               else {"name": "Tournoi de Lagny", "coefficient": 0.5})
         if "/games/" in chemin:
-            self.demandes.append(chemin)
-            return json.dumps(self.details[int(chemin.rsplit("/", 1)[1])])
+            i = int(chemin.rsplit("/", 1)[1])
+            if i not in self.details_lus:  # première lecture : une requête ; ensuite, le cache
+                self.demandes.append(chemin)
+                self.details_lus.add(i)
+            return json.dumps(self.details[i])
         return super().get(chemin, ttl, entetes, valide, perime_si_erreur)
 
     def get_plusieurs(self, chemins, ttl=None, message=None, **options):
@@ -228,7 +233,8 @@ def test_points_virtuels_en_ligne_seulement_jeunes_par_defaut():
     assert [j for j in v["joueurs"] if len(j) == 6] == [[540, "M", "B1", 0, "PETIT Tom", [round(540 + gagne), round(gagne, 1), 1, 1, lu]]]
     assert set(client.ttls) == {"8"}
     assert d["virtuels"] == {"joueurs": 7, "a_relire": 1, "connus": 1, "lus": 1, "reportes": 0, "plus_ancienne": lu,
-                             "plus_recente": lu, "perimetre": "jeunes"}  # 7 licences compétition (Vaires 6, Chelles 1)
+                             "plus_recente": lu, "perimetre": "jeunes", "hors_championnat": 0, "verifiees": 0, "details_lus": 0,
+                             "details_restants": 0}  # 7 licences compétition (Vaires 6, Chelles 1)
     assert "points virtuels de 1 joueurs sur 7 (relus : jeunes)" in departement.resume(d)
     assert "licence" not in json.dumps(d)  # pas de numéro de licence dans la page
     # Par défaut : seulement en ligne (pingpocket.fr lu dans les pages du PC) ; sur le PC, aucune partie demandée
@@ -312,3 +318,28 @@ def test_controle_des_parties_en_chiffres_seulement(capsys):
     assert "homePoints / barème : 0.5 (1)" in sortie and "barème 22, coef 0.5 -> homePoints 11, awayPoints -8" in sortie
     assert "NOM" not in sortie and "Prénom" not in sortie  # aucun nom dans le journal
     assert not any("identifier=c" in d for d in client.demandes)  # joueur jamais lu : pas de requête
+
+
+def test_victoire_par_forfait_ecartee_grace_au_detail_des_parties(monkeypatch):
+    """Écart signalé avec la FFTT : une victoire par forfait (hors championnat) comptait ; le forfait n'est que
+    dans le détail de la partie, lu une fois puis gardé, au plus MAX_DETAILS par lancement, les plus récents
+    d'abord, pour les joueurs choisis ; un détail déjà lu sert aussi aux autres."""
+    from ttvaires.resultats import points_partie
+    tournoi = {"id": 2, "name": "Tournoi de Lagny"}
+    p40 = {**_partie(40, "a", 600, 1200, True, jour="2026-10-04"), "contest": tournoi}   # victoire par forfait
+    p41 = {**_partie(41, "a", 600, 620, True, jour="2026-10-05"), "contest": tournoi}    # vraie victoire
+    p42 = {**_partie(42, "b", 700, 650, True, jour="2026-10-06"), "contest": tournoi}
+    maintenant = time.time()
+    client = ClientParties({}, {"a": [p40, p41], "b": [p42]}, dates_parties={"a": maintenant, "b": maintenant})
+    client.details = {40: {"forfeit": True, "homePoints": 2, "awayPoints": 0}, 41: {"homePoints": 2, "awayPoints": 1},
+                      42: {"homePoints": 2, "awayPoints": 1}}
+    monkeypatch.setattr(departement, "MAX_DETAILS", 1)
+    res, controle = departement.virtuels_des_joueurs(client, ["a", "b"], {"a": 600, "b": 700}, date(2026, 11, 15), a_relire={"a"})
+    # Joueur choisi : le plus récent de ses détails seulement (plafond 1) ; le forfait n'est pas encore connu
+    assert [d for d in client.demandes if "/games/" in d] == [f"{fftt.API}/games/41"]
+    assert (controle["hors_championnat"], controle["verifiees"], controle["details_lus"], controle["details_restants"]) == (3, 1, 1, 1)
+    # Lancement suivant : le forfait lu, la victoire par forfait ne compte plus ; le détail 41 déjà lu resservi sans requête
+    res, controle = departement.virtuels_des_joueurs(client, ["a", "b"], {"a": 600, "b": 700}, date(2026, 11, 15), a_relire={"a"})
+    assert res["a"][1:4] == [points_partie(600, 620, True, 0.5), 1, 0] and controle["details_restants"] == 0
+    assert [d for d in client.demandes if "/games/" in d].count(f"{fftt.API}/games/41") == 1
+    assert f"{fftt.API}/games/42" not in client.demandes  # joueur hors du choix : pas de requête de détail

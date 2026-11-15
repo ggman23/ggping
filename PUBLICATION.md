@@ -544,7 +544,13 @@ D'où viennent les données :
   plus de 3 jours (ou jamais) sont redemandés à la FFTT, environ 220 par minute : la première fois,
   environ 4 minutes pour les jeunes, 6 à 7 pour tout le département ; ensuite bien moins. Les autres
   joueurs gardent leur dernière lecture, avec sa date (« Lu le ») : rien ne disparaît. Les adversaires
-  de Vaires (lus chaque jour pour leur page) ne coûtent rien et apparaissent aussi. Les clubs du 77 passent après les adversaires : si
+  de Vaires (lus chaque jour pour leur page) ne coûtent rien et apparaissent aussi.
+- **Forfaits** : la liste des parties d'un joueur ne dit pas qu'une partie a été gagnée par forfait
+  (la FFTT ne la compte pas) ; seul le détail de la partie le dit. Le détail des parties hors
+  championnat (critérium, tournois...) est donc lu une fois puis gardé : au plus 2 500 nouvelles par
+  mise à jour (environ 11 minutes), celles des joueurs choisis, les plus récentes d'abord (6 600
+  environ au 15/11 : trois mises à jour « tous » pour tout vérifier, ensuite seulement les nouvelles).
+  La note de la page dit combien sont vérifiées. Les clubs du 77 passent après les adversaires : si
   la FFTT refusait des requêtes pendant la lecture des jeunes, la page des adversaires serait déjà faite.
 
 ## Sécurité

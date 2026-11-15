@@ -520,6 +520,17 @@ pour voir les favoris d'une poule.
   championnat, coefficients par famille, part de « non comptées » sur un échantillon d'une partie sur
   40 lue en détail et gardée). Les joueurs de Vaires (classement virtuel) lisent déjà ce détail. Note
   « vérification en cours » sur la page en attendant la correction.
+- Résultats du contrôle (mises à jour n° 71 et 72) : 0 partie « non comptée » sur 160, ni doublon, ni
+  décalage d'effectiveDate ; pas de filtre « notCounted » dans l'API (seulement order[notCounted]) ;
+  6 623 parties hors championnat distinctes ; coefficients donnés par la FFTT : tournois 0,75 / 1 /
+  0,5, critérium fédéral 1,5, Top Jeune 0,5, vétérans 1 ; homePoints / awayPoints du détail = points de
+  rencontre (2 victoire, 1 défaite, 0 forfait), pas des points de classement ; **2 forfaits sur 160**
+  (forfeit, présent seulement dans le détail), comptés jusque-là comme des victoires avec leurs points.
+  Correction : departement.virtuels_des_joueurs lit le détail des parties hors championnat (virtuel.
+  lire_etats_parties, gardé pour toujours), au plus MAX_DETAILS = 2500 nouveaux par lancement, ceux des
+  joueurs choisis, les plus récents d'abord ; les détails déjà lus servent à tous ; calcul par virtuel.
+  formes_depuis_parties (forme_joueurs le réutilise). Les coefficients restent ceux de la FFTT, faute de
+  barème officiel trouvé : à confirmer en comparant ensuite le joueur signalé.
 
 ## Calendrier de la saison : /cal/ (13/11/2026)
 

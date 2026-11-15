@@ -36,7 +36,7 @@ from datetime import datetime
 from . import controle_parties, fftt, pingpocket
 from .effectif import TRIS
 from .reseau import JOUR
-from .virtuel import forme_joueurs, url_parties
+from .virtuel import _lire_parties, _simple, est_championnat, formes_depuis_parties, lire_etats_parties, url_parties
 
 DEPARTEMENT = "77"
 SITE_PINGPOCKET = "www.pingpocket.fr"
@@ -50,6 +50,10 @@ JEUNES = ("P", "B", "M", "C", "J")  # catégories sous senior
 # Joueurs dont les points virtuels sont relus, au choix du lancement (option --virtuels-77)
 PERIMETRES = {"jeunes": JEUNES, "adultes": ("S", "V"), "tous": tuple(CATEGORIES), "aucun": ()}
 MAX_VIRTUELS = 2500      # borne de sécurité : joueurs dont les parties sont lues au plus par lancement (API FFTT)
+# Détail des parties hors championnat (forfait, partie non comptée : absents de la liste des parties), une
+# requête par partie, gardé pour toujours : au plus MAX_DETAILS nouveaux par lancement (environ 11 minutes),
+# ceux des joueurs choisis, les plus récents d'abord (6 623 parties hors championnat au 15/11/2026)
+MAX_DETAILS = 2500
 TTL_VIRTUELS = 3 * JOUR  # un joueur lu il y a moins de 3 jours n'est pas redemandé (les adversaires, lus chaque jour, servent aussi)
 # Ordre des niveaux, du plus haut au plus bas (pour trier les clubs par leur meilleure équipe)
 ORDRE_NIVEAUX = ["N1", "N2", "N3", "PN", "R1", "R2", "R3", "R4", "PR", "D1", "D2", "D3", "D4", "D5", "D6"]
@@ -162,7 +166,11 @@ def joueurs_du_club(listes):
 def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire=None):
     """Points virtuels : ({licence: [virtuels, points gagnés depuis le début de la phase, victoires,
     défaites, date de lecture « AAAA-MM-JJ »]}, {"joueurs", "a_relire", "connus", "lus", "reportes",
-    "plus_ancienne", "plus_recente"}).
+    "plus_ancienne", "plus_recente", "hors_championnat", "verifiees", "details_lus", "details_restants"}).
+
+    Parties hors championnat : leur détail (forfait, partie non comptée) est lu une fois puis gardé ; ceux
+    déjà lus servent pour tous les joueurs, les nouveaux sont lus pour les joueurs choisis (MAX_DETAILS
+    au plus, les plus récents d'abord). Une victoire par forfait ne rapporte rien (comme à la FFTT).
 
     a_relire : licences à relire si besoin (toutes si None). Relus : parmi elles, ceux jamais lus et ceux
     lus il y a TTL_VIRTUELS ou plus (au plus MAX_VIRTUELS, jamais lus d'abord, puis les plus anciens).
@@ -178,8 +186,22 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
     a_lire = perimes[:MAX_VIRTUELS]
     choisis = set(a_lire)
     gardes = [lic for lic in licences if lic not in choisis and dates[lic] is not None]
-    formes = forme_joueurs(client, a_lire, {}, debut, fin, ttl=TTL_VIRTUELS, message="parties des joueurs du 77") if a_lire else {}
-    formes.update(forme_joueurs(client, gardes, {}, debut, fin, ttl=None, message="parties des joueurs du 77 (déjà lues)") if gardes else {})
+    toutes = _lire_parties(client, a_lire, ttl=TTL_VIRTUELS, message="parties des joueurs du 77") if a_lire else {}
+    toutes.update(_lire_parties(client, gardes, ttl=None, message="parties des joueurs du 77 (déjà lues)") if gardes else {})
+    # Parties de simple hors championnat de la phase : date (les plus récentes d'abord) et joueurs choisis
+    hors, du_choix = {}, set()
+    for lic, parties in toutes.items():
+        for p in parties or []:
+            if (isinstance(p.get("id"), int) and debut <= (p.get("date") or "")[:10] <= fin and _simple(p)
+                    and not est_championnat((p.get("contest") or {}).get("name"))):
+                hors[p["id"]] = p.get("date") or ""
+                if lic in a_relire:
+                    du_choix.add(p["id"])
+    deja = {i for i in hors if client.date(f"{fftt.API}/games/{i}") is not None}
+    attente = sorted(du_choix - deja, key=lambda i: (hors[i], i), reverse=True)
+    nouveaux = attente[:MAX_DETAILS]
+    etats = lire_etats_parties(client, deja, nouveaux, message="détail des parties hors championnat (forfaits)")
+    formes = formes_depuis_parties(client, toutes, etats, debut, fin)
     res = {}
     for lic, f in formes.items():
         if f is None:
@@ -191,7 +213,9 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
     jours = sorted(r[4] for r in res.values())
     return res, {"joueurs": len(licences), "a_relire": len(a_relire), "connus": len(res), "lus": len(a_lire),
                  "reportes": sum(1 for lic in perimes[MAX_VIRTUELS:] if dates[lic] is None),
-                 "plus_ancienne": jours[0] if jours else None, "plus_recente": jours[-1] if jours else None}
+                 "plus_ancienne": jours[0] if jours else None, "plus_recente": jours[-1] if jours else None,
+                 "hors_championnat": len(hors), "verifiees": sum(1 for i in hors if i in etats), "details_lus": len(nouveaux),
+                 "details_restants": len(attente) - len(nouveaux)}
 
 
 def force_des_equipes(equipes, joueurs):

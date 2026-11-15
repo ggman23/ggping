@@ -129,8 +129,14 @@ def test_forme_des_joueurs_adverses():
     }
     class Client(FauxClient):
         demandes = []
+        details_lus = {}  # détail déjà lu (page des clubs du 77), gardé pour toujours
+
+        def date(self, chemin):
+            return (1.0 if chemin in self.details_lus else None) if "/games/" in chemin else super().date(chemin)
 
         def get(self, chemin, *a, **o):
+            if chemin in self.details_lus:
+                return self.details_lus[chemin]
             self.demandes.append(chemin)
             return super().get(chemin, *a, **o)
 
@@ -145,6 +151,10 @@ def test_forme_des_joueurs_adverses():
     assert x["points"] == round(sum(c["points"] for c in x["competitions"]), 1) and x["virtuels"] == 750 + x["points"]
     assert x["competitions"][0]["points"] > 0
     assert not [u for u in client.demandes if "/games/" in u]  # détail des parties non demandé
+    # Détail déjà lu ailleurs (clubs du 77) : la victoire 22 était un forfait, elle ne compte plus (sans requête)
+    client.details_lus = {f"{API}/games/22": json.dumps({"forfeit": True, "homePoints": 2, "awayPoints": 0})}
+    y = forme_joueurs(client, ["50"], {}, "2026-07-01", "2026-12-31")["50"]
+    assert (y["v"], y["d"]) == (2, 1) and not [u for u in client.demandes if "/games/" in u]
 
 
 def test_historique_des_classements_des_joueurs_du_club():

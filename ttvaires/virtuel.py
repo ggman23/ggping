@@ -235,14 +235,43 @@ def resume_forme(lignes, officiels):
 def forme_joueurs(client, licences, detail_rencontres, debut, fin, ttl=JOUR, message="parties des joueurs adverses"):
     """Forme de joueurs d'autres clubs (page adversaires) : {licence: resume_forme(...), ou None si
     l'API n'a pas répondu pour ce joueur}. Même calcul que le classement virtuel, avec une économie :
-    seules les feuilles de match déjà lues disent si une partie est non comptée ou perdue par forfait.
-    Le détail des parties hors championnat n'est pas demandé (une requête par partie) : une partie de
-    compétition individuelle abandonnée par forfait alors que les deux joueurs sont inscrits compterait
-    (cas rare ; une partie sans adversaire, elle, est bien écartée)."""
+    les feuilles de match déjà lues et le détail des parties hors championnat déjà lu (page des clubs du
+    77) disent si une partie est non comptée ou gagnée par forfait ; aucun détail n'est demandé ici (une
+    requête par partie). Une victoire par forfait hors championnat dont le détail n'a pas encore été lu
+    compte donc encore (environ 1 partie sur 80 ; une partie sans adversaire, elle, est bien écartée)."""
     toutes = _lire_parties(client, sorted(licences), ttl=ttl, message=message)
+    # Forfaits et parties non comptées hors championnat : le détail déjà lu (clubs du 77), sans nouvelle requête
+    hors = {p["id"] for ps in toutes.values() if ps for p in ps if isinstance(p.get("id"), int) and _simple(p)
+            and debut <= (p.get("date") or "")[:10] <= fin and not est_championnat((p.get("contest") or {}).get("name"))}
+    etats = {**lire_etats_parties(client, hors), **etats_des_feuilles(detail_rencontres)}
+    return formes_depuis_parties(client, toutes, etats, debut, fin)
+
+
+def lire_etats_parties(client, ids, a_lire=(), message="détail des parties"):
+    """{id de partie: {non_comptee, forfait, abandon, division, manches}} d'après le détail de chaque partie
+    (une requête par partie, gardée pour toujours) : celles de `ids` déjà lues (aucune requête) et celles
+    de `a_lire` (requêtes). Le forfait et la partie « non comptée » ne sont que dans ce détail."""
+    urls = {i: f"{API}/games/{i}" for i in ids if client.date(f"{API}/games/{i}") is not None}
+    urls.update({i: f"{API}/games/{i}" for i in a_lire})
+    pages = client.get_plusieurs(list(urls.values()), ttl=None, message=message, entetes=ENTETES, valide=json_valide) if urls else {}
+    etats = {}
+    for i, url in urls.items():
+        if not pages.get(url):
+            continue
+        g = json.loads(pages[url])
+        sm = g.get("sportMatch") or {}
+        division = ((sm.get("tour") or {}).get("division") or sm.get("division") or {}).get("name") if isinstance(sm, dict) else None
+        etats[i] = {"non_comptee": bool(g.get("notCounted")), "forfait": bool(g.get("forfeit")),
+                    "abandon": bool(g.get("abandonment")), "manches": _manches(g),
+                    "division": fftt.libelle_division(division) if division else None}
+    return etats
+
+
+def formes_depuis_parties(client, toutes, etats, debut, fin):
+    """{licence: resume_forme(...) avec le nom, ou None} à partir des listes de parties déjà lues ;
+    etats : ce que l'on sait de chaque partie (feuilles de match, détail lu) : non comptée, forfait."""
     simples = [p for ps in toutes.values() if ps for p in ps if debut <= (p.get("date") or "")[:10] <= fin and _simple(p)]
     competitions = _competitions(client, {(p.get("contest") or {}).get("id") for p in simples} - {None})
-    etats = etats_des_feuilles(detail_rencontres)
     res = {}
     for lic, parties in toutes.items():
         if parties is None:
