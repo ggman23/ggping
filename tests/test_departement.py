@@ -313,7 +313,8 @@ def test_controle_des_parties_en_chiffres_seulement(capsys):
     res = controle_parties.controler(client, ["a", "b", "c"], "2026-07-01", "2026-11-15")
     sortie = capsys.readouterr().out
     assert res == {"joueurs": 2, "filtres": None, "doublons": 1, "hors_championnat": 2, "echantillon": 1, "non_comptees": 1,
-                   "comparees": 1, "egales": 1}
+                   "comparees": 1, "egales": 1, "exterieurs": 1}  # « 999 » : hors du 77
+    assert "adversaires hors du 77 : 1 joueurs différents, 4 parties contre eux, 1 joueurs du 77 concernés" in sortie
     assert "Tableau handicap (1)" in sortie and "coefficients, Tournois : 0.5 (2 parties)" in sortie
     assert "homePoints / barème : 0.5 (1)" in sortie and "barème 22, coef 0.5 -> homePoints 11, awayPoints -8" in sortie
     assert "NOM" not in sortie and "Prénom" not in sortie  # aucun nom dans le journal

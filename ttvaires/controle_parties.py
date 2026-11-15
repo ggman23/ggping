@@ -79,6 +79,36 @@ def controler(client, licences, debut, fin):
     if exemple:
         print(f"  forme du champ sportMatch dans la liste : {_forme(exemple['sportMatch'])}"[:600], flush=True)
 
+    # Adversaires hors du 77 (leur valeur du mois est inconnue) : combien, et combien de parties contre eux
+    du_77, exterieurs, contre, touches = set(licences), set(), 0, set()
+    for lic, parties in toutes.items():
+        for p in parties or []:
+            if not (_simple(p) and debut <= (p.get("date") or "")[:10] <= fin):
+                continue
+            h, a = (p.get("homePlayer") or {}).get("identifier"), (p.get("awayPlayer") or {}).get("identifier")
+            adv = a if h == lic else h
+            if adv and adv not in du_77:
+                exterieurs.add(adv)
+                contre += 1
+                touches.add(lic)
+    res["exterieurs"] = len(exterieurs)
+    print(f"  adversaires hors du 77 : {len(exterieurs)} joueurs différents, {contre} parties contre eux, "
+          f"{len(touches)} joueurs du 77 concernés", flush=True)
+
+    # Ce que l'API donne d'un joueur (noms des champs seulement) : points mensuels ou virtuels ?
+    joueur = next((p.get("homePlayer") for ps in toutes.values() if ps for p in ps if p.get("homePlayer")), None)
+    if joueur:
+        print(f"  forme d'un joueur dans une partie : {_forme(joueur)}"[:700], flush=True)
+    try:
+        entree = json.loads(client.get(API, ttl=None, entetes=ENTETES, valide=json_valide))
+        print("  rubriques de l'API : " + ", ".join(sorted(k for k in entree if not k.startswith("@")))[:1500], flush=True)
+        iri = (joueur or {}).get("@id")
+        if iri:
+            licence = json.loads(client.get(API + iri[len("/api"):], ttl=None, entetes=ENTETES, valide=json_valide))
+            print(f"  forme d'une licence ({iri.rsplit('/', 2)[-2]}) : {_forme(licence, 3)}"[:1500], flush=True)
+    except Exception as e:  # noqa: BLE001 (un contrôle ne bloque jamais la mise à jour)
+        print(f"  rubriques de l'API : non lues ({type(e).__name__})", flush=True)
+
     # Coefficients donnés par la FFTT, par famille de compétitions (nombre de parties)
     competitions = _competitions(client, {(p.get("contest") or {}).get("id") for p in hors.values()} - {None})
     coefs = defaultdict(Counter)
