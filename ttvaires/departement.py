@@ -15,9 +15,11 @@ n'y figure pas. Seuls les licenciés de la saison (licences renouvelées) compte
 Points virtuels des jeunes (poussins à juniors, licences compétition) : calculés comme ceux des
 adversaires (virtuel.forme_joueurs : une requête par joueur à l'API de la FFTT, avec le compte licencié),
 par la mise à jour en ligne seulement (la page publiée y est faite ; le PC n'envoie pas les réponses de
-l'API, le faire aussi sur le PC doublerait les requêtes). Au plus MAX_VIRTUELS joueurs lus par
-lancement (jamais lus d'abord, puis les plus anciens), réponses gardées TTL_VIRTUELS ; les autres gardent
-leur dernière valeur connue. Une mise à jour lit déjà les parties de 800 à 1000 adversaires.
+l'API, le faire aussi sur le PC doublerait les requêtes). Un jeune lu il y a moins de TTL_VIRTUELS n'est
+pas redemandé (sa réponse enregistrée sert) ; au-delà, il est relu à la mise à jour suivante. Rien ne
+disparaît : jusque-là, sa dernière valeur reste affichée, avec sa date de lecture. Tous en une mise à
+jour (environ 4 minutes pour 820 jeunes ; une mise à jour lit déjà les parties de 800 à 1000
+adversaires) ; MAX_VIRTUELS n'est qu'une borne de sécurité.
 
 Force d'une équipe (estimation, pour voir les favoris d'une poule) : la moyenne des points des quatre
 joueurs que son numéro lui donne dans le club, par points décroissants (équipe 1 : joueurs 1 à 4, équipe
@@ -43,8 +45,8 @@ LISTES = ("categories", "etat")  # la liste par classement n'apporte rien ici
 JOUEURS_PAR_EQUIPE = 4
 CATEGORIES = ["P", "B", "M", "C", "J", "S", "V"]  # poussins ... vétérans
 JEUNES = ("P", "B", "M", "C", "J")  # catégories sous senior : leurs points virtuels sont calculés
-MAX_VIRTUELS = 300       # joueurs dont les parties sont lues au plus par lancement (API FFTT)
-TTL_VIRTUELS = 3 * JOUR  # parties d'un jeune gardées 3 jours (les adversaires, lus chaque jour, servent aussi)
+MAX_VIRTUELS = 1500      # borne de sécurité : joueurs dont les parties sont lues au plus par lancement (API FFTT)
+TTL_VIRTUELS = 3 * JOUR  # un jeune lu il y a moins de 3 jours n'est pas redemandé (les adversaires, lus chaque jour, servent aussi)
 # Ordre des niveaux, du plus haut au plus bas (pour trier les clubs par leur meilleure équipe)
 ORDRE_NIVEAUX = ["N1", "N2", "N3", "PN", "R1", "R2", "R3", "R4", "PR", "D1", "D2", "D3", "D4", "D5", "D6"]
 
@@ -159,11 +161,12 @@ def jeune(joueur):
 
 def virtuels_des_jeunes(client, licences, points_mensuels, aujourdhui):
     """Points virtuels des jeunes : ({licence: [virtuels, points gagnés depuis le début de la phase,
-    victoires, défaites]}, {"jeunes", "connus", "lus", "reportes"}).
+    victoires, défaites, date de lecture « AAAA-MM-JJ »]}, {"jeunes", "connus", "lus", "reportes",
+    "plus_ancienne", "plus_recente"}).
 
-    Au plus MAX_VIRTUELS joueurs lus (jamais lus d'abord, puis ceux dont la réponse est la plus ancienne) ;
-    les autres déjà lus gardent leur dernière réponse, même ancienne ; ceux jamais lus au-delà du plafond
-    attendent le lancement suivant. Sans partie dans la phase : virtuels = points mensuels, 0 gagné."""
+    Relus : ceux jamais lus et ceux lus il y a TTL_VIRTUELS ou plus (au plus MAX_VIRTUELS, jamais lus
+    d'abord, puis les plus anciens) ; les autres gardent leur réponse enregistrée. Sans partie dans la
+    phase : virtuels = points mensuels, 0 gagné."""
     debut, fin = fftt.bornes_phase(aujourdhui)
     fin = min(fin, aujourdhui.isoformat())
     maintenant = time.time()
@@ -181,9 +184,12 @@ def virtuels_des_jeunes(client, licences, points_mensuels, aujourdhui):
             continue
         virtuels = f["virtuels"] if f["virtuels"] is not None else (points_mensuels.get(lic) if not f["v"] + f["d"] else None)
         if virtuels is not None:
-            res[lic] = [round(virtuels), round(f["points"], 1), f["v"], f["d"]]
+            lu = client.date(url_parties(lic)) or maintenant  # date de la réponse enregistrée
+            res[lic] = [round(virtuels), round(f["points"], 1), f["v"], f["d"], datetime.fromtimestamp(lu).date().isoformat()]
+    jours = sorted(r[4] for r in res.values())
     return res, {"jeunes": len(licences), "connus": len(res), "lus": len(a_lire),
-                 "reportes": sum(1 for lic in perimes[MAX_VIRTUELS:] if dates[lic] is None)}
+                 "reportes": sum(1 for lic in perimes[MAX_VIRTUELS:] if dates[lic] is None),
+                 "plus_ancienne": jours[0] if jours else None, "plus_recente": jours[-1] if jours else None}
 
 
 def force_des_equipes(equipes, joueurs):
@@ -217,8 +223,8 @@ def recuperer_departement(client, numero_club="08770250", aujourdhui=None, dossi
     joueurs_par_club = {num: joueurs_du_club(listes[num][0]) for num in clubs if num in listes}
     jeunes = {j["licence"]: j["points"] for js in joueurs_par_club.values() for j in js if jeune(j)}
     if virtuels:
-        print(f"4/4 Points virtuels des jeunes : {len(jeunes)} (API FFTT, au plus {MAX_VIRTUELS} lus par lancement, "
-              "gardés 3 jours)", flush=True)
+        print(f"4/4 Points virtuels des jeunes : {len(jeunes)} (API FFTT ; ceux lus il y a moins de 3 jours ne sont pas "
+              "redemandés)", flush=True)
         virt, controle_virt = virtuels_des_jeunes(client, sorted(jeunes), jeunes, aujourdhui)
     else:
         print("4/4 Points virtuels des jeunes : calculés par la mise à jour en ligne seulement", flush=True)
@@ -238,7 +244,8 @@ def recuperer_departement(client, numero_club="08770250", aujourdhui=None, dossi
             "equipes": [{**e, **forces[(e["nom"], e["feminin"])]} for e in eqs], "niveaux": dict(niveaux),
             "meilleur_niveau": min((e["niveau"] for e in eqs if not e["feminin"]), key=rang_niveau, default=None),
             # Joueurs : [points mensuels, sexe, catégorie précise, loisir, « NOM Prénom »], et pour un jeune dont
-            # les parties sont connues [virtuels, points gagnés depuis le début de la phase, victoires, défaites] ;
+            # les parties sont connues [virtuels, points gagnés depuis le début de la phase, victoires, défaites,
+            # date de lecture des parties] ;
             # pour les statistiques, la fiche du club et le classement des joueurs du département (page chiffrée :
             # mot de passe du club ; pas de numéro de licence)
             "joueurs": [[j["points"], j["sexe"], j["cat"], 1 if j["loisir"] else 0, f"{j['nom'] or ''} {j['prenom'] or ''}".strip()]

@@ -2,7 +2,7 @@
 
 import json
 import time
-from datetime import date
+from datetime import date, datetime
 
 from test_effectif import _liste
 from ttvaires import departement, fftt
@@ -185,6 +185,8 @@ class ClientParties(Client):
             self.demandes.append(chemin)
             lic = chemin.split("identifier=")[1].split("&")[0]
             self.ttls[lic] = ttl
+            if ttl is not None:  # nouvelle réponse enregistrée maintenant (ttl None : réponse déjà enregistrée)
+                self.dates_parties[lic] = time.time()
             return json.dumps({"hydra:member": self.parties.get(lic, [])})
         if "/contests/" in chemin:
             return json.dumps({"name": "FED_Championnat de France par Equipes Masculin", "coefficient": 1})
@@ -215,9 +217,11 @@ def test_points_virtuels_des_jeunes_en_ligne_seulement():
     d = departement.recuperer_departement(client, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True)
     v = next(c for c in d["clubs"] if c["numero"] == VAIRES)
     gagne = points_partie(540, 700, True, 1) + points_partie(540, 500, False, 1)
-    # Seul le benjamin (PETIT Tom, licence 8) est un jeune : sa ligne porte [virtuels, gagnés, victoires, défaites]
-    assert [j for j in v["joueurs"] if len(j) == 6] == [[540, "M", "B1", 0, "PETIT Tom", [round(540 + gagne), round(gagne, 1), 1, 1]]]
-    assert d["virtuels_jeunes"] == {"jeunes": 1, "connus": 1, "lus": 1, "reportes": 0}
+    # Seul le benjamin (PETIT Tom, licence 8) est un jeune : sa ligne porte [virtuels, gagnés, victoires, défaites,
+    # date de lecture de ses parties]
+    lu = date.today().isoformat()
+    assert [j for j in v["joueurs"] if len(j) == 6] == [[540, "M", "B1", 0, "PETIT Tom", [round(540 + gagne), round(gagne, 1), 1, 1, lu]]]
+    assert d["virtuels_jeunes"] == {"jeunes": 1, "connus": 1, "lus": 1, "reportes": 0, "plus_ancienne": lu, "plus_recente": lu}
     assert "points virtuels de 1 jeunes sur 1" in departement.resume(d)
     assert "licence" not in json.dumps(d)  # pas de numéro de licence dans la page
     # Par défaut : seulement en ligne (pingpocket.fr lu dans les pages du PC) ; sur le PC, aucune partie demandée
@@ -228,20 +232,24 @@ def test_points_virtuels_des_jeunes_en_ligne_seulement():
     assert departement.recuperer_departement(en_ligne, VAIRES, aujourdhui=date(2026, 11, 15))["virtuels_jeunes"]["connus"] == 1
 
 
-def test_virtuels_plafonnes_par_lancement_jamais_lus_d_abord(monkeypatch):
-    monkeypatch.setattr(departement, "MAX_VIRTUELS", 2)
+def test_virtuels_relus_apres_3_jours_avec_leur_date_et_plafond_de_securite(monkeypatch):
+    monkeypatch.setattr(departement, "MAX_VIRTUELS", 3)
     maintenant = time.time()
+    il_y_a = lambda jours: datetime.fromtimestamp(maintenant - jours * 86400).date().isoformat()
     # a, b : jamais lus ; c : lu il y a 4 jours (périmé) ; d : lu il y a une heure
     client = ClientParties({}, {"a": [_partie(1, "a", 600, 600, True)], "c": [_partie(2, "c", 800, 800, False)]},
                            dates_parties={"c": maintenant - 4 * 86400, "d": maintenant - 3600})
     res, controle = departement.virtuels_des_jeunes(client, ["a", "b", "c", "d"], {"a": 600, "b": 510, "c": 800, "d": 700},
                                                     date(2026, 11, 15))
-    # a et b lus (cache 3 jours) ; c et d : leur dernière réponse, même ancienne (aucune requête : ttl None)
-    assert client.ttls == {"a": departement.TTL_VIRTUELS, "b": departement.TTL_VIRTUELS, "c": None, "d": None}
+    # a, b (jamais lus) et c (lu il y a plus de 3 jours) relus ; d (lu il y a une heure) : sa réponse enregistrée
+    assert client.ttls == {"a": departement.TTL_VIRTUELS, "b": departement.TTL_VIRTUELS, "c": departement.TTL_VIRTUELS, "d": None}
     assert res["a"][1] > 0 and res["c"][1] < 0
-    assert res["b"] == [510, 0, 0, 0] and res["d"] == [700, 0, 0, 0]  # sans partie : virtuels = points mensuels
-    assert controle == {"jeunes": 4, "connus": 4, "lus": 2, "reportes": 0}
+    assert res["b"][:4] == [510, 0, 0, 0] and res["d"][:4] == [700, 0, 0, 0]  # sans partie : virtuels = points mensuels
+    assert res["c"][4] == il_y_a(0) and res["d"][4] == il_y_a(1 / 24)  # date de lecture de chacun
+    assert (controle["lus"], controle["reportes"], controle["connus"]) == (3, 0, 4)
+    # Borne de sécurité : au-delà, jamais lus d'abord ; un déjà lu garde sa réponse ancienne (et sa date)
     monkeypatch.setattr(departement, "MAX_VIRTUELS", 1)
-    client = ClientParties({}, {}, dates_parties={"d": maintenant - 3600})
-    res, controle = departement.virtuels_des_jeunes(client, ["a", "b", "d"], {"a": 600, "b": 510, "d": 700}, date(2026, 11, 15))
-    assert set(client.ttls) == {"a", "d"} and controle["reportes"] == 1 and set(res) == {"a", "d"}  # b : au prochain lancement
+    client = ClientParties({}, {}, dates_parties={"c": maintenant - 4 * 86400, "d": maintenant - 3600})
+    res, controle = departement.virtuels_des_jeunes(client, ["a", "b", "c", "d"], {"a": 600, "b": 510, "c": 800, "d": 700}, date(2026, 11, 15))
+    assert client.ttls == {"a": departement.TTL_VIRTUELS, "c": None, "d": None} and controle["reportes"] == 1
+    assert set(res) == {"a", "c", "d"} and res["c"][4] == il_y_a(4) and controle["plus_ancienne"] == il_y_a(4)

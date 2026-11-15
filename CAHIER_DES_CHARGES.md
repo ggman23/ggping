@@ -485,6 +485,15 @@ pour voir les favoris d'une poule.
   choisie ; sur téléphone sans les points mensuels), rang selon la colonne triée ; fiche du club : jeunes
   les plus en progression ; Classements et Comparer : moyenne des 4 meilleurs jeunes (virtuels), points
   gagnés par tous les jeunes du club. Tests : plafond, ordre de lecture, en ligne seulement.
+- Précision demandée (15/11) : « gardée 3 jours » voulait dire qu'un jeune lu il y a moins de 3 jours
+  n'est pas redemandé ; rien ne disparaît après. Demandes : afficher la date de récupération de chaque
+  joueur ; pourquoi trois mises à jour plutôt qu'une ? Réponse : le plafond de 300 par lancement n'était
+  qu'une précaution ; les 789 adversaires sont lus en 3 min 30 dans une mise à jour, donc les 824 jeunes
+  le sont en une seule (environ 4 minutes de plus ; MAX_VIRTUELS = 1500, simple borne de sécurité). Date
+  de lecture (date de la réponse enregistrée) en 5e valeur du jeune : colonne « Lu le » (téléphone : sous
+  le nom), en orange au-delà de 7 jours, dans la fiche du club et dans la note (« lus entre le … et le
+  … »). Ordre des pages : les clubs du 77 après les adversaires (un refus de l'API pendant la lecture
+  des jeunes ne touche plus la page des adversaires).
 
 ## Calendrier de la saison : /cal/ (13/11/2026)
 

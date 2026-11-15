@@ -238,11 +238,11 @@ def main():
             a_faire.append(("classement virtuel", page_virtuel))
         if args.indivs:
             a_faire.append(("individuels", page_indivs))
-        if args.departement:
-            a_faire.append(("clubs du 77", page_departement))
         if args.adversaires or not (args.resultats or args.rencontres or args.effectif or args.virtuel or args.indivs
                                     or args.departement):
             a_faire.append(("adversaires", lambda c, club, ctx: page_adversaires(c, club, ctx, args.tous_les_historiques)))
+        if args.departement:  # en dernier : la lecture des parties des jeunes (API FFTT) ne retarde ni ne gêne les autres pages
+            a_faire.append(("clubs du 77", page_departement))
         ctx = Contexte()
         pages, bilans = generer_pages(client, args.club, ctx, a_faire)
         print(f"Pages téléchargées : {client.nb_telecharges}, reprises du cache : {client.nb_cache}")

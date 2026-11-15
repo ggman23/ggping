@@ -506,8 +506,10 @@ chaque mise à jour « Tout » (ou « Clubs du 77 » dans la liste des pages), e
 - **Jeunes : points virtuels et progression** : avec la catégorie « Jeunes (poussins à juniors) » ou une
   catégorie de jeunes (lien « Voir les jeunes classés par progression »), trois colonnes de plus :
   **Virtuels**, **+/−** (points gagnés ou perdus depuis le début de la phase, toutes compétitions :
-  championnat, critérium, tournois...) et **Parties** (victoires, défaites). Toucher « +/− » classe les
-  jeunes qui progressent le plus. Sur téléphone, les points mensuels s'effacent pour laisser la place.
+  championnat, critérium, tournois...), **Parties** (victoires, défaites) et **Lu le** (date à laquelle ses
+  parties ont été lues à la FFTT ; en orange si c'est il y a plus de 7 jours). Toucher « +/− » classe les
+  jeunes qui progressent le plus. Sur téléphone, les points mensuels s'effacent pour laisser la place et
+  la date est sous le nom.
   La fiche d'un club montre ses jeunes les plus en progression ; **Classements** et **Comparer** ont deux
   mesures de plus : moyenne des 4 meilleurs jeunes (virtuels) et points gagnés par tous les jeunes du club.
 
@@ -525,11 +527,13 @@ D'où viennent les données :
   navigateur dans le dossier `import\` sert aussi.
 - **Points virtuels des jeunes** : API de la FFTT (avec le compte licencié), une requête par jeune
   (environ 820 jeunes en compétition dans le 77), calculés comme ceux des adversaires. Seulement par la
-  mise à jour en ligne (le PC n'en a pas besoin : la page publiée est faite en ligne). Au plus 300 jeunes
-  lus par mise à jour (jamais lus d'abord, puis les plus anciens), réponses gardées 3 jours : les
-  premières fois, il faut trois mises à jour pour les avoir tous ; ensuite, chaque mise à jour en relit
-  au plus 300. Les jeunes déjà lus comme adversaires ne coûtent rien. Pour comparaison, une mise à jour
-  « Tout » lit déjà les parties de 800 à 1000 adversaires.
+  mise à jour en ligne (le PC n'en a pas besoin : la page publiée est faite en ligne). **Une seule mise à
+  jour suffit** pour les avoir tous (environ 4 minutes de plus la première fois ; une mise à jour « Tout »
+  lit déjà les parties de 800 à 1000 adversaires). Ensuite, un jeune lu il y a moins de 3 jours n'est pas
+  redemandé à la FFTT (sa réponse enregistrée sert) ; au-delà, il est relu à la mise à jour suivante.
+  Rien ne disparaît : sans mise à jour, la dernière valeur reste affichée, avec sa date (« Lu le »). Les
+  jeunes déjà lus comme adversaires ne coûtent rien. Les clubs du 77 passent après les adversaires : si
+  la FFTT refusait des requêtes pendant la lecture des jeunes, la page des adversaires serait déjà faite.
 
 ## Sécurité
 

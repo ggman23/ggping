@@ -112,11 +112,14 @@ dialog::backdrop { background: rgba(10, 15, 25, .45); }
 #table-joueurs td.joueur { white-space: normal; min-width: 150px; }
 #table-joueurs .club-sous { display: none; }
 #table-joueurs td.prog { font-variant-numeric: tabular-nums; }
+.ancien { color: var(--att); font-weight: 600; }
+.lu { display: block; white-space: nowrap; }
 .plus-lignes { margin: 12px 0 0; }
 .lien { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); text-decoration: underline; cursor: pointer; }
 @media (max-width: 700px) {
   /* Jeunes : virtuels et +/− à l'écran ; les points mensuels, la colonne sexe et les parties s'effacent */
-  #table-joueurs .col-club, #table-joueurs.avec-virt .col-sexe, #table-joueurs.avec-virt .col-points, #table-joueurs .col-parties { display: none; }
+  #table-joueurs .col-club, #table-joueurs.avec-virt .col-sexe, #table-joueurs.avec-virt .col-points, #table-joueurs .col-parties,
+  #table-joueurs .col-lu { display: none; }
   #table-joueurs .club-sous { display: block; }
   #table-joueurs.avec-virt td.joueur { min-width: 120px; }
 }
@@ -184,6 +187,9 @@ const PAR_NUM = new Map(CLUBS.map((c) => [c.numero, c]));
 // Jeunes (poussins à juniors) : points virtuels calculés par la mise à jour (6e élément d'un joueur)
 const JEUNES = ["P", "B", "M", "C", "J"];
 const AVEC_VIRTUELS = CLUBS.some((c) => (c.joueurs || []).some((j) => j[5]));
+const jourMois = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : "—");
+// Parties lues il y a plus de 7 jours (par rapport à la mise à jour) : date mise en évidence
+const ancien = (iso) => !!iso && (new Date(D.genere_le) - new Date(iso)) / 864e5 > 7;
 const signe = (x) => (x == null ? "—" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toLocaleString("fr-FR", { maximumFractionDigits: 1 }));
 const nomCourt = (c) => c.nom;
 
@@ -422,7 +428,7 @@ const ordreCat = (a, b) => D.categories.indexOf(lettre(a)) - D.categories.indexO
 const JOUEURS = CLUBS.flatMap((c) => (c.joueurs || []).filter((j) => !j[3]).map((j) => (
   { points: j[0], sexe: j[1], cat: j[2], nom: j[4] || "", club: c.numero, clubNom: c.nom, vaires: c.vaires,
     jeune: JEUNES.includes(lettre(j[2])), virt: j[5] ? j[5][0] : null, prog: j[5] ? j[5][1] : null,
-    v: j[5] ? j[5][2] : null, d: j[5] ? j[5][3] : null })));
+    v: j[5] ? j[5][2] : null, d: j[5] ? j[5][3] : null, lu: j[5] ? j[5][4] : null })));
 const sansAccent = (t) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 for (const j of JOUEURS) j.cle = sansAccent(j.nom);
 const CATS_PRECISES = [...new Set(JOUEURS.map((j) => j.cat).filter(Boolean))].sort(ordreCat);
@@ -478,17 +484,21 @@ function vueJoueurs() {
     ${AVEC_VIRTUELS && !avecVirt ? `<p class="note"><button type="button" class="lien" data-jeunes-prog>Voir les jeunes classés par progression</button> (points virtuels, catégorie « Jeunes » ou une catégorie de jeunes)</p>` : ""}
     <p class="position">${fr(garde.length)} joueur${garde.length > 1 ? "s" : ""}${vaires.length && !vj.club ? ` · Vaires : ${vaires.length}, ${cleRang === "prog" ? "la meilleure progression" : "le mieux classé"} ${premier}<sup>${premier === 1 ? "er" : "e"}</sup>` : ""}</p>
     <div class="defil"><table id="table-joueurs" class="${avecVirt ? "avec-virt" : ""}"><tr><th class="n">#</th>${th("nom", "Joueur")}${th("club", "Club", "col-club")}${th("cat", "Cat.")}<th class="col-sexe">Sexe</th>${th("points", "Points", "n col-points", "Points mensuels (classement officiel du mois)")}${avecVirt
-      ? th("virt", "Virtuels", "n", "Points virtuels : points de la phase + points gagnés ou perdus depuis, toutes compétitions") + th("prog", "+/−", "n", `Points gagnés ou perdus depuis le début de la phase (${debutPhase})`) + '<th class="n col-parties">Parties</th>' : ""}</tr>
+      ? th("virt", "Virtuels", "n", "Points virtuels : points de la phase + points gagnés ou perdus depuis, toutes compétitions") + th("prog", "+/−", "n", `Points gagnés ou perdus depuis le début de la phase (${debutPhase})`) + '<th class="n col-parties">Parties</th><th class="n col-lu" title="Date de lecture de ses parties à la FFTT">Lu le</th>' : ""}</tr>
       ${affiche.map((j) => `<tr class="${j.vaires ? "vaires" : ""}"><td class="n rang">${rang.get(j) ?? "—"}</td>
-        <td class="joueur">${esc(j.nom)}<span class="club-sous doux">${esc(j.clubNom)}${avecVirt && j.sexe === "F" ? " · F" : ""}</span></td>
+        <td class="joueur">${esc(j.nom)}<span class="club-sous doux">${esc(j.clubNom)}${avecVirt && j.sexe === "F" ? " · F" : ""}${avecVirt && j.lu
+          ? `<span class="lu${ancien(j.lu) ? " ancien" : ""}">lu le ${jourMois(j.lu)}</span>` : ""}</span></td>
         <td class="col-club"><button type="button" class="nom" data-club="${esc(j.club)}">${esc(j.clubNom)}</button></td>
         <td title="${esc(libelleCat(j.cat))}">${esc(j.cat || "—")}</td><td class="col-sexe">${j.sexe === "F" ? "F" : "H"}</td><td class="n col-points">${fr(j.points)}</td>${avecVirt
           ? `<td class="n">${fr(j.virt)}</td><td class="n prog"${j.v != null ? ` title="${j.v} victoire${j.v > 1 ? "s" : ""}, ${j.d} défaite${j.d > 1 ? "s" : ""}"` : ""}>${j.prog == null ? "—" : signe(j.prog)}</td>
-            <td class="n col-parties">${j.v == null ? "—" : `${j.v} V · ${j.d} D`}</td>` : ""}</tr>`).join("")}</table></div>
+            <td class="n col-parties">${j.v == null ? "—" : `${j.v} V · ${j.d} D`}</td><td class="n col-lu${ancien(j.lu) ? " ancien" : ""}">${jourMois(j.lu)}</td>` : ""}</tr>`).join("")}</table></div>
     ${lignes.length > vj.n ? `<button type="button" class="bouton plus-lignes" id="plus-j">Afficher ${Math.min(200, lignes.length - vj.n)} de plus (${fr(lignes.length - vj.n)} restants)</button>` : ""}
     <p class="note">Points mensuels des listes de licenciés de pingpocket.fr (lues par le PC). ${AVEC_VIRTUELS || V
       ? `Points virtuels des jeunes (licences compétition) : calculés comme pour les adversaires, d'après les parties de la saison connues de la FFTT
-        (championnat, critérium, tournois…), relues tous les 3 jours au plus${V ? ` ; ${fr(V.connus)} jeunes sur ${fr(V.jeunes)} connus${V.reportes ? `, ${fr(V.reportes)} aux prochaines mises à jour` : ""}` : ""}${sansVirt ? ` (« — » : ${fr(sansVirt)} pas encore lus)` : ""}.`
+        (championnat, critérium, tournois…)${V ? ` ; ${fr(V.connus)} jeunes sur ${fr(V.jeunes)} connus${V.reportes ? `, ${fr(V.reportes)} à la prochaine mise à jour` : ""}` : ""}${sansVirt ? ` (« — » : ${fr(sansVirt)} pas encore lus)` : ""}.
+        « Lu le » : date à laquelle ses parties ont été lues. Un jeune lu il y a moins de 3 jours n'est pas redemandé à la FFTT ; ensuite, il est relu
+        à la mise à jour suivante (sa dernière valeur reste affichée en attendant)${V && V.plus_ancienne ? ` ; lus entre le ${jourMois(V.plus_ancienne)} et le ${jourMois(V.plus_recente)}` : ""}.
+        En orange : lu il y a plus de 7 jours.`
       : "Points virtuels des jeunes : calculés par la mise à jour en ligne du site."}
       Catégories de la FFTT : P poussins, B1 et B2 benjamins, M1 et M2 minimes, C1 et C2 cadets,
       J1 à J3 juniors, S seniors, V40… vétérans. Sans les licences loisir. ${CLUBS.filter((c) => !c.joueurs).length ? `${CLUBS.filter((c) => !c.joueurs).length} club(s) sans liste pour l'instant.` : ""}</p>
@@ -517,8 +527,8 @@ function ficheClub(num) {
       <p class="note"><a href="#joueurs" data-voir-club="${esc(c.numero)}">Tous les joueurs du club</a></p>` : '<p class="vide">Liste des licenciés pas encore lue.</p>'}
     ${jeunes.length ? `<h3>Jeunes en progression</h3>
       <p class="intro">${fr(jeunes.length)} jeune${jeunes.length > 1 ? "s" : ""} en compétition · ${signe(jeunes.reduce((a, j) => a + j[5][1], 0))} points à eux tous depuis le début de la phase</p>
-      <table><tr><th>Joueur</th><th>Cat.</th><th class="n">Virtuels</th><th class="n">+/−</th></tr>${enProgres.map((j) =>
-      `<tr><td>${esc(j[4])}${j[1] === "F" ? ' <span class="doux">F</span>' : ""}</td><td>${esc(j[2])}</td><td class="n">${fr(j[5][0])}</td><td class="n">${signe(j[5][1])}</td></tr>`).join("")}</table>
+      <table><tr><th>Joueur</th><th>Cat.</th><th class="n">Virtuels</th><th class="n">+/−</th><th class="n">Lu le</th></tr>${enProgres.map((j) =>
+      `<tr><td>${esc(j[4])}${j[1] === "F" ? ' <span class="doux">F</span>' : ""}</td><td>${esc(j[2])}</td><td class="n">${fr(j[5][0])}</td><td class="n">${signe(j[5][1])}</td><td class="n${ancien(j[5][4]) ? " ancien" : ""}">${jourMois(j[5][4])}</td></tr>`).join("")}</table>
       <p class="note"><a href="#joueurs" data-voir-club="${esc(c.numero)}" data-jeunes>Tous les jeunes du club</a></p>` : ""}`;
   const d = document.getElementById("fiche");
   if (d.showModal) d.showModal(); else d.setAttribute("open", "");
