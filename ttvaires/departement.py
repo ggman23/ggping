@@ -12,14 +12,16 @@ Les clubs du département sont ceux des rencontres des journées 1 et 2 des divi
 la requête qui sert déjà à trouver l'identifiant d'un club : un club sans aucune équipe départementale
 n'y figure pas. Seuls les licenciés de la saison (licences renouvelées) comptent.
 
-Points virtuels des jeunes (poussins à juniors, licences compétition) : calculés comme ceux des
-adversaires (virtuel.forme_joueurs : une requête par joueur à l'API de la FFTT, avec le compte licencié),
-par la mise à jour en ligne seulement (la page publiée y est faite ; le PC n'envoie pas les réponses de
-l'API, le faire aussi sur le PC doublerait les requêtes). Un jeune lu il y a moins de TTL_VIRTUELS n'est
-pas redemandé (sa réponse enregistrée sert) ; au-delà, il est relu à la mise à jour suivante. Rien ne
-disparaît : jusque-là, sa dernière valeur reste affichée, avec sa date de lecture. Tous en une mise à
-jour (environ 4 minutes pour 820 jeunes ; une mise à jour lit déjà les parties de 800 à 1000
-adversaires) ; MAX_VIRTUELS n'est qu'une borne de sécurité.
+Points virtuels des joueurs (licences compétition) : calculés comme ceux des adversaires
+(virtuel.forme_joueurs : une requête par joueur à l'API de la FFTT, avec le compte licencié), par la mise
+à jour en ligne seulement (la page publiée y est faite ; le PC n'envoie pas les réponses de l'API, le
+faire aussi sur le PC doublerait les requêtes). Le lancement choisit qui relire (PERIMETRES : les jeunes
+par défaut, les adultes, tous, aucun) : un joueur choisi lu il y a moins de TTL_VIRTUELS n'est pas
+redemandé (sa réponse enregistrée sert), au-delà il est relu. Les autres gardent leur dernière réponse
+enregistrée, avec sa date (lus lors d'un lancement précédent, ou comme adversaires de Vaires, relus
+chaque jour). Rien ne disparaît. Environ 4 minutes pour 820 jeunes, 6 à 7 pour tout le département la
+première fois (une mise à jour lit déjà les parties de 800 à 1000 adversaires) ; MAX_VIRTUELS n'est
+qu'une borne de sécurité.
 
 Force d'une équipe (estimation, pour voir les favoris d'une poule) : la moyenne des points des quatre
 joueurs que son numéro lui donne dans le club, par points décroissants (équipe 1 : joueurs 1 à 4, équipe
@@ -44,9 +46,11 @@ TTL_EQUIPES = 7 * JOUR   # équipes engagées : fixées pour la phase
 LISTES = ("categories", "etat")  # la liste par classement n'apporte rien ici
 JOUEURS_PAR_EQUIPE = 4
 CATEGORIES = ["P", "B", "M", "C", "J", "S", "V"]  # poussins ... vétérans
-JEUNES = ("P", "B", "M", "C", "J")  # catégories sous senior : leurs points virtuels sont calculés
-MAX_VIRTUELS = 1500      # borne de sécurité : joueurs dont les parties sont lues au plus par lancement (API FFTT)
-TTL_VIRTUELS = 3 * JOUR  # un jeune lu il y a moins de 3 jours n'est pas redemandé (les adversaires, lus chaque jour, servent aussi)
+JEUNES = ("P", "B", "M", "C", "J")  # catégories sous senior
+# Joueurs dont les points virtuels sont relus, au choix du lancement (option --virtuels-77)
+PERIMETRES = {"jeunes": JEUNES, "adultes": ("S", "V"), "tous": tuple(CATEGORIES), "aucun": ()}
+MAX_VIRTUELS = 2500      # borne de sécurité : joueurs dont les parties sont lues au plus par lancement (API FFTT)
+TTL_VIRTUELS = 3 * JOUR  # un joueur lu il y a moins de 3 jours n'est pas redemandé (les adversaires, lus chaque jour, servent aussi)
 # Ordre des niveaux, du plus haut au plus bas (pour trier les clubs par leur meilleure équipe)
 ORDRE_NIVEAUX = ["N1", "N2", "N3", "PN", "R1", "R2", "R3", "R4", "PR", "D1", "D2", "D3", "D4", "D5", "D6"]
 
@@ -155,29 +159,27 @@ def joueurs_du_club(listes):
     return sortie
 
 
-def jeune(joueur):
-    return not joueur["loisir"] and joueur["cat"][:1].upper() in JEUNES and bool(joueur.get("licence"))
-
-
-def virtuels_des_jeunes(client, licences, points_mensuels, aujourdhui):
-    """Points virtuels des jeunes : ({licence: [virtuels, points gagnés depuis le début de la phase,
-    victoires, défaites, date de lecture « AAAA-MM-JJ »]}, {"jeunes", "connus", "lus", "reportes",
+def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire=None):
+    """Points virtuels : ({licence: [virtuels, points gagnés depuis le début de la phase, victoires,
+    défaites, date de lecture « AAAA-MM-JJ »]}, {"joueurs", "a_relire", "connus", "lus", "reportes",
     "plus_ancienne", "plus_recente"}).
 
-    Relus : ceux jamais lus et ceux lus il y a TTL_VIRTUELS ou plus (au plus MAX_VIRTUELS, jamais lus
-    d'abord, puis les plus anciens) ; les autres gardent leur réponse enregistrée. Sans partie dans la
-    phase : virtuels = points mensuels, 0 gagné."""
+    a_relire : licences à relire si besoin (toutes si None). Relus : parmi elles, ceux jamais lus et ceux
+    lus il y a TTL_VIRTUELS ou plus (au plus MAX_VIRTUELS, jamais lus d'abord, puis les plus anciens).
+    Tous les autres déjà lus gardent leur réponse enregistrée, même ancienne. Sans partie dans la phase :
+    virtuels = points mensuels, 0 gagné."""
     debut, fin = fftt.bornes_phase(aujourdhui)
     fin = min(fin, aujourdhui.isoformat())
     maintenant = time.time()
+    a_relire = set(licences) if a_relire is None else set(a_relire)
     dates = {lic: client.date(url_parties(lic)) for lic in licences}
-    perimes = sorted((lic for lic, d in dates.items() if d is None or maintenant - d >= TTL_VIRTUELS),
+    perimes = sorted((lic for lic, d in dates.items() if lic in a_relire and (d is None or maintenant - d >= TTL_VIRTUELS)),
                      key=lambda lic: (dates[lic] is not None, dates[lic] or 0, lic))
     a_lire = perimes[:MAX_VIRTUELS]
     choisis = set(a_lire)
     gardes = [lic for lic in licences if lic not in choisis and dates[lic] is not None]
-    formes = forme_joueurs(client, a_lire, {}, debut, fin, ttl=TTL_VIRTUELS, message="parties des jeunes") if a_lire else {}
-    formes.update(forme_joueurs(client, gardes, {}, debut, fin, ttl=None, message="parties des jeunes (déjà lues)") if gardes else {})
+    formes = forme_joueurs(client, a_lire, {}, debut, fin, ttl=TTL_VIRTUELS, message="parties des joueurs du 77") if a_lire else {}
+    formes.update(forme_joueurs(client, gardes, {}, debut, fin, ttl=None, message="parties des joueurs du 77 (déjà lues)") if gardes else {})
     res = {}
     for lic, f in formes.items():
         if f is None:
@@ -187,7 +189,7 @@ def virtuels_des_jeunes(client, licences, points_mensuels, aujourdhui):
             lu = client.date(url_parties(lic)) or maintenant  # date de la réponse enregistrée
             res[lic] = [round(virtuels), round(f["points"], 1), f["v"], f["d"], datetime.fromtimestamp(lu).date().isoformat()]
     jours = sorted(r[4] for r in res.values())
-    return res, {"jeunes": len(licences), "connus": len(res), "lus": len(a_lire),
+    return res, {"joueurs": len(licences), "a_relire": len(a_relire), "connus": len(res), "lus": len(a_lire),
                  "reportes": sum(1 for lic in perimes[MAX_VIRTUELS:] if dates[lic] is None),
                  "plus_ancienne": jours[0] if jours else None, "plus_recente": jours[-1] if jours else None}
 
@@ -206,9 +208,13 @@ def force_des_equipes(equipes, joueurs):
     return res
 
 
-def recuperer_departement(client, numero_club="08770250", aujourdhui=None, dossier_import=None, virtuels=None):
-    """virtuels : calculer les points virtuels des jeunes ; par défaut, seulement dans la mise à jour en
-    ligne (pingpocket.fr lu seulement dans les pages envoyées par le PC), pas sur le PC."""
+def recuperer_departement(client, numero_club="08770250", aujourdhui=None, dossier_import=None, virtuels=None,
+                          perimetre="jeunes"):
+    """virtuels : calculer les points virtuels ; par défaut, seulement dans la mise à jour en ligne
+    (pingpocket.fr lu seulement dans les pages envoyées par le PC), pas sur le PC. perimetre : joueurs à
+    relire (PERIMETRES : jeunes, adultes, tous, aucun) ; les autres gardent leurs réponses enregistrées."""
+    if perimetre not in PERIMETRES:
+        raise ValueError(f"joueurs à relire : {perimetre} ; choix possibles : {', '.join(PERIMETRES)}")
     aujourdhui = aujourdhui or datetime.now().date()
     phase, saison = fftt.phase_et_saison(aujourdhui)
     debut, fin = fftt.bornes_phase(aujourdhui)
@@ -221,13 +227,17 @@ def recuperer_departement(client, numero_club="08770250", aujourdhui=None, dossi
     print("3/4 Licenciés des clubs (pingpocket.fr, listes gardées un mois)", flush=True)
     listes, reportees = listes_licencies(client, clubs, dossier_import)
     joueurs_par_club = {num: joueurs_du_club(listes[num][0]) for num in clubs if num in listes}
-    jeunes = {j["licence"]: j["points"] for js in joueurs_par_club.values() for j in js if jeune(j)}
+    competition = {j["licence"]: j for js in joueurs_par_club.values() for j in js if not j["loisir"] and j.get("licence")}
+    choisis = set(competition) if perimetre == "tous" else \
+        {lic for lic, j in competition.items() if j["cat"][:1].upper() in PERIMETRES[perimetre]}  # « tous » : catégorie inconnue comprise
     if virtuels:
-        print(f"4/4 Points virtuels des jeunes : {len(jeunes)} (API FFTT ; ceux lus il y a moins de 3 jours ne sont pas "
-              "redemandés)", flush=True)
-        virt, controle_virt = virtuels_des_jeunes(client, sorted(jeunes), jeunes, aujourdhui)
+        print(f"4/4 Points virtuels : {len(choisis)} joueurs à relire ({perimetre}) sur {len(competition)} (API FFTT ; "
+              "ceux lus il y a moins de 3 jours ne sont pas redemandés, les autres gardent leur dernière lecture)", flush=True)
+        virt, controle_virt = virtuels_des_joueurs(client, sorted(competition), {lic: j["points"] for lic, j in competition.items()},
+                                                   aujourdhui, choisis)
+        controle_virt["perimetre"] = perimetre
     else:
-        print("4/4 Points virtuels des jeunes : calculés par la mise à jour en ligne seulement", flush=True)
+        print("4/4 Points virtuels : calculés par la mise à jour en ligne seulement", flush=True)
         virt, controle_virt = {}, None
 
     sortie, sans_liste = [], []
@@ -243,7 +253,7 @@ def recuperer_departement(client, numero_club="08770250", aujourdhui=None, dossi
             "date_liste": datetime.fromtimestamp(listes[num][1]).isoformat(timespec="minutes") if num in listes else None,
             "equipes": [{**e, **forces[(e["nom"], e["feminin"])]} for e in eqs], "niveaux": dict(niveaux),
             "meilleur_niveau": min((e["niveau"] for e in eqs if not e["feminin"]), key=rang_niveau, default=None),
-            # Joueurs : [points mensuels, sexe, catégorie précise, loisir, « NOM Prénom »], et pour un jeune dont
+            # Joueurs : [points mensuels, sexe, catégorie précise, loisir, « NOM Prénom »], et pour un joueur dont
             # les parties sont connues [virtuels, points gagnés depuis le début de la phase, victoires, défaites,
             # date de lecture des parties] ;
             # pour les statistiques, la fiche du club et le classement des joueurs du département (page chiffrée :
@@ -271,7 +281,7 @@ def recuperer_departement(client, numero_club="08770250", aujourdhui=None, dossi
     return {"genere_le": datetime.now().isoformat(timespec="minutes"), "saison": saison, "phase": phase,
             "departement": DEPARTEMENT, "club": numero_club, "clubs": sortie, "poules": poules_sortie,
             "categories": CATEGORIES, "ordre_niveaux": ORDRE_NIVEAUX, "joueurs_par_equipe": JOUEURS_PAR_EQUIPE,
-            "debut_phase": debut, "virtuels_jeunes": controle_virt,
+            "debut_phase": debut, "virtuels": controle_virt,
             "controle": {"clubs": len(sortie), "sans_liste": sans_liste, "listes_reportees": reportees}}
 
 
@@ -280,5 +290,6 @@ def resume(donnees):
     avec = c["clubs"] - len(c["sans_liste"])
     return (f"{c['clubs']} clubs, {sum(len(x['equipes']) for x in donnees['clubs'])} équipes, licenciés connus pour {avec} clubs"
             + (f" ({c['listes_reportees']} listes au prochain lancement sur le PC)" if c["listes_reportees"] else "")
-            + (f" ; points virtuels de {v['connus']} jeunes sur {v['jeunes']}" + (f", {v['reportes']} au prochain lancement" if v["reportes"] else "")
-               if (v := donnees.get("virtuels_jeunes")) else ""))
+            + (f" ; points virtuels de {v['connus']} joueurs sur {v['joueurs']} (relus : {v['perimetre']})"
+               + (f", {v['reportes']} au prochain lancement" if v["reportes"] else "")
+               if (v := donnees.get("virtuels")) else ""))

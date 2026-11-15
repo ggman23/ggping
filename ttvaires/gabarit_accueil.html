@@ -40,6 +40,8 @@ a.bouton { display: inline-block; text-align: center; font-size: 16px; padding: 
   background: var(--accent); color: #fff; font-weight: 600; text-decoration: none; }
 .carte a.titre { color: inherit; text-decoration: none; }
 #statut { margin-top: 10px; font-size: 14.5px; }
+#bloc-joueurs-77 { margin-top: 12px; }
+#bloc-joueurs-77 p { margin: 6px 0 0; }
 details { margin-top: 12px; font-size: 14px; }
 summary { cursor: pointer; color: var(--accent); }
 ol { padding-left: 20px; margin: 8px 0; }
@@ -69,17 +71,6 @@ a { color: var(--accent); }
 </header>
 <main>
   <div id="bandeau-archive" hidden></div>
-  <h2>Pages</h2>
-  <div id="pages"></div>
-
-  <h2>Images à partager</h2>
-  <div id="images" class="images"></div>
-
-  <div id="bloc-archives" hidden>
-    <h2>Archives des journées passées</h2>
-    <div id="archives"></div>
-  </div>
-
   <h2 id="titre-maj">Mettre à jour maintenant</h2>
   <div class="carte" id="mise-a-jour">
     <label for="choix" class="petit">Pages à mettre à jour</label>
@@ -92,12 +83,26 @@ a { color: var(--accent); }
       <option value="indivs">Individuels (critérium)</option>
       <option value="departement">Clubs du 77</option>
     </select>
+    <div id="bloc-joueurs-77">
+      <label for="joueurs-77" class="petit">Clubs du 77 : points virtuels à relire</label>
+      <select id="joueurs-77">
+        <option value="jeunes">Les jeunes (environ 820)</option>
+        <option value="adultes">Les adultes (environ 1 500)</option>
+        <option value="tous">Tous les joueurs du 77 (environ 2 300)</option>
+        <option value="aucun">Aucun : garder les dernières lectures</option>
+      </select>
+      <p class="petit">Seuls ceux lus il y a plus de 3 jours sont redemandés à la FFTT (environ 1 minute pour 220 joueurs) ;
+        les autres gardent leur dernière lecture, avec sa date.</p>
+    </div>
     <div class="ligne"><button id="lancer">Mettre à jour GitHub et Cloudflare</button>
       <button id="lancer-netlify" class="second">Mettre à jour les 3 sites (avec Netlify)</button></div>
-    <p class="petit">GitHub et Cloudflare : gratuit, autant de fois qu'il faut (corrections, ajouts).
-      Les 3 sites : envoie aussi la version sur Netlify, l'adresse donnée au club (15 crédits Netlify sur 300 par mois ;
-      18 envois au plus par mois, au-delà Netlify n'est plus mis à jour jusqu'au 6). Les mises à jour automatiques
-      (tous les lundis, matin et soir) ne font que GitHub et Cloudflare.</p>
+    <details>
+      <summary>Quel bouton choisir ?</summary>
+      <p class="petit">GitHub et Cloudflare : gratuit, autant de fois qu'il faut (corrections, ajouts).
+        Les 3 sites : envoie aussi la version sur Netlify, l'adresse donnée au club (15 crédits Netlify sur 300 par mois ;
+        18 envois au plus par mois, au-delà Netlify n'est plus mis à jour jusqu'au 6). Les mises à jour automatiques
+        (tous les lundis, matin et soir) ne font que GitHub et Cloudflare, avec les jeunes du 77.</p>
+    </details>
     <div id="statut" role="status"></div>
     <details id="reglage">
       <summary>Réglage du bouton (une fois par appareil et par adresse du site)</summary>
@@ -118,6 +123,17 @@ a { color: var(--accent); }
     </details>
     <p class="petit">Sans réglage, depuis l'appli ou le site GitHub : <a id="lien-actions" target="_blank" rel="noopener">Actions
       → Mise à jour du site → Run workflow</a>.</p>
+  </div>
+
+  <h2>Pages</h2>
+  <div id="pages"></div>
+
+  <h2>Images à partager</h2>
+  <div id="images" class="images"></div>
+
+  <div id="bloc-archives" hidden>
+    <h2>Archives des journées passées</h2>
+    <div id="archives"></div>
   </div>
 
   <h2>Dernier lancement</h2>
@@ -330,6 +346,9 @@ async function github(chemin, options = {}) {
 }
 // Deux boutons : GitHub et Cloudflare (gratuits), ou les 3 sites (Netlify en plus : 15 crédits)
 const boutonsMaj = (inactifs) => ["lancer", "lancer-netlify"].forEach((id) => { document.getElementById(id).disabled = inactifs; });
+const choixJoueurs77 = () => { document.getElementById("bloc-joueurs-77").hidden = !["tout", "departement"].includes(document.getElementById("choix").value); };
+document.getElementById("choix").addEventListener("change", choixJoueurs77);
+choixJoueurs77();
 async function lancer(netlify) {
   if (!lire(JETON)) { document.getElementById("reglage").open = true; statut('<span class="etat att">Fais d\'abord le réglage ci-dessous.</span>'); return; }
   boutonsMaj(true);
@@ -337,7 +356,8 @@ async function lancer(netlify) {
   const depuis = Date.now();
   try {
     await github(`/repos/${E.depot}/actions/workflows/${E.workflow}/dispatches`, { method: "POST",
-      body: JSON.stringify({ ref: E.branche, inputs: { pages: document.getElementById("choix").value, netlify: netlify ? "true" : "false" } }) });
+      body: JSON.stringify({ ref: E.branche, inputs: { pages: document.getElementById("choix").value, netlify: netlify ? "true" : "false",
+        joueurs_77: document.getElementById("joueurs-77").value } }) });
     statut(netlify ? "Mise à jour des 3 sites demandée… " : "Mise à jour de GitHub et Cloudflare demandée… ");
     suivre(depuis, 0);
   } catch (e) {

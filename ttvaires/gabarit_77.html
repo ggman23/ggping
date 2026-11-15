@@ -114,6 +114,7 @@ dialog::backdrop { background: rgba(10, 15, 25, .45); }
 #table-joueurs td.prog { font-variant-numeric: tabular-nums; }
 .ancien { color: var(--att); font-weight: 600; }
 .lu { display: block; white-space: nowrap; }
+.virt-mensuels { display: none; }
 .plus-lignes { margin: 12px 0 0; }
 .lien { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); text-decoration: underline; cursor: pointer; }
 @media (max-width: 700px) {
@@ -122,6 +123,9 @@ dialog::backdrop { background: rgba(10, 15, 25, .45); }
   #table-joueurs .col-lu { display: none; }
   #table-joueurs .club-sous { display: block; }
   #table-joueurs.avec-virt td.joueur { min-width: 120px; }
+  /* Points mensuels effacés : un joueur sans virtuels montre ses points mensuels, en gris */
+  #table-joueurs .virt-absent { display: none; }
+  #table-joueurs .virt-mensuels { display: inline; }
 }
 @media (max-width: 700px) {
   main { padding: 10px 8px 32px; }
@@ -434,12 +438,15 @@ for (const j of JOUEURS) j.cle = sansAccent(j.nom);
 const CATS_PRECISES = [...new Set(JOUEURS.map((j) => j.cat).filter(Boolean))].sort(ordreCat);
 let vj = { sexe: "T", cat: "", club: "", q: "", tri: { cle: "points", sens: -1 }, n: 200 };
 const garderCat = (j) => !vj.cat || (vj.cat === "jeunes" ? j.jeune : vj.cat.endsWith("*") ? lettre(j.cat) === vj.cat[0] : j.cat === vj.cat);
-// Colonnes des points virtuels : quand la catégorie choisie est une catégorie de jeunes
-const catJeunes = () => AVEC_VIRTUELS && (vj.cat === "jeunes" || (vj.cat !== "" && JEUNES.includes(vj.cat[0])));
+// Points virtuels connus : jeunes et adultes (les adultes : mise à jour « adultes » ou « tous », ou adversaires de Vaires)
+const NB_VIRT = { jeunes: JOUEURS.filter((j) => j.jeune).length, jeunesV: JOUEURS.filter((j) => j.jeune && j.virt != null).length,
+  adultes: JOUEURS.filter((j) => !j.jeune).length, adultesV: JOUEURS.filter((j) => !j.jeune && j.virt != null).length };
 function vueJoueurs() {
-  const q = sansAccent(vj.q.trim()), avecVirt = catJeunes();
+  const q = sansAccent(vj.q.trim());
   const garde = JOUEURS.filter((j) => (vj.sexe === "T" || j.sexe === vj.sexe) && garderCat(j)
     && (!vj.club || j.club === vj.club) && (!q || j.cle.includes(q)));
+  // Colonnes des points virtuels : quand au moins 3 joueurs affichés sur 4 en ont
+  const avecVirt = AVEC_VIRTUELS && garde.length > 0 && garde.filter((j) => j.virt != null).length >= 0.75 * garde.length;
   const sens = vj.tri.sens, cle = !avecVirt && (vj.tri.cle === "virt" || vj.tri.cle === "prog") ? "points" : vj.tri.cle;
   // Rang (ex aequo : même rang) : selon les points virtuels ou la progression si on trie par eux, sinon les points mensuels
   const cleRang = cle === "virt" || cle === "prog" ? cle : "points";
@@ -468,12 +475,12 @@ function vueJoueurs() {
   const th = (k, titre, cls = "", aide = "") => `<th class="${cls}" aria-sort="${cle === k ? (sens > 0 ? "ascending" : "descending") : "none"}"${aide ? ` title="${esc(aide)}"` : ""}><button type="button" data-tri-j="${k}">${titre}</button></th>`;
   const vaires = parRang.filter((j) => j.vaires && rang.get(j) != null);
   const affiche = lignes.slice(0, vj.n);
-  const V = D.virtuels_jeunes, debutPhase = D.debut_phase ? `${D.debut_phase.slice(8, 10)}/${D.debut_phase.slice(5, 7)}/${D.debut_phase.slice(0, 4)}` : "—";
+  const V = D.virtuels, debutPhase = D.debut_phase ? `${D.debut_phase.slice(8, 10)}/${D.debut_phase.slice(5, 7)}/${D.debut_phase.slice(0, 4)}` : "—";
   const sansVirt = avecVirt ? garde.filter((j) => j.virt == null).length : 0;
   const premier = vaires.length ? rang.get(vaires[0]) : null;
   return `<section class="carte"><h2>Les joueurs du 77</h2>
     <p class="intro">Tous les licenciés compétition des clubs du département, classés par points mensuels (le classement officiel du mois)${avecVirt
-      ? `, avec pour les jeunes leurs <b>points virtuels</b> et les points gagnés ou perdus depuis le début de la phase (+/−), toutes compétitions` : ""}.
+      ? `, avec leurs <b>points virtuels</b> et les points gagnés ou perdus depuis le début de la phase (+/−), toutes compétitions` : ""}.
       Les joueurs de Vaires sont en jaune.</p>
     <div class="filtres">
       <span class="bascule" id="sexe-j"><button type="button" data-v="T" aria-pressed="${vj.sexe === "T"}">Femmes et hommes</button><button type="button" data-v="F" aria-pressed="${vj.sexe === "F"}">Femmes</button><button type="button" data-v="M" aria-pressed="${vj.sexe === "M"}">Hommes</button></span>
@@ -481,7 +488,8 @@ function vueJoueurs() {
       <label>Club <select id="club-j">${optionsClub}</select></label>
       <input type="search" id="recherche-j" placeholder="Chercher un joueur" value="${esc(vj.q)}" aria-label="Chercher un joueur">
     </div>
-    ${AVEC_VIRTUELS && !avecVirt ? `<p class="note"><button type="button" class="lien" data-jeunes-prog>Voir les jeunes classés par progression</button> (points virtuels, catégorie « Jeunes » ou une catégorie de jeunes)</p>` : ""}
+    ${AVEC_VIRTUELS && !avecVirt ? `<p class="note">${NB_VIRT.jeunesV ? '<button type="button" class="lien" data-jeunes-prog>Voir les jeunes classés par progression</button> · ' : ""}points virtuels
+      connus pour ${fr(NB_VIRT.jeunesV + NB_VIRT.adultesV)} joueurs sur ${fr(JOUEURS.length)} : leurs colonnes s'affichent quand au moins 3 joueurs de la liste sur 4 en ont</p>` : ""}
     <p class="position">${fr(garde.length)} joueur${garde.length > 1 ? "s" : ""}${vaires.length && !vj.club ? ` · Vaires : ${vaires.length}, ${cleRang === "prog" ? "la meilleure progression" : "le mieux classé"} ${premier}<sup>${premier === 1 ? "er" : "e"}</sup>` : ""}</p>
     <div class="defil"><table id="table-joueurs" class="${avecVirt ? "avec-virt" : ""}"><tr><th class="n">#</th>${th("nom", "Joueur")}${th("club", "Club", "col-club")}${th("cat", "Cat.")}<th class="col-sexe">Sexe</th>${th("points", "Points", "n col-points", "Points mensuels (classement officiel du mois)")}${avecVirt
       ? th("virt", "Virtuels", "n", "Points virtuels : points de la phase + points gagnés ou perdus depuis, toutes compétitions") + th("prog", "+/−", "n", `Points gagnés ou perdus depuis le début de la phase (${debutPhase})`) + '<th class="n col-parties">Parties</th><th class="n col-lu" title="Date de lecture de ses parties à la FFTT">Lu le</th>' : ""}</tr>
@@ -490,16 +498,18 @@ function vueJoueurs() {
           ? `<span class="lu${ancien(j.lu) ? " ancien" : ""}">lu le ${jourMois(j.lu)}</span>` : ""}</span></td>
         <td class="col-club"><button type="button" class="nom" data-club="${esc(j.club)}">${esc(j.clubNom)}</button></td>
         <td title="${esc(libelleCat(j.cat))}">${esc(j.cat || "—")}</td><td class="col-sexe">${j.sexe === "F" ? "F" : "H"}</td><td class="n col-points">${fr(j.points)}</td>${avecVirt
-          ? `<td class="n">${fr(j.virt)}</td><td class="n prog"${j.v != null ? ` title="${j.v} victoire${j.v > 1 ? "s" : ""}, ${j.d} défaite${j.d > 1 ? "s" : ""}"` : ""}>${j.prog == null ? "—" : signe(j.prog)}</td>
+          ? `<td class="n">${j.virt != null ? fr(j.virt) : `<span class="virt-absent">—</span><span class="virt-mensuels doux" title="Virtuels pas encore lus : points mensuels">${fr(j.points)}</span>`}</td><td class="n prog"${j.v != null ? ` title="${j.v} victoire${j.v > 1 ? "s" : ""}, ${j.d} défaite${j.d > 1 ? "s" : ""}"` : ""}>${j.prog == null ? "—" : signe(j.prog)}</td>
             <td class="n col-parties">${j.v == null ? "—" : `${j.v} V · ${j.d} D`}</td><td class="n col-lu${ancien(j.lu) ? " ancien" : ""}">${jourMois(j.lu)}</td>` : ""}</tr>`).join("")}</table></div>
     ${lignes.length > vj.n ? `<button type="button" class="bouton plus-lignes" id="plus-j">Afficher ${Math.min(200, lignes.length - vj.n)} de plus (${fr(lignes.length - vj.n)} restants)</button>` : ""}
     <p class="note">Points mensuels des listes de licenciés de pingpocket.fr (lues par le PC). ${AVEC_VIRTUELS || V
-      ? `Points virtuels des jeunes (licences compétition) : calculés comme pour les adversaires, d'après les parties de la saison connues de la FFTT
-        (championnat, critérium, tournois…)${V ? ` ; ${fr(V.connus)} jeunes sur ${fr(V.jeunes)} connus${V.reportes ? `, ${fr(V.reportes)} à la prochaine mise à jour` : ""}` : ""}${sansVirt ? ` (« — » : ${fr(sansVirt)} pas encore lus)` : ""}.
-        « Lu le » : date à laquelle ses parties ont été lues. Un jeune lu il y a moins de 3 jours n'est pas redemandé à la FFTT ; ensuite, il est relu
-        à la mise à jour suivante (sa dernière valeur reste affichée en attendant)${V && V.plus_ancienne ? ` ; lus entre le ${jourMois(V.plus_ancienne)} et le ${jourMois(V.plus_recente)}` : ""}.
+      ? `Points virtuels (licences compétition) : calculés comme pour les adversaires, d'après les parties de la saison connues de la FFTT
+        (championnat, critérium, tournois…) ; connus pour ${fr(NB_VIRT.jeunesV)} jeunes sur ${fr(NB_VIRT.jeunes)} et ${fr(NB_VIRT.adultesV)} adultes
+        sur ${fr(NB_VIRT.adultes)}${V && V.reportes ? `, ${fr(V.reportes)} à la prochaine mise à jour` : ""}${sansVirt ? ` (« — » : ${fr(sansVirt)} pas encore lus dans cette liste)` : ""}.
+        Qui relire se choisit au lancement de la mise à jour : les jeunes (par défaut), les adultes, tous ou aucun${V && V.perimetre ? ` (dernière : ${esc(V.perimetre)})` : ""} ;
+        les autres gardent leur dernière lecture, et les adversaires de Vaires sont relus chaque jour.
+        « Lu le » : date à laquelle ses parties ont été lues ; un joueur lu il y a moins de 3 jours n'est pas redemandé à la FFTT${V && V.plus_ancienne ? ` ; lus entre le ${jourMois(V.plus_ancienne)} et le ${jourMois(V.plus_recente)}` : ""}.
         En orange : lu il y a plus de 7 jours.`
-      : "Points virtuels des jeunes : calculés par la mise à jour en ligne du site."}
+      : "Points virtuels : calculés par la mise à jour en ligne du site."}
       Catégories de la FFTT : P poussins, B1 et B2 benjamins, M1 et M2 minimes, C1 et C2 cadets,
       J1 à J3 juniors, S seniors, V40… vétérans. Sans les licences loisir. ${CLUBS.filter((c) => !c.joueurs).length ? `${CLUBS.filter((c) => !c.joueurs).length} club(s) sans liste pour l'instant.` : ""}</p>
   </section>`;

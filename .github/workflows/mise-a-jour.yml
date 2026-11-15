@@ -15,6 +15,11 @@ on:
         type: choice
         options: [tout, resultats, effectif, virtuel, adversaires, indivs, departement]
         default: tout
+      joueurs_77:
+        description: "Clubs du 77 : joueurs dont les points virtuels sont relus (les autres gardent leur dernière lecture)"
+        type: choice
+        options: [jeunes, adultes, tous, aucun]
+        default: jeunes
       netlify:
         description: Envoyer aussi sur Netlify, l'adresse donnée au club (15 crédits Netlify) ; sinon GitHub et Cloudflare seulement
         type: boolean
@@ -87,6 +92,7 @@ jobs:
       - name: Récupération des données
         env:
           CHOIX: ${{ inputs.pages || 'tout' }}
+          JOUEURS_77: ${{ inputs.joueurs_77 || 'jeunes' }}  # clubs du 77 : points virtuels relus (mise à jour du lundi : les jeunes)
           SURNOMS: ${{ secrets.SURNOMS }}  # noms affichés sur le récapitulatif (facultatif, voir PUBLICATION.md)
           # Compte licencié FFTT : l'API de la FFTT demande une connexion depuis le 31/10/2026
           FFTT_IDENTIFIANT: ${{ secrets.FFTT_IDENTIFIANT }}
@@ -100,7 +106,7 @@ jobs:
             *) echo "::error::Choix inconnu : $CHOIX"; exit 1 ;;
           esac
           # pingpocket.fr refuse les serveurs de GitHub : on utilise ses pages envoyées par le PC
-          python -m ttvaires $ARGS --pas-de-navigateur --pingpocket-cache
+          python -m ttvaires $ARGS --pas-de-navigateur --pingpocket-cache --virtuels-77 "$JOUEURS_77"
 
       - name: Réglage de GitHub Pages
         id: pages

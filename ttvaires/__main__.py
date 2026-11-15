@@ -152,10 +152,11 @@ def page_indivs(client, club, ctx):
     return [html, *faire_images("images_indivs", donnees, dossier=ctx.images)], indivs.resume(donnees)
 
 
-def page_departement(client, club, ctx):
-    """Clubs du 77 : licenciés (sexe, catégories, points) et équipes engagées de chaque club du département."""
+def page_departement(client, club, ctx, perimetre="jeunes"):
+    """Clubs du 77 : licenciés (sexe, catégories, points) et équipes engagées de chaque club du département ;
+    perimetre : joueurs dont les points virtuels sont relus (jeunes, adultes, tous, aucun)."""
     print("=== Clubs du 77 : joueurs et équipes de chaque club du département", flush=True)
-    donnees = departement.recuperer_departement(client, club, ctx.aujourdhui, dossier_import=IMPORT)
+    donnees = departement.recuperer_departement(client, club, ctx.aujourdhui, dossier_import=IMPORT, perimetre=perimetre)
     html = generer_html(donnees, ctx.sortie / "departement_77.html", GABARIT_77)
     return [html], departement.resume(donnees)
 
@@ -203,6 +204,9 @@ def main():
                         help="individuels : poules des joueurs de Vaires et forme de leurs adversaires (mot de passe du club)")
     parser.add_argument("--departement", action="store_true",
                         help="clubs du 77 : joueurs (sexe, catégories, points) et équipes engagées de chaque club")
+    parser.add_argument("--virtuels-77", choices=list(departement.PERIMETRES), default="jeunes",
+                        help="clubs du 77 : joueurs dont les points virtuels sont relus (mise à jour en ligne ; "
+                             "défaut : jeunes ; les autres gardent leur dernière lecture)")
     parser.add_argument("--demo", action="store_true", help="page des adversaires avec des données fictives")
     parser.add_argument("--hors-ligne", action="store_true",
                         help="n'utilise que les pages déjà téléchargées (refaire pages et images en 30 s, sans envoi au site)")
@@ -242,7 +246,7 @@ def main():
                                     or args.departement):
             a_faire.append(("adversaires", lambda c, club, ctx: page_adversaires(c, club, ctx, args.tous_les_historiques)))
         if args.departement:  # en dernier : la lecture des parties des jeunes (API FFTT) ne retarde ni ne gêne les autres pages
-            a_faire.append(("clubs du 77", page_departement))
+            a_faire.append(("clubs du 77", lambda c, club, ctx: page_departement(c, club, ctx, args.virtuels_77)))
         ctx = Contexte()
         pages, bilans = generer_pages(client, args.club, ctx, a_faire)
         print(f"Pages téléchargées : {client.nb_telecharges}, reprises du cache : {client.nb_cache}")

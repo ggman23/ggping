@@ -76,6 +76,12 @@ navigateur du téléphone, choisir « Version pour ordinateur » si un menu n'ap
 
 ## Le bouton « Lancer la mise à jour » du site
 
+En haut de la page d'accueil du site (« Mettre à jour maintenant », avant la liste des pages). Avec
+« Tout » ou « Clubs du 77 », un second choix dit **quels joueurs du 77 relire pour leurs points
+virtuels** : les jeunes (par défaut, environ 820), les adultes (environ 1 500), tous (environ 2 300) ou
+aucun (garder les dernières lectures). Dans GitHub (*Run workflow*) : « joueurs_77 ». Voir « Clubs du
+77 » plus bas.
+
 Deux boutons :
 - **« Mettre à jour GitHub et Cloudflare »** : gratuit, autant de fois qu'il faut (corrections,
   ajouts) ; la copie Netlify n'est pas touchée.
@@ -508,13 +514,14 @@ chaque mise à jour « Tout » (ou « Clubs du 77 » dans la liste des pages), e
   200 lignes, puis « afficher plus ». Joueurs de Vaires en jaune, avec leur nombre et la place du
   mieux classé. La fiche d'un club mène à ses joueurs (« Tous les joueurs du club »). Les noms ne sont que
   dans la page chiffrée (mot de passe du club).
-- **Jeunes : points virtuels et progression** : avec la catégorie « Jeunes (poussins à juniors) » ou une
-  catégorie de jeunes (lien « Voir les jeunes classés par progression »), trois colonnes de plus :
+- **Points virtuels et progression** : quand au moins 3 joueurs de la liste sur 4 ont leurs points
+  virtuels (les jeunes par défaut ; tout le monde après une mise à jour « tous » ; lien « Voir les jeunes
+  classés par progression »), quatre colonnes de plus :
   **Virtuels**, **+/−** (points gagnés ou perdus depuis le début de la phase, toutes compétitions :
   championnat, critérium, tournois...), **Parties** (victoires, défaites) et **Lu le** (date à laquelle ses
   parties ont été lues à la FFTT ; en orange si c'est il y a plus de 7 jours). Toucher « +/− » classe les
-  jeunes qui progressent le plus. Sur téléphone, les points mensuels s'effacent pour laisser la place et
-  la date est sous le nom.
+  joueurs qui progressent le plus. Sur téléphone, les points mensuels s'effacent pour laisser la place (un
+  joueur pas encore lu montre ses points mensuels en gris) et la date est sous le nom.
   La fiche d'un club montre ses jeunes les plus en progression ; **Classements** et **Comparer** ont deux
   mesures de plus : moyenne des 4 meilleurs jeunes (virtuels) et points gagnés par tous les jeunes du club.
 
@@ -530,14 +537,14 @@ D'où viennent les données :
   site avec les autres données du PC. La première fois, il faut deux ou trois lancements du PC pour
   avoir tous les clubs ; d'ici là, leurs colonnes affichent « — ». Une liste enregistrée depuis un
   navigateur dans le dossier `import\` sert aussi.
-- **Points virtuels des jeunes** : API de la FFTT (avec le compte licencié), une requête par jeune
-  (environ 820 jeunes en compétition dans le 77), calculés comme ceux des adversaires. Seulement par la
-  mise à jour en ligne (le PC n'en a pas besoin : la page publiée est faite en ligne). **Une seule mise à
-  jour suffit** pour les avoir tous (environ 4 minutes de plus la première fois ; une mise à jour « Tout »
-  lit déjà les parties de 800 à 1000 adversaires). Ensuite, un jeune lu il y a moins de 3 jours n'est pas
-  redemandé à la FFTT (sa réponse enregistrée sert) ; au-delà, il est relu à la mise à jour suivante.
-  Rien ne disparaît : sans mise à jour, la dernière valeur reste affichée, avec sa date (« Lu le »). Les
-  jeunes déjà lus comme adversaires ne coûtent rien. Les clubs du 77 passent après les adversaires : si
+- **Points virtuels** : API de la FFTT (avec le compte licencié), une requête par joueur, calculés
+  comme ceux des adversaires. Seulement par la mise à jour en ligne (le PC n'en a pas besoin : la page
+  publiée est faite en ligne). **Qui relire se choisit au lancement** : les jeunes (par défaut, et la
+  mise à jour du lundi), les adultes, tous ou aucun. Parmi les joueurs choisis, seuls ceux lus il y a
+  plus de 3 jours (ou jamais) sont redemandés à la FFTT, environ 220 par minute : la première fois,
+  environ 4 minutes pour les jeunes, 6 à 7 pour tout le département ; ensuite bien moins. Les autres
+  joueurs gardent leur dernière lecture, avec sa date (« Lu le ») : rien ne disparaît. Les adversaires
+  de Vaires (lus chaque jour pour leur page) ne coûtent rien et apparaissent aussi. Les clubs du 77 passent après les adversaires : si
   la FFTT refusait des requêtes pendant la lecture des jeunes, la page des adversaires serait déjà faite.
 
 ## Sécurité

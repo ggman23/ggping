@@ -494,6 +494,20 @@ pour voir les favoris d'une poule.
   le nom), en orange au-delà de 7 jours, dans la fiche du club et dans la note (« lus entre le … et le
   … »). Ordre des pages : les clubs du 77 après les adversaires (un refus de l'API pendant la lecture
   des jeunes ne touche plus la page des adversaires).
+- Choix des joueurs à relire et bouton en haut (15/11) : demande : 2 332 joueurs en tout, soit 3 fois
+  les jeunes : est-ce acceptable pour la FFTT ? pouvoir lancer tous les joueurs du 77, tous les jeunes,
+  ou tous sauf les jeunes ; et le bouton de mise à jour en tout premier sur la page. Réponse : la
+  première fois, environ 1 300 à 1 500 requêtes de plus pour tout le département (une partie est déjà
+  lue comme adversaires), 6 à 7 minutes, deux fois la charge d'une mise à jour « Tout » ; ensuite,
+  seulement ceux lus il y a plus de 3 jours : acceptable, au choix de l'utilisateur. Option
+  --virtuels-77 {jeunes, adultes, tous, aucun} (departement.PERIMETRES, défaut : jeunes), entrée
+  « joueurs_77 » du workflow (lundi : jeunes), second choix sous « Pages à mettre à jour » de l'accueil
+  (seulement pour « Tout » et « Clubs du 77 », non retenu). Hors du choix : la dernière lecture
+  enregistrée sert, sans requête (adultes adversaires compris). MAX_VIRTUELS = 2500. Page : colonnes des
+  virtuels quand au moins 3 joueurs affichés sur 4 en ont ; sur téléphone, un joueur sans virtuels
+  montre ses points mensuels en gris ; note : connus pour x jeunes sur y et z adultes sur w. Accueil :
+  « Mettre à jour maintenant » avant « Pages » ; l'explication des deux boutons repliée (« Quel bouton
+  choisir ? »).
 
 ## Calendrier de la saison : /cal/ (13/11/2026)
 
