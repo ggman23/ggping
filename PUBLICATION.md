@@ -232,6 +232,11 @@ plus (essai du 10/11/2026 : publication jamais traitée). Donc, à la fin de cha
 commit vide « Mise à jour du site n° … » est ajouté à la branche (`ttvaires/pages.py`) : la suivante
 tourne sur un commit nouveau. Ces commits ne changent aucun fichier.
 
+GitHub répond parfois qu'il ne trouve pas le site qu'on vient de lui envoyer (15/11/2026 : « No
+artifacts named github-pages were found », une seconde après « successfully uploaded » ; Netlify et
+Cloudflare, eux, publiés). L'étape « Publication » réessaie donc une fois, une minute plus tard ; la
+mise à jour n'est en échec que si le second essai rate aussi (alors : la relancer plus tard).
+
 ## Espace club sur le site GitHub (gratuit, sans limite de mises à jour)
 
 À chaque mise à jour, l'espace club est aussi publié sur le site GitHub, à l'adresse

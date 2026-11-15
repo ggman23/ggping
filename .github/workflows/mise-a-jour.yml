@@ -48,7 +48,7 @@ jobs:
     timeout-minutes: 60
     environment:
       name: github-pages
-      url: ${{ steps.deploiement.outputs.page_url }}
+      url: ${{ steps.deploiement.outputs.page_url || steps.deploiement2.outputs.page_url }}
     env:
       TZ: Europe/Paris
       PYTHONUNBUFFERED: "1"
@@ -147,8 +147,21 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: python -m ttvaires.pages nettoyer
 
+      # GitHub répond parfois qu'il ne trouve pas le site qu'on vient de lui envoyer (15/11 : « Found 0
+      # artifact(s) » une seconde après « successfully uploaded ») : on attend une minute et on réessaie.
+      # La mise à jour n'est en échec que si le second essai rate aussi.
       - name: Publication
         id: deploiement
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      - name: Publication (nouvel essai dans une minute)
+        if: ${{ steps.deploiement.outcome == 'failure' }}
+        run: sleep 60
+
+      - name: Publication (second essai)
+        id: deploiement2
+        if: ${{ steps.deploiement.outcome == 'failure' }}
         uses: actions/deploy-pages@v4
 
       # Copie de secours sur Netlify : accueil public (adversaires), /club/ (espace club, secret
