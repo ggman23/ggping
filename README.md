@@ -282,7 +282,8 @@ journée suivante). Mise en place :
    2. Résultats des joueurs de Vaires (page + Excel) et feuilles de match — rapide, moins d'une minute ;
    3. Effectif de Vaires : brûlages par joueur et par équipe — rapide ;
    4. Classement virtuel du club, toutes compétitions — rapide ;
-   5. tout : les quatre pages ;
+   5. tout : les quatre pages et les clubs du 77 (à la fin, envoie les données au site et y lance
+      la mise à jour « Tout », si le lien avec le téléphone est réglé) ;
    6. la page de démonstration ;
    7. le lien avec le téléphone (réglage, puis envoi automatique des données au site) ;
    8. les adversaires en lisant d'un coup tous les meilleurs classements manquants (long : une
