@@ -68,6 +68,10 @@ button.nom:hover { text-decoration: underline; }
 .niv { display: inline-block; font-size: 12px; font-weight: 600; padding: 0 6px; border-radius: 5px; background: var(--surface2); margin-right: 3px; }
 .vide { color: var(--doux); padding: 10px 2px; }
 .note { font-size: 12.5px; color: var(--doux); margin: 10px 2px 0; }
+/* Rappel, dans chaque vue, que seuls certains joueurs sont comptés */
+.filtre-actif { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; background: var(--att-fond); color: var(--att);
+  border-radius: 8px; padding: 7px 10px; font-size: 13.5px; margin: 0 0 10px; }
+.filtre-actif button { border: 1px solid currentColor; background: none; color: inherit; border-radius: 8px; padding: 3px 10px; cursor: pointer; font-weight: 600; }
 /* Classement : barres horizontales, une par club */
 .barres { display: grid; grid-template-columns: 34px minmax(110px, 230px) minmax(0, 1fr); gap: 4px 10px; align-items: center; font-size: 13.5px; }
 .barres .r { color: var(--doux); text-align: right; font-variant-numeric: tabular-nums; }
@@ -139,7 +143,7 @@ dialog::backdrop { background: rgba(10, 15, 25, .45); }
   <section class="carte" id="filtres-joueurs" aria-label="Joueurs comptés">
     <div class="filtres">
       <label>Joueurs
-        <span class="bascule" id="sexe"><button type="button" data-v="T">Tous</button><button type="button" data-v="F">Femmes</button><button type="button" data-v="M">Hommes</button></span></label>
+        <span class="bascule" id="sexe"><button type="button" data-v="T">Femmes et hommes</button><button type="button" data-v="F">Femmes seulement</button><button type="button" data-v="M">Hommes seulement</button></span></label>
       <label>Catégories <span class="cats" id="cats"></span></label>
       <label>Licences
         <span class="bascule" id="loisir"><button type="button" data-v="1" title="Compétition et loisir : le nombre de licenciés de la FFTT">Toutes</button><button type="button" data-v="0" title="Sans les licences loisir (pas de points, pas de compétition)">Compétition</button></span></label>
@@ -172,9 +176,19 @@ document.getElementById("sous-titre").textContent = `Saison ${D.saison} · phase
   + (D.genere_le ? ` · données du ${D.genere_le.slice(8, 10)}/${D.genere_le.slice(5, 7)}` : "");
 
 /* ---------- Joueurs comptés : sexe, catégories, licences loisir (retenus sur l'appareil) ---------- */
-let filtre = { sexe: "T", cats: new Set(D.categories), loisir: "1" };
-try { const f = JSON.parse(lire("77-filtre-2") || "null"); if (f) filtre = { sexe: f.sexe || "T", cats: new Set(f.cats || D.categories), loisir: f.loisir || "1" }; } catch (e) { /* réglage illisible */ }
-const sauverFiltre = () => ecrire("77-filtre-2", JSON.stringify({ sexe: filtre.sexe, cats: [...filtre.cats], loisir: filtre.loisir }));
+/* Joueurs comptés : tous au départ de chaque visite (un réglage oublié fausserait la lecture des autres
+   onglets) ; un bandeau le rappelle dans chaque vue tant qu'il n'est pas « tout » */
+const PAR_DEFAUT = () => ({ sexe: "T", cats: new Set(D.categories), loisir: "1" });
+let filtre = PAR_DEFAUT();
+const filtreComplet = () => filtre.sexe === "T" && filtre.loisir === "1" && D.categories.every((c) => filtre.cats.has(c));
+function bandeauFiltre() {
+  if (filtreComplet()) return "";
+  const morceaux = [filtre.sexe === "F" ? "femmes seulement" : filtre.sexe === "M" ? "hommes seulement" : "",
+    D.categories.every((c) => filtre.cats.has(c)) ? "" : [...filtre.cats].map((c) => CATS[c].toLowerCase()).join(", "),
+    filtre.loisir === "1" ? "" : "sans les licences loisir"].filter(Boolean);
+  return `<p class="filtre-actif" role="status">Comptés : ${esc(morceaux.join(" · "))} (réglage en haut de la page)
+    <button type="button" data-tout-compter>Tout compter</button></p>`;
+}
 function boutonsFiltres() {
   for (const id of ["sexe", "loisir"]) document.querySelectorAll(`#${id} button`).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === filtre[id])));
   const tous = D.categories.every((c) => filtre.cats.has(c)), jeunes = ["P", "B", "M", "C", "J"], adultes = ["S", "V"];
@@ -183,7 +197,7 @@ function boutonsFiltres() {
     `<button type="button" data-p="tous" aria-pressed="${tous}">Toutes</button><button type="button" data-p="jeunes" aria-pressed="${egal(jeunes)}">Jeunes</button>`
     + `<button type="button" data-p="adultes" aria-pressed="${egal(adultes)}">Adultes</button>`
     + D.categories.map((c) => `<button type="button" data-c="${c}" aria-pressed="${!tous && filtre.cats.has(c)}" title="${esc(CATS[c])}">${c}</button>`).join("");
-  const morceaux = [filtre.sexe === "F" ? "joueuses" : filtre.sexe === "M" ? "joueurs (hommes)" : "joueuses et joueurs",
+  const morceaux = [filtre.sexe === "F" ? "femmes seulement" : filtre.sexe === "M" ? "hommes seulement" : "femmes et hommes",
     tous ? "toutes catégories" : [...filtre.cats].map((c) => CATS[c].toLowerCase()).join(", "),
     filtre.loisir === "1" ? "toutes les licences, loisir comprises (le nombre de licenciés de la FFTT)" : "licences compétition seulement (sans les licences loisir)"];
   document.getElementById("resume-filtres").textContent = `Comptés : ${morceaux.join(" · ")} (licences de la saison).`;
@@ -200,7 +214,7 @@ document.getElementById("cats").addEventListener("click", (ev) => {
   }
   changer();
 });
-function changer() { sauverFiltre(); calculer(); colonnes(); boutonsFiltres(); afficher(); }
+function changer() { calculer(); colonnes(); boutonsFiltres(); afficher(); }
 
 /* ---------- Statistiques de chaque club, pour les joueurs comptés ---------- */
 let S = new Map();
@@ -263,7 +277,7 @@ function vueClubs() {
   const lignes = liste.map((s, i) => `<tr class="${s.club.vaires ? "vaires" : ""}"><td class="rang">${i + 1}</td>
       <td class="club"><button type="button" class="nom" data-club="${esc(s.club.numero)}">${esc(s.club.nom)}</button></td>
       ${COLONNES.map((c) => c.cle === "niveau" ? `<td>${niveaux(s.club) || "—"}</td>` : `<td class="n">${s.connu || c.cle === "equipes" ? fr(valeur(s, c.cle)) : "—"}</td>`).join("")}</tr>`).join("");
-  return `<section class="carte"><h2>Les clubs du 77</h2>
+  return `<section class="carte"><h2>Les clubs du 77</h2>${bandeauFiltre()}
     <p class="intro">Touche un en-tête pour trier, un club pour sa fiche. La ligne de Vaires est en jaune. Points : points mensuels des joueurs comptés.</p>
     <div class="filtres">
       <input type="search" id="recherche" placeholder="Chercher un club" value="${esc(recherche)}" aria-label="Chercher un club">
@@ -302,7 +316,7 @@ function vueClassements() {
   const tries = [...S.values()].filter((s) => valeur(s, mesure) != null)
     .sort((a, b) => valeur(b, mesure) - valeur(a, mesure) || a.club.nom.localeCompare(b.club.nom, "fr"));
   const i = tries.findIndex((s) => s.club.vaires), m = MESURES.find((x) => x.cle === mesure);
-  return `<section class="carte"><h2>Où se situe Vaires</h2>
+  return `<section class="carte"><h2>Où se situe Vaires</h2>${bandeauFiltre()}
     <div class="filtres"><label>Classer selon <select id="mesure">${MESURES.map((x) => `<option value="${x.cle}"${x.cle === mesure ? " selected" : ""}>${esc(x.titre)}</option>`).join("")}</select></label></div>
     <p class="position">${i >= 0 ? `Vaires : <b>${i + 1}<sup>${i ? "e" : "er"}</sup> sur ${tries.length}</b> · ${esc(m.titre.toLowerCase())} : ${mesure === "niveau" ? esc(tries[i].niveau) : fr(valeur(tries[i], mesure))}` : "Vaires n'a pas encore de données pour ce classement."}</p>
     ${barres(tries, mesure)}${noteDonnees()}</section>`;
@@ -321,7 +335,7 @@ function vueComparer() {
   const mesures = ["top4", "top10", "joueurs", "meilleur", "mille", "F", "equipes"];
   const titres = { top4: "Moyenne des 4 meilleurs", top10: "Moyenne des 10 meilleurs", joueurs: "Joueurs", meilleur: "Meilleur joueur",
     mille: "Joueurs à 1000 points ou plus", F: "Joueuses", equipes: "Équipes engagées" };
-  return `<section class="carte"><h2>Comparer des clubs</h2>
+  return `<section class="carte"><h2>Comparer des clubs</h2>${bandeauFiltre()}
     <p class="intro">Jusqu'à ${MAX} clubs : choisis-les un par un, ou prends d'un coup ceux d'une poule.</p>
     <div class="filtres">
       <select id="ajout" aria-label="Ajouter un club"${choisis.length >= MAX ? " disabled" : ""}><option value="">${choisis.length >= MAX ? `${MAX} clubs au plus` : "Ajouter un club…"}</option>${options}</select>
@@ -403,6 +417,7 @@ function afficher() {
   if (r) r.addEventListener("input", () => { recherche = r.value; const pos = r.selectionStart; afficher(); const n = document.getElementById("recherche"); n.focus(); n.setSelectionRange(pos, pos); });
 }
 document.getElementById("vue").addEventListener("click", (ev) => {
+  if (ev.target.closest("[data-tout-compter]")) { filtre = PAR_DEFAUT(); changer(); return; }
   const t = ev.target.closest("[data-tri]");
   if (t) { const cle = t.dataset.tri; tri = { cle, sens: tri.cle === cle ? -tri.sens : cle === "nom" ? 1 : -1 }; ecrire("77-tri", JSON.stringify(tri)); afficher(); return; }
   const c = ev.target.closest("[data-club]"); if (c) { ficheClub(c.dataset.club); return; }

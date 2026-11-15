@@ -451,6 +451,11 @@ pour voir les favoris d'une poule.
   licences loisir n'étaient pas comptées par défaut. Par défaut maintenant : toutes les licences, avec
   une colonne « dont loisir » ; bouton « Compétition » pour les retirer (réglage retenu sous un
   nouveau nom pour que tout le monde reparte de ce défaut).
+- Correction (15/11) : la comparaison montrait 49 joueurs pour Vaires : « Hommes » et « Adultes »
+  étaient restés choisis (réglage retenu d'une visite à l'autre, en haut de la page, hors de vue).
+  Maintenant : chaque visite repart de « tout », un bandeau « Comptés : … · Tout compter » rappelle le
+  réglage dans chaque vue, et les boutons disent « Femmes et hommes / Femmes seulement / Hommes
+  seulement ». La force estimée des équipes masculines compte toujours aussi les joueuses (championnat mixte).
 - Mise à jour : option --departement, dans « Tout » (workflow, PC option 5 et option 9) et seule
   (« Clubs du 77 »). Navigation : « 77 » en haut et dans le menu de /indivs/, /tournois/, /cal/ ;
   « Aller à » de /club/.

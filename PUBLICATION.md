@@ -478,7 +478,9 @@ chaque mise à jour « Tout » (ou « Clubs du 77 » dans la liste des pages), e
   équipes, et les équipes par division (« D2 ×3 », « F D1 » pour une équipe féminine). Toucher un
   en-tête trie, toucher un club ouvre sa fiche (équipes avec leur force estimée, 10 meilleurs joueurs).
   Recherche par nom et filtre par division.
-- **Joueurs comptés** (en haut, pour toutes les vues ; retenu sur l'appareil) : tous, femmes ou hommes ;
+- **Joueurs comptés** (en haut, pour toutes les vues ; chaque visite repart de « tout » ; tant qu'il n'est
+  pas sur « tout », un bandeau le rappelle dans chaque vue, avec « Tout compter ») : femmes et hommes,
+  femmes seulement ou hommes seulement ;
   toutes les catégories, les jeunes (P à J), les adultes (S et V) ou des catégories au choix ; toutes
   les licences (par défaut : le nombre de licenciés affiché par la FFTT et pingpocket, avec une colonne
   « dont loisir ») ou seulement les licences compétition. Seules les licences de la saison comptent.
