@@ -189,6 +189,9 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const lire = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const ecrire = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* navigation privée */ } };
 const fr = (x) => (x == null ? "—" : Number(x).toLocaleString("fr-FR", { maximumFractionDigits: 0 }));
+// Points virtuels : une décimale, comme l'appli FFTT (909,5 ; 500,0). Les points publiés sur la licence sont, eux, arrondis à
+// l'entier le plus proche, 0,5 vers le haut (règlements administratifs, juillet 2025), après retrait de la dérive en fin de phase.
+const fr1 = (x) => (x == null ? "—" : Number(x).toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
 const CATS = { P: "Poussins", B: "Benjamins", M: "Minimes", C: "Cadets", J: "Juniors", S: "Seniors", V: "Vétérans" };
 const ORDRE = D.ordre_niveaux || [];
 const rangNiveau = (n) => (ORDRE.includes(n) ? ORDRE.indexOf(n) : ORDRE.length);
@@ -253,7 +256,7 @@ const texteChoisi = (select) => (select.options[select.selectedIndex] || {}).tex
 document.addEventListener("click", (ev) => {  // liens vers une autre page (pas les liens internes « #… »)
   const a = ev.target.closest("a[href]");
   if (a && !a.getAttribute("href").startsWith("#")) {
-    const nom = (a.querySelector("b") || a).textContent.trim();
+    const nom = a.dataset.lien || (a.querySelector("b") || a).textContent.trim();
     compterAction("lien", nom, `lien ${nom}`);
   }
 });
@@ -529,6 +532,11 @@ function vueJoueurs() {
     <p class="intro">Tous les licenciés compétition des clubs du département, classés par points mensuels (le classement officiel du mois)${avecVirt
       ? `, avec une <b>estimation</b> de leurs points virtuels et des points gagnés ou perdus depuis le début de la phase (+/−), toutes compétitions (seule la situation mensuelle publiée par la FFTT est officielle)` : ""}.
       Les joueurs de Vaires sont en jaune.</p>
+    <p class="note">Classements officiels de la FFTT (situation du mois précédent, publiée vers le 16 du mois ; nouvel onglet, code à
+      recopier sur le site de la FFTT) : <a href="https://www2.fftt.com/site/competition/classement/classement-departemental" target="_blank"
+      rel="noopener" data-lien="FFTT departemental">département</a> · <a href="https://www2.fftt.com/site/competition/classement/classement-regional"
+      target="_blank" rel="noopener" data-lien="FFTT regional">région</a> · <a href="https://www2.fftt.com/site/competition/classement/classement-national"
+      target="_blank" rel="noopener" data-lien="FFTT national">France</a>.</p>
     <div class="filtres">
       <span class="bascule" id="sexe-j"><button type="button" data-v="T" aria-pressed="${vj.sexe === "T"}">Femmes et hommes</button><button type="button" data-v="F" aria-pressed="${vj.sexe === "F"}">Femmes</button><button type="button" data-v="M" aria-pressed="${vj.sexe === "M"}">Hommes</button></span>
       <label>Catégorie <select id="cat-j">${optionsCat}</select></label>
@@ -545,7 +553,7 @@ function vueJoueurs() {
           ? `<span class="lu${ancien(j.lu) ? " ancien" : ""}">lu le ${jourMois(j.lu)}</span>` : ""}</span></td>
         <td class="col-club"><button type="button" class="nom" data-club="${esc(j.club)}">${esc(j.clubNom)}</button></td>
         <td title="${esc(libelleCat(j.cat))}">${esc(j.cat || "—")}</td><td class="col-sexe">${j.sexe === "F" ? "F" : "H"}</td><td class="n col-points">${fr(j.points)}</td>${avecVirt
-          ? `<td class="n">${j.virt != null ? fr(j.virt) + repere(j) : `<span class="virt-absent">—</span><span class="virt-mensuels doux" title="Virtuels pas encore lus : points mensuels">${fr(j.points)}</span>`}</td><td class="n prog"${j.v != null ? ` title="${esc([parMois(j.mois), `${j.v} victoire${j.v > 1 ? "s" : ""}, ${j.d} défaite${j.d > 1 ? "s" : ""}`].filter(Boolean).join(" ; "))}"` : ""}>${j.prog == null ? "—" : signe(j.prog)}</td>
+          ? `<td class="n">${j.virt != null ? fr1(j.virt) + repere(j) : `<span class="virt-absent">—</span><span class="virt-mensuels doux" title="Virtuels pas encore lus : points mensuels">${fr(j.points)}</span>`}</td><td class="n prog"${j.v != null ? ` title="${esc([parMois(j.mois), `${j.v} victoire${j.v > 1 ? "s" : ""}, ${j.d} défaite${j.d > 1 ? "s" : ""}`].filter(Boolean).join(" ; "))}"` : ""}>${j.prog == null ? "—" : signe(j.prog)}</td>
             <td class="n col-parties">${j.v == null ? "—" : `${j.v} V · ${j.d} D`}</td><td class="n col-lu${ancien(j.lu) ? " ancien" : ""}">${jourMois(j.lu)}</td>` : ""}</tr>`).join("")}</table></div>
     ${lignes.length > vj.n ? `<button type="button" class="bouton plus-lignes" id="plus-j">Afficher ${Math.min(200, lignes.length - vj.n)} de plus (${fr(lignes.length - vj.n)} restants)</button>` : ""}
     <p class="note">Points mensuels des listes de licenciés de pingpocket.fr (lues par le PC). ${AVEC_VIRTUELS || V
@@ -590,7 +598,7 @@ function ficheClub(num) {
     ${jeunes.length ? `<h3>Jeunes en progression</h3>
       <p class="intro">${fr(jeunes.length)} jeune${jeunes.length > 1 ? "s" : ""} en compétition · ${signe(jeunes.reduce((a, j) => a + j[5][1], 0))} points à eux tous depuis le début de la phase</p>
       <table><tr><th>Joueur</th><th>Cat.</th><th class="n">Virtuels (estim.)</th><th class="n">+/−</th><th class="n">Lu le</th></tr>${enProgres.map((j) =>
-      `<tr><td>${esc(j[4])}${j[1] === "F" ? ' <span class="doux">F</span>' : ""}</td><td>${esc(j[2])}</td><td class="n">${fr(j[5][0])}</td><td class="n">${signe(j[5][1])}</td><td class="n${ancien(j[5][4]) ? " ancien" : ""}">${jourMois(j[5][4])}</td></tr>`).join("")}</table>
+      `<tr><td>${esc(j[4])}${j[1] === "F" ? ' <span class="doux">F</span>' : ""}</td><td>${esc(j[2])}</td><td class="n">${fr1(j[5][0])}</td><td class="n">${signe(j[5][1])}</td><td class="n${ancien(j[5][4]) ? " ancien" : ""}">${jourMois(j[5][4])}</td></tr>`).join("")}</table>
       <p class="note"><a href="#joueurs" data-voir-club="${esc(c.numero)}" data-jeunes>Tous les jeunes du club</a></p>` : ""}`;
   const d = document.getElementById("fiche");
   if (d.showModal) d.showModal(); else d.setAttribute("open", "");

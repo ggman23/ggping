@@ -567,6 +567,16 @@ D'où viennent les données :
   mois par mois. Leur liste est refaite à chaque lecture des joueurs du 77 : un nouvel adversaire (jamais
   lu) est lu en premier, sans rien faire. MAX_EXTERIEURS (3 000) borne seulement le nombre lu en une
   mise à jour : au-delà, le reste l'est à la suivante.
+- **Affichage** : points virtuels à une décimale, comme l'appli FFTT (909,5). Règle de la FFTT
+  (règlements administratifs, juillet 2025) : une situation mensuelle garde ses décimales ; les
+  points publiés sur la licence sont arrondis à l'entier le plus proche (1525,50 donne 1526), et en
+  fin de phase, après retrait de la dérive (−5,16 en phase 1 de 2025-2026, −5,95 en phase 2).
+  Calendrier 2026-2027 (circulaire administrative) : période 1 = juillet, août et septembre, puis un
+  mois par période ; une période est publiée le 9 du mois suivant en Premium et le 16 pour tous.
+- **Classements officiels** : liens dans l'onglet Joueurs vers ceux de la FFTT (département, région,
+  France ; situation du mois précédent). Nouvel onglet : le site de la FFTT refuse d'être affiché
+  dans un cadre (X-Frame-Options SAMEORIGIN) et demande un code à recopier (captcha) : l'outil ne
+  lit jamais ces pages.
 - **Fiabilité d'une estimation** (pastille de couleur à côté des points virtuels, page des clubs du 77
   et classement virtuel de Vaires, avec une info-bulle) : le nombre de parties du joueur contre un
   adversaire dont la valeur du mois est elle-même estimée. Les parties du premier mois de la phase

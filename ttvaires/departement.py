@@ -284,7 +284,8 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
         virtuels = depart[lic] + sum(gains) if lic in depart else (points_mensuels.get(lic) if not ls else None)
         if virtuels is not None:
             lu = client.date(url_parties(lic)) or maintenant  # date de la réponse enregistrée
-            res[lic] = [round(virtuels), round(sum(gains), 1), v, d, datetime.fromtimestamp(lu).date().isoformat(),
+            # virtuels à une décimale, comme l'appli FFTT (909,5)
+            res[lic] = [round(virtuels, 1), round(sum(gains), 1), v, d, datetime.fromtimestamp(lu).date().isoformat(),
                         [round(par_periode[x], 1) for x in periodes],
                         sum(1 for l in ls if l.get("adv_licence") and l["adv_licence"] not in du_77),  # contre d'autres départements
                         sum(1 for l in ls if mensuel.valeur_estimee(l.get("adv_licence"), l["date"], depart, estime, premiere))]

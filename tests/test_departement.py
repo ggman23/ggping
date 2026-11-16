@@ -237,7 +237,7 @@ def test_points_virtuels_en_ligne_seulement_choix_des_jeunes():
     # contre un adversaire à valeur du mois estimée (999 n'a pas de partie lue : ses gains sont inconnus)]
     lu = date.today().isoformat()
     assert [j for j in v["joueurs"] if len(j) == 6] == [[540, "M", "B1", 0, "PETIT Tom",
-                                                         [round(540 + gagne), round(gagne, 1), 1, 1, lu, [round(gagne, 1)], 2, 2]]]
+                                                         [round(540 + gagne, 1), round(gagne, 1), 1, 1, lu, [round(gagne, 1)], 2, 2]]]
     assert lues(client.ttls) == {"8": True, "999": True}  # son adversaire d'un autre département aussi
     assert d["virtuels"] == {"joueurs": 7, "a_relire": 1, "connus": 1, "lus": 1, "reportes": 0, "plus_ancienne": lu,
                              "plus_recente": lu, "perimetre": "jeunes", "hors_championnat": 0, "verifiees": 0, "details_lus": 0,

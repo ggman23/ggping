@@ -615,6 +615,13 @@ pour voir les favoris d'une poule.
   (adversaires extérieurs tous à valeur calculée) ont maintenant une pastille grise (« presque sûre »),
   journal : fiabilite_gris. France entière (125 000 licenciés) : écartée avec l'utilisateur
   (extraction de toute la base avec un compte personnel ; accès officiel peu probable).
+- Classements officiels publics et arrondi (15-16/11) : pages de la FFTT (www2.fftt.com,
+  classement national, régional, départemental) derrière un captcha, et interdites en cadre ;
+  tennis2table.com interdit les agents de Claude (robots.txt) : rien n'est lu automatiquement.
+  Vérification sur captures de l'utilisateur : gains de septembre identiques pour 21 joueurs (minimes
+  garçons du 77) ; deux joueurs de Vaires identiques sur trois mois (−1,0 / +14,0 / +7,5 et
+  0 / +4,5 / 0). Règle d'arrondi trouvée (entier le plus proche, 0,5 vers le haut, après dérive en fin
+  de phase) : virtuels affichés à une décimale ; liens vers les classements officiels (nouvel onglet).
 
 ## Calendrier de la saison : /cal/ (13/11/2026)
 
