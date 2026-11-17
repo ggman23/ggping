@@ -15,10 +15,25 @@ Le mot de passe est lu dans la variable MOT_DE_PASSE_CLUB, sinon demandé.
 
 Si le mot de passe du club change, ces documents ne s'ouvrent plus avec la nouvelle clé : la mise à
 jour le signale et ne les publie pas ; il faut les ajouter de nouveau.
+
+Espace à mot de passe à part (ex. /lundi/, page personnelle : demandé le 17/11/2026). Son entrée de
+ressources.json nomme le secret GitHub qui le protège (« acces » : MOT_DE_PASSE_LUNDI) ; le mot de
+passe n'est jamais dans le dépôt ni connu de qui y dépose une page. La page est déposée « scellée »
+(fichier .scelle) avec la clé publique de l'espace (« cle_publique ») : n'importe qui peut en déposer
+une nouvelle version, seule la mise à jour en ligne, qui a le secret, sait l'ouvrir (la clé privée est
+tirée du mot de passe ; le mot de passe du club ne l'ouvre pas). La mise à jour publie la clé publique
+à <adresse>/cle-publique.txt. Sans le secret, l'espace n'est pas publié du tout.
+
+    python -m ttvaires.ressources acces lundi MOT_DE_PASSE_LUNDI            (une fois)
+    python -m ttvaires.ressources cle lundi <clé de …/lundi/cle-publique.txt>   (une fois)
+    python -m ttvaires.ressources espace lundi chemin/page.html             (chaque nouvelle version)
 """
 
 import argparse
+import base64
 import getpass
+import gzip
+import hashlib
 import json
 import os
 import re
@@ -33,6 +48,62 @@ DOSSIER = RACINE / "ressources"
 LISTE = "ressources.json"
 TYPES = {".html": "page", ".htm": "page", ".pdf": "pdf", ".png": "image", ".jpg": "image", ".jpeg": "image"}
 STOCKAGE_CLUB = "cvtt-vaires-cle-club"  # clé gardée par l'espace club : la même ouvre les espaces (voir publier_espaces)
+SCELLE = b"SCEL1"  # en-tête d'une page scellée (espace à mot de passe à part)
+CONSIGNE_A_PART = "Page privée : entre son mot de passe (ce n'est pas celui du club)."
+
+
+def stockage_a_part(chemin):
+    """Où le navigateur garde la clé d'un espace à mot de passe à part. Le nom commence par celui de
+    l'espace club : l'application Android reconnaît les pages du club et de /lundi/ à ce repère
+    (android/.../Principale.java, TEMOIN_CLUB), mais la clé gardée est distincte."""
+    return f"{STOCKAGE_CLUB}-{chemin}"
+
+
+def _cle_privee(mot_de_passe, chemin):
+    from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
+
+    graine = hashlib.sha256(b"cvtt-vaires-scellement\0" + chemin.encode("utf-8") + b"\0" + publier.cle(mot_de_passe)).digest()
+    return X25519PrivateKey.from_private_bytes(graine)
+
+
+def cle_publique(mot_de_passe, chemin):
+    """Clé publique (base64) d'un espace à mot de passe à part, tirée de son mot de passe."""
+    from cryptography.hazmat.primitives import serialization
+
+    brut = _cle_privee(mot_de_passe, chemin).public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+    return base64.b64encode(brut).decode("ascii")
+
+
+def _cle_partagee(secret):
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+
+    return HKDF(algorithm=hashes.SHA256(), length=32, salt=None, info=b"cvtt-vaires espace scelle").derive(secret)
+
+
+def sceller(donnees, cle_publique_b64):
+    """Page chiffrée pour la seule clé privée de l'espace (X25519 éphémère + AES-GCM) :
+    SCELLE + clé éphémère (32 octets) + vecteur (12) + chiffré."""
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    ephemere = X25519PrivateKey.generate()
+    cle = _cle_partagee(ephemere.exchange(X25519PublicKey.from_public_bytes(base64.b64decode(cle_publique_b64))))
+    iv = os.urandom(12)
+    return (SCELLE + ephemere.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+            + iv + AESGCM(cle).encrypt(iv, gzip.compress(donnees, mtime=0), None))
+
+
+def desceller(brut, mot_de_passe, chemin):
+    from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PublicKey
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    if not brut.startswith(SCELLE):
+        raise ValueError("ce n'est pas une page scellée")
+    n = len(SCELLE)
+    cle = _cle_partagee(_cle_privee(mot_de_passe, chemin).exchange(X25519PublicKey.from_public_bytes(brut[n:n + 32])))
+    return gzip.decompress(AESGCM(cle).decrypt(brut[n + 32:n + 44], brut[n + 44:], None))
 
 
 def lire(dossier=None):
@@ -115,34 +186,124 @@ def publier_dans(club, cle_club, dossier=None):
     return rubriques
 
 
-def ajouter_espace(chemin_url, page, mot_de_passe_club, titre=None, dossier=None):
-    """Espace protégé à une adresse à lui (ex. /lundi/) : une page HTML fournie, affichée telle quelle
-    après le mot de passe du club. Chiffrée dans `dossier` ; un espace du même chemin est remplacé."""
-    from .netlify import chiffrer_stable
-
-    page, dossier = Path(page), Path(dossier or DOSSIER)
+def _chemin_espace(chemin_url):
     chemin_url = chemin_url.strip("/").lower()
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", chemin_url) or chemin_url in ("club", "gg", "stats", "archives"):
         raise ValueError(f"adresse d'espace invalide ou réservée : /{chemin_url}/")
+    return chemin_url
+
+
+def ajouter_espace(chemin_url, page, mot_de_passe_club, titre=None, dossier=None):
+    """Espace protégé à une adresse à lui (ex. /lundi/) : une page HTML fournie, affichée telle quelle
+    après le mot de passe du club, ou après son mot de passe à part s'il en a un (voir le début du
+    module : la page est alors scellée avec sa clé publique, sans mot de passe). Un espace du même
+    chemin est remplacé (son mot de passe à part et sa clé publique sont gardés)."""
+    from .netlify import chiffrer_stable
+
+    page, dossier = Path(page), Path(dossier or DOSSIER)
+    chemin_url = _chemin_espace(chemin_url)
     if page.suffix.lower() not in (".html", ".htm"):
         raise ValueError("un espace est une page .html")
-    if not mot_de_passe_club:
-        raise ValueError("mot de passe du club manquant")
+    liste = lire(dossier)
+    ancien = next((e for e in liste["espaces"] if e["chemin"] == chemin_url), {})
     fichier = f"espace-{chemin_url}.html"
     dossier.mkdir(parents=True, exist_ok=True)
-    (dossier / f"{fichier}.chiffre").write_bytes(chiffrer_stable(page.read_bytes(), publier.cle(mot_de_passe_club)))
-    liste = lire(dossier)
-    liste["espaces"] = [e for e in liste["espaces"] if e["chemin"] != chemin_url]
-    liste["espaces"].append({"chemin": chemin_url, "fichier": fichier, "titre": titre or page.stem, "taille": page.stat().st_size})
+    entree = {"chemin": chemin_url, "fichier": fichier, "titre": titre or ancien.get("titre") or page.stem,
+              "taille": page.stat().st_size}
+    if ancien.get("acces"):
+        if not ancien.get("cle_publique"):
+            raise ValueError(f"/{chemin_url}/ : clé publique inconnue. Lancer une mise à jour avec le secret {ancien['acces']}, "
+                             f"puis : python -m ttvaires.ressources cle {chemin_url} <clé de …/{chemin_url}/cle-publique.txt>")
+        (dossier / f"{fichier}.scelle").write_bytes(sceller(page.read_bytes(), ancien["cle_publique"]))
+        (dossier / f"{fichier}.chiffre").unlink(missing_ok=True)  # ancienne version au mot de passe du club
+        entree.update(acces=ancien["acces"], cle_publique=ancien["cle_publique"])
+    else:
+        if not mot_de_passe_club:
+            raise ValueError("mot de passe du club manquant")
+        (dossier / f"{fichier}.chiffre").write_bytes(chiffrer_stable(page.read_bytes(), publier.cle(mot_de_passe_club)))
+    liste["espaces"] = [e for e in liste["espaces"] if e["chemin"] != chemin_url] + [entree]
     _ecrire(liste, dossier)
     return fichier
 
 
+def regler_acces(chemin_url, variable, dossier=None):
+    """L'espace sera protégé par le mot de passe du secret `variable` (ex. MOT_DE_PASSE_LUNDI), plus
+    par celui du club. Sans ce secret, la mise à jour ne le publie pas."""
+    chemin_url, dossier = _chemin_espace(chemin_url), Path(dossier or DOSSIER)
+    if not re.fullmatch(r"[A-Z][A-Z0-9_]*", variable or ""):
+        raise ValueError("nom de secret attendu, par exemple MOT_DE_PASSE_LUNDI")
+    liste = lire(dossier)
+    e = next((e for e in liste["espaces"] if e["chemin"] == chemin_url), None)
+    if e is None:
+        raise ValueError(f"espace /{chemin_url}/ inconnu")
+    e["acces"] = variable
+    _ecrire(liste, dossier)
+
+
+def regler_cle_publique(chemin_url, cle, mot_de_passe_club=None, dossier=None):
+    """Enregistre la clé publique de l'espace (publiée par la mise à jour à …/cle-publique.txt) et scelle
+    avec elle la version encore chiffrée au mot de passe du club, qui est supprimée."""
+    chemin_url, dossier = _chemin_espace(chemin_url), Path(dossier or DOSSIER)
+    if len(base64.b64decode(cle, validate=True)) != 32:
+        raise ValueError("clé publique invalide (32 octets en base64 attendus)")
+    liste = lire(dossier)
+    e = next((e for e in liste["espaces"] if e["chemin"] == chemin_url), None)
+    if e is None or not e.get("acces"):
+        raise ValueError(f"/{chemin_url}/ n'a pas de mot de passe à part (commande acces)")
+    e["cle_publique"] = cle
+    ancien = dossier / f"{e['fichier']}.chiffre"
+    if ancien.exists():
+        if not mot_de_passe_club:
+            raise ValueError("mot de passe du club nécessaire pour sceller la version actuelle")
+        (dossier / f"{e['fichier']}.scelle").write_bytes(sceller(publier.dechiffrer(ancien.read_bytes(), publier.cle(mot_de_passe_club)), cle))
+        ancien.unlink()
+    _ecrire(liste, dossier)
+
+
+def _espace_a_part(e, site, cle_club, dossier):
+    """Page chiffrée avec le mot de passe à part de l'espace (secret e["acces"]), ou None (pas publiée)."""
+    from .netlify import chiffrer_stable
+
+    mot_de_passe = os.environ.get(e["acces"], "")
+    if not mot_de_passe:
+        print(f"  ! espace /{e['chemin']}/ non publié : secret {e['acces']} absent (mot de passe à part)", flush=True)
+        return None
+    publique = cle_publique(mot_de_passe, e["chemin"])
+    scelle, ancien = dossier / f"{e['fichier']}.scelle", dossier / f"{e['fichier']}.chiffre"
+    try:
+        if scelle.exists():
+            clair = desceller(scelle.read_bytes(), mot_de_passe, e["chemin"])
+        elif ancien.exists():  # version au mot de passe du club, en attendant d'être scellée
+            clair = publier.dechiffrer(ancien.read_bytes(), cle_club)
+        else:
+            print(f"  ! espace /{e['chemin']}/ : {e['fichier']} introuvable dans ressources/", flush=True)
+            return None
+    except Exception:
+        print(f"  ! espace /{e['chemin']}/ : la page déposée ne s'ouvre pas avec le secret {e['acces']} (mot de passe "
+              "changé depuis ?) : à déposer de nouveau avec la nouvelle clé publique", flush=True)
+        clair = None
+    (Path(site) / e["chemin"]).mkdir(parents=True, exist_ok=True)
+    (Path(site) / e["chemin"] / "cle-publique.txt").write_text(publique + "\n", encoding="ascii")
+    if e.get("cle_publique") != publique:
+        print(f"  espace /{e['chemin']}/ : clé publique à enregistrer dans le dépôt (python -m ttvaires.ressources cle "
+              f"{e['chemin']} …), publiée à {e['chemin']}/cle-publique.txt", flush=True)
+    return None if clair is None else chiffrer_stable(clair, publier.cle(mot_de_passe))
+
+
 def publier_espaces(site, cle_club, dossier=None):
-    """Écrit <site>/<chemin>/index.html pour chaque espace : la page de mot de passe (celui du club)
-    qui affiche la page fournie, toujours chiffrée. Renvoie les chemins publiés."""
+    """Écrit <site>/<chemin>/index.html pour chaque espace : la page de mot de passe (celui du club, ou
+    celui de l'espace s'il en a un à part) qui affiche la page fournie, toujours chiffrée. Renvoie les
+    chemins publiés."""
     publies, dossier = [], Path(dossier or DOSSIER)
     for e in lire(dossier)["espaces"]:
+        if e.get("acces"):
+            chiffre = _espace_a_part(e, site, cle_club, dossier)
+            if chiffre is not None:
+                page = Path(site) / e["chemin"] / "index.html"
+                page.write_text(publier.page_verrouillee_chiffree(chiffre, e["titre"], stockage_a_part(e["chemin"]),
+                                                                  CONSIGNE_A_PART), encoding="utf-8")
+                publies.append(e["chemin"])
+            continue
         source = dossier / f"{e['fichier']}.chiffre"
         try:
             chiffre = source.read_bytes()
@@ -175,7 +336,21 @@ def main(arguments=None):
     e.add_argument("chemin", type=Path)
     e.add_argument("--titre")
     sous.add_parser("liste", help="afficher les rubriques, leurs documents et les espaces")
+    c = sous.add_parser("acces", help="protéger un espace par un mot de passe à part (secret GitHub, ex. MOT_DE_PASSE_LUNDI)")
+    c.add_argument("adresse")
+    c.add_argument("secret")
+    k = sous.add_parser("cle", help="enregistrer la clé publique d'un espace à mot de passe à part (…/cle-publique.txt)")
+    k.add_argument("adresse")
+    k.add_argument("cle")
     args = p.parse_args(arguments)
+    if args.action == "acces":
+        regler_acces(args.adresse, args.secret)
+        print(f"/{args.adresse.strip('/').lower()}/ : mot de passe du secret {args.secret}. À envoyer sur GitHub (commit).")
+        return 0
+    if args.action == "cle":
+        regler_cle_publique(args.adresse, args.cle, os.environ.get("MOT_DE_PASSE_CLUB"))
+        print(f"/{args.adresse.strip('/').lower()}/ : clé publique enregistrée. À envoyer sur GitHub (commit).")
+        return 0
     if args.action == "liste":
         liste = lire()
         for r in liste["rubriques"]:
@@ -183,9 +358,11 @@ def main(arguments=None):
             for d in r["documents"]:
                 print(f"  {d['fichier']} : {d['titre']}")
         for x in liste["espaces"]:
-            print(f"/{x['chemin']}/ : {x['titre']}")
+            print(f"/{x['chemin']}/ : {x['titre']}" + (f" (mot de passe à part : {x['acces']})" if x.get("acces") else ""))
         return 0
-    mdp = os.environ.get("MOT_DE_PASSE_CLUB") or getpass.getpass("Mot de passe de l'espace club : ")
+    a_part = args.action == "espace" and next((x for x in lire()["espaces"] if x["chemin"] == args.adresse.strip("/").lower()
+                                               and x.get("acces")), None)
+    mdp = "" if a_part else (os.environ.get("MOT_DE_PASSE_CLUB") or getpass.getpass("Mot de passe de l'espace club : "))
     if args.action == "espace":
         ajouter_espace(args.adresse, args.chemin, mdp, args.titre)
         print(f"Espace /{args.adresse.strip('/').lower()}/ ajouté. À envoyer sur GitHub (commit du dossier ressources/).")

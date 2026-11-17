@@ -138,6 +138,8 @@ jobs:
         env:
           MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
           MOT_DE_PASSE_CLUB: ${{ secrets.MOT_DE_PASSE_CLUB }}
+          # /lundi/ : mot de passe à part (sans ce secret, /lundi/ n'est pas publié ; voir ttvaires/ressources.py)
+          MOT_DE_PASSE_LUNDI: ${{ secrets.MOT_DE_PASSE_LUNDI }}
           GOATCOUNTER: ${{ vars.GOATCOUNTER || secrets.GOATCOUNTER }}
           UMAMI: ${{ vars.UMAMI || secrets.UMAMI || '23cfef06-9803-4df0-b7e7-6631a2490f82' }}
         run: python -m ttvaires.netlify --github site-github
@@ -183,6 +185,7 @@ jobs:
           MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
           MOT_DE_PASSE_GG: ${{ secrets.MOT_DE_PASSE_GG }}
           MOT_DE_PASSE_CLUB: ${{ secrets.MOT_DE_PASSE_CLUB }}
+          MOT_DE_PASSE_LUNDI: ${{ secrets.MOT_DE_PASSE_LUNDI }}  # /lundi/ : mot de passe à part
           # Statistiques de visite (facultatif, voir PUBLICATION.md) : variable GOATCOUNTER, ou secret du même nom
           GOATCOUNTER: ${{ vars.GOATCOUNTER || secrets.GOATCOUNTER }}
           SURNOMS: ${{ secrets.SURNOMS }}  # dans l'empreinte du contenu : un surnom changé refait la copie

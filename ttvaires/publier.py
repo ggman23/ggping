@@ -80,12 +80,15 @@ def page_verrouillee(html, titre, cle_):
     return page_verrouillee_chiffree(chiffrer(html.encode("utf-8"), cle_), titre)
 
 
-def page_verrouillee_chiffree(chiffre, titre, stockage="cvtt-vaires-cle"):
+CONSIGNE_CLUB = "Page réservée au CVTT Vaires : entre le mot de passe du club."
+
+
+def page_verrouillee_chiffree(chiffre, titre, stockage="cvtt-vaires-cle", consigne=CONSIGNE_CLUB):
     """Comme page_verrouillee, pour une page déjà chiffrée (vecteur + chiffré, voir chiffrer).
     `stockage` : où le navigateur garde la clé (« se souvenir ») ; celle de l'espace club
     (cvtt-vaires-cle-club) ouvre directement une page du club à qui y est déjà entré."""
     return (GABARIT_VERROU.read_text(encoding="utf-8")
-            .replace("__TITRE__", titre).replace("__SEL__", SEL).replace("__STOCKAGE__", stockage)
+            .replace("__TITRE__", titre).replace("__CONSIGNE__", consigne).replace("__SEL__", SEL).replace("__STOCKAGE__", stockage)
             .replace("__ITERATIONS__", str(ITERATIONS)).replace("__CHIFFRE__", base64.b64encode(chiffre).decode("ascii")))
 
 

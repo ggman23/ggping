@@ -622,6 +622,12 @@ pour voir les favoris d'une poule.
   garçons du 77) ; deux joueurs de Vaires identiques sur trois mois (−1,0 / +14,0 / +7,5 et
   0 / +4,5 / 0). Règle d'arrondi trouvée (entier le plus proche, 0,5 vers le haut, après dérive en fin
   de phase) : virtuels affichés à une décimale ; liens vers les classements officiels (nouvel onglet).
+- /lundi/ (17/11) : nouvelle version de la page (au 16/11), puis, à la demande de l'utilisateur (notes
+  personnelles sur des joueurs), mot de passe à part : secret MOT_DE_PASSE_LUNDI (ressources.json :
+  « acces »), sans lui pas de publication. Page déposée scellée (X25519 + AES-GCM) avec la clé publique
+  tirée du mot de passe, publiée à …/lundi/cle-publique.txt : dépôt d'une nouvelle version sans le mot
+  de passe, le mot de passe du club n'ouvre plus rien. Clé retenue sous cvtt-vaires-cle-club-lundi
+  (repère de l'application Android inchangé). Consigne de la page de mot de passe adaptée.
 
 ## Calendrier de la saison : /cal/ (13/11/2026)
 

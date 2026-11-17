@@ -24,7 +24,7 @@ d'Android revient à la page précédente de l'onglet.
 ## Onglets Club, Lundi et Indivs : trois copies du même espace
 
 Les espaces club, /lundi/ et /indivs/ sont publiés à trois adresses, avec le même contenu et le même
-mot de passe (celui du club). À l'ouverture de l'onglet (et avec ⌂ ou un appui long sur l'onglet),
+mot de passe (celui du club ; /lundi/ a le sien depuis le 17/11/2026, retenu à part par la page). À l'ouverture de l'onglet (et avec ⌂ ou un appui long sur l'onglet),
 l'application vérifie l'une après l'autre que la page répond et ouvre la première qui marche :
 
 1. **GitHub** : https://ggman23.github.io/ggping/club/ (ou …/lundi/), mis à jour à chaque mise à jour ;

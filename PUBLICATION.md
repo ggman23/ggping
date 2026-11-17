@@ -400,15 +400,25 @@ site, avec « Partager » sur téléphone (ex. le mémo sac de sport, version im
 
 Une page HTML fournie peut avoir sa propre adresse, à côté de /club/ : **/lundi/** sur chaque site
 (https://ggping.netlify.app/lundi/, https://ggman23.github.io/ggping/lundi/,
-https://ggping-pap.pages.dev/lundi/). Elle demande le **mot de passe du club** puis s'affiche telle
-quelle ; quelqu'un qui est déjà entré dans l'espace club (« se souvenir ») l'ouvre directement. Elle
-n'est pas listée dans l'espace club (ni dans /indivs/ ou /tournois/) : elle est pour l'administrateur et
-l'application (onglet Lundi). La page reste chiffrée dans le dépôt
-(dossier `ressources/`). Pour la remplacer par une nouvelle version, sur le PC :
+https://ggping-pap.pages.dev/lundi/). Depuis le 17/11/2026 (page personnelle, avec des notes sur des
+joueurs), elle a **son propre mot de passe, pas celui du club** : le secret GitHub
+**`MOT_DE_PASSE_LUNDI`** (*Settings* → *Secrets and variables* → *Actions* → *New repository secret*),
+choisi par l'administrateur et écrit nulle part ailleurs. **Sans ce secret, /lundi/ n'est pas publié du
+tout.** Le navigateur le retient à part (« se souvenir ») : entrer dans l'espace club n'ouvre pas
+/lundi/. Elle n'est pas listée dans l'espace club (ni dans /indivs/ ou /tournois/) : elle est pour
+l'administrateur et l'application (onglet Lundi, qui la reconnaît toujours).
 
-    python -m ttvaires.ressources espace lundi "C:\chemin\roi.html" --titre "Le roi du lundi"
+Dans le dépôt (public), la page est **scellée** (`ressources/espace-lundi.html.scelle`) avec la clé
+publique de l'espace : on peut y déposer une nouvelle version sans connaître le mot de passe, et seule
+la mise à jour en ligne, qui a le secret, sait l'ouvrir ; le mot de passe du club ne l'ouvre pas. La
+mise à jour publie cette clé publique à …/lundi/cle-publique.txt. Une nouvelle version, sur le PC :
 
-puis envoyer le dossier `ressources/` sur GitHub (ou m'envoyer la page).
+    python -m ttvaires.ressources espace lundi "C:\chemin\roi.html"
+
+puis envoyer le dossier `ressources/` sur GitHub (ou m'envoyer la page). Si le mot de passe à part
+change, la page déposée ne s'ouvre plus : la mise à jour le signale ; enregistrer la nouvelle clé
+publique (`python -m ttvaires.ressources cle lundi <clé>`) et déposer de nouveau la page. Les versions
+d'avant le 17/11 restent dans l'historique du dépôt, chiffrées avec le mot de passe du club.
 
 ## Individuels : /indivs/ (poules du critérium et forme des adversaires)
 

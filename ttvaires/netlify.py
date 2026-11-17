@@ -552,7 +552,9 @@ def main():
         dossier = construire(Path(args.site), Path(args.dossier), mot_de_passe,
                              mot_de_passe_gg, mot_de_passe_club, goatcounter, umami)
         signature = signature_contenu(Path(args.site), mot_de_passe,
-                                      (mot_de_passe_gg, mot_de_passe_club, goatcounter, umami))
+                                      (mot_de_passe_gg, mot_de_passe_club, goatcounter, umami,
+                                       # mots de passe à part des espaces (ex. MOT_DE_PASSE_LUNDI) : changés, copie refaite
+                                       *(v for e in ressources.lire()["espaces"] if e.get("acces") and (v := os.environ.get(e["acces"])))))
         (dossier / SIGNATURE).write_text(signature + "\n", encoding="utf-8")
         if not jeton:
             print("Netlify : pas de jeton (secret NETLIFY_AUTH_TOKEN), copie non envoyée. Voir PUBLICATION.md.")

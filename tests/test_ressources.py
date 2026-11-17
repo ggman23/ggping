@@ -102,3 +102,51 @@ def test_image_dans_une_rubrique(tmp_path):
     ressources.ajouter("Prépa mentale", image, "club", dossier=depot)
     (r,) = ressources.publier_dans(tmp_path / "club", publier.cle("club"), depot)
     assert [(d["fichier"], d["type"]) for d in r["documents"]] == [("memo.png", "image")]
+
+
+def test_espace_a_mot_de_passe_a_part(tmp_path, monkeypatch):
+    """/lundi/ (page personnelle, 17/11) : mot de passe à part, secret MOT_DE_PASSE_LUNDI. Sans lui, pas
+    publié ; la page déposée est scellée avec la clé publique (le mot de passe du club ne l'ouvre pas)."""
+    import base64
+    depot, page = tmp_path / "ressources", tmp_path / "roi.html"
+    page.write_text("<!doctype html><title>Roi</title><p>Notes personnelles</p>", encoding="utf-8")
+    ressources.ajouter_espace("lundi", page, "club", titre="Le roi du lundi", dossier=depot)
+    ressources.regler_acces("lundi", "MOT_DE_PASSE_LUNDI", dossier=depot)
+    # Sans le secret : rien n'est publié (pas même au mot de passe du club)
+    monkeypatch.delenv("MOT_DE_PASSE_LUNDI", raising=False)
+    assert ressources.publier_espaces(tmp_path / "s1", publier.cle("club"), depot) == []
+    assert not (tmp_path / "s1" / "lundi" / "index.html").exists()
+    # Avec le secret : la version au mot de passe du club est publiée avec le mot de passe à part
+    monkeypatch.setenv("MOT_DE_PASSE_LUNDI", "secret-lundi")
+    assert ressources.publier_espaces(tmp_path / "s2", publier.cle("club"), depot) == ["lundi"]
+    html = (tmp_path / "s2" / "lundi" / "index.html").read_text(encoding="utf-8")
+    chiffre = base64.b64decode(re.search(r'<script id="chiffre" type="text/plain">(.*?)</script>', html, re.S)[1].strip())
+    assert b"Notes personnelles" in publier.dechiffrer(chiffre, publier.cle("secret-lundi"))
+    try:
+        publier.dechiffrer(chiffre, publier.cle("club"))
+        raise AssertionError("le mot de passe du club ne doit pas ouvrir /lundi/")
+    except AssertionError:
+        raise
+    except Exception:
+        pass
+    # Clé gardée à part, mais repère de l'application Android conservé (il commence par celui du club)
+    assert 'STOCKAGE = "cvtt-vaires-cle-club-lundi"' in html and "cvtt-vaires-cle-club" in html[:1000]
+    assert "ce n'est pas celui du club" in html and "entre le mot de passe du club" not in html
+    publique = (tmp_path / "s2" / "lundi" / "cle-publique.txt").read_text().strip()
+    assert publique == ressources.cle_publique("secret-lundi", "lundi")
+    # Clé publique enregistrée : la version au mot de passe du club est scellée puis supprimée
+    ressources.regler_cle_publique("lundi", publique, "club", dossier=depot)
+    assert not (depot / "espace-lundi.html.chiffre").exists() and (depot / "espace-lundi.html.scelle").exists()
+    assert b"Notes" not in (depot / "espace-lundi.html.scelle").read_bytes()
+    # Nouvelle version déposée sans aucun mot de passe : scellée, publiée
+    page.write_text("<!doctype html><title>Roi</title><p>Version 2</p>", encoding="utf-8")
+    ressources.ajouter_espace("lundi", page, "", dossier=depot)
+    assert ressources.publier_espaces(tmp_path / "s3", publier.cle("club"), depot) == ["lundi"]
+    html = (tmp_path / "s3" / "lundi" / "index.html").read_text(encoding="utf-8")
+    chiffre = base64.b64decode(re.search(r'<script id="chiffre" type="text/plain">(.*?)</script>', html, re.S)[1].strip())
+    assert b"Version 2" in publier.dechiffrer(chiffre, publier.cle("secret-lundi"))
+    assert ressources.lire(depot)["espaces"][0]["titre"] == "Le roi du lundi"  # titre gardé
+    # Mot de passe changé : la page scellée ne s'ouvre plus, pas publiée (nouvelle clé publique quand même)
+    monkeypatch.setenv("MOT_DE_PASSE_LUNDI", "autre")
+    assert ressources.publier_espaces(tmp_path / "s4", publier.cle("club"), depot) == []
+    assert (tmp_path / "s4" / "lundi" / "cle-publique.txt").read_text().strip() == ressources.cle_publique("autre", "lundi")
