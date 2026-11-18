@@ -7,15 +7,18 @@ autres en phase 2). La grille des rencontres est la même pour toutes les poules
 que l'équipe placée en 1 reçoit celle placée en 8 (le premier nommé reçoit).
 
 Page /paris/ (mot de passe du club) : faite par la mise à jour (étape adversaires, paris_vaires.html,
-publiée comme /77/). L'API de la FFTT n'a pas les rencontres du championnat de Paris (contrôle du
-18/11/2026, diagnostic_api) : ni résultats ni compositions de Paris. Pour chaque club adverse, comme
-pour le championnat de France (adversaires.recuperer_paris) : ses joueurs, leurs points, leur meilleur
-classement, leur forme (victoires, défaites, points gagnés depuis le début de la phase) et l'équipe où
-chacun joue en championnat de France.
+publiée comme /77/), avec la présentation de la page adversaires du championnat de France
+(gabarit_paris.html, calqué sur gabarit.html) : récapitulatif par semaine, un onglet par équipe
+(calendrier, lieu et adresse de la salle, classement de la poule, adversaires) et la fiche de chaque club
+adverse. L'API de la FFTT n'a pas les rencontres du championnat de Paris (contrôle du 18/11/2026,
+diagnostic_api) : ni résultats ni compositions de Paris, donc pas de score, un classement vide et pas de
+brûlage. Pour chaque club adverse, comme pour le championnat de France (adversaires.recuperer_paris) :
+ses joueurs, leurs points, leur meilleur classement, leur forme (victoires, défaites, points gagnés depuis
+le début de la phase) et l'équipe où chacun joue en championnat de France.
 """
 
 import json
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 GABARIT = Path(__file__).with_name("gabarit_paris.html")
@@ -58,55 +61,75 @@ def _equipe(position, club, nom, numero, dep):
             "vaires": club == CLUB_VAIRES}
 
 
-def _equipes_france(club):
-    """{joueur: (championnat, numéro de l'équipe où il a le plus joué en championnat de France, rencontres)}"""
-    compte = defaultdict(Counter)
-    for e in club.get("equipes", []):
-        for c in e.get("compositions", []):
-            for jid in c["joueurs"]:
-                compte[jid][(e["championnat"], e["numero"])] += 1
-    return {jid: (*c.most_common(1)[0][0], sum(c.values())) for jid, c in compte.items()}
+# Champs gardés pour chaque joueur adverse (la page n'a aucun numéro de licence : voir clubs_adverses)
+CHAMPS_JOUEUR = ("nom", "prenom", "sexe", "categorie", "categorie_long", "classement", "points", "points_mensuels",
+                 "meilleur", "renouvele", "nouveau")
 
 
 def clubs_adverses(adversaires):
-    """Clubs adverses pour la page (adversaires.recuperer_paris) : joueurs du mieux classé au moins bien
-    classé, sans numéro de licence."""
+    """Clubs adverses pour la page (adversaires.recuperer_paris), au format de la page adversaires du
+    championnat de France : salle, joueurs (points, meilleur classement, forme) et équipes du championnat
+    de France avec qui y a joué. Les numéros de licence sont remplacés par des repères (j1, j2...)."""
     res = {}
     for num, c in (adversaires or {}).get("clubs", {}).items():
-        france = _equipes_france(c)
+        reperes = {}
+        repere = lambda lic: reperes.setdefault(lic, f"j{len(reperes) + 1}")
         joueurs = []
-        for j in c["joueurs"]:
-            f, m, eq = j.get("forme") or {}, j.get("meilleur") or {}, france.get(j["id"])
-            joueurs.append({"nom": f"{j.get('nom') or ''} {j.get('prenom') or ''}".strip(), "sexe": j.get("sexe"),
-                            "cat": j.get("categorie"), "pts": j.get("points_mensuels") or j.get("points"),
-                            "meilleur": m.get("points"), "annee": m.get("annee"),
-                            "v": f.get("v"), "d": f.get("d"), "gain": f.get("points"), "virt": f.get("virtuels"),
-                            "eq": (f"{eq[1]}" + (" F" if eq[0] == "F" else "")) if eq else None, "nb": eq[2] if eq else 0,
-                            "nouveau": bool(j.get("nouveau"))})
-        joueurs.sort(key=lambda x: (-(x["pts"] or 0), x["nom"]))
-        res[num] = {"nom": c["nom"], "complet": bool(c.get("effectif_complet")), "date": c.get("date_effectif"),
-                    "france": [{"numero": e["numero"], "ch": e["championnat"], "division": e["division"]}
-                               for e in c.get("equipes", [])],
-                    "joueurs": joueurs, "erreur": c.get("erreur")}
+        for j in c.get("joueurs", []):
+            x = {"id": repere(j["id"]), **{k: j.get(k) for k in CHAMPS_JOUEUR}}
+            if "forme" in j:  # absent : joueur non suivi ; None : parties non lues
+                x["forme"] = j["forme"]
+            joueurs.append(x)
+        equipes = [{"libelle": e.get("libelle"), "numero": e.get("numero"), "championnat": e.get("championnat"),
+                    "division": e.get("division"),
+                    "compositions": [{"journee": co.get("journee"), "date": co.get("date"),
+                                      "joueurs": [repere(i) for i in co.get("joueurs", [])]} for co in e.get("compositions", [])]}
+                   for e in c.get("equipes", [])]
+        res[num] = {"numero": num, "nom": c.get("nom"), "salle": c.get("salle"), "joueurs": joueurs, "equipes": equipes,
+                    "effectif_complet": bool(c.get("effectif_complet")), "date_effectif": c.get("date_effectif"),
+                    "reference_nouveaux": c.get("reference_nouveaux"), "erreur": c.get("erreur")}
+    return res
+
+
+def _rencontres(poule, nous):
+    """Les sept rencontres d'une équipe de Vaires, au format de la page adversaires."""
+    par_position = {p["position"]: p for p in poule}
+    res = []
+    for j, jour, a, b in rencontres_de_la_poule():
+        if nous["position"] not in (a, b):
+            continue
+        dom, ext = par_position[a], par_position[b]
+        adv = ext if dom is nous else dom
+        res.append({"journee": j, "date": jour, "date_reelle": None, "heure": None,
+                    "domicile": {"libelle": dom["nom"], "club": dom["club"]},
+                    "exterieur": {"libelle": ext["nom"], "club": ext["club"]},
+                    "vaires_domicile": dom is nous, "score": None,
+                    "adversaire": {"club": adv["club"], "libelle": adv["nom"], "numero": adv["numero"]}})
     return res
 
 
 def donnees(adversaires=None):
-    """Données de la page /paris/ : poules et calendrier, et, avec `adversaires` (adversaires.recuperer_paris),
-    les clubs adverses et leurs joueurs (sans numéro de licence)."""
-    grille = rencontres_de_la_poule()
+    """Données de la page /paris/, au format de la page adversaires du championnat de France : les trois
+    équipes de Vaires (calendrier, lieu, classement de la poule) et, avec `adversaires`
+    (adversaires.recuperer_paris), les clubs adverses et leurs joueurs. Les résultats du championnat de
+    Paris ne sont pas dans l'API de la FFTT : pas de score, classement vide."""
+    adv = adversaires or {}
     equipes = []
     for e in EQUIPES:
         poule = [_equipe(i, *t) for i, t in enumerate(e["equipes"], 1)]
-        nous = next(p["position"] for p in poule if p["vaires"])
-        rencontres = [{"journee": j, "date": jour, "domicile": a, "exterieur": b} for j, jour, a, b in grille]
-        calendrier = [{"journee": j, "date": jour, "a_domicile": a == nous, "adversaire": b if a == nous else a}
-                      for j, jour, a, b in grille if nous in (a, b)]
-        equipes.append({"cle": e["cle"], "nom": e["nom"], "division": e["division"], "code": e["code"], "poule": e["poule"],
-                        "position": nous, "equipes": poule, "rencontres": rencontres, "calendrier": calendrier})
-    sources = (adversaires or {}).get("sources", {})
-    return {"saison": SAISON, "source": SOURCE, "journees": [{"numero": i, "date": d} for i, d in enumerate(JOURNEES, 1)],
-            "equipes": equipes, "clubs": clubs_adverses(adversaires), "genere_le": (adversaires or {}).get("genere_le"),
+        nous = next(p for p in poule if p["vaires"])
+        equipes.append({
+            "id": e["cle"], "libelle": nous["nom"], "nom_court": e["nom"], "numero": nous["numero"], "championnat": "M",
+            "division": e["division"], "code": e["code"], "poule": f"Poule {e['poule']}", "position": nous["position"],
+            "jour": "vendredi", "rencontres": _rencontres(poule, nous),
+            "classement": [{"rang": None, "libelle": p["nom"], "club": p["club"], "dep": p["dep"], "position": p["position"],
+                            "points": None, "joues": None, "v": None, "n": None, "d": None} for p in poule]})
+    club = adv.get("club") or {}
+    sources = adv.get("sources", {})
+    return {"saison": SAISON, "source": SOURCE, "phase": adv.get("phase"),
+            "journees": [{"numero": i, "date": d} for i, d in enumerate(JOURNEES, 1)],
+            "club": {"numero": CLUB_VAIRES, "nom": "CVTT Vaires", "salle": club.get("salle")},
+            "equipes": equipes, "clubs": clubs_adverses(adv), "genere_le": adv.get("genere_le"),
             "debut_forme": (sources.get("forme") or {}).get("debut"), "historiques_restants": sources.get("historiques_restants", 0)}
 
 

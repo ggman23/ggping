@@ -270,14 +270,9 @@ def recuperer_paris(client, numero_club="08770250", aujourdhui=None, dossier_imp
     debut, fin = fftt.bornes_phase(aujourdhui)
     equipes, noms = [], {}
     for e in paris.donnees()["equipes"]:
-        pos = {x["position"]: x for x in e["equipes"]}
-        rencontres = []
-        for c in e["calendrier"]:
-            a = pos[c["adversaire"]]
-            noms.setdefault(a["club"], a["nom"].rsplit(" ", 1)[0])
-            rencontres.append({"journee": c["journee"], "date": c["date"], "vaires_domicile": c["a_domicile"], "score": None,
-                               "adversaire": {"club": a["club"], "libelle": a["nom"], "numero": a["numero"]}})
-        equipes.append({"id": e["cle"], "libelle": e["nom"], "rencontres": rencontres})
+        for r in e["rencontres"]:
+            noms.setdefault(r["adversaire"]["club"], r["adversaire"]["libelle"].rsplit(" ", 1)[0])
+        equipes.append({"id": e["id"], "libelle": e["libelle"], "rencontres": e["rencontres"]})
     print(f"=== Championnat de Paris : {len(noms)} clubs adverses (équipes du championnat de France : API FFTT)", flush=True)
     rencontres_clubs, erreurs = {}, {}
     for num in sorted(noms):

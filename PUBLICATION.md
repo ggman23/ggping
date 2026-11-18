@@ -512,20 +512,24 @@ https://ggping.netlify.app/paris/), avec le **mot de passe du club** (ouverture 
 - Championnat de Paris IDF 2026-2027 : Vaires 1 en Honneur (poule 1), Vaires 2 en Promotion
   d'Honneur (poule 2), Vaires 3 en Division 2 (poule 3) ; sept journées, le vendredi, du 27/11/2026
   au 04/06/2027.
-- Menu : la prochaine journée (les trois rencontres de Vaires, domicile ou extérieur, l'adversaire et
-  son département), chaque équipe (son calendrier, la journée suivante encadrée, les journées passées
-  grisées ; sa poule ; toutes les rencontres de la poule, journée par journée), toutes les dates ;
-  et les autres espaces.
+- Même présentation que la page adversaires du championnat de France (`gabarit_paris.html`, calqué
+  sur `gabarit.html`) : onglets **Récapitulatif** (les rencontres semaine par semaine : équipe, date,
+  adversaire, lieu, score ; la semaine en cours ou prochaine encadrée ; filtre par équipe) et
+  **Vaires 1 / 2 / 3** (calendrier de la saison avec le lieu, DOM ou EXT avec l'adresse de la salle
+  adverse et un lien « plan » ; classement de la poule, vide pour l'instant ; « Adversaires — clique
+  sur une équipe »). La fiche d'un adversaire : la rencontre, le lieu, les équipes du club en
+  championnat de France, et son effectif : catégorie, classement officiel, phase (victoires/parties
+  et points gagnés ou perdus, points virtuels), mensuel, meilleur classement (année), compétitions hors
+  championnat, équipe du championnat de France où il joue (×nombre de rencontres) ; tris par points,
+  meilleur classement, forme, parties jouées ; « qui a joué dans quelle équipe » du championnat de
+  France. Pas de brûlage ni de composition probable : on ne sait pas qui joue en Paris.
+- Bandeau tant qu'il manque des effectifs, des adresses de salle ou des meilleurs classements (lus sur
+  pingpocket.fr par le PC) : lancer la mise à jour depuis le PC (option 8 : tout d'un coup).
 - Données : poules et calendrier des documents de la ligue (PDF « Poules HO / PH / D2 »), recopiés
   dans `ttvaires/paris.py` (le premier nommé de la grille reçoit) ; les tests vérifient que chaque
   équipe rencontre les sept autres une fois, une seule rencontre par équipe et par journée, le
   vendredi. Nouveaux documents de la ligue : me les envoyer.
-- **Clubs adverses** (17 : 6 du 77, 8 du 93, 3 du 94), une vue par club (lien sur chaque adversaire et
-  dans le menu) : les rencontres de Vaires contre lui, ses équipes du championnat de France, et ses
-  joueurs, du mieux classé au moins bien classé, triables : points (situation mensuelle), meilleur
-  classement de l'historique (année), équipe où il joue en championnat de France (nombre de
-  rencontres), victoires – défaites et +/− depuis le début de la phase, points virtuels (estimation,
-  toutes compétitions) ; filtres « ont joué cette phase », « alignés en championnat de France ».
+- **Clubs adverses** (17 : 6 du 77, 8 du 93, 3 du 94), sans numéro de licence dans la page (repères j1, j2…).
   Comme la page adversaires du championnat de France (`adversaires.recuperer_paris`, mêmes caches) :
   équipes et joueurs alignés par l'API de la FFTT, effectif complet et meilleur classement par
   pingpocket.fr (pages lues par **le PC**, options 1 et 8, envoyées au site), forme par l'API. Faite

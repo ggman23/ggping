@@ -20,23 +20,32 @@ def test_calendrier_et_grille_du_championnat_de_paris():
 
 
 def test_les_trois_equipes_de_vaires_et_leur_calendrier():
+    """Même format que la page adversaires du championnat de France : une équipe par onglet, sept
+    rencontres (qui reçoit, adversaire), et le classement de la poule, vide pour l'instant."""
     d = paris.donnees()
-    assert [(e["nom"], e["code"], e["poule"], e["position"]) for e in d["equipes"]] == [
-        ("Vaires 1", "HO", 1, 1), ("Vaires 2", "PH", 2, 5), ("Vaires 3", "D2", 3, 5)]
+    assert [(e["id"], e["nom_court"], e["libelle"], e["division"], e["poule"]) for e in d["equipes"]] == [
+        ("v1", "Vaires 1", "VAIRES CTT 1", "Honneur", "Poule 1"), ("v2", "Vaires 2", "VAIRES CTT 2", "Promotion d'Honneur", "Poule 2"),
+        ("v3", "Vaires 3", "VAIRES CVTT 3", "Division 2", "Poule 3")]
     for e in d["equipes"]:
-        assert len(e["equipes"]) == 8 and sum(p["vaires"] for p in e["equipes"]) == 1
-        assert len(e["calendrier"]) == 7 and len({c["adversaire"] for c in e["calendrier"]}) == 7
+        assert len(e["rencontres"]) == 7 and len({r["adversaire"]["libelle"] for r in e["rencontres"]}) == 7
+        assert all(r["score"] is None and r["adversaire"]["club"] != paris.CLUB_VAIRES for r in e["rencontres"])
+        assert [c["points"] for c in e["classement"]] == [None] * 8 and sum(c["club"] == paris.CLUB_VAIRES for c in e["classement"]) == 1
     v1 = d["equipes"][0]
     # J1 : 1/8, Vaires (1) reçoit Villemomble 2 ; J2 : 7/1, Vaires se déplace à Nogent
-    noms = {p["position"]: p["nom"] for p in v1["equipes"]}
-    assert (v1["calendrier"][0]["a_domicile"], noms[v1["calendrier"][0]["adversaire"]]) == (True, "VILLEMOMBLE SP 2")
-    assert (v1["calendrier"][1]["a_domicile"], noms[v1["calendrier"][1]["adversaire"]]) == (False, "NOGENT TT 1")
+    j1, j2 = v1["rencontres"][:2]
+    assert (j1["vaires_domicile"], j1["adversaire"]["libelle"], j1["domicile"]["libelle"]) == (True, "VILLEMOMBLE SP 2", "VAIRES CTT 1")
+    assert (j2["vaires_domicile"], j2["adversaire"]["libelle"], j2["exterieur"]["libelle"]) == (False, "NOGENT TT 1", "VAIRES CTT 1")
+    assert (j2["date"], j2["adversaire"]["club"], j2["adversaire"]["numero"]) == ("2027-01-08", "08940524", 1)
     v2 = d["equipes"][1]
-    noms = {p["position"]: p["nom"] for p in v2["equipes"]}
-    assert (v2["calendrier"][0]["a_domicile"], noms[v2["calendrier"][0]["adversaire"]]) == (False, "VILLEMOMBLE SP 3")
+    assert (v2["rencontres"][0]["vaires_domicile"], v2["rencontres"][0]["adversaire"]["libelle"]) == (False, "VILLEMOMBLE SP 3")
+    assert d["club"] == {"numero": "08770250", "nom": "CVTT Vaires", "salle": None} and d["clubs"] == {}
     assert "licence" not in str(d)
     html = paris.page().decode("utf-8")
     assert "__DONNEES_JSON__" not in html and "VILLEMOMBLE SP 2" in html
+    # La présentation de la page adversaires du championnat de France (gabarit.html), sans brûlage
+    assert all(t in html for t in ("Récapitulatif", "Classement de la poule", "Adversaires — clique sur une équipe",
+                                   "Meilleur (année)", "Mensuel", "Éq. France"))
+    assert "Pour l'équipe" not in html and "Vérifications" not in html
 
 
 def test_page_paris_avec_le_mot_de_passe_du_club_et_liens_entre_les_espaces(tmp_path):
@@ -119,7 +128,12 @@ def test_adversaires_de_paris_effectif_meilleur_classement_et_forme(monkeypatch)
     assert len(donnees["clubs"]) == 17 and "08770250" not in donnees["clubs"]
     page = paris.donnees(donnees)
     v = page["clubs"]["08930113"]
-    assert v["complet"] and v["france"] == [{"numero": 2, "ch": "M", "division": "PR"}]
-    assert v["joueurs"] == [{"nom": "DUPONT Marc", "sexe": None, "cat": "V40", "pts": 1205, "meilleur": 1450, "annee": "2015",
-                             "v": 7, "d": 2, "gain": 25.5, "virt": 1205.5, "eq": "2", "nb": 1, "nouveau": False}]
+    assert v["effectif_complet"] and v["nom"] == "VILLEMOMBLE SP" and v["date_effectif"] == "2026-11-12T20:00"
+    assert v["equipes"] == [{"libelle": "VILLEMOMBLE SP 2", "numero": 2, "championnat": "M", "division": "PR",
+                             "compositions": [{"journee": 2, "date": "2026-10-02", "joueurs": ["j1"]}]}]
+    assert v["joueurs"] == [{"id": "j1", "nom": "DUPONT", "prenom": "Marc", "sexe": None, "categorie": "V40", "categorie_long": None,
+                             "classement": 11, "points": 1180, "points_mensuels": 1205, "meilleur": {"points": 1450, "annee": "2015"},
+                             "renouvele": True, "nouveau": None, "forme": {"v": 7, "d": 2, "points": 25.5, "virtuels": 1205.5}}]
     assert page["clubs"]["08771394"]["joueurs"] == [] and "7123456" not in json.dumps(page)
+    # Vaires 1 reçoit Villemomble 2 à la J1 : la fiche de la rencontre montre ce club
+    assert page["equipes"][0]["rencontres"][0]["adversaire"]["club"] == "08930113"

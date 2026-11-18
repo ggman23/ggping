@@ -708,3 +708,10 @@ Pas d'onglet dans l'application pour l'instant.
   paris.donnees(adversaires) (sans licence), vue par club dans gabarit_paris.html ; /paris/ devient une
   page de la mise à jour (paris_vaires.html → paris.html, PAGES_A_PART) ; PC : options 1 et 8 pour les
   effectifs et meilleurs classements des 11 clubs hors du 77.
+- Changement (18/11) : « la liste des clubs est moins lisible que le travail fait pour le championnat de
+  France : refais cela pour les 3 équipes, qui ils vont rencontrer et quand, avec les adresses des clubs ;
+  sur Vaires 1 un classement même s'il est vide ; cliquer sur un adversaire pour la liste de ses joueurs
+  (classement, meilleur classement, matchs gagnés/perdus, points gagnés/perdus) ». Réalisation :
+  paris.donnees au format de adversaires.recuperer (rencontres domicile/extérieur, classement des 8
+  équipes, salles de pingpocket, joueurs avec repères au lieu des licences), gabarit_paris.html calqué
+  sur gabarit.html (récapitulatif, onglets, fiche du club), sans brûlage ni vérifications.

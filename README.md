@@ -42,10 +42,11 @@ sans aucune requête de l'outil) ; liens vers la recherche de PingRadar et la li
 directs entre /club/, /paris/, /indivs/, /tournois/, /cal/ et /77/ : voir PUBLICATION.md.
 
 **Championnat de Paris** (/paris/, mot de passe du club) : les trois équipes de Vaires (Honneur,
-Promotion d'Honneur, Division 2) : prochaine journée, calendrier de chaque équipe (domicile ou
-extérieur), poules et toutes leurs rencontres, d'après les documents de la ligue (`ttvaires/paris.py`) ;
-chaque club adverse avec ses joueurs (points, meilleur classement, équipe en championnat de France,
-victoires, défaites et points gagnés depuis le début de la phase).
+Promotion d'Honneur, Division 2), présentées comme la page adversaires du championnat de France :
+récapitulatif par semaine, onglet de chaque équipe (calendrier avec l'adresse de la salle, classement
+de la poule, adversaires), d'après les documents de la ligue (`ttvaires/paris.py`) ; la fiche de chaque
+club adverse avec ses joueurs (points, mensuel, meilleur classement, victoires, défaites et points
+gagnés depuis le début de la phase, équipe en championnat de France).
 
 **Calendrier** (/cal/, mot de passe du club) : la saison comme un agenda, mois par mois (‹ › et
 « Aujourd'hui ») : championnat par équipes, championnat féminin, championnat de Paris, championnat des
