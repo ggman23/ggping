@@ -70,10 +70,12 @@ def page_adversaires(client, club, ctx, tous_les_historiques=False):
                         tous_les_historiques=tous_les_historiques,
                         fichier_etat=None if ctx.archive else CACHE / "effectif_adversaires.json")
     enrichir(donnees)
-    if not ctx.archive:  # championnat de Paris : ses rencontres sont-elles dans l'API ? (journal seulement)
+    rencontres_paris = 0
+    if not ctx.archive:  # championnat de Paris : ses rencontres sont-elles dans l'API ? (journal et bilan)
         try:
             from . import paris
-            paris.diagnostic_api(client, club, ctx.aujourdhui or datetime.now().date())
+            competitions = paris.diagnostic_api(client, club, ctx.aujourdhui or datetime.now().date())
+            rencontres_paris = sum(n for nom, n in competitions.items() if "paris" in nom.lower())
         except Exception as e:  # noqa: BLE001 (un contrôle ne bloque jamais la mise à jour)
             print(f"  championnat de Paris : contrôle impossible ({type(e).__name__})", flush=True)
     ctx.donnees(donnees)
@@ -82,6 +84,8 @@ def page_adversaires(client, club, ctx, tous_les_historiques=False):
     restants = donnees["sources"].get("historiques_restants")
     if restants:
         resume += f" ; {restants} meilleurs classements pas encore lus (option 8 pour tout lire)"
+    if rencontres_paris:  # le jour où la ligue les saisit : résultats et compositions de Paris récupérables
+        resume += f" ; championnat de Paris maintenant dans l'API FFTT ({rencontres_paris} rencontres de Vaires)"
     html = generer_html(donnees, ctx.sortie / "vaires.html")
     # Classements des poules de toutes les équipes du club : une page et une image à partager
     classements = generer_html(donnees_classements(donnees), ctx.sortie / "classements_vaires.html", GABARIT_CLASSEMENTS)

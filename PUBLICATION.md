@@ -537,7 +537,11 @@ https://ggping.netlify.app/paris/), avec le **mot de passe du club** (ouverture 
 - Pas de résultats ni de compositions du championnat de Paris : ses rencontres ne sont pas dans l'API
   de la FFTT (contrôle du 18/11/2026, mise à jour n° 89 : seulement le championnat de France, 42
   rencontres masculines et 7 féminines ; le journal le redit à chaque mise à jour, « Championnat de
-  Paris dans l'API FFTT ? »).
+  Paris dans l'API FFTT ? »). Les poules sont sorties le 17/11 : la ligue les saisira. Le jour où elles
+  y sont, le bilan de l'étape adversaires l'écrit (« championnat de Paris maintenant dans l'API FFTT
+  (N rencontres de Vaires) ») : on branchera alors scores, classement, compositions, « qui a joué
+  où » et brûlages comme pour le championnat de France (la page a déjà le même format), avec les
+  règles du championnat de Paris (règlement de la ligue).
 - Liens : « Paris » en haut de /cal/, /indivs/, /tournois/ et /77/ (et dans le menu des trois
   premiers), dans « Aller à » et « Autres espaces » de /club/ ; /paris/ renvoie vers chacun. Pas de lien
   vers /lundi/.

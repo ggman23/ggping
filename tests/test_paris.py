@@ -137,3 +137,25 @@ def test_adversaires_de_paris_effectif_meilleur_classement_et_forme(monkeypatch)
     assert page["clubs"]["08771394"]["joueurs"] == [] and "7123456" not in json.dumps(page)
     # Vaires 1 reçoit Villemomble 2 à la J1 : la fiche de la rencontre montre ce club
     assert page["equipes"][0]["rencontres"][0]["adversaire"]["club"] == "08930113"
+
+
+def test_le_bilan_dit_quand_le_championnat_de_paris_arrive_dans_l_api(tmp_path, monkeypatch):
+    """Le jour où la ligue saisit les rencontres de Paris, le bilan de l'étape adversaires le dit."""
+    from types import SimpleNamespace
+    import ttvaires.__main__ as m
+
+    donnees = {"verification": {"journees": [], "clubs": []}, "sources": {}}
+    monkeypatch.setattr(m, "recuperer", lambda *a, **k: donnees)
+    monkeypatch.setattr(m, "enrichir", lambda d: d)
+    monkeypatch.setattr(m.verifications, "afficher_adversaires", lambda *a: "tout est là")
+    monkeypatch.setattr(m, "generer_html", lambda d, chemin, *a: chemin)
+    monkeypatch.setattr(m, "donnees_classements", lambda d: d)
+    monkeypatch.setattr(m, "faire_images", lambda *a, **k: [])
+    monkeypatch.setattr(m, "page_paris", lambda *a, **k: tmp_path / "paris_vaires.html")
+    ctx = SimpleNamespace(archive=False, aujourdhui=date(2026, 11, 25), sortie=tmp_path, images=tmp_path, donnees=lambda d: d)
+    competitions = {"FED_Championnat de France par Equipes Masculin": 42}
+    monkeypatch.setattr(paris, "diagnostic_api", lambda *a: competitions)
+    assert m.page_adversaires(None, "08770250", ctx)[1] == "tout est là"
+    competitions["Championnat de Paris IDF"] = 21
+    assert m.page_adversaires(None, "08770250", ctx)[1] == (
+        "tout est là ; championnat de Paris maintenant dans l'API FFTT (21 rencontres de Vaires)")
