@@ -60,6 +60,8 @@ th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--bord
 th { color: var(--doux); font-weight: 600; font-size: 13px; white-space: nowrap; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 td.c, th.c { text-align: center; }
+/* Effectif : classement / points, forme, mensuel, meilleur classement sur une ligne */
+td.nw { white-space: nowrap; }
 .defil { overflow-x: auto; }
 table.placements td, table.placements th { white-space: nowrap; }
 tr.vaires td { font-weight: 700; background: var(--accent-fond); }
@@ -496,10 +498,10 @@ function tableEffectif(club, ch, a, N, r) {
   const ligne = (j, avecStatut) => `<tr>
     <td>${nomJoueur(j)}${j.sexe === "F" && ch !== "F" ? ' <span class="badge fille">F</span>' : ""}${badgeNouveau(j)}</td>
     <td title="${esc(j.categorie_long ?? "")}">${esc(j.categorie ?? "")}</td>
-    <td class="num">${cltJ(j)} <span class="petit">${j.points ?? ""}</span></td>
-    ${avecForme ? `<td>${celForme(j)}</td>` : ""}
-    <td class="num">${j.points_mensuels ?? "—"}${j.points_mensuels && j.points ? ecartMensuel(j.points_mensuels - j.points) : ""}</td>
-    <td>${meilleur(j)}</td>
+    <td class="num nw">${cltJ(j)}${j.points != null ? ` <span class="petit">/ ${j.points}</span>` : ""}</td>
+    ${avecForme ? `<td class="nw">${celForme(j)}</td>` : ""}
+    <td class="num nw">${j.points_mensuels ?? "—"}${j.points_mensuels && j.points ? ecartMensuel(j.points_mensuels - j.points) : ""}</td>
+    <td class="nw">${meilleur(j)}</td>
     ${avecForme ? `<td>${celHorsChampionnat(j)}</td>` : ""}
     ${js.map((jn) => `<td class="c">${cellule(j, jn)}</td>`).join("")}
     ${avecStatut ? `<td>${statutJoueur(j, a, r)}</td>` : ""}</tr>`;
