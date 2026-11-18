@@ -70,6 +70,12 @@ def page_adversaires(client, club, ctx, tous_les_historiques=False):
                         tous_les_historiques=tous_les_historiques,
                         fichier_etat=None if ctx.archive else CACHE / "effectif_adversaires.json")
     enrichir(donnees)
+    if not ctx.archive:  # championnat de Paris : ses rencontres sont-elles dans l'API ? (journal seulement)
+        try:
+            from . import paris
+            paris.diagnostic_api(client, club, ctx.aujourdhui or datetime.now().date())
+        except Exception as e:  # noqa: BLE001 (un contrôle ne bloque jamais la mise à jour)
+            print(f"  championnat de Paris : contrôle impossible ({type(e).__name__})", flush=True)
     ctx.donnees(donnees)
     (ctx.sortie / "donnees.json").write_text(json.dumps(donnees, ensure_ascii=False, indent=1), encoding="utf-8")
     resume = verifications.afficher_adversaires(donnees["verification"]["journees"], donnees["verification"]["clubs"])

@@ -95,6 +95,7 @@ tr.vaires td:nth-child(2) b::after { content: " · Vaires"; color: var(--accent)
     <div class="titres"><b>CVTT Vaires · individuels</b><span id="sous-titre"></span></div>
     <nav class="espaces" aria-label="Autres espaces">
       <a id="vers-club" href="../club/" title="Espace club : pages, images, archives">Club</a>
+      <a id="vers-paris" href="../paris/" title="Championnat de Paris : poules et calendrier des trois équipes">Paris</a>
       <a id="vers-tournois" href="../tournois/" title="Tournois à venir autour de Vaires">Tournois</a>
       <a id="vers-cal" href="../cal/" title="Calendrier de la saison">Calendrier</a>
       <a id="vers-77" href="../77/" title="Clubs du 77 : joueurs, niveau et équipes de chaque club">77</a>
@@ -156,6 +157,7 @@ document.getElementById("vers-club").href = CLUB;
 document.getElementById("vers-tournois").href = TOURNOIS;
 document.getElementById("vers-cal").href = CAL;
 document.getElementById("vers-77").href = `${BASE}/77/`;
+document.getElementById("vers-paris").href = `${BASE}/paris/`;
 const lienImage = (p) => `${CLUB}#${encodeURIComponent("indivs_" + p.id + ".png")}`;
 
 const ENTREES = [];
@@ -188,6 +190,7 @@ function menu(actif) {
     + `<h2>Autres espaces</h2><a class="entree" href="${CLUB}"><b>Espace club</b><span>Pages, images à partager, archives</span></a>`
     + `<a class="entree" href="${TOURNOIS}"><b>Tournois</b><span>Tournois à venir autour de Vaires</span></a>`
     + `<a class="entree" href="${CAL}"><b>Calendrier</b><span>Dates de la saison : championnats, critérium</span></a>`
+    + `<a class="entree" href="${BASE}/paris/"><b>Championnat de Paris</b><span>Poules et calendrier des trois équipes</span></a>`
     + `<a class="entree" href="${BASE}/77/"><b>Clubs du 77</b><span>Joueurs, niveau et équipes de chaque club</span></a>`;
 }
 

@@ -40,7 +40,7 @@ adversaires des 7 équipes du **CVTT Vaires** (club FFTT n° **08770250**) et g�
   qui a joué dans quelle équipe, à quelle journée (ex. toto → Lognes 18, titi → Lognes 19).
   Le régional se joue le samedi, le départemental le vendredi.
 - Le championnat **féminin** est traité à part (uniquement pour Vaires 1 F).
-- On ignore coupes et Championnat de Paris.
+- On ignore coupes et Championnat de Paris (Paris : page /paris/ ajoutée le 18/11/2026, voir plus bas).
 
 ### Règles de brûlage appliquées (validées)
 1. **Brûlage** : un joueur qui a disputé 2 rencontres (dans la même phase) dans des équipes
@@ -691,3 +691,13 @@ Pas d'onglet dans l'application pour l'instant.
   « Tournois » ; /club/ → « Aller à » en haut du menu (individuels, tournois) et « Autres espaces ».
 - Changement (11/11) : /lundi/ (le roi du lundi) n'est plus listé dans /club/ (ni « Aller à » ni
   « Autres espaces ») : il est pour l'administrateur et l'application seulement.
+- Championnat de Paris (18/11) : « une page /paris/ avec l'identique de /club/ pour le championnat de
+  France, et la navigation d'une page à l'autre ». Documents de la ligue (PDF des poules HO, PH, D2) :
+  Vaires 1 Honneur poule 1, Vaires 2 Promotion d'Honneur poule 2, Vaires 3 Division 2 poule 3 ; 7
+  journées (27/11/2026 → 04/06/2027), grille commune. Réalisation : paris.py (données recopiées, tests
+  de la grille), gabarit_paris.html (prochaine journée, chaque équipe : calendrier, poule, rencontres ;
+  toutes les dates), publiée comme /cal/ (PAGES_FIXES, mot de passe du club), liens « Paris » dans
+  /club/, /cal/, /indivs/, /tournois/, /77/. Les pages de /club/ (adversaires, compositions, brûlages,
+  résultats, classements) viennent de l'API de la FFTT, filtrée sur le championnat de France :
+  paris.diagnostic_api écrit dans le journal si l'API a les rencontres de Paris (étape suivante selon
+  le résultat).

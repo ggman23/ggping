@@ -42,7 +42,7 @@ from urllib.parse import quote
 
 import requests
 
-from . import calendrier, publier, ressources
+from . import calendrier, paris, publier, ressources
 
 RACINE = Path(__file__).resolve().parent.parent
 API = "https://api.netlify.com/api/v1"
@@ -71,7 +71,9 @@ PAGES_A_PART = {"indivs.html": ("indivs", "Individuels"), "77.html": ("77", "Clu
 # la page étant un fichier HTML ou une fonction qui la fabrique.
 # /tournois/ : blocs de PingRadar intégrés (cadres qui se mettent à jour tout seuls, voir le gabarit).
 # /cal/ : calendrier de la saison (dates du comité de Seine-et-Marne, voir calendrier.py).
-PAGES_FIXES = {"tournois": ("Tournois", Path(__file__).with_name("gabarit_tournois.html")),
+# /paris/ : championnat de Paris, poules et calendrier des trois équipes de Vaires (voir paris.py).
+PAGES_FIXES = {"paris": ("Championnat de Paris", paris.page),
+               "tournois": ("Tournois", Path(__file__).with_name("gabarit_tournois.html")),
                "cal": ("Calendrier", calendrier.page)}
 
 

@@ -504,6 +504,30 @@ https://ggping.netlify.app/cal/), avec le **mot de passe du club** (ouverture di
   haut de /indivs/ et de /tournois/ (et dans leur menu) et dans « Aller à » de /club/. Pas de lien
   vers /lundi/.
 
+## Championnat de Paris : /paris/ (les trois équipes de Vaires)
+
+**/paris/** sur chaque site (https://ggping-pap.pages.dev/paris/, https://ggman23.github.io/ggping/paris/,
+https://ggping.netlify.app/paris/), avec le **mot de passe du club** (ouverture directe depuis /club/).
+
+- Championnat de Paris IDF 2026-2027 : Vaires 1 en Honneur (poule 1), Vaires 2 en Promotion
+  d'Honneur (poule 2), Vaires 3 en Division 2 (poule 3) ; sept journées, le vendredi, du 27/11/2026
+  au 04/06/2027.
+- Menu : la prochaine journée (les trois rencontres de Vaires, domicile ou extérieur, l'adversaire et
+  son département), chaque équipe (son calendrier, la journée suivante encadrée, les journées passées
+  grisées ; sa poule ; toutes les rencontres de la poule, journée par journée), toutes les dates ;
+  et les autres espaces.
+- Données : poules et calendrier des documents de la ligue (PDF « Poules HO / PH / D2 »), recopiés
+  dans `ttvaires/paris.py` (le premier nommé de la grille reçoit) ; les tests vérifient que chaque
+  équipe rencontre les sept autres une fois, une seule rencontre par équipe et par journée, le
+  vendredi. Aucune requête : la page ne change qu'avec ces documents (m'envoyer les nouveaux PDF).
+- Résultats, compositions, forme des adversaires, comme dans /club/ pour le championnat de France :
+  seulement si l'API de la FFTT a les rencontres du championnat de Paris. La mise à jour le vérifie
+  (journal : « Championnat de Paris dans l'API FFTT ? », compétitions par équipes du club sur la
+  saison, poules de Paris trouvées ; aucun nom de joueur).
+- Liens : « Paris » en haut de /cal/, /indivs/, /tournois/ et /77/ (et dans le menu des trois
+  premiers), dans « Aller à » et « Autres espaces » de /club/ ; /paris/ renvoie vers chacun. Pas de lien
+  vers /lundi/.
+
 ## Clubs du 77 : /77/ (niveau de Vaires parmi les clubs du département)
 
 **/77/** sur chaque site, avec le **mot de passe du club** (ouverture directe depuis /club/). Faite à

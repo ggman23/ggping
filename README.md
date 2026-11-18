@@ -39,7 +39,11 @@ critérium, tournois), du plus fort au plus faible : voir PUBLICATION.md.
 **Tournois** (/tournois/, mot de passe du club) : les prochains tournois à 100 km de Vaires, ce week-end
 et le suivant, en Île-de-France et en Seine-et-Marne, avec les blocs de PingRadar (mis à jour en continu,
 sans aucune requête de l'outil) ; liens vers la recherche de PingRadar et la liste de la FFTT. Liens
-directs entre /club/, /indivs/, /tournois/ et /cal/ : voir PUBLICATION.md.
+directs entre /club/, /paris/, /indivs/, /tournois/, /cal/ et /77/ : voir PUBLICATION.md.
+
+**Championnat de Paris** (/paris/, mot de passe du club) : les trois équipes de Vaires (Honneur,
+Promotion d'Honneur, Division 2) : prochaine journée, calendrier de chaque équipe (domicile ou
+extérieur), poules et toutes leurs rencontres, d'après les documents de la ligue (`ttvaires/paris.py`).
 
 **Calendrier** (/cal/, mot de passe du club) : la saison comme un agenda, mois par mois (‹ › et
 « Aujourd'hui ») : championnat par équipes, championnat féminin, championnat de Paris, championnat des
