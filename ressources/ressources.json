@@ -61,7 +61,8 @@
    "fichier": "espace-lundi.html",
    "titre": "Le roi du lundi",
    "taille": 75997,
-   "acces": "MOT_DE_PASSE_LUNDI"
+   "acces": "MOT_DE_PASSE_LUNDI",
+   "cle_publique": "bttA77kufPV6e6WJSl//vE9tydG59dgKtMphA1pHhjE="
   }
  ]
 }
