@@ -60,8 +60,8 @@ th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--bord
 th { color: var(--doux); font-weight: 600; font-size: 13px; white-space: nowrap; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 td.c, th.c { text-align: center; }
-/* Effectif : classement / points, forme, mensuel, meilleur classement sur une ligne */
-td.nw { white-space: nowrap; }
+/* Effectif des adversaires : chaque joueur sur une ligne (le tableau défile s'il est trop large) */
+table.effectif td { white-space: nowrap; }
 .defil { overflow-x: auto; }
 table.placements td, table.placements th { white-space: nowrap; }
 tr.vaires td { font-weight: 700; background: var(--accent-fond); }
@@ -222,7 +222,14 @@ const badgeNouveau = (j) => j.nouveau ? ' <span class="badge nouveau" title="ins
    j.forme absent : joueur non suivi ; null : parties non lues lors de la mise à jour. */
 const signe = (x) => (Math.round(x) > 0 ? "+" : Math.round(x) < 0 ? "−" : "±") + Math.abs(Math.round(x));
 const classeForme = (f) => (Math.round(f.points) > 0 ? "plus" : Math.round(f.points) < 0 ? "moins" : "");
-const abrege = (nom) => (nom === "Critérium fédéral" ? "Critérium" : nom.length > 26 ? nom.slice(0, 25) + "…" : nom);
+// Noms de compétitions raccourcis (le nom entier au survol) : les badges tiennent sur une ligne
+const ABREVIATIONS = [[/^Critérium fédéral$/, "Critérium"], [/Championnat/g, "Ch."], [/de France/g, "France"],
+  [/départementa(?:les?|l|ux)/gi, "dép."], [/régiona(?:les?|l|ux)/gi, "rég."], [/Vétérans?/g, "Vét."], [/par équipes/g, "éq."],
+  [/par classement/g, "clt"], [/\s+/g, " "]];
+const abrege = (nom) => {
+  const court = ABREVIATIONS.reduce((s, [motif, par]) => s.replace(motif, par), nom).trim();
+  return court.length > 20 ? court.slice(0, 19) + "…" : court;
+};
 function formeTitre(f) {
   return `Depuis le début de la phase, toutes compétitions : ${pluriel(f.v, "victoire")}, ${pluriel(f.d, "défaite")}, ${signe(f.points)} points`
     + (f.virtuels != null ? ` (${Math.round(f.virtuels)} points virtuels)` : "")
@@ -436,10 +443,10 @@ function tableEffectif(club, r) {
   const ligne = (j) => `<tr>
     <td>${nomJoueur(j)}${j.sexe === "F" ? ' <span class="badge fille">F</span>' : ""}${badgeNouveau(j)}</td>
     <td title="${esc(j.categorie_long ?? "")}">${esc(j.categorie ?? "")}</td>
-    <td class="num nw">${cltJ(j)}${j.points != null ? ` <span class="petit">/ ${j.points}</span>` : ""}</td>
-    ${avecForme ? `<td class="nw">${celForme(j)}</td>` : ""}
-    <td class="num nw">${j.points_mensuels ?? "—"}${j.points_mensuels && j.points ? ecartMensuel(j.points_mensuels - j.points) : ""}</td>
-    <td class="nw">${meilleur(j)}</td>
+    <td class="num">${cltJ(j)}${j.points != null ? ` <span class="petit">/ ${j.points}</span>` : ""}</td>
+    ${avecForme ? `<td>${celForme(j)}</td>` : ""}
+    <td class="num">${j.points_mensuels ?? "—"}${j.points_mensuels && j.points ? ecartMensuel(j.points_mensuels - j.points) : ""}</td>
+    <td>${meilleur(j)}</td>
     ${avecForme ? `<td>${celHorsChampionnat(j)}</td>` : ""}
     ${avecFrance ? `<td>${celFrance(fr[j.id])}</td>` : ""}</tr>`;
   const entete = `<thead><tr><th>Joueur</th><th>Cat.</th><th class="num">Officiel</th>
@@ -470,9 +477,9 @@ function tableEffectif(club, r) {
        (Ctrl+S, « Page Web, complète ») dans le dossier import de l'outil.</p>` : "";
   // Les explications des colonnes sous le tableau : sur téléphone, les joueurs d'abord
   return `<h4>Effectif de ${esc(club.nom)} (${pluriel(actifs.length, "joueur")})</h4>${partiel}${noteListe(club)}
-    ${actifs.length ? `${tris}<div class="defil"><table>${entete}<tbody id="${cle}">${EFFECTIFS[cle](tri)}</tbody></table></div>` : ""}${legende}
+    ${actifs.length ? `${tris}<div class="defil"><table class="effectif">${entete}<tbody id="${cle}">${EFFECTIFS[cle](tri)}</tbody></table></div>` : ""}${legende}
     ${anciens.length ? `<details><summary>Pas encore renouvelés (${anciens.length})</summary>
-      <div class="defil"><table>${entete}<tbody>${anciens.map(ligne).join("")}</tbody></table></div></details>` : ""}`;
+      <div class="defil"><table class="effectif">${entete}<tbody>${anciens.map(ligne).join("")}</tbody></table></div></details>` : ""}`;
 }
 /* Date de la liste des licenciés du club (lue sur pingpocket.fr par le PC) : les inscriptions plus
    récentes n'y sont pas. Ancienne de plus de 10 jours : à relire en lançant la mise à jour du PC. */
