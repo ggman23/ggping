@@ -42,7 +42,7 @@ from urllib.parse import quote
 
 import requests
 
-from . import calendrier, paris, publier, ressources
+from . import calendrier, publier, ressources
 
 RACINE = Path(__file__).resolve().parent.parent
 API = "https://api.netlify.com/api/v1"
@@ -66,14 +66,13 @@ ORDRE_CLUB = ["vaires.html", "resultats_vaires.html", "resultats_vaires.xlsx", "
               "fiches_vaires.html"]
 # Pages du site publiées à leur propre adresse avec le mot de passe du club (et non parmi les documents
 # de /club/, qui y renvoie par « Autres espaces ») : page du site -> (adresse, titre)
-PAGES_A_PART = {"indivs.html": ("indivs", "Individuels"), "77.html": ("77", "Clubs du 77")}
+PAGES_A_PART = {"indivs.html": ("indivs", "Individuels"), "paris.html": ("paris", "Championnat de Paris"),
+                "77.html": ("77", "Clubs du 77")}
 # Pages fixes (aucune donnée de la mise à jour), publiées de même à leur adresse : adresse -> (titre, page),
 # la page étant un fichier HTML ou une fonction qui la fabrique.
 # /tournois/ : blocs de PingRadar intégrés (cadres qui se mettent à jour tout seuls, voir le gabarit).
 # /cal/ : calendrier de la saison (dates du comité de Seine-et-Marne, voir calendrier.py).
-# /paris/ : championnat de Paris, poules et calendrier des trois équipes de Vaires (voir paris.py).
-PAGES_FIXES = {"paris": ("Championnat de Paris", paris.page),
-               "tournois": ("Tournois", Path(__file__).with_name("gabarit_tournois.html")),
+PAGES_FIXES = {"tournois": ("Tournois", Path(__file__).with_name("gabarit_tournois.html")),
                "cal": ("Calendrier", calendrier.page)}
 
 

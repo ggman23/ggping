@@ -1,3 +1,4 @@
+import json
 from collections import Counter
 from datetime import date
 
@@ -39,14 +40,21 @@ def test_les_trois_equipes_de_vaires_et_leur_calendrier():
 
 
 def test_page_paris_avec_le_mot_de_passe_du_club_et_liens_entre_les_espaces(tmp_path):
-    """/paris/ publiée comme /cal/ (mot de passe du club, clé de /club/), listée dans « Autres espaces » de
-    /club/, et reliée dans les deux sens à /cal/, /indivs/, /tournois/ et /77/."""
+    """/paris/ : page de la mise à jour (paris_vaires.html, comme /77/) publiée avec le mot de passe du club,
+    listée dans « Autres espaces » de /club/, et reliée dans les deux sens à /cal/, /indivs/, /tournois/, /77/."""
     import base64
+    import json
     import re
-    from test_tournois import _crypto, _site
+    from test_tournois import _crypto
     from ttvaires import netlify, publier
     _crypto()
-    site = _site(tmp_path)
+    sortie, site = tmp_path / "sortie", tmp_path / "site"
+    sortie.mkdir()
+    (sortie / "vaires.html").write_text("<p>adversaires</p>", encoding="utf-8")
+    (sortie / "paris_vaires.html").write_bytes(paris.page())
+    (sortie / "bilan.json").write_text(json.dumps({"debut": "2026-11-18T08:00", "fin": "2026-11-18T08:05", "pages": [
+        {"nom": "adversaires", "resume": "ok", "fichiers": ["vaires.html", "paris_vaires.html"]}]}))
+    publier.publier(sortie, site, "secret", "g/p", "b")
     for dossier in (netlify.construire(site, tmp_path / "netlify", "secret", "", "club"),
                     netlify.site_github(site, tmp_path / "github", "secret", "club")):
         page = (dossier / "paris" / "index.html").read_text(encoding="utf-8")
@@ -83,3 +91,35 @@ def test_controle_du_championnat_de_paris_dans_l_api(capsys, monkeypatch):
     rencontres[:] = rencontres[:1]
     paris.diagnostic_api(None, "08770250", date(2026, 11, 18))
     assert "aucune rencontre dans l'API" in capsys.readouterr().out
+
+
+def test_adversaires_de_paris_effectif_meilleur_classement_et_forme(monkeypatch):
+    """Clubs adverses des trois poules : joueurs alignés en championnat de France (API), complétés par
+    pingpocket (effectif, meilleur classement) et leur forme ; la page n'a aucun numéro de licence."""
+    from ttvaires import adversaires, fftt
+
+    villemomble = {"name": "VILLEMOMBLE SP 2", "clubs": [{"identifier": "08930113", "id": 93, "name": "VILLEMOMBLE SPORTS"}]}
+    autre = {"name": "AUTRE 1", "clubs": [{"identifier": "08939999", "id": 9, "name": "AUTRE"}]}
+    rencontre = {"id": 501, "homeOpponent": {"team": villemomble}, "awayOpponent": {"team": autre}, "day": {"position": 2},
+                 "date": "2026-10-02T20:00:00", "division": {"name": "PR Ph1", "contest": {"name": "FED_Championnat de France par Equipes Masculin"}}}
+    feuille = {**rencontre, "homeSheetMatches": [{"identifier": "A", "player": {"identifier": "7123456", "points": 1180,
+               "person": {"familyName": "DUPONT", "givenName": "Marc"}}}], "awaySheetMatches": []}
+    monkeypatch.setattr(fftt, "id_interne_club", lambda client, numero, debut: numero)
+    monkeypatch.setattr(fftt, "rencontres_club", lambda client, id_club, debut, fin, ttl: [rencontre] if id_club == "08930113" else [])
+    monkeypatch.setattr(fftt, "details", lambda client, rencontres, auj, etats=None: {501: feuille} if rencontres else {})
+
+    def pingpocket(client, donnees, *args, **kwargs):  # effectif complet et meilleur classement (pages lues par le PC)
+        club = donnees["clubs"]["08930113"]
+        club["effectif_complet"], club["date_effectif"] = True, "2026-11-12T20:00"
+        club["joueurs"][0].update(categorie="V40", points_mensuels=1205, meilleur={"points": 1450, "annee": "2015"}, renouvele=True)
+    monkeypatch.setattr(adversaires, "completer_avec_pingpocket", pingpocket)
+    monkeypatch.setattr(adversaires, "forme_joueurs", lambda client, licences, detail, debut, fin: {
+        "7123456": {"v": 7, "d": 2, "points": 25.5, "virtuels": 1205.5}})
+    donnees = adversaires.recuperer_paris(object(), aujourdhui=date(2026, 11, 18))
+    assert len(donnees["clubs"]) == 17 and "08770250" not in donnees["clubs"]
+    page = paris.donnees(donnees)
+    v = page["clubs"]["08930113"]
+    assert v["complet"] and v["france"] == [{"numero": 2, "ch": "M", "division": "PR"}]
+    assert v["joueurs"] == [{"nom": "DUPONT Marc", "sexe": None, "cat": "V40", "pts": 1205, "meilleur": 1450, "annee": "2015",
+                             "v": 7, "d": 2, "gain": 25.5, "virt": 1205.5, "eq": "2", "nb": 1, "nouveau": False}]
+    assert page["clubs"]["08771394"]["joueurs"] == [] and "7123456" not in json.dumps(page)

@@ -43,7 +43,9 @@ directs entre /club/, /paris/, /indivs/, /tournois/, /cal/ et /77/ : voir PUBLIC
 
 **Championnat de Paris** (/paris/, mot de passe du club) : les trois équipes de Vaires (Honneur,
 Promotion d'Honneur, Division 2) : prochaine journée, calendrier de chaque équipe (domicile ou
-extérieur), poules et toutes leurs rencontres, d'après les documents de la ligue (`ttvaires/paris.py`).
+extérieur), poules et toutes leurs rencontres, d'après les documents de la ligue (`ttvaires/paris.py`) ;
+chaque club adverse avec ses joueurs (points, meilleur classement, équipe en championnat de France,
+victoires, défaites et points gagnés depuis le début de la phase).
 
 **Calendrier** (/cal/, mot de passe du club) : la saison comme un agenda, mois par mois (‹ › et
 « Aujourd'hui ») : championnat par équipes, championnat féminin, championnat de Paris, championnat des

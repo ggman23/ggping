@@ -59,6 +59,19 @@ tr.prochaine td { box-shadow: inset 0 0 0 2px var(--accent); }
 .jour ul { margin: 0; padding: 0; list-style: none; }
 .jour li { padding: 3px 0; font-size: 14.5px; }
 .jour li.vaires { font-weight: 700; }
+.joueurs th { white-space: nowrap; }
+.joueurs th button { border: 0; background: none; color: inherit; font: inherit; padding: 0; cursor: pointer; }
+.joueurs td.nom { white-space: nowrap; }
+.tag { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 5px; padding: 0 5px; margin-left: 4px;
+  background: var(--accent-fond); color: var(--accent); }
+.pos { color: var(--dom); } .neg { color: #c62828; }
+@media (prefers-color-scheme: dark) { .neg { color: #ff7b72; } }
+.filtres { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.filtres button { border: 1px solid var(--bord); background: var(--surface); color: var(--texte); border-radius: 999px; padding: 5px 12px;
+  font: inherit; font-size: 14px; cursor: pointer; }
+.filtres button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+a.club { font-weight: 700; }
+@media (max-width: 600px) { .joueurs .opt { display: none; } }
 .note { background: var(--att-fond); color: var(--att); border-radius: 8px; padding: 8px 10px; font-size: 13.5px; margin: 16px 0 0; }
 .source { color: var(--doux); font-size: 12.5px; margin: 14px 2px 0; }
 #retour { display: none; }
@@ -140,6 +153,18 @@ const parPosition = (e) => new Map(e.equipes.map((p) => [p.position, p]));
 const lieu = (domicile) => `<span class="lieu ${domicile ? "dom" : "ext"}">${domicile ? "Domicile" : "Extérieur"}</span>`;
 const adversaire = (e, c) => parPosition(e).get(c.adversaire);
 const nomDivision = (e) => `${e.division} · poule ${e.poule}`;
+/* Clubs adverses (mise à jour : adversaires.recuperer_paris) : joueurs, points, meilleur classement, forme */
+const CLUBS = D.clubs || {};
+const AVEC_CLUBS = Object.keys(CLUBS).length > 0;
+const lienClub = (num, texte) => (CLUBS[num] ? `<a class="club" href="#club-${esc(num)}">${esc(texte)}</a>` : `<b>${esc(texte)}</b>`);
+const fr = (x, d = 0) => (x == null ? "—" : Number(x).toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d }));
+const signe = (x) => (x == null ? "—" : `${x > 0 ? "+" : x < 0 ? "−" : ""}${fr(Math.abs(x), 1)}`);
+/* Rencontres de Vaires contre chaque club (une équipe adverse du même club peut jouer contre deux équipes de Vaires) */
+const FACE = {};
+for (const e of D.equipes) for (const c of e.calendrier) {
+  const a = parPosition(e).get(c.adversaire);
+  (FACE[a.club] = FACE[a.club] || []).push({ e, c, a });
+}
 
 function menu(actif) {
   document.getElementById("menu").innerHTML = `<h2>Championnat de Paris ${esc(D.saison)}</h2>
@@ -148,6 +173,9 @@ function menu(actif) {
     ${D.equipes.map((e) => `<a class="entree${actif === e.cle ? " actif" : ""}" href="#${e.cle}"><b>${esc(e.nom)} · ${esc(e.division)}</b>
       <span>Poule ${e.poule} · calendrier et adversaires</span></a>`).join("")}
     <a class="entree${actif === "dates" ? " actif" : ""}" href="#dates"><b>Toutes les dates</b><span>Les 7 vendredis et les 3 rencontres de chacun</span></a>
+    ${AVEC_CLUBS ? `<h2>Clubs adverses</h2>${Object.entries(CLUBS).sort((a, b) => a[1].nom.localeCompare(b[1].nom, "fr")).map(([num, c]) =>
+      `<a class="entree${actif === "club-" + num ? " actif" : ""}" href="#club-${esc(num)}"><b>${esc(c.nom)}</b>
+        <span>${FACE[num].map((f) => `${esc(f.e.nom)} J${f.c.journee}`).join(" · ")} · ${c.joueurs.length} joueurs</span></a>`).join("")}` : ""}
     <h2>Autres espaces</h2>
     <a class="entree" href="${CLUB}"><b>Espace club</b><span>Championnat de France : pages, images, archives</span></a>
     <a class="entree" href="${INDIVS}"><b>Individuels</b><span>Poules du critérium et adversaires</span></a>
@@ -160,7 +188,7 @@ function menu(actif) {
 function carteMatch(e, c, titre = true) {
   const a = adversaire(e, c);
   return `<div class="carte vaires"><div class="match">${titre ? `<span class="eq">${esc(e.nom)}</span>` : ""}${lieu(c.a_domicile)}
-    <span>${c.a_domicile ? "reçoit" : "va chez"} <b>${esc(a.nom)}</b></span><span class="contre">(${esc(a.dep)})</span></div>
+    <span>${c.a_domicile ? "reçoit" : "va chez"} ${lienClub(a.club, a.nom)}</span><span class="contre">(${esc(a.dep)})</span></div>
     <div class="doux">${esc(nomDivision(e))} · journée ${c.journee}</div></div>`;
 }
 
@@ -176,7 +204,7 @@ function vueEquipe(e) {
   const pos = parPosition(e);
   const lignes = e.calendrier.map((c) => {
     const a = pos.get(c.adversaire), cls = c.date < AUJ ? "passe" : PROCHAINE && c.journee === PROCHAINE.numero ? "prochaine" : "";
-    return `<tr class="${cls}"><td>J${c.journee}</td><td>${esc(court(c.date))}</td><td>${lieu(c.a_domicile)}</td><td>${esc(a.nom)}</td><td class="n">${esc(a.dep)}</td></tr>`;
+    return `<tr class="${cls}"><td>J${c.journee}</td><td>${esc(court(c.date))}</td><td>${lieu(c.a_domicile)}</td><td>${lienClub(a.club, a.nom)}</td><td class="n">${esc(a.dep)}</td></tr>`;
   }).join("");
   const poule = e.equipes.map((p) => `<tr class="${p.vaires ? "vaires" : ""}"><td class="n">${p.position}</td><td>${esc(p.nom)}</td><td class="n">${esc(p.dep)}</td></tr>`).join("");
   const journees = D.journees.map((j) => `<div class="jour"><h3>J${j.numero} · ${esc(court(j.date))}</h3><ul>${e.rencontres.filter((r) => r.journee === j.numero)
@@ -201,8 +229,56 @@ function vueDates() {
     ${notes()}</div>`;
 }
 
-const notes = () => `<p class="note">Horaires et salles : ceux de chaque club (le club qui reçoit). Les résultats, les compositions
-    et la forme des adversaires s'ajouteront ici quand la FFTT publiera les rencontres du championnat de Paris.</p>
+let filtreJ = "tous", triJ = { cle: "pts", sens: -1 };
+const COLONNES = [
+  { cle: "nom", titre: "Joueur", texte: true }, { cle: "cat", titre: "Cat.", texte: true, opt: true },
+  { cle: "pts", titre: "Points", n: true }, { cle: "meilleur", titre: "Meilleur", n: true },
+  { cle: "eq", titre: "Éq. France", texte: true, opt: true, aide: "Équipe où il a le plus joué en championnat de France cette phase (nombre de rencontres)" },
+  { cle: "vd", titre: "V – D", n: true, aide: "Victoires et défaites depuis le début de la phase, toutes compétitions" },
+  { cle: "gain", titre: "+/−", n: true, aide: "Points gagnés ou perdus depuis le début de la phase (estimation)" },
+  { cle: "virt", titre: "Virtuels", n: true, opt: true, aide: "Estimation des points virtuels" },
+];
+const valeur = (j, cle) => (cle === "vd" ? (j.v ?? -1) - (j.d ?? 0) / 1000 : cle === "eq" ? (j.eq ? parseInt(j.eq, 10) : 99) : j[cle]);
+function vueClub(num) {
+  const c = CLUBS[num];
+  const garde = c.joueurs.filter((j) => filtreJ === "tous" || (filtreJ === "joue" ? (j.v || 0) + (j.d || 0) > 0 : j.nb > 0));
+  const col = COLONNES.find((x) => x.cle === triJ.cle);
+  garde.sort((a, b) => { const x = valeur(a, triJ.cle), y = valeur(b, triJ.cle);
+    return (col.texte ? String(x ?? "").localeCompare(String(y ?? ""), "fr") : (x ?? -1e9) - (y ?? -1e9)) * triJ.sens || (b.pts || 0) - (a.pts || 0); });
+  const th = (x) => `<th class="${x.n ? "n" : ""}${x.opt ? " opt" : ""}"${x.aide ? ` title="${esc(x.aide)}"` : ""}><button type="button" data-tri="${x.cle}">${esc(x.titre)}${triJ.cle === x.cle ? (triJ.sens > 0 ? " ▲" : " ▼") : ""}</button></th>`;
+  const lignes = garde.map((j) => `<tr><td class="nom">${esc(j.nom)}${j.sexe === "F" ? ' <span class="doux">F</span>' : ""}${j.nouveau ? '<span class="tag">nouveau</span>' : ""}</td>
+    <td class="opt">${esc(j.cat || "—")}</td><td class="n">${fr(j.pts)}</td>
+    <td class="n" title="${j.annee ? "en " + esc(j.annee) : ""}">${j.meilleur ? fr(j.meilleur) + (j.annee ? ` <span class="doux">(${esc(String(j.annee).slice(-2))})</span>` : "") : "—"}</td>
+    <td class="opt">${j.eq ? `${esc(j.eq)} <span class="doux">(${j.nb})</span>` : "—"}</td>
+    <td class="n">${j.v == null ? "—" : `${j.v} – ${j.d}`}</td><td class="n ${j.gain > 0 ? "pos" : j.gain < 0 ? "neg" : ""}">${signe(j.gain)}</td>
+    <td class="n opt">${fr(j.virt, 1)}</td></tr>`).join("");
+  const france = c.france.length ? c.france.map((e) => `équipe ${e.numero}${e.ch === "F" ? " F" : ""} (${esc(e.division)})`).join(" · ") : "aucune équipe trouvée";
+  return `<div class="contenu"><h1>${esc(c.nom)}</h1>
+    ${FACE[num].map((f) => carteMatch(f.e, f.c)).join("")}
+    <p class="infos">En championnat de France cette phase : ${france}.</p>
+    <p class="infos">${c.complet ? `Effectif complet (liste des licenciés${c.date ? " du " + esc(c.date.slice(8, 10) + "/" + c.date.slice(5, 7)) : ""}), sans les licences loisir.`
+      : "Effectif limité aux joueurs déjà alignés en championnat de France : la liste complète du club n'est pas encore lue (PC)."}${c.erreur ? " Équipes du club non lues (l'API FFTT n'a pas répondu) : relancer." : ""}</p>
+    <div class="filtres" role="group" aria-label="Joueurs affichés">
+      <button type="button" data-filtre="tous" aria-pressed="${filtreJ === "tous"}">Tous (${c.joueurs.length})</button>
+      <button type="button" data-filtre="joue" aria-pressed="${filtreJ === "joue"}">Ont joué cette phase</button>
+      <button type="button" data-filtre="france" aria-pressed="${filtreJ === "france"}">Alignés en championnat de France</button></div>
+    <div class="defil"><table class="joueurs"><tr>${COLONNES.map(th).join("")}</tr>${lignes || `<tr><td colspan="8" class="doux">Aucun joueur.</td></tr>`}</table></div>
+    <p class="source">Points : situation mensuelle (sinon points de la phase). Meilleur : meilleur classement de son historique (année).
+      V – D et +/− : toutes compétitions depuis le ${D.debut_forme ? esc(D.debut_forme.split("-").reverse().join("/")) : "début de la phase"}, estimation
+      comme le classement virtuel.${D.historiques_restants ? ` ${fr(D.historiques_restants)} meilleurs classements pas encore lus (PC).` : ""}
+      Un club compose ses équipes du championnat de Paris à sa façon : toute la liste est montrée, du mieux classé au moins bien classé.</p>
+    ${notes()}</div>`;
+}
+document.addEventListener("click", (ev) => {
+  const t = ev.target.closest("[data-tri]");
+  if (t) { const cle = t.dataset.tri, col = COLONNES.find((x) => x.cle === cle);
+    triJ = { cle, sens: triJ.cle === cle ? -triJ.sens : col.texte ? 1 : -1 }; compterAction("tri", cle, `tri ${col.titre}`); route(); return; }
+  const f = ev.target.closest("[data-filtre]");
+  if (f) { filtreJ = f.dataset.filtre; compterAction("filtre", filtreJ, `joueurs : ${f.textContent.trim()}`); route(); }
+});
+
+const notes = () => `<p class="note">Horaires et salles : ceux de chaque club (le club qui reçoit). Les rencontres du championnat
+    de Paris ne sont pas dans l'API de la FFTT : ni résultats ni compositions ici${AVEC_CLUBS ? "" : " ; les joueurs des clubs adverses arrivent avec la prochaine mise à jour"}.</p>
   <p class="source">${esc(D.source)} ; « reçoit » : le premier nommé de la grille des rencontres.</p>`;
 
 const TELEPHONE = matchMedia("(max-width: 860px)");
@@ -211,15 +287,18 @@ function route() {
   const h = decodeURIComponent(location.hash.slice(1));
   const surMenu = h === "menu" && TELEPHONE.matches;
   const e = D.equipes.find((x) => x.cle === h);
-  const cle = e ? e.cle : h === "dates" ? "dates" : "prochaine";
+  const club = h.startsWith("club-") && CLUBS[h.slice(5)] ? h.slice(5) : null;
+  const cle = e ? e.cle : club ? h : h === "dates" ? "dates" : "prochaine";
   document.getElementById("appli").classList.toggle("sur-menu", surMenu);
   menu(surMenu ? null : cle);
   if (!surMenu) {
-    document.getElementById("vue").innerHTML = e ? vueEquipe(e) : cle === "dates" ? vueDates() : vueProchaine();
-    document.getElementById("vue").scrollTop = 0;
-    if (cle !== vueComptee) { vueComptee = cle; compterAction("vue", cle, e ? `${e.nom} (${e.division})` : cle === "dates" ? "toutes les dates" : "prochaine journée"); }
+    const memeVue = cle === vueComptee;
+    document.getElementById("vue").innerHTML = e ? vueEquipe(e) : club ? vueClub(club) : cle === "dates" ? vueDates() : vueProchaine();
+    if (!memeVue) document.getElementById("vue").scrollTop = 0;  // un tri ou un filtre garde la position
+    if (!memeVue) { vueComptee = cle; compterAction("vue", club ? "club" : cle, e ? `${e.nom} (${e.division})` : club ? `club ${CLUBS[club].nom}`
+      : cle === "dates" ? "toutes les dates" : "prochaine journée"); }
   }
-  document.title = `CVTT Vaires · championnat de Paris${surMenu ? "" : e ? " · " + e.nom : ""}`;
+  document.title = `CVTT Vaires · championnat de Paris${surMenu ? "" : e ? " · " + e.nom : club ? " · " + CLUBS[club].nom : ""}`;
 }
 document.getElementById("sous-titre").textContent = PROCHAINE ? `Prochaine journée : ${long(PROCHAINE.date)}` : `Saison ${D.saison}`;
 window.addEventListener("hashchange", route);

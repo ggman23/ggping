@@ -701,3 +701,10 @@ Pas d'onglet dans l'application pour l'instant.
   résultats, classements) viennent de l'API de la FFTT, filtrée sur le championnat de France :
   paris.diagnostic_api écrit dans le journal si l'API a les rencontres de Paris (étape suivante selon
   le résultat).
+- Contrôle (mise à jour n° 89, 18/11) : l'API n'a pour Vaires que le championnat de France (42 + 7
+  rencontres), pas le championnat de Paris. Demande : « au moins l'effectif des clubs, le meilleur
+  classement, les victoires, défaites et points gagnés ». Réalisation : adversaires.recuperer_paris
+  (clubs des poules de paris.py ; équipes du championnat de France par l'API, pingpocket, forme),
+  paris.donnees(adversaires) (sans licence), vue par club dans gabarit_paris.html ; /paris/ devient une
+  page de la mise à jour (paris_vaires.html → paris.html, PAGES_A_PART) ; PC : options 1 et 8 pour les
+  effectifs et meilleurs classements des 11 clubs hors du 77.

@@ -519,11 +519,21 @@ https://ggping.netlify.app/paris/), avec le **mot de passe du club** (ouverture 
 - Données : poules et calendrier des documents de la ligue (PDF « Poules HO / PH / D2 »), recopiés
   dans `ttvaires/paris.py` (le premier nommé de la grille reçoit) ; les tests vérifient que chaque
   équipe rencontre les sept autres une fois, une seule rencontre par équipe et par journée, le
-  vendredi. Aucune requête : la page ne change qu'avec ces documents (m'envoyer les nouveaux PDF).
-- Résultats, compositions, forme des adversaires, comme dans /club/ pour le championnat de France :
-  seulement si l'API de la FFTT a les rencontres du championnat de Paris. La mise à jour le vérifie
-  (journal : « Championnat de Paris dans l'API FFTT ? », compétitions par équipes du club sur la
-  saison, poules de Paris trouvées ; aucun nom de joueur).
+  vendredi. Nouveaux documents de la ligue : me les envoyer.
+- **Clubs adverses** (17 : 6 du 77, 8 du 93, 3 du 94), une vue par club (lien sur chaque adversaire et
+  dans le menu) : les rencontres de Vaires contre lui, ses équipes du championnat de France, et ses
+  joueurs, du mieux classé au moins bien classé, triables : points (situation mensuelle), meilleur
+  classement de l'historique (année), équipe où il joue en championnat de France (nombre de
+  rencontres), victoires – défaites et +/− depuis le début de la phase, points virtuels (estimation,
+  toutes compétitions) ; filtres « ont joué cette phase », « alignés en championnat de France ».
+  Comme la page adversaires du championnat de France (`adversaires.recuperer_paris`, mêmes caches) :
+  équipes et joueurs alignés par l'API de la FFTT, effectif complet et meilleur classement par
+  pingpocket.fr (pages lues par **le PC**, options 1 et 8, envoyées au site), forme par l'API. Faite
+  par l'étape adversaires de la mise à jour (`paris_vaires.html`, publiée à /paris/ comme /77/).
+- Pas de résultats ni de compositions du championnat de Paris : ses rencontres ne sont pas dans l'API
+  de la FFTT (contrôle du 18/11/2026, mise à jour n° 89 : seulement le championnat de France, 42
+  rencontres masculines et 7 féminines ; le journal le redit à chaque mise à jour, « Championnat de
+  Paris dans l'API FFTT ? »).
 - Liens : « Paris » en haut de /cal/, /indivs/, /tournois/ et /77/ (et dans le menu des trois
   premiers), dans « Aller à » et « Autres espaces » de /club/ ; /paris/ renvoie vers chacun. Pas de lien
   vers /lundi/.

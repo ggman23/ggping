@@ -6,13 +6,16 @@ Division 2 poule 3. Sept journées, le vendredi, sur toute la saison (la journé
 autres en phase 2). La grille des rencontres est la même pour toutes les poules : « 1/8 » veut dire
 que l'équipe placée en 1 reçoit celle placée en 8 (le premier nommé reçoit).
 
-La page /paris/ (mot de passe du club, comme /cal/) est faite de ces données seules : aucune requête.
-Les résultats, les compositions et la forme des adversaires viendront de l'API de la FFTT si elle a
-les rencontres du championnat de Paris (contrôle dans la mise à jour : diagnostic_api).
+Page /paris/ (mot de passe du club) : faite par la mise à jour (étape adversaires, paris_vaires.html,
+publiée comme /77/). L'API de la FFTT n'a pas les rencontres du championnat de Paris (contrôle du
+18/11/2026, diagnostic_api) : ni résultats ni compositions de Paris. Pour chaque club adverse, comme
+pour le championnat de France (adversaires.recuperer_paris) : ses joueurs, leurs points, leur meilleur
+classement, leur forme (victoires, défaites, points gagnés depuis le début de la phase) et l'équipe où
+chacun joue en championnat de France.
 """
 
 import json
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 
 GABARIT = Path(__file__).with_name("gabarit_paris.html")
@@ -55,8 +58,42 @@ def _equipe(position, club, nom, numero, dep):
             "vaires": club == CLUB_VAIRES}
 
 
-def donnees():
-    """Données de la page /paris/ (aucun nom de joueur)."""
+def _equipes_france(club):
+    """{joueur: (championnat, numéro de l'équipe où il a le plus joué en championnat de France, rencontres)}"""
+    compte = defaultdict(Counter)
+    for e in club.get("equipes", []):
+        for c in e.get("compositions", []):
+            for jid in c["joueurs"]:
+                compte[jid][(e["championnat"], e["numero"])] += 1
+    return {jid: (*c.most_common(1)[0][0], sum(c.values())) for jid, c in compte.items()}
+
+
+def clubs_adverses(adversaires):
+    """Clubs adverses pour la page (adversaires.recuperer_paris) : joueurs du mieux classé au moins bien
+    classé, sans numéro de licence."""
+    res = {}
+    for num, c in (adversaires or {}).get("clubs", {}).items():
+        france = _equipes_france(c)
+        joueurs = []
+        for j in c["joueurs"]:
+            f, m, eq = j.get("forme") or {}, j.get("meilleur") or {}, france.get(j["id"])
+            joueurs.append({"nom": f"{j.get('nom') or ''} {j.get('prenom') or ''}".strip(), "sexe": j.get("sexe"),
+                            "cat": j.get("categorie"), "pts": j.get("points_mensuels") or j.get("points"),
+                            "meilleur": m.get("points"), "annee": m.get("annee"),
+                            "v": f.get("v"), "d": f.get("d"), "gain": f.get("points"), "virt": f.get("virtuels"),
+                            "eq": (f"{eq[1]}" + (" F" if eq[0] == "F" else "")) if eq else None, "nb": eq[2] if eq else 0,
+                            "nouveau": bool(j.get("nouveau"))})
+        joueurs.sort(key=lambda x: (-(x["pts"] or 0), x["nom"]))
+        res[num] = {"nom": c["nom"], "complet": bool(c.get("effectif_complet")), "date": c.get("date_effectif"),
+                    "france": [{"numero": e["numero"], "ch": e["championnat"], "division": e["division"]}
+                               for e in c.get("equipes", [])],
+                    "joueurs": joueurs, "erreur": c.get("erreur")}
+    return res
+
+
+def donnees(adversaires=None):
+    """Données de la page /paris/ : poules et calendrier, et, avec `adversaires` (adversaires.recuperer_paris),
+    les clubs adverses et leurs joueurs (sans numéro de licence)."""
     grille = rencontres_de_la_poule()
     equipes = []
     for e in EQUIPES:
@@ -67,13 +104,15 @@ def donnees():
                       for j, jour, a, b in grille if nous in (a, b)]
         equipes.append({"cle": e["cle"], "nom": e["nom"], "division": e["division"], "code": e["code"], "poule": e["poule"],
                         "position": nous, "equipes": poule, "rencontres": rencontres, "calendrier": calendrier})
+    sources = (adversaires or {}).get("sources", {})
     return {"saison": SAISON, "source": SOURCE, "journees": [{"numero": i, "date": d} for i, d in enumerate(JOURNEES, 1)],
-            "equipes": equipes}
+            "equipes": equipes, "clubs": clubs_adverses(adversaires), "genere_le": (adversaires or {}).get("genere_le"),
+            "debut_forme": (sources.get("forme") or {}).get("debut"), "historiques_restants": sources.get("historiques_restants", 0)}
 
 
-def page():
-    """Page /paris/ (HTML) : le gabarit avec les données des poules."""
-    js = json.dumps(donnees(), ensure_ascii=False).replace("<", "\\u003c")
+def page(adversaires=None):
+    """Page /paris/ (HTML) : le gabarit avec les données."""
+    js = json.dumps(donnees(adversaires), ensure_ascii=False).replace("<", "\\u003c")
     return GABARIT.read_text(encoding="utf-8").replace("__DONNEES_JSON__", js).encode("utf-8")
 
 

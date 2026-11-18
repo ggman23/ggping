@@ -43,6 +43,7 @@ PUBLIES = {
     "fiches_vaires.html": ("fiches.html", "Fiches des joueurs", "Tout sur un joueur : courbe, manches (3, 4 ou 5), remontées, bilan selon le niveau de l'adversaire"),
     "departement_77.html": ("77.html", "Clubs du 77", "Joueurs, catégories, niveau et équipes de chaque club de Seine-et-Marne"),
     "indivs_vaires.html": ("indivs.html", "Individuels", "Poules du critérium des joueurs de Vaires et forme de leurs adversaires"),
+    "paris_vaires.html": ("paris.html", "Championnat de Paris", "Poules, calendrier et joueurs des clubs adverses des trois équipes"),
 }
 
 # Images à partager rangées à part (et non avec la page qui les produit)

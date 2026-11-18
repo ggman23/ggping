@@ -85,8 +85,29 @@ def page_adversaires(client, club, ctx, tous_les_historiques=False):
     html = generer_html(donnees, ctx.sortie / "vaires.html")
     # Classements des poules de toutes les équipes du club : une page et une image à partager
     classements = generer_html(donnees_classements(donnees), ctx.sortie / "classements_vaires.html", GABARIT_CLASSEMENTS)
-    return [html, classements, *faire_images("image_classements", donnees, IMPORT, dossier=ctx.images),
-            *faire_images("images_adversaires", donnees, dossier=ctx.images, aujourdhui=ctx.aujourdhui)], resume
+    fichiers = [html, classements, *faire_images("image_classements", donnees, IMPORT, dossier=ctx.images),
+                *faire_images("images_adversaires", donnees, dossier=ctx.images, aujourdhui=ctx.aujourdhui)]
+    if not ctx.archive:  # championnat de Paris : clubs adverses, leurs joueurs et leur forme (page /paris/)
+        try:
+            fichiers.append(page_paris(client, club, ctx, tous_les_historiques))
+        except Exception as e:  # noqa: BLE001 (la page du championnat de France ne dépend pas de celle de Paris)
+            print(f"  ! championnat de Paris : page non faite ({type(e).__name__} : {e})", flush=True)
+    return fichiers, resume
+
+
+def page_paris(client, club, ctx, tous_les_historiques=False):
+    from . import paris
+    from .adversaires import recuperer_paris
+
+    donnees = recuperer_paris(client, club, aujourdhui=ctx.aujourdhui, dossier_import=IMPORT,
+                              tous_les_historiques=tous_les_historiques, fichier_etat=CACHE / "effectif_adversaires_paris.json")
+    page = ctx.sortie / "paris_vaires.html"
+    page.write_bytes(paris.page(donnees))
+    joueurs = sum(len(c["joueurs"]) for c in donnees["clubs"].values())
+    complets = sum(1 for c in donnees["clubs"].values() if c.get("effectif_complet"))
+    print(f"Championnat de Paris : {len(donnees['clubs'])} clubs adverses, {joueurs} joueurs, "
+          f"{complets} effectifs complets (pingpocket.fr)", flush=True)
+    return page
 
 
 def page_resultats(client, club, ctx):

@@ -254,6 +254,52 @@ def recuperer(client, numero_club="08770250", aujourdhui=None, dossier_import=No
     return donnees
 
 
+def recuperer_paris(client, numero_club="08770250", aujourdhui=None, dossier_import=None, tous_les_historiques=False,
+                    fichier_etat=None):
+    """Adversaires du championnat de Paris (page /paris/). Ses rencontres ne sont pas dans l'API de la FFTT
+    (contrôle du 18/11/2026) : les poules et le calendrier sont ceux de paris.py. Pour chaque club adverse,
+    comme pour le championnat de France : ses joueurs alignés cette phase en championnat de France (API),
+    son effectif complet et le meilleur classement de ses joueurs (pingpocket.fr : pages lues par le PC),
+    leur forme depuis le début de la phase (API). Les mêmes caches servent : un club déjà lu pour la page
+    adversaires ne coûte presque rien."""
+    from . import paris
+
+    aujourdhui = aujourdhui or date.today()
+    auj = aujourdhui.isoformat()
+    phase, saison = fftt.phase_et_saison(aujourdhui)
+    debut, fin = fftt.bornes_phase(aujourdhui)
+    equipes, noms = [], {}
+    for e in paris.donnees()["equipes"]:
+        pos = {x["position"]: x for x in e["equipes"]}
+        rencontres = []
+        for c in e["calendrier"]:
+            a = pos[c["adversaire"]]
+            noms.setdefault(a["club"], a["nom"].rsplit(" ", 1)[0])
+            rencontres.append({"journee": c["journee"], "date": c["date"], "vaires_domicile": c["a_domicile"], "score": None,
+                               "adversaire": {"club": a["club"], "libelle": a["nom"], "numero": a["numero"]}})
+        equipes.append({"id": e["cle"], "libelle": e["nom"], "rencontres": rencontres})
+    print(f"=== Championnat de Paris : {len(noms)} clubs adverses (équipes du championnat de France : API FFTT)", flush=True)
+    rencontres_clubs, erreurs = {}, {}
+    for num in sorted(noms):
+        try:
+            rencontres_clubs[num] = fftt.rencontres_club(client, fftt.id_interne_club(client, num, debut), debut, fin, ttl=3 * HEURE)
+        except (ErreurReseau, ValueError) as err:
+            print(f"  ! {noms[num]} : {err}", flush=True)
+            rencontres_clubs[num], erreurs[num] = [], str(err)
+    detail = fftt.details(client, [r for rs in rencontres_clubs.values() for r in rs], auj, {})
+    clubs = {}
+    for num, rencontres in rencontres_clubs.items():
+        equipes_club, joueurs = equipes_et_compositions(num, rencontres, detail, {"M", "F"})
+        clubs[num] = {"numero": num, "nom": noms[num], "salle": None, "joueurs": list(joueurs.values()),
+                      "equipes": equipes_club, "effectif_complet": False, "erreur": erreurs.get(num)}
+    donnees = {"genere_le": datetime.now().isoformat(timespec="minutes"), "saison": saison, "phase": phase,
+               "club": {"numero": numero_club, "nom": numero_club, "salle": None},
+               "equipes": equipes, "clubs": clubs, "sources": {"pingpocket": False}}
+    completer_avec_pingpocket(client, donnees, dossier_import, tous_les_historiques, fichier_etat)
+    ajouter_forme(client, donnees, detail, debut, min(fin, auj), auj)
+    return donnees
+
+
 def joueurs_a_suivre(donnees, auj):
     """Joueurs des clubs que Vaires doit encore rencontrer (rencontre à venir ou pas encore saisie) dont
     on lit la forme : ceux déjà alignés cette phase, et les licenciés réinscrits à plus de 500 points
