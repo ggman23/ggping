@@ -5,8 +5,10 @@ Recopiés des captures de l'application de la FFTT envoyées le 18/11/2026 : Vai
 une exempte à chaque journée ; pas encore de dates dans l'application : celles du calendrier du comité,
 les mêmes vendredis que le championnat de Paris, voir calendrier.py). Pas d'équipe de Vaires en moins de 11 ans.
 
-Qui peut jouer : les joueurs de la catégorie d'âge de l'équipe et des catégories plus jeunes (un benjamin
-peut jouer en moins de 13 et en moins de 15 ans). Les licences loisir sont gardées : les clubs les
+Qui peut jouer : les joueurs de la catégorie d'âge de l'équipe et des catégories plus jeunes. Les catégories
+de la FFTT vont de deux ans en deux ans (âge atteint dans l'année où commence la saison) : poussins moins de
+9 ans, benjamins 9-10 ans, minimes 11-12 ans, cadets 13-14 ans. Moins de 13 ans : minimes, benjamins,
+poussins ; moins de 15 ans : cadets aussi (un minime 1 peut jouer en moins de 13 et en moins de 15 ans). Les licences loisir sont gardées : les clubs les
 changeront pour faire jouer ces jeunes.
 
 Page /jeunes/ (mot de passe du club), faite par l'étape adversaires de la mise à jour (jeunes_vaires.html,
@@ -27,10 +29,10 @@ SOURCE = ("Poules du championnat des jeunes par équipes 2026-2027 (application 
 JOURNEES = ["2026-11-27", "2027-01-08", "2027-02-05", "2027-03-19", "2027-04-02", "2027-05-14", "2027-06-04"]
 CLUB_VAIRES = paris.CLUB_VAIRES
 
-# Catégories d'âge (code court de pingpocket : P, B1, B2, M1, M2...) : chaque équipe accueille sa catégorie
-# et les plus jeunes.
-CATEGORIES = {"P": "poussins", "B": "benjamins", "M": "minimes"}
-AGES = {"moins de 11 ans": ["P"], "moins de 13 ans": ["P", "B"], "moins de 15 ans": ["P", "B", "M"]}
+# Catégories d'âge (code court de pingpocket : P, B1, B2, M1, M2, C1, C2...) : chaque équipe accueille sa
+# catégorie et les plus jeunes. « Moins de 13 ans » = minimes (11-12 ans) et plus jeunes.
+CATEGORIES = {"P": "poussins", "B": "benjamins", "M": "minimes", "C": "cadets"}
+AGES = {"moins de 11 ans": ["P", "B"], "moins de 13 ans": ["P", "B", "M"], "moins de 15 ans": ["P", "B", "M", "C"]}
 
 # Clubs des deux poules : nom des équipes (sans leur numéro) -> numéro FFTT (None : retrouvé par son nom)
 CLUBS = {

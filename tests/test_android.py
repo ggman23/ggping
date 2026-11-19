@@ -39,14 +39,15 @@ def test_cle_creee_puis_reprise(tmp_path, monkeypatch):
     assert not (tmp_path / "c" / cle_signature.FICHIER).exists()                 # l'ancienne n'est pas remplacée
 
 
-def test_onglets_paris_entre_club_et_lundi():
-    """Sept onglets ; Paris entre Club et Lundi, sur les trois copies, avec le témoin du club (la page
-    /paris/ garde le mot de passe du club sous la même clé)."""
+def test_onglets_paris_et_jeunes_entre_club_et_lundi():
+    """Huit onglets ; Paris et Jeunes entre Club et Lundi, sur les trois copies, avec le témoin du club
+    (/paris/ et /jeunes/ gardent le mot de passe du club sous la même clé)."""
     import re
     from ttvaires import netlify
 
     java = (Path(__file__).resolve().parent.parent / "android/src/fr/cvtt/vaires/Principale.java").read_text(encoding="utf-8")
-    assert re.findall(r'new Onglet\("(\w+)"', java) == ["maj", "club", "paris", "lundi", "indivs", "goatcounter", "umami"]
+    assert re.findall(r'new Onglet\("(\w+)"', java) == ["maj", "club", "paris", "jeunes", "lundi", "indivs", "goatcounter", "umami"]
     assert 'new Onglet("paris", "Paris", "🗼", COPIES, NOMS_COPIES, "paris/", TEMOIN_CLUB,' in java
-    assert "PARIS = 2, LUNDI = 3, INDIVS = 4, GOATCOUNTER = 5, UMAMI = 6" in java
-    assert netlify.PAGES_A_PART["paris.html"][0] == "paris"
+    assert 'new Onglet("jeunes", "Jeunes", "🧒", COPIES, NOMS_COPIES, "jeunes/", TEMOIN_CLUB,' in java
+    assert "PARIS = 2, JEUNES = 3, LUNDI = 4, INDIVS = 5, GOATCOUNTER = 6, UMAMI = 7" in java
+    assert netlify.PAGES_A_PART["paris.html"][0] == "paris" and netlify.PAGES_A_PART["jeunes.html"][0] == "jeunes"

@@ -724,3 +724,5 @@ Pas d'onglet dans l'application pour l'instant.
   forme de tous les jeunes), gabarit_championnat.html (ex gabarit_paris.html, paramétré par D.espace,
   D.titre, e.categories), PAGES_A_PART jeunes.html, liens « Jeunes » partout (en-têtes sur deux lignes
   sur téléphone). Contrôle de l'API élargi à toute compétition hors championnat de France.
+- Correction (19/11) : « mon fils, minime 1, pourra jouer en Vaires 1 ou Vaires 2 » : moins de 13 ans =
+  minimes (11-12 ans) et plus jeunes, moins de 15 ans = cadets (13-14 ans) aussi (jeunes.AGES).

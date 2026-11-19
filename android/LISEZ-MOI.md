@@ -1,12 +1,13 @@
 # Application Android CVTT Vaires
 
-Tout sous la main dans une seule application, en sept onglets (en bas de l'écran) :
+Tout sous la main dans une seule application, en huit onglets (en bas de l'écran) :
 
 | Onglet | Page |
 |---|---|
 | ⟳ **MàJ** (mise à jour) | le site GitHub (https://ggman23.github.io/ggping/) : boutons de mise à jour, pages, images |
 | 🏓 **Club** | l'espace club, sur GitHub (https://ggman23.github.io/ggping/club/), sinon Cloudflare, sinon Netlify (voir plus bas) |
 | 🗼 **Paris** | le championnat de Paris /paris/ (les trois équipes de Vaires, leurs adversaires et leurs joueurs), sur GitHub (https://ggman23.github.io/ggping/paris/), sinon Cloudflare, sinon Netlify |
+| 🧒 **Jeunes** | le championnat des jeunes /jeunes/ (les équipes −15 et −13 ans, leurs adversaires et leurs jeunes), sur GitHub (https://ggman23.github.io/ggping/jeunes/), sinon Cloudflare, sinon Netlify |
 | 👑 **Lundi** | l'espace /lundi/ (« Le roi du lundi »), sur GitHub (https://ggman23.github.io/ggping/lundi/), sinon Cloudflare, sinon Netlify |
 | 🎯 **Indivs** | les individuels /indivs/ (poules du critérium et forme des adversaires), sur GitHub (https://ggman23.github.io/ggping/indivs/), sinon Cloudflare, sinon Netlify |
 | 📊 **Goat** | les statistiques GoatCounter (https://ggman23.goatcounter.com/) |
@@ -22,15 +23,15 @@ d'Android revient à la page précédente de l'onglet.
 - Les liens vers d'autres sites (GitHub, cartes des salles...) s'ouvrent dans le navigateur.
 - Tes visites depuis l'application ne sont **pas comptées** dans les statistiques du club.
 
-## Onglets Club, Paris, Lundi et Indivs : trois copies du même espace
+## Onglets Club, Paris, Jeunes, Lundi et Indivs : trois copies du même espace
 
-Les espaces club, /paris/, /lundi/ et /indivs/ sont publiés à trois adresses, avec le même contenu et le même
+Les espaces club, /paris/, /jeunes/, /lundi/ et /indivs/ sont publiés à trois adresses, avec le même contenu et le même
 mot de passe (celui du club ; /lundi/ a le sien depuis le 17/11/2026, retenu à part par la page). À l'ouverture de l'onglet (et avec ⌂ ou un appui long sur l'onglet),
 l'application vérifie l'une après l'autre que la page répond et ouvre la première qui marche :
 
-1. **GitHub** : https://ggman23.github.io/ggping/club/ (ou …/paris/, …/lundi/), mis à jour à chaque mise à jour ;
-2. sinon **Cloudflare** : https://ggping-pap.pages.dev/club/ (ou …/paris/, …/lundi/) ;
-3. sinon **Netlify** : https://ggping.netlify.app/club/ (ou …/paris/, …/lundi/), mis à jour seulement à la main
+1. **GitHub** : https://ggman23.github.io/ggping/club/ (ou …/paris/, …/jeunes/, …/lundi/), mis à jour à chaque mise à jour ;
+2. sinon **Cloudflare** : https://ggping-pap.pages.dev/club/ (ou …/paris/, …/jeunes/, …/lundi/) ;
+3. sinon **Netlify** : https://ggping.netlify.app/club/ (ou …/paris/, …/jeunes/, …/lundi/), mis à jour seulement à la main
    (bouton « Mettre à jour les 3 sites ») ;
 4. sinon une page « site indisponible » avec un bouton **Réessayer** (↻ fait la même chose).
 
@@ -40,7 +41,7 @@ cours de route (site en panne), la même page est ouverte sur la copie suivante.
 
 Chaque copie a sa propre mémoire : le mot de passe du club est demandé **une fois par copie** (une
 fois sur GitHub, puis une fois sur Cloudflare le jour où elle sert), cocher « Se souvenir ». Sur une
-même copie, Club, Paris et Indivs partagent le mot de passe retenu : saisi dans l'un, les autres
+même copie, Club, Paris, Jeunes et Indivs partagent le mot de passe retenu : saisi dans l'un, les autres
 s'ouvrent seuls. Un lien d'une de ces pages vers une autre (« Espace club » ou « Image de la poule » depuis
 /indivs/, « Autres espaces » du club) ouvre le bon onglet.
 

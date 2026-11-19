@@ -23,8 +23,8 @@ def test_poules_des_jeunes_recopiees_des_captures():
 def test_calendrier_des_deux_equipes_de_vaires():
     d = jeunes.donnees()
     v1, v2 = d["equipes"]
-    assert (v1["libelle"], v1["division"], v1["poule"], v1["categories"]) == ("VAIRES CVTT 1", "Moins de 15 ans", "Poule 3", ["P", "B", "M"])
-    assert (v2["libelle"], v2["division"], v2["poule"], v2["categories"]) == ("VAIRES CVTT 2", "Moins de 13 ans", "Poule 1", ["P", "B"])
+    assert (v1["libelle"], v1["division"], v1["poule"], v1["categories"]) == ("VAIRES CVTT 1", "Moins de 15 ans", "Poule 3", ["P", "B", "M", "C"])
+    assert (v2["libelle"], v2["division"], v2["poule"], v2["categories"]) == ("VAIRES CVTT 2", "Moins de 13 ans", "Poule 1", ["P", "B", "M"])
     assert [(r["journee"], r["vaires_domicile"], r["adversaire"]["libelle"]) for r in v1["rencontres"][:2]] == [
         (1, True, "CTT MONTHYON 1"), (2, False, "ROISSY TT US 3")]
     assert v1["rencontres"][0]["adversaire"]["club"] == "08771201" and not v1["rencontres"][0]["date_a_confirmer"]
@@ -41,12 +41,16 @@ def test_calendrier_des_deux_equipes_de_vaires():
 
 
 def test_qui_peut_jouer_dans_chaque_equipe():
-    """La catégorie de l'équipe et les plus jeunes : un benjamin joue en moins de 13 et en moins de 15 ans."""
-    assert jeunes.peut_jouer("B1", "moins de 13 ans") and jeunes.peut_jouer("B2", "moins de 15 ans")
-    assert jeunes.peut_jouer("P", "moins de 13 ans") and jeunes.peut_jouer("M2", "moins de 15 ans")
-    assert not jeunes.peut_jouer("M1", "moins de 13 ans") and not jeunes.peut_jouer("C1", "moins de 15 ans")
+    """La catégorie de l'équipe et les plus jeunes. Catégories de la FFTT : poussins moins de 9 ans, benjamins
+    9-10, minimes 11-12, cadets 13-14 : un minime 1 (né en 2015, 11 ans en 2026) joue en moins de 13 et en
+    moins de 15 ans ; un cadet seulement en moins de 15 ans."""
+    assert jeunes.peut_jouer("M1", "moins de 13 ans") and jeunes.peut_jouer("M1", "moins de 15 ans")
+    assert jeunes.peut_jouer("M2", "moins de 13 ans") and jeunes.peut_jouer("B1", "moins de 13 ans")
+    assert jeunes.peut_jouer("P", "moins de 13 ans") and jeunes.peut_jouer("C2", "moins de 15 ans")
+    assert not jeunes.peut_jouer("C1", "moins de 13 ans") and not jeunes.peut_jouer("J1", "moins de 15 ans")
+    assert jeunes.peut_jouer("B2", "moins de 11 ans") and not jeunes.peut_jouer("M1", "moins de 11 ans")
     assert not jeunes.peut_jouer(None, "moins de 15 ans") and not jeunes.peut_jouer("V40", "moins de 15 ans")
-    assert jeunes.jeune({"categorie": "M2"}) and not jeunes.jeune({"categorie": "S"}) and not jeunes.jeune({})
+    assert jeunes.jeune({"categorie": "C2"}) and not jeunes.jeune({"categorie": "J1"}) and not jeunes.jeune({})
 
 
 def test_numeros_des_clubs_retrouves_par_leur_nom():
@@ -73,17 +77,18 @@ def test_jeunes_des_clubs_adverses_loisir_compris(tmp_path):
     pages = {base + "CATEGORY": _ecran("par catégorie d'âge", [("Sénior", [("1", "ALIGNE Paul", "1210")]),
                                                               ("Minime 2", [("5", "MINIME Leo", "640")]),
                                                               ("Benjamin 1", [("6", "BENJ Lou", "L")]),
-                                                              ("Cadet 1", [("7", "CADET Max", "700")])]),
-             base + "LICENCE_STATE": _ecran("par licences à jour", [("Licences à jour", [(i, "", "") for i in "1567"])])}
+                                                              ("Cadet 1", [("7", "CADET Max", "700")]),
+                                                              ("Junior 1", [("8", "JUNIOR Tim", "800")])]),
+             base + "LICENCE_STATE": _ecran("par licences à jour", [("Licences à jour", [(i, "", "") for i in "15678"])])}
     client = FauxPingpocket(en_ligne=True, pages=pages, en_cache=[f"/app/fftt/licencies/{i}/graphiques/historique-classement"
-                                                                  for i in "1567"])
+                                                                  for i in "15678"])
     donnees = _donnees()
     completer_avec_pingpocket(client, donnees, tmp_path, garder=jeunes.jeune)
     joueurs = {j["id"]: j for j in donnees["clubs"][MEAUX]["joueurs"]}
-    assert set(joueurs) == {"5", "6"} and joueurs["6"]["loisir"] and not joueurs["5"]["loisir"]
+    assert set(joueurs) == {"5", "6", "7"} and joueurs["6"]["loisir"] and not joueurs["5"]["loisir"]  # pas le junior
     # Forme : tous les jeunes réinscrits (même à 500 points), pas les licences loisir
     donnees["equipes"] = [{"rencontres": [{"adversaire": {"club": MEAUX}, "score": None, "date": "2026-11-27"}]}]
-    assert set(joueurs_a_suivre(donnees, "2026-11-19", tous=True)[1]) == {"5"}
+    assert set(joueurs_a_suivre(donnees, "2026-11-19", tous=True)[1]) == {"5", "7"}
     # Club sans liste : les joueurs des feuilles de match n'ont pas d'âge connu
     donnees = _donnees()
     completer_avec_pingpocket(FauxPingpocket(en_ligne=True), donnees, tmp_path, garder=jeunes.jeune)

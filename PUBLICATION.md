@@ -557,8 +557,10 @@ présentation que /paris/ (`gabarit_championnat.html`, commun aux deux pages).
   captures de l'application de la FFTT du 18/11/2026 dans `ttvaires/jeunes.py` ; dates : les vendredis
   du calendrier du comité (les mêmes que Paris) ; en moins de 13 ans, l'application n'a pas encore de
   dates ni de numéros de tour : « (à confirmer) », journées dans l'ordre de l'application.
-- **Qui peut jouer** : la catégorie de l'équipe et les plus jeunes (moins de 15 ans : minimes, benjamins,
-  poussins ; moins de 13 ans : benjamins, poussins). Chaque fiche d'adversaire ne montre que les jeunes
+- **Qui peut jouer** : la catégorie de l'équipe et les plus jeunes. Catégories de la FFTT, de deux ans en
+  deux ans (âge atteint dans l'année où commence la saison) : poussins moins de 9 ans, benjamins 9-10,
+  minimes 11-12, cadets 13-14. Moins de 15 ans : cadets, minimes, benjamins, poussins ; moins de 13 ans :
+  minimes, benjamins, poussins (un minime 1 joue dans les deux équipes). Chaque fiche d'adversaire ne montre que les jeunes
   qui ont l'âge, **licences loisir comprises** (badge « loisir » : le club les changera pour les faire
   jouer ; pas de forme pour elles). Forme de **tous** les jeunes réinscrits (beaucoup sont à 500 points),
   depuis le début de la phase (la saison jusqu'en décembre).

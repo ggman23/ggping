@@ -54,10 +54,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Application CVTT Vaires : sept onglets, chacun avec sa page qui reste ouverte quand on passe
+ * Application CVTT Vaires : huit onglets, chacun avec sa page qui reste ouverte quand on passe
  * de l'un à l'autre : le site GitHub (mise à jour), l'espace club, le championnat de Paris (/paris/),
- * /lundi/, les individuels (/indivs/), GoatCounter et Umami. Le club, /paris/, /lundi/ et /indivs/
- * sont publiés en trois copies
+ * le championnat des jeunes (/jeunes/), /lundi/, les individuels (/indivs/), GoatCounter et Umami. Le
+ * club, /paris/, /jeunes/, /lundi/ et /indivs/ sont publiés en trois copies
  * identiques : l'onglet ouvre la première qui répond, GitHub, sinon Cloudflare, sinon Netlify, sinon
  * une page d'erreur avec « Réessayer ».
  * Les téléchargements et le partage d'images des pages passent par l'application (pont « Appli »).
@@ -77,7 +77,7 @@ public class Principale extends Activity {
                String... hotes) {
             this.cle = cle;
             this.titre = titre;
-            // Sept boutons en bas : « Mise à jour » ne tiendrait pas sur un écran de 360 dp
+            // Huit boutons en bas : « Mise à jour » ne tiendrait pas sur un écran de 360 dp
             this.court = titre.equals("GoatCounter") ? "Goat" : titre.equals("Mise à jour") ? "MàJ" : titre;
             this.symbole = symbole;
             this.racines = racines;
@@ -106,8 +106,8 @@ public class Principale extends Activity {
     static final String GITHUB = "https://ggman23.github.io/ggping/", CLOUDFLARE = "https://ggping-pap.pages.dev/",
             NETLIFY = "https://ggping.netlify.app/";
     static final String[] COPIES = {GITHUB, CLOUDFLARE, NETLIFY}, NOMS_COPIES = {"GitHub", "Cloudflare", "Netlify"};
-    static final int MISE_A_JOUR = 0, CLUB = 1, PARIS = 2, LUNDI = 3, INDIVS = 4, GOATCOUNTER = 5, UMAMI = 6;
-    // Le témoin est la clé sous laquelle les pages du club, de /paris/ et de /lundi/ gardent le mot de passe
+    static final int MISE_A_JOUR = 0, CLUB = 1, PARIS = 2, JEUNES = 3, LUNDI = 4, INDIVS = 5, GOATCOUNTER = 6, UMAMI = 7;
+    // Le témoin est la clé sous laquelle les pages du club, de /paris/, /jeunes/ et /lundi/ gardent le mot de passe
     // (ttvaires/ressources.py) : Cloudflare Pages, par exemple, répond par la page d'accueil à une
     // adresse qui n'existe pas. Il est au début des pages (balise meta cvtt-cle) depuis la mise à jour
     // du 10/11/2026 ; avant, seulement à la fin (après 2 Mo pour /lundi/) : la lecture s'arrête dès
@@ -118,6 +118,8 @@ public class Principale extends Activity {
         new Onglet("club", "Club", "🏓", COPIES, NOMS_COPIES, "club/", TEMOIN_CLUB,
                 "ggman23.github.io", "ggping-pap.pages.dev", "ggping.netlify.app"),
         new Onglet("paris", "Paris", "🗼", COPIES, NOMS_COPIES, "paris/", TEMOIN_CLUB,
+                "ggman23.github.io", "ggping-pap.pages.dev", "ggping.netlify.app"),
+        new Onglet("jeunes", "Jeunes", "🧒", COPIES, NOMS_COPIES, "jeunes/", TEMOIN_CLUB,
                 "ggman23.github.io", "ggping-pap.pages.dev", "ggping.netlify.app"),
         new Onglet("lundi", "Lundi", "👑", COPIES, NOMS_COPIES, "lundi/", TEMOIN_CLUB,
                 "ggman23.github.io", "ggping-pap.pages.dev", "ggping.netlify.app"),
