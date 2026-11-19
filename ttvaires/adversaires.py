@@ -264,16 +264,51 @@ def recuperer_paris(client, numero_club="08770250", aujourdhui=None, dossier_imp
     adversaires ne coûte presque rien."""
     from . import paris
 
+    return clubs_des_poules(client, "Championnat de Paris", paris.donnees()["equipes"], numero_club, aujourdhui,
+                            dossier_import, tous_les_historiques, fichier_etat)
+
+
+def recuperer_jeunes(client, numero_club="08770250", aujourdhui=None, dossier_import=None, tous_les_historiques=False,
+                     fichier_etat=None):
+    """Adversaires du championnat des jeunes par équipes (page /jeunes/) : poules de jeunes.py, numéros des
+    clubs retrouvés par leur nom (jeunes.trouver_clubs), puis comme /paris/, mais seulement les jeunes qui ont
+    l'âge (poussins, benjamins, minimes), licences loisir comprises, et la forme de chacun d'eux."""
+    from . import jeunes
+
+    aujourdhui = aujourdhui or date.today()
+    annee = aujourdhui.year if aujourdhui.month >= 7 else aujourdhui.year - 1
+    print("=== Championnat des jeunes : numéros des clubs adverses (rencontres du comité, API FFTT)", flush=True)
+    try:
+        numeros = jeunes.trouver_clubs(client, f"{annee}-07-01")
+    except (ErreurReseau, ValueError) as err:
+        print(f"  ! clubs non retrouvés ({err})", flush=True)
+        numeros = {}
+    equipes = [{**e, "rencontres": [r for r in e["rencontres"] if r["adversaire"] and r["adversaire"]["club"] in
+                                    {n for n in {**jeunes.CLUBS, **numeros}.values() if n}]}
+               for e in jeunes.donnees(numeros=numeros)["equipes"]]
+    donnees = clubs_des_poules(client, "Championnat des jeunes", equipes, numero_club, aujourdhui, dossier_import,
+                               tous_les_historiques, fichier_etat, garder=jeunes.jeune)
+    donnees["numeros"] = {k: v for k, v in numeros.items() if v}
+    return donnees
+
+
+def clubs_des_poules(client, titre, equipes_vaires, numero_club, aujourdhui, dossier_import, tous_les_historiques,
+                     fichier_etat, garder=None):
+    """Clubs adverses d'équipes de Vaires dont les poules ne sont pas dans l'API (Paris, jeunes) : pour chacun,
+    ses équipes et ses joueurs du championnat de France (API), son effectif et le meilleur classement de ses
+    joueurs (pingpocket.fr), leur forme (API). `garder` (jeunes) : seuls les joueurs qu'il accepte restent,
+    licences loisir comprises, et la forme de chacun est lue."""
     aujourdhui = aujourdhui or date.today()
     auj = aujourdhui.isoformat()
     phase, saison = fftt.phase_et_saison(aujourdhui)
     debut, fin = fftt.bornes_phase(aujourdhui)
     equipes, noms = [], {}
-    for e in paris.donnees()["equipes"]:
+    for e in equipes_vaires:
         for r in e["rencontres"]:
-            noms.setdefault(r["adversaire"]["club"], r["adversaire"]["libelle"].rsplit(" ", 1)[0])
+            if r.get("adversaire"):
+                noms.setdefault(r["adversaire"]["club"], r["adversaire"]["libelle"].rsplit(" ", 1)[0])
         equipes.append({"id": e["id"], "libelle": e["libelle"], "rencontres": e["rencontres"]})
-    print(f"=== Championnat de Paris : {len(noms)} clubs adverses (équipes du championnat de France : API FFTT)", flush=True)
+    print(f"=== {titre} : {len(noms)} clubs adverses (équipes du championnat de France : API FFTT)", flush=True)
     rencontres_clubs, erreurs = {}, {}
     for num in sorted(noms):
         try:
@@ -290,15 +325,16 @@ def recuperer_paris(client, numero_club="08770250", aujourdhui=None, dossier_imp
     donnees = {"genere_le": datetime.now().isoformat(timespec="minutes"), "saison": saison, "phase": phase,
                "club": {"numero": numero_club, "nom": numero_club, "salle": None},
                "equipes": equipes, "clubs": clubs, "sources": {"pingpocket": False}}
-    completer_avec_pingpocket(client, donnees, dossier_import, tous_les_historiques, fichier_etat)
-    ajouter_forme(client, donnees, detail, debut, min(fin, auj), auj)
+    completer_avec_pingpocket(client, donnees, dossier_import, tous_les_historiques, fichier_etat, garder=garder)
+    ajouter_forme(client, donnees, detail, debut, min(fin, auj), auj, tous=garder is not None)
     return donnees
 
 
-def joueurs_a_suivre(donnees, auj):
+def joueurs_a_suivre(donnees, auj, tous=False):
     """Joueurs des clubs que Vaires doit encore rencontrer (rencontre à venir ou pas encore saisie) dont
     on lit la forme : ceux déjà alignés cette phase, et les licenciés réinscrits à plus de 500 points
-    (ils peuvent jouer critérium ou tournois sans avoir encore joué en championnat). {licence: [fiches]}."""
+    (ils peuvent jouer critérium ou tournois sans avoir encore joué en championnat). Avec `tous` (jeunes :
+    beaucoup sont à 500 points), tous les licenciés réinscrits hors licence loisir. {licence: [fiches]}."""
     a_venir = {r["adversaire"]["club"] for e in donnees["equipes"] for r in e["rencontres"]
                if r.get("adversaire") and (not r.get("score") or r["date"] > auj)}
     joueurs = {}
@@ -308,15 +344,16 @@ def joueurs_a_suivre(donnees, auj):
             continue
         alignes = {jid for e in club["equipes"] for c in e["compositions"] for jid in c["joueurs"]}
         for j in club["joueurs"]:
-            if j["id"] in alignes or (j.get("renouvele") and (j.get("points_mensuels") or j.get("points") or 0) > 500):
+            if tous and j.get("renouvele") and not j.get("loisir") or j["id"] in alignes or (
+                    j.get("renouvele") and (j.get("points_mensuels") or j.get("points") or 0) > 500):
                 joueurs.setdefault(j["id"], []).append(j)
     return a_venir, joueurs
 
 
-def ajouter_forme(client, donnees, detail, debut, fin, auj):
+def ajouter_forme(client, donnees, detail, debut, fin, auj, tous=False):
     """Forme des joueurs adverses (j["forme"]) : victoires, défaites et points gagnés ou perdus depuis
     le début de la phase, toutes compétitions (championnat, critérium fédéral, tournois...)."""
-    a_venir, joueurs = joueurs_a_suivre(donnees, auj)
+    a_venir, joueurs = joueurs_a_suivre(donnees, auj, tous)
     print(f"6/6 Forme des joueurs adverses (toutes compétitions) : {len(joueurs)} joueurs des {len(a_venir)} clubs "
           "encore à rencontrer (API FFTT)", flush=True)
     formes = forme_joueurs(client, list(joueurs), detail, debut, fin) if joueurs else {}
@@ -364,14 +401,16 @@ def _memoriser_listes_en_cache(client, clubs, liens, etats):
     return change
 
 
-def completer_avec_pingpocket(client, donnees, dossier_import=None, tous_les_historiques=False, fichier_etat=None):
+def completer_avec_pingpocket(client, donnees, dossier_import=None, tous_les_historiques=False, fichier_etat=None,
+                              garder=None):
     """Effectifs complets, catégories, meilleur classement et adresses des salles (pingpocket.fr).
 
     Les listes de licenciés enregistrées depuis un navigateur dans le dossier import complètent
     (ou remplacent, si elles sont plus récentes) celles du site. Chaque club reçoit la date de sa
     liste (date_effectif) ; avec `fichier_etat` (état mémorisé, envoyé par le PC comme celui de la
     page effectif), les joueurs inscrits ou réinscrits depuis la liste précédente du club sont
-    marqués « nouveau » (reference_nouveaux : date de cette liste précédente)."""
+    marqués « nouveau » (reference_nouveaux : date de cette liste précédente). Avec `garder` (page /jeunes/),
+    seuls les joueurs qu'il accepte restent, licences loisir comprises (j["loisir"])."""
     print("4/6 Compléments pingpocket.fr : effectifs complets, catégories, adresses des salles", flush=True)
     numero_club = donnees["club"]["numero"]
     clubs = donnees["clubs"]
@@ -412,7 +451,10 @@ def completer_avec_pingpocket(client, donnees, dossier_import=None, tous_les_his
         importes += "import" in club
         club["effectif_complet"] = True
         vus = {j["id"]: j for j in club["joueurs"]}
-        effectif = pingpocket.effectif(listes, {t: t for t in TRIS})
+        if garder:  # jeunes : licences loisir comprises, seulement ceux qui ont l'âge
+            effectif = [j for j in pingpocket.licencies(listes, {t: t for t in TRIS}) if garder(j)]
+        else:
+            effectif = pingpocket.effectif(listes, {t: t for t in TRIS})
         for j in effectif:
             if j["id"] in vus:  # points officiels de la feuille de match, sexe du championnat féminin
                 j["points"] = vus[j["id"]]["points"]
@@ -430,6 +472,9 @@ def completer_avec_pingpocket(client, donnees, dossier_import=None, tous_les_his
                     j["nouveau"] = j["id"] in nouveaux
             if etat:
                 etats[num], change = etat, True
+    if garder:  # jeunes : sans liste du club, on ne connaît pas l'âge des joueurs vus sur les feuilles de match
+        for club in clubs.values():
+            club["joueurs"] = [j for j in club["joueurs"] if garder(j)]
     donnees["sources"]["pingpocket"] = complets > 0
     if change:
         fichier.parent.mkdir(parents=True, exist_ok=True)

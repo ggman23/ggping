@@ -73,7 +73,8 @@ def test_page_paris_avec_le_mot_de_passe_du_club_et_liens_entre_les_espaces(tmp_
         club = (dossier / "club" / "index.html").read_text(encoding="utf-8")
         assert '{"chemin": "paris", "titre": "Championnat de Paris"}' in club
     html = paris.page().decode("utf-8")
-    assert all(f"`${{BASE}}/{e}/`" in html for e in ("club", "indivs", "tournois", "cal", "77")) and "/lundi/" not in html
+    assert '["club", "paris", "jeunes", "indivs", "tournois", "cal", "77"]' in html and "/lundi/" not in html
+    assert all(f'id="vers-{e}"' in html for e in ("club", "paris", "jeunes", "indivs", "tournois", "cal", "77"))
     for gabarit in ("gabarit_cal.html", "gabarit_indivs.html", "gabarit_tournois.html", "gabarit_77.html"):
         autre = netlify.Path(netlify.__file__).with_name(gabarit).read_text(encoding="utf-8")
         assert 'id="vers-paris"' in autre and ("`${BASE}/paris/`" in autre or '["vers-paris", "paris"]' in autre)
@@ -133,7 +134,8 @@ def test_adversaires_de_paris_effectif_meilleur_classement_et_forme(monkeypatch)
                              "compositions": [{"journee": 2, "date": "2026-10-02", "joueurs": ["j1"]}]}]
     assert v["joueurs"] == [{"id": "j1", "nom": "DUPONT", "prenom": "Marc", "sexe": None, "categorie": "V40", "categorie_long": None,
                              "classement": 11, "points": 1180, "points_mensuels": 1205, "meilleur": {"points": 1450, "annee": "2015"},
-                             "renouvele": True, "nouveau": None, "forme": {"v": 7, "d": 2, "points": 25.5, "virtuels": 1205.5}}]
+                             "renouvele": True, "nouveau": None, "loisir": None,
+                             "forme": {"v": 7, "d": 2, "points": 25.5, "virtuels": 1205.5}}]
     assert page["clubs"]["08771394"]["joueurs"] == [] and "7123456" not in json.dumps(page)
     # Vaires 1 reçoit Villemomble 2 à la J1 : la fiche de la rencontre montre ce club
     assert page["equipes"][0]["rencontres"][0]["adversaire"]["club"] == "08930113"
@@ -152,10 +154,11 @@ def test_le_bilan_dit_quand_le_championnat_de_paris_arrive_dans_l_api(tmp_path, 
     monkeypatch.setattr(m, "donnees_classements", lambda d: d)
     monkeypatch.setattr(m, "faire_images", lambda *a, **k: [])
     monkeypatch.setattr(m, "page_paris", lambda *a, **k: tmp_path / "paris_vaires.html")
+    monkeypatch.setattr(m, "page_jeunes", lambda *a, **k: tmp_path / "jeunes_vaires.html")
     ctx = SimpleNamespace(archive=False, aujourdhui=date(2026, 11, 25), sortie=tmp_path, images=tmp_path, donnees=lambda d: d)
     competitions = {"FED_Championnat de France par Equipes Masculin": 42}
     monkeypatch.setattr(paris, "diagnostic_api", lambda *a: competitions)
     assert m.page_adversaires(None, "08770250", ctx)[1] == "tout est là"
-    competitions["Championnat de Paris IDF"] = 21
+    competitions["L08_Championnat de Paris"] = 21
     assert m.page_adversaires(None, "08770250", ctx)[1] == (
-        "tout est là ; championnat de Paris maintenant dans l'API FFTT (21 rencontres de Vaires)")
+        "tout est là ; nouveau dans l'API FFTT : L08_Championnat de Paris (21 rencontres de Vaires)")

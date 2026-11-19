@@ -44,6 +44,7 @@ PUBLIES = {
     "departement_77.html": ("77.html", "Clubs du 77", "Joueurs, catégories, niveau et équipes de chaque club de Seine-et-Marne"),
     "indivs_vaires.html": ("indivs.html", "Individuels", "Poules du critérium des joueurs de Vaires et forme de leurs adversaires"),
     "paris_vaires.html": ("paris.html", "Championnat de Paris", "Poules, calendrier et joueurs des clubs adverses des trois équipes"),
+    "jeunes_vaires.html": ("jeunes.html", "Championnat des jeunes", "Poules, calendrier et jeunes des clubs adverses des équipes −15 et −13 ans"),
 }
 
 # Images à partager rangées à part (et non avec la page qui les produit)

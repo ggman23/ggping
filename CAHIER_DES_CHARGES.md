@@ -715,3 +715,12 @@ Pas d'onglet dans l'application pour l'instant.
   paris.donnees au format de adversaires.recuperer (rencontres domicile/extérieur, classement des 8
   équipes, salles de pingpocket, joueurs avec repères au lieu des licences), gabarit_paris.html calqué
   sur gabarit.html (récapitulatif, onglets, fiche du club), sans brûlage ni vérifications.
+- Championnat des jeunes (19/11) : « crée une page /jeunes/ comme France et Paris : calendrier des 2
+  équipes (−15 ans, −13 ans), liste des adversaires, effectifs des clubs adverses avec matchs,
+  victoires, défaites ; une catégorie plus jeune peut jouer (un benjamin en −15 et en −13) ; garder les
+  licences loisir qui ont l'âge ». Réalisation : jeunes.py (poules des captures de l'application FFTT,
+  exempt en −13, dates du calendrier du comité, catégories P/B/M, numéros des clubs retrouvés par leur
+  nom : trouver_clubs), adversaires.clubs_des_poules (commun avec Paris ; garder : jeunes et loisirs ;
+  forme de tous les jeunes), gabarit_championnat.html (ex gabarit_paris.html, paramétré par D.espace,
+  D.titre, e.categories), PAGES_A_PART jeunes.html, liens « Jeunes » partout (en-têtes sur deux lignes
+  sur téléphone). Contrôle de l'API élargi à toute compétition hors championnat de France.

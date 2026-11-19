@@ -70,12 +70,13 @@ def page_adversaires(client, club, ctx, tous_les_historiques=False):
                         tous_les_historiques=tous_les_historiques,
                         fichier_etat=None if ctx.archive else CACHE / "effectif_adversaires.json")
     enrichir(donnees)
-    rencontres_paris = 0
+    nouvelles_competitions = {}
     if not ctx.archive:  # championnat de Paris : ses rencontres sont-elles dans l'API ? (journal et bilan)
         try:
             from . import paris
             competitions = paris.diagnostic_api(client, club, ctx.aujourdhui or datetime.now().date())
-            rencontres_paris = sum(n for nom, n in competitions.items() if "paris" in nom.lower())
+            # Autre chose que le championnat de France (Paris : « L08_… », jeunes) : à brancher le jour venu
+            nouvelles_competitions = {nom: n for nom, n in competitions.items() if "Championnat de France" not in nom}
         except Exception as e:  # noqa: BLE001 (un contrôle ne bloque jamais la mise à jour)
             print(f"  championnat de Paris : contrôle impossible ({type(e).__name__})", flush=True)
     ctx.donnees(donnees)
@@ -84,8 +85,8 @@ def page_adversaires(client, club, ctx, tous_les_historiques=False):
     restants = donnees["sources"].get("historiques_restants")
     if restants:
         resume += f" ; {restants} meilleurs classements pas encore lus (option 8 pour tout lire)"
-    if rencontres_paris:  # le jour où la ligue les saisit : résultats et compositions de Paris récupérables
-        resume += f" ; championnat de Paris maintenant dans l'API FFTT ({rencontres_paris} rencontres de Vaires)"
+    if nouvelles_competitions:  # le jour où la ligue ou le comité les saisit : résultats et compositions récupérables
+        resume += " ; nouveau dans l'API FFTT : " + ", ".join(f"{nom} ({n} rencontres de Vaires)" for nom, n in nouvelles_competitions.items())
     html = generer_html(donnees, ctx.sortie / "vaires.html")
     # Classements des poules de toutes les équipes du club : une page et une image à partager
     classements = generer_html(donnees_classements(donnees), ctx.sortie / "classements_vaires.html", GABARIT_CLASSEMENTS)
@@ -96,6 +97,10 @@ def page_adversaires(client, club, ctx, tous_les_historiques=False):
             fichiers.append(page_paris(client, club, ctx, tous_les_historiques))
         except Exception as e:  # noqa: BLE001 (la page du championnat de France ne dépend pas de celle de Paris)
             print(f"  ! championnat de Paris : page non faite ({type(e).__name__} : {e})", flush=True)
+        try:  # championnat des jeunes : les jeunes des clubs adverses (page /jeunes/)
+            fichiers.append(page_jeunes(client, club, ctx, tous_les_historiques))
+        except Exception as e:  # noqa: BLE001
+            print(f"  ! championnat des jeunes : page non faite ({type(e).__name__} : {e})", flush=True)
     return fichiers, resume
 
 
@@ -110,6 +115,22 @@ def page_paris(client, club, ctx, tous_les_historiques=False):
     joueurs = sum(len(c["joueurs"]) for c in donnees["clubs"].values())
     complets = sum(1 for c in donnees["clubs"].values() if c.get("effectif_complet"))
     print(f"Championnat de Paris : {len(donnees['clubs'])} clubs adverses, {joueurs} joueurs, "
+          f"{complets} effectifs complets (pingpocket.fr)", flush=True)
+    return page
+
+
+def page_jeunes(client, club, ctx, tous_les_historiques=False):
+    from . import jeunes
+    from .adversaires import recuperer_jeunes
+
+    donnees = recuperer_jeunes(client, club, aujourdhui=ctx.aujourdhui, dossier_import=IMPORT,
+                               tous_les_historiques=tous_les_historiques, fichier_etat=CACHE / "effectif_adversaires_jeunes.json")
+    page = ctx.sortie / "jeunes_vaires.html"
+    page.write_bytes(jeunes.page(donnees))
+    joueurs = sum(len(c["joueurs"]) for c in donnees["clubs"].values())
+    loisirs = sum(1 for c in donnees["clubs"].values() for j in c["joueurs"] if j.get("loisir"))
+    complets = sum(1 for c in donnees["clubs"].values() if c.get("effectif_complet"))
+    print(f"Championnat des jeunes : {len(donnees['clubs'])} clubs adverses, {joueurs} jeunes dont {loisirs} licences loisir, "
           f"{complets} effectifs complets (pingpocket.fr)", flush=True)
     return page
 

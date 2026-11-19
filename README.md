@@ -48,6 +48,11 @@ de la poule, adversaires), d'après les documents de la ligue (`ttvaires/paris.p
 club adverse avec ses joueurs (points, mensuel, meilleur classement, victoires, défaites et points
 gagnés depuis le début de la phase, équipe en championnat de France).
 
+**Championnat des jeunes** (/jeunes/, mot de passe du club) : Vaires 1 en moins de 15 ans et Vaires 2 en
+moins de 13 ans, même présentation que /paris/ (`ttvaires/jeunes.py`) ; pour chaque club adverse, ses
+jeunes qui ont l'âge de jouer dans l'équipe (licences loisir comprises), leur classement, meilleur
+classement, victoires, défaites et points gagnés.
+
 **Calendrier** (/cal/, mot de passe du club) : la saison comme un agenda, mois par mois (‹ › et
 « Aujourd'hui ») : championnat par équipes, championnat féminin, championnat de Paris, championnat des
 jeunes et critérium fédéral (et, si on les coche, les autres épreuves du comité et les dates limites

@@ -83,8 +83,9 @@ tr.vaires td:nth-child(2) b::after { content: " · Vaires"; color: var(--accent)
 @media (max-width: 520px) {
   /* En-tête : les liens vers les autres espaces sur leur propre ligne (le titre reste lisible) */
   .barre { flex-wrap: wrap; }
-  .espaces { order: 3; flex-basis: 100%; }
-  .espaces a { flex: 1 1 0; text-align: center; padding: 7px 6px; }
+  /* Sept espaces : les liens sur deux lignes de trois (une seule ligne déborderait à 360 px) */
+  .espaces { order: 3; flex-basis: 100%; flex-wrap: wrap; gap: 6px; }
+  .espaces a { flex: 1 0 30%; text-align: center; padding: 7px 6px; }
 }
 </style>
 </head>
@@ -96,6 +97,7 @@ tr.vaires td:nth-child(2) b::after { content: " · Vaires"; color: var(--accent)
     <nav class="espaces" aria-label="Autres espaces">
       <a id="vers-club" href="../club/" title="Espace club : pages, images, archives">Club</a>
       <a id="vers-paris" href="../paris/" title="Championnat de Paris : poules et calendrier des trois équipes">Paris</a>
+      <a id="vers-jeunes" href="../jeunes/" title="Championnat des jeunes : les équipes −15 et −13 ans et leurs adversaires">Jeunes</a>
       <a id="vers-tournois" href="../tournois/" title="Tournois à venir autour de Vaires">Tournois</a>
       <a id="vers-cal" href="../cal/" title="Calendrier de la saison">Calendrier</a>
       <a id="vers-77" href="../77/" title="Clubs du 77 : joueurs, niveau et équipes de chaque club">77</a>
@@ -158,6 +160,7 @@ document.getElementById("vers-tournois").href = TOURNOIS;
 document.getElementById("vers-cal").href = CAL;
 document.getElementById("vers-77").href = `${BASE}/77/`;
 document.getElementById("vers-paris").href = `${BASE}/paris/`;
+document.getElementById("vers-jeunes").href = `${BASE}/jeunes/`;
 const lienImage = (p) => `${CLUB}#${encodeURIComponent("indivs_" + p.id + ".png")}`;
 
 const ENTREES = [];
@@ -191,6 +194,7 @@ function menu(actif) {
     + `<a class="entree" href="${TOURNOIS}"><b>Tournois</b><span>Tournois à venir autour de Vaires</span></a>`
     + `<a class="entree" href="${CAL}"><b>Calendrier</b><span>Dates de la saison : championnats, critérium</span></a>`
     + `<a class="entree" href="${BASE}/paris/"><b>Championnat de Paris</b><span>Poules et calendrier des trois équipes</span></a>`
+    + `<a class="entree" href="${BASE}/jeunes/"><b>Championnat des jeunes</b><span>Équipes −15 et −13 ans et leurs adversaires</span></a>`
     + `<a class="entree" href="${BASE}/77/"><b>Clubs du 77</b><span>Joueurs, niveau et équipes de chaque club</span></a>`;
 }
 

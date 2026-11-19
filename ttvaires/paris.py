@@ -8,7 +8,7 @@ que l'équipe placée en 1 reçoit celle placée en 8 (le premier nommé reçoit
 
 Page /paris/ (mot de passe du club) : faite par la mise à jour (étape adversaires, paris_vaires.html,
 publiée comme /77/), avec la présentation de la page adversaires du championnat de France
-(gabarit_paris.html, calqué sur gabarit.html) : récapitulatif par semaine, un onglet par équipe
+(gabarit_championnat.html, calqué sur gabarit.html, commun avec /jeunes/) : récapitulatif par semaine, un onglet par équipe
 (calendrier, lieu et adresse de la salle, classement de la poule, adversaires) et la fiche de chaque club
 adverse. L'API de la FFTT n'a pas les rencontres du championnat de Paris (contrôle du 18/11/2026,
 diagnostic_api) : ni résultats ni compositions de Paris, donc pas de score, un classement vide et pas de
@@ -21,7 +21,7 @@ import json
 from collections import Counter
 from pathlib import Path
 
-GABARIT = Path(__file__).with_name("gabarit_paris.html")
+GABARIT = Path(__file__).with_name("gabarit_championnat.html")  # commun à /paris/ et /jeunes/
 SAISON = "2026-2027"
 SOURCE = "Poules et calendrier du championnat de Paris IDF 2026-2027 (documents de la ligue Paris Île-de-France)"
 
@@ -63,7 +63,7 @@ def _equipe(position, club, nom, numero, dep):
 
 # Champs gardés pour chaque joueur adverse (la page n'a aucun numéro de licence : voir clubs_adverses)
 CHAMPS_JOUEUR = ("nom", "prenom", "sexe", "categorie", "categorie_long", "classement", "points", "points_mensuels",
-                 "meilleur", "renouvele", "nouveau")
+                 "meilleur", "renouvele", "nouveau", "loisir")
 
 
 def clubs_adverses(adversaires):
@@ -126,7 +126,8 @@ def donnees(adversaires=None):
                             "points": None, "joues": None, "v": None, "n": None, "d": None} for p in poule]})
     club = adv.get("club") or {}
     sources = adv.get("sources", {})
-    return {"saison": SAISON, "source": SOURCE, "phase": adv.get("phase"),
+    return {"espace": "paris", "titre": "championnat de Paris", "competition": "championnat de Paris IDF",
+            "saison": SAISON, "source": SOURCE, "phase": adv.get("phase"),
             "journees": [{"numero": i, "date": d} for i, d in enumerate(JOURNEES, 1)],
             "club": {"numero": CLUB_VAIRES, "nom": "CVTT Vaires", "salle": club.get("salle")},
             "equipes": equipes, "clubs": clubs_adverses(adv), "genere_le": adv.get("genere_le"),
@@ -157,18 +158,22 @@ def diagnostic_api(client, numero_club, aujourdhui):
     print(f"--- Championnat de Paris dans l'API FFTT ? Compétitions par équipes du club ({debut} au {fin}) ---", flush=True)
     for nom, n in par_competition.most_common():
         print(f"  {nom} : {n} rencontres", flush=True)
-    paris = [r for r in rencontres if "paris" in ((r.get("division") or {}).get("contest", {}).get("name") or "").lower()]
+    # Tout ce qui n'est pas le championnat de France : Paris (divisions « L08_… » dans l'application de la
+    # FFTT) et championnat des jeunes, quel que soit le nom de la compétition
+    paris = [r for r in rencontres if "Championnat de France" not in ((r.get("division") or {}).get("contest", {}).get("name") or "")]
     if not paris:
-        print("  championnat de Paris : aucune rencontre dans l'API pour ce club (pas encore saisies, ou pas dans l'API)", flush=True)
+        print("  championnat de Paris, jeunes : aucune rencontre dans l'API pour ce club (pas encore saisies, ou pas dans l'API)",
+              flush=True)
     vues = Counter()
     for r in paris:
         nos = [fftt.equipe(r, c).get("name") for c in ("homeOpponent", "awayOpponent")
                if fftt.club_de(fftt.equipe(r, c))[0] == numero_club]
         vues[(r["division"].get("name"), (r.get("pool") or {}).get("id"), tuple(nos))] += 1
     for (division, poule, nos), n in sorted(vues.items(), key=lambda x: str(x[0])):
-        print(f"  Paris : division « {division} », poule {poule}, équipe(s) {', '.join(filter(None, nos))} : {n} rencontres", flush=True)
+        print(f"  hors France : division « {division} », poule {poule}, équipe(s) {', '.join(filter(None, nos))} : {n} rencontres",
+              flush=True)
     if paris:
         jours = sorted({(r.get("day") or {}).get("position") for r in paris} - {None})
         dates = sorted({(r.get("date") or "")[:10] for r in paris})
-        print(f"  Paris : journées {jours}, dates {dates[:8]}", flush=True)
+        print(f"  hors France : journées {jours}, dates {dates[:8]}", flush=True)
     return dict(par_competition)

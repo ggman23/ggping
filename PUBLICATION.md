@@ -512,8 +512,8 @@ https://ggping.netlify.app/paris/), avec le **mot de passe du club** (ouverture 
 - Championnat de Paris IDF 2026-2027 : Vaires 1 en Honneur (poule 1), Vaires 2 en Promotion
   d'Honneur (poule 2), Vaires 3 en Division 2 (poule 3) ; sept journées, le vendredi, du 27/11/2026
   au 04/06/2027.
-- Même présentation que la page adversaires du championnat de France (`gabarit_paris.html`, calqué
-  sur `gabarit.html`) : onglets **Récapitulatif** (les rencontres semaine par semaine : équipe, date,
+- Même présentation que la page adversaires du championnat de France (`gabarit_championnat.html`, calqué
+  sur `gabarit.html`, commun avec /jeunes/) : onglets **Récapitulatif** (les rencontres semaine par semaine : équipe, date,
   adversaire, lieu, score ; la semaine en cours ou prochaine encadrée ; filtre par équipe) et
   **Vaires 1 / 2 / 3** (calendrier de la saison avec le lieu, DOM ou EXT avec l'adresse de la salle
   adverse et un lien « plan » ; classement de la poule, vide pour l'instant ; « Adversaires — clique
@@ -545,6 +545,38 @@ https://ggping.netlify.app/paris/), avec le **mot de passe du club** (ouverture 
 - Liens : « Paris » en haut de /cal/, /indivs/, /tournois/ et /77/ (et dans le menu des trois
   premiers), dans « Aller à » et « Autres espaces » de /club/ ; /paris/ renvoie vers chacun. Pas de lien
   vers /lundi/.
+
+## Championnat des jeunes : /jeunes/ (les équipes −15 et −13 ans)
+
+**/jeunes/** sur chaque site, avec le **mot de passe du club** (ouverture directe depuis /club/), même
+présentation que /paris/ (`gabarit_championnat.html`, commun aux deux pages).
+
+- Championnat des jeunes par équipes 77, 2026-2027 : **Vaires 1 en moins de 15 ans** (poule 3, « A (C) »
+  dans l'application de la FFTT, 8 équipes) et **Vaires 2 en moins de 13 ans** (poule 1, « A (A) »,
+  7 équipes : une exempte à chaque journée). Pas d'équipe en moins de 11 ans. Poules recopiées des
+  captures de l'application de la FFTT du 18/11/2026 dans `ttvaires/jeunes.py` ; dates : les vendredis
+  du calendrier du comité (les mêmes que Paris) ; en moins de 13 ans, l'application n'a pas encore de
+  dates ni de numéros de tour : « (à confirmer) », journées dans l'ordre de l'application.
+- **Qui peut jouer** : la catégorie de l'équipe et les plus jeunes (moins de 15 ans : minimes, benjamins,
+  poussins ; moins de 13 ans : benjamins, poussins). Chaque fiche d'adversaire ne montre que les jeunes
+  qui ont l'âge, **licences loisir comprises** (badge « loisir » : le club les changera pour les faire
+  jouer ; pas de forme pour elles). Forme de **tous** les jeunes réinscrits (beaucoup sont à 500 points),
+  depuis le début de la phase (la saison jusqu'en décembre).
+- **Numéros des clubs adverses** : Monthyon et Dammartin connus ; les autres (Coulommiers, Roissy,
+  Meaux, Fertois, Serris, Villeparisis, Saint-Thibault, Apozoir) retrouvés par leur nom dans les
+  rencontres du comité 77 (API FFTT, celles de /77/, en cache) : `jeunes.trouver_clubs`, le journal
+  écrit chaque association (« jeunes : SERRIS ATT -> 0877…… »). Un club pas retrouvé est signalé en
+  haut de la page (« club pas encore lu ») : me le dire, j'ajoute son numéro dans `jeunes.CLUBS`.
+- Effectifs et adresses : listes des licenciés de pingpocket.fr (déjà lues pour /77/), adresses des
+  salles lues par le PC (lancer.bat) : bandeau tant qu'il en manque.
+- Faite par l'étape adversaires de la mise à jour (`jeunes_vaires.html`, publiée à /jeunes/ comme /paris/).
+  Ni score ni composition : les rencontres des jeunes ne sont pas encore dans l'API de la FFTT. Le
+  contrôle de chaque mise à jour liste maintenant toute compétition par équipes du club autre que le
+  championnat de France (Paris, jeunes) et le bilan l'écrit (« nouveau dans l'API FFTT : … ») : on
+  branchera alors scores, classement, compositions et brûlages.
+- Liens : « Jeunes » dans l'en-tête et le menu de /cal/, /indivs/, /tournois/, /77/, /paris/, et dans
+  « Aller à » et « Autres espaces » de /club/. Sur téléphone, les liens des en-têtes passent sur deux
+  lignes de trois.
 
 ## Clubs du 77 : /77/ (niveau de Vaires parmi les clubs du département)
 

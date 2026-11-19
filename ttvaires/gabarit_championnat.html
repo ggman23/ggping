@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CVTT Vaires · championnat de Paris</title>
+<title>CVTT Vaires</title>
 <style>
 :root {
   --fond: #f4f5f7; --surface: #ffffff; --surface2: #f0f2f5; --texte: #1c2330; --doux: #5b6576;
@@ -143,13 +143,15 @@ table.verif td.c, table.verif th.c { text-align: center; }
 <div class="espaces" aria-label="Autres espaces">
   <span class="petit">Autres espaces :</span>
   <a id="vers-club" href="../club/" title="Espace club : championnat de France, pages, images, archives">Club</a>
+  <a id="vers-paris" href="../paris/" title="Championnat de Paris : les trois équipes et leurs adversaires">Paris</a>
+  <a id="vers-jeunes" href="../jeunes/" title="Championnat des jeunes : les deux équipes et leurs adversaires">Jeunes</a>
   <a id="vers-indivs" href="../indivs/" title="Individuels : poules du critérium et adversaires">Indivs</a>
   <a id="vers-tournois" href="../tournois/" title="Tournois à venir autour de Vaires">Tournois</a>
   <a id="vers-cal" href="../cal/" title="Calendrier de la saison">Calendrier</a>
   <a id="vers-77" href="../77/" title="Clubs du 77 : joueurs, niveau et équipes de chaque club">77</a>
 </div>
 <header class="entete">
-  <div class="titre"><h1>CVTT Vaires — championnat de Paris</h1><p id="sous-titre"></p></div>
+  <div class="titre"><h1 id="titre">CVTT Vaires</h1><p id="sous-titre"></p></div>
   <nav id="onglets"></nav>
 </header>
 <div id="bandeau"></div>
@@ -157,21 +159,24 @@ table.verif td.c, table.verif th.c { text-align: center; }
 <script id="donnees" type="application/json">__DONNEES_JSON__</script>
 <script>
 "use strict";
-/* Championnat de Paris IDF : la même présentation que la page adversaires du championnat de France
-   (gabarit.html). Poules et calendrier : ttvaires/paris.py (documents de la ligue). Clubs adverses :
-   adversaires.recuperer_paris (joueurs alignés en championnat de France, effectif et meilleur classement
-   lus sur pingpocket.fr par le PC, forme depuis le début de la phase). Les rencontres du championnat de
-   Paris ne sont pas dans l'API de la FFTT : ni score, ni composition, ni brûlage. */
+/* Championnat de Paris (/paris/) et championnat des jeunes (/jeunes/) : la même présentation que la page
+   adversaires du championnat de France (gabarit.html). Poules et calendrier : ttvaires/paris.py et
+   ttvaires/jeunes.py. Clubs adverses : adversaires.clubs_des_poules (joueurs alignés en championnat de France,
+   effectif et meilleur classement lus sur pingpocket.fr par le PC, forme depuis le début de la phase). Leurs
+   rencontres ne sont pas dans l'API de la FFTT : ni score, ni composition, ni brûlage. Jeunes : chaque équipe
+   ne montre que les joueurs qui ont l'âge (e.categories), licences loisir comprises. */
 const D = JSON.parse(document.getElementById("donnees").textContent);
+const ESPACE = D.espace || "paris", NOM_ESPACE = { paris: "Paris", jeunes: "Jeunes" }[ESPACE] || ESPACE;
+const TITRE = D.titre || "championnat de Paris";
 const CLUBS = D.clubs || {};
 const EQUIPES = D.equipes || [];
 const AUJOURDHUI = D.date_reference || new Date().toISOString().slice(0, 10);
 const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
 
 /* Statistiques de visite (GoatCounter et Umami, sur les copies du site qui en ont) : ce qu'on fait dans la
-   page, en événements « paris/<action>/<détail> » (vue, fiche, tri, filtre, lien). Jamais un nom de joueur. */
+   page, en événements « paris/<action>/<détail> » ou « jeunes/… » (vue, fiche, tri, filtre, lien). Jamais un nom de joueur. */
 const compterAction = (action, detail, titre) => {
-  try { if (window.compteur) window.compteur(`paris/${action}/${String(detail).replace(/\//g, "-").slice(0, 80)}`, `Paris · ${titre}`, true); }
+  try { if (window.compteur) window.compteur(`${ESPACE}/${action}/${String(detail).replace(/\//g, "-").slice(0, 80)}`, `${NOM_ESPACE} · ${titre}`, true); }
   catch (e) { /* sans compteur */ }
 };
 document.addEventListener("click", (ev) => {  // liens vers une autre page (pas les liens internes « #… »)
@@ -182,15 +187,17 @@ document.addEventListener("click", (ev) => {  // liens vers une autre page (pas 
   }
 });
 
-/* Autres espaces à côté de /paris/ (même mot de passe, déjà retenu), y compris sur le site GitHub (…/ggping/paris/) */
+/* Autres espaces à côté de /paris/ ou /jeunes/ (même mot de passe, déjà retenu), y compris sur le site GitHub
+   (…/ggping/paris/) ; le lien vers la page elle-même est retiré */
 function racine() {
-  const p = location.pathname, i = p.search(/\/(gg\/)?paris(\/|\.html)/);
+  const p = location.pathname, i = p.search(new RegExp(`/(gg/)?${ESPACE}(/|\\.html)`));
   return i >= 0 ? p.slice(0, i) : p.replace(/\/[^/]*$/, "");
 }
 const BASE = location.protocol === "file:" ? ".." : racine();
-const CLUB = `${BASE}/club/`, INDIVS = `${BASE}/indivs/`, TOURNOIS = `${BASE}/tournois/`, CAL = `${BASE}/cal/`, D77 = `${BASE}/77/`;
-for (const [id, url] of [["vers-club", CLUB], ["vers-indivs", INDIVS], ["vers-tournois", TOURNOIS], ["vers-cal", CAL], ["vers-77", D77]])
-  document.getElementById(id).href = url;
+for (const chemin of ["club", "paris", "jeunes", "indivs", "tournois", "cal", "77"]) {
+  const lien = document.getElementById(`vers-${chemin}`);
+  if (chemin === ESPACE) lien.remove(); else lien.href = `${BASE}/${chemin}/`;
+}
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -215,6 +222,14 @@ const pts = (j) => j.points_mensuels ?? j.points ?? 0;
 const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? "s" : ""}`;
 
 function nomJoueur(j) { return `${esc(j.nom)} ${esc(j.prenom)}`.trim(); }
+/* Jeunes : une équipe « moins de N ans » accueille sa catégorie et les plus jeunes (e.categories : P, B, M) */
+const peutJouer = (j, e) => {
+  if (!e || !e.categories) return true;
+  const m = /^([A-Z])\d*$/.exec((j.categorie || "").replace(/\s/g, ""));
+  return !!m && e.categories.includes(m[1]);
+};
+const nomsCategories = (e) => (e.categories || []).slice().reverse().map((c) => (D.categories || {})[c] || c).join(", ");
+const badgeLoisir = (j) => j.loisir ? ' <span class="badge neutre" title="licence loisir : le club devra la changer pour le faire jouer en championnat">loisir</span>' : "";
 // Inscrit ou réinscrit depuis la liste précédente de son club (voir adversaires.completer_avec_pingpocket)
 const badgeNouveau = (j) => j.nouveau ? ' <span class="badge nouveau" title="inscrit ou réinscrit depuis la liste précédente de son club">nouveau</span>' : "";
 /* Forme : parties depuis le début de la phase, toutes compétitions (championnat, critérium fédéral,
@@ -282,7 +297,7 @@ function lieu(r) {
 function scoreTxt(r) {
   if (!r.adversaire) return "";
   if (!r.score) return dateRenc(r) && dateRenc(r) < AUJOURDHUI
-    ? '<span class="petit" title="Les résultats du championnat de Paris ne sont pas dans l\'API de la FFTT">non disponible</span>' : "";
+    ? `<span class="petit" title="Les résultats du ${TITRE} ne sont pas dans l'API de la FFTT">non disponible</span>` : "";
   const [a, b] = r.score;
   const nous = r.vaires_domicile ? a : b, eux = r.vaires_domicile ? b : a;
   const cls = nous > eux ? "okb" : nous < eux ? "brule" : "neutre";
@@ -292,7 +307,9 @@ function libelleAdv(r) { return r.adversaire ? esc(r.adversaire.libelle) : '<spa
 function dateTxt(r) {
   const reportee = r.date_reelle && r.date_reelle !== r.date
     ? ` <span class="badge att" title="Date prévue : ${esc(fmtDate(r.date))}">déplacée</span>` : "";
-  return `${fmtDate(dateRenc(r))}${r.heure ? " " + esc(r.heure) : ""}${reportee}`;
+  const confirmer = r.date_a_confirmer
+    ? ' <span class="petit" title="Pas encore de date dans l\'application de la FFTT : celle du calendrier du comité">(à confirmer)</span>' : "";
+  return `${fmtDate(dateRenc(r))}${r.heure ? " " + esc(r.heure) : ""}${reportee}${confirmer}`;
 }
 
 /* ---------- Onglets et navigation ---------- */
@@ -315,7 +332,7 @@ function route() {
     else window.scrollTo(0, 0);
     compte = r ? ["fiche", `${e.id}-J${r.journee} ${r.adversaire ? r.adversaire.libelle : "exempt"}`, `${e.nom_court} J${r.journee} contre ${r.adversaire ? r.adversaire.libelle : "exempt"}`]
       : ["vue", e.id, `${e.nom_court} (${e.division})`];
-    document.title = `CVTT Vaires · championnat de Paris · ${e.nom_court}${r && r.adversaire ? " · " + r.adversaire.libelle : ""}`;
+    document.title = `CVTT Vaires · ${TITRE} · ${e.nom_court}${r && r.adversaire ? " · " + r.adversaire.libelle : ""}`;
   } else {
     const filtre = vue === "recap" && EQUIPES.some((x) => x.id === id) ? id : null;
     onglets("recap");
@@ -323,7 +340,7 @@ function route() {
     document.querySelector(".semaine.courante")?.scrollIntoView({ block: "start" });
     window.scrollBy(0, -110);
     compte = filtre ? ["filtre", `recap-${filtre}`, `récapitulatif ${filtre}`] : ["vue", "recap", "récapitulatif"];
-    document.title = "CVTT Vaires · championnat de Paris";
+    document.title = `CVTT Vaires · ${TITRE}`;
   }
   if (compte.join("|") !== vueComptee) { vueComptee = compte.join("|"); compterAction(...compte); }
 }
@@ -334,10 +351,14 @@ function bandeauEtat() {
   if (!cs.length) return `<div class="note bandeau">Clubs adverses pas encore lus : leurs joueurs, leur salle et leur forme viennent avec la mise à jour.</div>`;
   const complets = cs.filter((c) => c.effectif_complet).length, adresses = cs.filter((c) => c.salle).length;
   const reste = D.historiques_restants || 0;
-  if (complets === cs.length && adresses === cs.length && !reste) return "";
+  const inconnus = new Set(EQUIPES.flatMap((e) => e.rencontres || []).filter((r) => r.adversaire && !CLUBS[r.adversaire.club])
+    .map((r) => r.adversaire.club)).size;
+  const absents = inconnus ? ` ${pluriel(inconnus, "club")} pas encore lu${inconnus > 1 ? "s" : ""} (numéro FFTT pas encore retrouvé ou club
+    sans réponse de l'API).` : "";
+  if (complets === cs.length && adresses === cs.length && !reste) return absents ? `<div class="note bandeau">${absents.trim()}</div>` : "";
   return `<div class="note bandeau">Clubs adverses : ${complets}/${cs.length} effectifs complets, ${adresses}/${cs.length} adresses de salle${reste
     ? `, ${reste} meilleur${reste > 1 ? "s" : ""} classement${reste > 1 ? "s" : ""} encore à lire` : ""}. Ils viennent de pingpocket.fr, lu par le PC : lancer la mise à jour
-    depuis le PC (lancer.bat${reste ? ", option 8 pour tout lire d'un coup" : ""}).</div>`;
+    depuis le PC (lancer.bat${reste ? ", option 8 pour tout lire d'un coup" : ""}).${absents}</div>`;
 }
 
 /* ---------- Récapitulatif par semaine ---------- */
@@ -368,9 +389,10 @@ function vueRecap(filtre) {
         <td data-l="Score">${scoreTxt(r)}</td></tr>`).join("")}
       </tbody></table></div></article>`;
   });
-  const source = `<p class="petit">${esc(D.source || "")}. Les rencontres du championnat de Paris ne sont pas dans l'API de la FFTT :
+  const source = `<p class="petit">${esc(D.source || "")}. Les rencontres du ${esc(TITRE)} ne sont pas dans l'API de la FFTT :
     ni score ni composition. Pour chaque club adverse : ses joueurs (alignés en championnat de France, liste des licenciés
-    de pingpocket.fr), leur meilleur classement et leur forme depuis le début de la phase.</p>`;
+    de pingpocket.fr${D.avec_loisir ? " ; pour les jeunes, licences loisir comprises" : ""}), leur meilleur classement et leur
+    forme depuis le début de la phase.</p>`;
   return bandeauEtat() + filtres + blocs.join("") + source;
 }
 
@@ -391,14 +413,14 @@ function vueEquipe(e, journee) {
     ${classement.map((c) => `<tr class="${c.club === D.club.numero ? "vaires" : ""}"><td class="num">${c.rang ?? "—"}</td>
       <td>${esc(c.libelle)}${c.dep ? ` <span class="petit">(${esc(c.dep)})</span>` : ""}</td>
       ${["points", "joues", "v", "n", "d"].map((k) => `<td class="num">${c[k] ?? "—"}</td>`).join("")}</tr>`).join("")}
-    </tbody></table></div>${vide ? `<p class="petit">Vide pour l'instant : les résultats du championnat de Paris ne sont pas dans l'API
-    de la FFTT. Équipes dans l'ordre de la poule (documents de la ligue).</p>` : ""}</div>`;
+    </tbody></table></div>${vide ? `<p class="petit">Vide pour l'instant : les résultats du ${esc(TITRE)} ne sont pas dans l'API
+    de la FFTT. Équipes dans l'ordre de la poule.</p>` : ""}</div>`;
   const puces = `<div class="carte"><h3>Adversaires — clique sur une équipe pour voir son club</h3><div class="puces">
     ${rencs.filter((r) => r.adversaire).map((r) => `<a href="#e/${e.id}/j/${r.journee}" class="${r.journee === journee ? "actif" : ""}">
       <b>${libelleAdv(r)}</b><span class="petit">J${r.journee} · ${fmtDate(dateRenc(r))} · ${r.vaires_domicile ? "dom." : "ext."}</span></a>`).join("")}
     </div></div>`;
   const r = journee != null ? rencs.find((x) => x.journee === journee) : null;
-  return `<h2>${esc(e.libelle)}</h2><p class="sous">${[e.division, e.poule, "championnat de Paris IDF", e.jour].filter(Boolean).map(esc).join(" · ")}</p>
+  return `<h2>${esc(e.libelle)}</h2><p class="sous">${[e.division, nomsCategories(e), e.poule, D.competition || TITRE, e.jour].filter(Boolean).map(esc).join(" · ")}</p>
     ${bandeauEtat()}<div class="grille2">${cal}${clst}</div>${puces}<div id="panneau">${r && r.adversaire ? panneauRencontre(e, r) : ""}</div>`;
 }
 
@@ -415,7 +437,7 @@ function panneauRencontre(e, r) {
     ${france.map((x) => `<span class="badge neutre">${x.numero ?? "?"}${x.championnat === "F" ? " F" : ""} · ${esc(x.division || "?")}</span>`).join(" ")}</p>`
     : `<p class="petit">${esc(club.nom)} n'a pas d'équipe en championnat de France cette phase (API FFTT).</p>`;
   const erreur = club.erreur ? `<p class="verif-ko">⚠ ${esc(club.nom)} : ${esc(club.erreur)}. Relancer la mise à jour plus tard.</p>` : "";
-  return `<div class="carte">${tete}${score}${erreur}${equipesClub}${tableEffectif(club, r)}${tableEquipes(club, idx)}</div>`;
+  return `<div class="carte">${tete}${score}${erreur}${equipesClub}${tableEffectif(club, r, e)}${tableEquipes(club, idx)}</div>`;
 }
 
 // Équipe(s) du championnat de France où chaque joueur a joué cette phase : {repère du joueur: {"2": 4, "1 F": 1}}
@@ -433,15 +455,15 @@ function celFrance(fr) {
     `<span class="m" title="Équipe ${esc(k)} du club en championnat de France : ${pluriel(n, "rencontre")}">${esc(k)}</span><span class="petit">×${n}</span>`).join(" ");
 }
 
-function tableEffectif(club, r) {
-  const tous = club.joueurs || [];
+function tableEffectif(club, r, e) {
+  const tous = (club.joueurs || []).filter((j) => peutJouer(j, e));
   const actifs = tous.filter((j) => j.renouvele !== false);
   const anciens = tous.filter((j) => j.renouvele === false).sort((x, y) => pts(y) - pts(x));
   const avecForme = tous.some((j) => j.forme !== undefined);
   const fr = equipesFrance(club);
   const avecFrance = Object.keys(fr).length > 0;
   const ligne = (j) => `<tr>
-    <td>${nomJoueur(j)}${j.sexe === "F" ? ' <span class="badge fille">F</span>' : ""}${badgeNouveau(j)}</td>
+    <td>${nomJoueur(j)}${j.sexe === "F" ? ' <span class="badge fille">F</span>' : ""}${badgeNouveau(j)}${badgeLoisir(j)}</td>
     <td title="${esc(j.categorie_long ?? "")}">${esc(j.categorie ?? "")}</td>
     <td class="num">${cltJ(j)}${j.points != null ? ` <span class="petit">/ ${j.points}</span>` : ""}</td>
     ${avecForme ? `<td>${celForme(j)}</td>` : ""}
@@ -455,11 +477,14 @@ function tableEffectif(club, r) {
     ${avecFrance ? '<th title="Équipe du club dans laquelle le joueur a joué cette phase en championnat de France">Éq. France</th>' : ""}</tr></thead>`;
   const legende = (avecForme ? `<p class="petit">Phase : victoires sur parties jouées (7/9 = 7 gagnées sur 9) et points gagnés ou perdus depuis
     le début de la phase dans toutes les compétitions (championnat, critérium fédéral, tournois…), comme le classement virtuel
-    de Vaires ; en petit, les points virtuels. Hors championnat : les compétitions individuelles jouées. Lu pour les joueurs
-    déjà alignés et les licenciés à plus de 500 points.</p>` : "")
+    de Vaires ; en petit, les points virtuels. Hors championnat : les compétitions individuelles jouées. Lu pour ${e.categories
+    ? "tous les jeunes (sauf les licences loisir)" : "les joueurs déjà alignés et les licenciés à plus de 500 points"}.</p>` : "")
     + (avecFrance ? `<p class="petit">Éq. France : équipe du club dans laquelle le joueur a joué cette phase en championnat de France
-    (×4 = 4 rencontres). On ne sait pas qui joue dans quelle équipe du championnat de Paris : ses rencontres ne sont pas dans
+    (×4 = 4 rencontres). On ne sait pas qui joue dans quelle équipe du ${esc(TITRE)} : ses rencontres ne sont pas dans
     l'API de la FFTT.</p>` : "")
+    + (e.categories ? `<p class="petit">${esc(e.division)} : ${esc(nomsCategories(e))} (la catégorie de l'équipe et les plus
+    jeunes). Les licences loisir sont gardées (<span class="badge neutre">loisir</span>) : le club les changera pour faire jouer
+    ces jeunes ; pas de forme pour elles.</p>` : "")
     + (D.historiques_restants ? `<p class="petit">Meilleur classement : ${pluriel(D.historiques_restants, "joueur")} des clubs adverses
     encore à lire (option 8 du menu du PC pour tout lire d'un coup).</p>` : "");
   const cle = `eff-${club.numero}`;
@@ -468,7 +493,10 @@ function tableEffectif(club, r) {
   EFFECTIFS[cle] = (t) => actifs.slice().sort((x, y) => TRIS_EFFECTIF[t](x) - TRIS_EFFECTIF[t](y) || pts(y) - pts(x)).map(ligne).join("");
   const tris = `<div class="tris">Trier par :${cles.map((t) => ` <button type="button" class="tri${t === tri ? " actif" : ""}"
     onclick="trierEffectif('${cle}', '${t}', this)">${NOMS_TRIS[t]}</button>`).join("")}</div>`;
-  const partiel = club.effectif_complet === false
+  const partiel = club.effectif_complet === false && e.categories
+    ? `<p class="note">Liste des licenciés du club pas encore lue (pingpocket.fr) : on ne connaît pas encore l'âge de ses joueurs.
+       Elle vient avec la mise à jour lancée depuis le PC (lancer.bat).</p>`
+    : club.effectif_complet === false
     ? `<p class="note">Effectif limité aux joueurs alignés cette phase en championnat de France : la liste des licenciés du club
        (pingpocket.fr, effectif complet, catégories, meilleur classement) n'a pas encore été lue. Elle vient avec la mise à jour
        lancée depuis le PC (lancer.bat), ou en enregistrant ses listes
@@ -476,7 +504,8 @@ function tableEffectif(club, r) {
        <a href="${listeClub(club.numero, "LICENCE_STATE")}" target="_blank" rel="noopener" data-lien="pingpocket licences">par licences à jour</a>
        (Ctrl+S, « Page Web, complète ») dans le dossier import de l'outil.</p>` : "";
   // Les explications des colonnes sous le tableau : sur téléphone, les joueurs d'abord
-  return `<h4>Effectif de ${esc(club.nom)} (${pluriel(actifs.length, "joueur")})</h4>${partiel}${noteListe(club)}
+  return `<h4>${e.categories ? `Jeunes de ${esc(club.nom)} qui peuvent jouer en ${esc(e.age)}` : `Effectif de ${esc(club.nom)}`}
+    (${pluriel(actifs.length, "joueur")})</h4>${partiel}${noteListe(club)}
     ${actifs.length ? `${tris}<div class="defil"><table class="effectif">${entete}<tbody id="${cle}">${EFFECTIFS[cle](tri)}</tbody></table></div>` : ""}${legende}
     ${anciens.length ? `<details><summary>Pas encore renouvelés (${anciens.length})</summary>
       <div class="defil"><table class="effectif">${entete}<tbody>${anciens.map(ligne).join("")}</tbody></table></div></details>` : ""}`;
@@ -517,7 +546,9 @@ function tableEquipes(club, idx) {
 
 /* ---------- Démarrage ---------- */
 const prochaine = (D.journees || []).find((j) => j.date >= AUJOURDHUI);
-document.getElementById("sous-titre").textContent = [`${D.club.nom} · championnat de Paris IDF ${D.saison ?? ""}`,
+document.getElementById("titre").textContent = `CVTT Vaires — ${TITRE}`;
+document.title = `CVTT Vaires · ${TITRE}`;
+document.getElementById("sous-titre").textContent = [`${D.club.nom} · ${D.competition || TITRE} ${D.saison ?? ""}`,
   prochaine ? `prochaine journée : J${prochaine.numero}, ${fmtDate(prochaine.date, true)}` : "",
   D.genere_le ? "données du " + new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : ""].filter(Boolean).join(" · ");
 if (D.demo) document.getElementById("bandeau").innerHTML = '<div class="demo">Données de démonstration (fictives)</div>';
