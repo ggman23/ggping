@@ -8,7 +8,8 @@ libre). Le logo du club est celui fourni avec l'outil (logo_club.png, découpé 
 import/logo_club.png le remplace s'il existe (sinon import/logo_gauche.png).
 
 Les classements sont ceux de la page des adversaires : calculés à partir des feuilles de match
-(points de rencontre de la FFTT, puis parties gagnées / perdues en cas d'égalité).
+(points de rencontre de la FFTT, égalités départagées selon l'article I.202 des règlements sportifs :
+voir departage.py).
 """
 
 import random

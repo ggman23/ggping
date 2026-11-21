@@ -12,7 +12,7 @@ import time
 from datetime import date, datetime
 from pathlib import Path
 
-from . import fftt, pingpocket
+from . import departage, fftt, pingpocket
 from .effectif import TRIS, suivre_inscrits
 from .reseau import HEURE, JOUR, ErreurReseau
 from .verifications import bilan_club, bilan_rencontres
@@ -23,11 +23,14 @@ MAX_HISTORIQUES = 150  # historiques téléchargés au plus par lancement (≈ 1
 
 
 def classement_poule(poule, rencontres, detail):
-    """Classement d'une poule calculé à partir des résultats saisis (points de rencontre de la FFTT,
-    puis rapport PG / PP en cas d'égalité). PG / PP : points gagnés / perdus, c'est-à-dire le cumul
-    des scores des rencontres (21-21...), comme sur le site de la FFTT. En plus, d'après les feuilles
-    de match : manches gagnées / perdues (sg / sp) et points marqués / encaissés dans les manches
-    (pm / pe) ; sans_detail compte les parties jouées dont les manches n'ont pas été saisies."""
+    """Classement d'une poule calculé à partir des résultats saisis : points-rencontres de la FFTT, puis
+    départage des égalités selon l'article I.202 des règlements sportifs (departage.py : goal-average
+    particulier, précédé du quotient général des parties quand toutes les parties sont jouées). PG / PP :
+    points gagnés / perdus, c'est-à-dire le cumul des scores des rencontres (21-21...), comme sur le site de
+    la FFTT. En plus, d'après les feuilles de match : manches gagnées / perdues (sg / sp) et points marqués /
+    encaissés dans les manches (pm / pe) ; sans_detail compte les parties jouées dont les manches n'ont pas
+    été saisies. Chaque équipe reçoit son rang, le critère qui l'a départagée (departage, None sans égalité)
+    et la règle appliquée à la poule (regle)."""
     equipes = {}
     for po in poule.get("poolOpponents", []):
         t = (po.get("opponent") or {}).get("team") or {}
@@ -36,36 +39,47 @@ def classement_poule(poule, rencontres, detail):
                                   "numero": t.get("position") or fftt.numero_equipe(t["name"]),
                                   "points": 0, "joues": 0, "v": 0, "n": 0, "d": 0, "pg": 0, "pp": 0,
                                   "sg": 0, "sp": 0, "pm": 0, "pe": 0, "sans_detail": 0}
+    resultats = []  # pour le départage : chaque rencontre vue du club qui reçoit
     for r in rencontres:
         d = detail.get(r["id"])
         if not d:
             continue
+        noms = {cote: fftt.equipe(d, f"{cote}Opponent").get("name") for cote in ("home", "away")}
+        manches, jeu = {"home": 0, "away": 0}, {"home": 0, "away": 0}
         for cote, autre in (("home", "away"), ("away", "home")):
-            e = equipes.get(fftt.equipe(d, f"{cote}Opponent").get("name"))
+            e = equipes.get(noms[cote])
+            pour, contre = d.get(f"{cote}GamePoints") or 0, d.get(f"{autre}GamePoints") or 0
+            for g in d.get("games") or []:
+                sets = [(s.get(f"{cote}Score"), s.get(f"{autre}Score")) for s in g.get("sets") or []]
+                sets = [(a, b) for a, b in sets if a is not None and b is not None]
+                manches[cote] += sum(a > b for a, b in sets)
+                jeu[cote] += sum(a for a, _ in sets)
+                if e is not None and not sets and g.get("winner") in ("home", "away") and not g.get("forfeit"):
+                    e["sans_detail"] += 1
             if e is None:
                 continue
-            pour, contre = d.get(f"{cote}GamePoints") or 0, d.get(f"{autre}GamePoints") or 0
             e["joues"] += 1
             e["points"] += d.get(f"{cote}Points") or 0
             e["pg"] += pour
             e["pp"] += contre
             e["v" if pour > contre else "n" if pour == contre else "d"] += 1
-            for g in d.get("games") or []:
-                sets = [(s.get(f"{cote}Score"), s.get(f"{autre}Score")) for s in g.get("sets") or []]
-                sets = [(a, b) for a, b in sets if a is not None and b is not None]
-                if not sets and g.get("winner") in ("home", "away") and not g.get("forfeit"):
-                    e["sans_detail"] += 1
-                for a, b in sets:
-                    e["sg"] += a > b
-                    e["sp"] += b > a
-                    e["pm"] += a
-                    e["pe"] += b
-    ordre = sorted(equipes.values(), key=lambda e: (-e["points"], -(e["pg"] / e["pp"] if e["pp"] else e["pg"] * 1000)))
-    precedent, rang = None, 0
-    for i, e in enumerate(ordre, 1):
-        cle = (e["points"], e["pg"], e["pp"])
-        rang = rang if cle == precedent else i
-        e["rang"], precedent = rang, cle
+        for cote, autre in (("home", "away"), ("away", "home")):
+            e = equipes.get(noms[cote])
+            if e is not None:
+                e["sg"] += manches[cote]
+                e["sp"] += manches[autre]
+                e["pm"] += jeu[cote]
+                e["pe"] += jeu[autre]
+        if noms["home"] in equipes and noms["away"] in equipes:
+            resultats.append({"dom": noms["home"], "ext": noms["away"], "forfait": bool(d.get("forfeit")),
+                              "pts": (d.get("homePoints") or 0, d.get("awayPoints") or 0),
+                              "parties": (d.get("homeGamePoints") or 0, d.get("awayGamePoints") or 0),
+                              "manches": (manches["home"], manches["away"]), "jeu": (jeu["home"], jeu["away"])})
+    regle, places = departage.classer({n: e["points"] for n, e in equipes.items()}, resultats)
+    ordre = []
+    for nom, rang, critere in places:
+        equipes[nom].update(rang=rang, departage=critere, regle=regle)
+        ordre.append(equipes[nom])
     return ordre
 
 
@@ -88,8 +102,9 @@ def donnees_classements(donnees):
             "lignes": [{"rang": c["rang"], "libelle": c["libelle"], "points": c["points"], "joues": c["joues"],
                         "v": c["v"], "n": c["n"], "d": c["d"], "pg": c.get("pg", 0), "pp": c.get("pp", 0),
                         **{k: c.get(k, 0) for k in ("sg", "sp", "pm", "pe", "sans_detail")},
-                        "nous": c.get("club") == club}
+                        "departage": c.get("departage"), "nous": c.get("club") == club}
                        for c in e["classement"]],
+            "regle": departage.REGLES.get(e["classement"][0].get("regle")) if e["classement"] else None,
         })
     sortie = {"club": {"numero": club, "nom": donnees["club"].get("nom", "")}, "saison": donnees["saison"],
               "phase": donnees["phase"], "genere_le": donnees.get("genere_le"),
@@ -218,6 +233,13 @@ def recuperer(client, numero_club="08770250", aujourdhui=None, dossier_import=No
             "jour": fftt.jour_habituel([x["date"] for x in rencontres]), "rencontres": rencontres,
             "classement": classement_poule(infos[e["poule"]], rencontres_poules[e["poule"]], detail),
         })
+
+    for e in equipes:  # quelle règle de départage (article I.202) : à comparer au règlement du comité
+        cl = e["classement"]
+        if cl:
+            print(f"  classement {e['libelle']} : {departage.REGLES[cl[0]['regle']]}"
+                  + (f" ; {sum(1 for c in cl if c['departage'])} équipe(s) départagée(s)" if any(c["departage"] for c in cl) else ""),
+                  flush=True)
 
     # 2 et 3. Clubs adverses : toutes leurs équipes et leurs feuilles de match
     print(f"2/6 Clubs adverses : {len(clubs_adv)} (API FFTT)", flush=True)

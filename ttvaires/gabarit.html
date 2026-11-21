@@ -383,9 +383,14 @@ function vueEquipe(e, journee) {
     </tbody></table></div></div>`;
   const clst = (e.classement || []).length ? `<div class="carte"><h3>Classement de la poule</h3><div class="defil"><table>
     <thead><tr><th class="num">#</th><th>Équipe</th><th class="num">Pts</th><th class="num">J</th><th class="num">V</th><th class="num">N</th><th class="num">D</th></tr></thead><tbody>
-    ${e.classement.map((c) => `<tr class="${c.club === D.club.numero ? "vaires" : ""}"><td class="num">${c.rang ?? ""}</td><td>${esc(c.libelle)}</td>
+    ${e.classement.map((c) => `<tr class="${c.club === D.club.numero ? "vaires" : ""}"><td class="num"${c.departage
+      ? ` title="${esc("Départagée : " + c.departage)}"` : ""}>${c.rang ?? ""}${/entre elles/.test(c.departage || "") ? "≡" : ""}</td><td>${esc(c.libelle)}</td>
       <td class="num">${c.points ?? ""}</td><td class="num">${c.joues ?? ""}</td><td class="num">${c.v ?? ""}</td><td class="num">${c.n ?? ""}</td><td class="num">${c.d ?? ""}</td></tr>`).join("")}
-    </tbody></table></div></div>` : '<div class="carte"><h3>Classement de la poule</h3><p class="petit">Pas encore disponible.</p></div>';
+    </tbody></table></div>${e.classement.some((c) => c.departage) ? `<p class="petit">Égalités de points départagées selon l'article
+    I.202 des règlements sportifs de la FFTT ${e.classement[0].regle === "score_acquis" ? "(rencontres arrêtées au score acquis) :"
+      : "(toutes les parties jouées) : quotient général des parties, puis"} goal-average particulier, c'est-à-dire les
+    rencontres entre les équipes à égalité. ≡ : équipe placée ainsi (détail au survol du rang).</p>` : ""}</div>`
+    : '<div class="carte"><h3>Classement de la poule</h3><p class="petit">Pas encore disponible.</p></div>';
   const puces = `<div class="carte"><h3>Adversaires — clique sur une équipe pour voir son club</h3><div class="puces">
     ${rencs.filter((r) => r.adversaire).map((r) => `<a href="#e/${e.id}/j/${r.journee}" class="${r.journee === journee ? "actif" : ""}">
       <b>${libelleAdv(r)}</b><span class="petit">J${r.journee} · ${fmtDate(dateRenc(r))} · ${r.vaires_domicile ? "dom." : "ext."}</span></a>`).join("")}

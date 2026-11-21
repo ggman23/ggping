@@ -48,6 +48,7 @@ tr.nous, tbody tr.nous:nth-child(odd) { background: var(--rouge); }
 tr.nous td { color: #fff; font-weight: 700; border-top-color: var(--rouge); }
 tr.nous td.r { box-shadow: inset 4px 0 0 var(--rouge-vif); }
 th.c, td.c { width: 1%; padding-left: 9px; padding-right: 9px; }
+.regle { margin: 6px 4px 0; color: var(--doux); font-size: 12.5px; }
 .legende { max-width: 1320px; margin: 0 auto; padding: 8px 16px 4px; color: var(--doux); font-size: 13px; }
 .note { max-width: 1320px; margin: 0 auto; padding: 0 16px 24px; color: var(--gris); font-size: 12.5px; }
 .vide { grid-column: 1 / -1; color: var(--doux); text-align: center; }
@@ -72,7 +73,10 @@ th.c, td.c { width: 1%; padding-left: 9px; padding-right: 9px; }
   &nbsp;•&nbsp; PG / PP : points gagnés / perdus (cumul des scores des rencontres, comme sur le site de la FFTT)
   &nbsp;•&nbsp; SG / SP : sets gagnés / perdus &nbsp;•&nbsp; PM / PE : points marqués / encaissés dans les sets</p>
 <p class="note">Classements calculés à partir des feuilles de match saisies : points de rencontre de la FFTT (victoire 3,
-  nul 2, défaite 1), puis rapport PG / PP en cas d'égalité. Sets et points des sets additionnés partie par partie,
+  nul 2, défaite 1, forfait 0). Égalités départagées selon l'article I.202 des règlements sportifs de la FFTT : quand
+  toutes les parties sont jouées, quotient général PG / PP, puis goal-average particulier (rencontres entre les équipes
+  à égalité : points, parties, manches, points-jeu) ; quand les rencontres s'arrêtent au score acquis, goal-average
+  particulier seul. ≡ : équipe départagée par le goal-average particulier (détail au survol). Sets et points des sets additionnés partie par partie,
   doubles compris, depuis la première journée (* : certaines parties saisies sans le détail des sets). Ligne rouge :
   l'équipe de Vaires.</p>
 <script id="donnees" type="application/json">__DONNEES_JSON__</script>
@@ -88,8 +92,10 @@ document.getElementById("quand").textContent = `${D.club.nom} · ${D.date_refere
   ? "archive, état au " + new Date(D.date_reference + "T12:00").toLocaleDateString("fr-FR")
   : "données du " + new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`;
 
+// Équipe placée par le goal-average particulier (rencontres entre les équipes à égalité de points)
+const particulier = (l) => /entre elles/.test(l.departage || "");
 const ligne = (l) => `<tr${l.nous ? ' class="nous"' : ""}>
-  <td class="r">${l.rang}</td><td class="g" title="${esc(l.libelle)}">${esc(l.libelle)}</td>
+  <td class="r"${l.departage ? ` title="${esc("Départagée : " + l.departage)}"` : ""}>${l.rang}${particulier(l) ? "≡" : ""}</td><td class="g" title="${esc(l.libelle)}">${esc(l.libelle)}</td>
   <td class="pts c">${l.points}</td><td class="c">${l.joues}</td><td class="c">${l.v}</td><td class="c">${l.n}</td><td class="c">${l.d}</td>
   <td class="c groupe">${l.pg}</td><td class="c">${l.pp}</td>
   <td class="c groupe sup">${l.sg ?? ""}${l.sans_detail ? "*" : ""}</td><td class="c sup">${l.sp ?? ""}</td>
@@ -105,7 +111,7 @@ document.getElementById("contenu").innerHTML = D.poules.length ? D.poules.map((p
         <th class="c groupe" title="sets gagnés">SG</th><th class="c" title="sets perdus">SP</th>
         <th class="c groupe" title="points marqués dans les sets">PM</th><th class="c" title="points encaissés dans les sets">PE</th></tr></thead>
       <tbody>${p.lignes.map(ligne).join("")}</tbody>
-    </table></div></section>`).join("")
+    </table></div>${p.lignes.some((l) => l.departage) && p.regle ? `<p class="regle">Égalités : ${esc(p.regle)}.</p>` : ""}</section>`).join("")
   : '<p class="vide">Pas encore de classement : aucune poule trouvée pour les équipes du club.</p>';
 
 // La colonne équipe se cale juste après la colonne du rang (largeur réelle, variable selon l'écran)

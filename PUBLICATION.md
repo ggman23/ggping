@@ -504,6 +504,26 @@ https://ggping.netlify.app/cal/), avec le **mot de passe du club** (ouverture di
   haut de /indivs/ et de /tournois/ (et dans leur menu) et dans « Aller à » de /club/. Pas de lien
   vers /lundi/.
 
+## Classement des poules : égalités départagées comme le règlement le dit
+
+Les classements des poules (page adversaires, page et image des classements) sont calculés par l'outil à partir
+des feuilles de match : points-rencontres (victoire 3, nul 2, défaite 1, forfait 0), puis les égalités selon
+l'article I.202 des règlements sportifs de la FFTT 2026-2027 (`ttvaires/departage.py`) :
+
+- rencontres arrêtées au score acquis (I.202.1) : goal-average particulier, c'est-à-dire un classement sur
+  les seules rencontres entre les équipes à égalité : points-rencontres, puis quotient des parties, des
+  manches, des points-jeu, puis tirage au sort (non simulé : ex aequo) ;
+- toutes les parties jouées (I.202.2) : d'abord le quotient général des parties (toute la poule), puis le
+  même goal-average particulier pour celles encore à égalité ;
+- dès qu'une partie des équipes est départagée, on recommence au premier critère avec celles qui restent à
+  égalité, sur leurs seules rencontres ; une équipe battue par forfait l'est par toutes les parties prévues
+  à 0 (I.202.2) ou la moitié plus une (I.202.1), 3 manches à 0 et 11-0 par manche.
+
+Le cas se lit sur les scores d'une poule (le même total de parties partout : toutes jouées). Le journal écrit
+la règle de chaque poule de Vaires (« classement … : article I.202.2 … »). ≡ à côté du rang : équipe placée par
+le goal-average particulier (détail au survol). Le règlement du comité 77 n'a pas pu être lu par l'outil
+(cdtt77.fr interdit toute lecture automatique) : s'il prévoit autre chose, l'adapter dans departage.py.
+
 ## Championnat de Paris : /paris/ (les trois équipes de Vaires)
 
 **/paris/** sur chaque site (https://ggping-pap.pages.dev/paris/, https://ggman23.github.io/ggping/paris/,

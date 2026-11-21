@@ -726,3 +726,10 @@ Pas d'onglet dans l'application pour l'instant.
   sur téléphone). Contrôle de l'API élargi à toute compétition hors championnat de France.
 - Correction (19/11) : « mon fils, minime 1, pourra jouer en Vaires 1 ou Vaires 2 » : moins de 13 ans =
   minimes (11-12 ans) et plus jeunes, moins de 15 ans = cadets (13-14 ans) aussi (jeunes.AGES).
+- Classement des poules (21/11) : « le classement doit se faire au goal-average particulier ; vérifie dans le
+  règlement du comité 77 (cdtt77.fr/documents) ». cdtt77.fr interdit toute lecture automatique (robots.txt :
+  Disallow: /) : non lu. Règlements sportifs fédéraux 2026-2027 (fftt.com/reglements, lecture autorisée),
+  article I.202 : I.202.1 (score acquis) goal-average particulier ; I.202.2 (toutes les parties jouées)
+  quotient général des parties puis goal-average particulier ; procédure recommencée pour les équipes encore
+  à égalité ; forfaits comptés à 0. Réalisation : departage.py, adversaires.classement_poule (règle lue sur
+  les scores, critère de chaque équipe), notes et ≡ sur la page adversaires et la page des classements.
