@@ -386,10 +386,13 @@ function vueEquipe(e, journee) {
     ${e.classement.map((c) => `<tr class="${c.club === D.club.numero ? "vaires" : ""}"><td class="num"${c.departage
       ? ` title="${esc("Départagée : " + c.departage)}"` : ""}>${c.rang ?? ""}${/entre elles/.test(c.departage || "") ? "≡" : ""}</td><td>${esc(c.libelle)}</td>
       <td class="num">${c.points ?? ""}</td><td class="num">${c.joues ?? ""}</td><td class="num">${c.v ?? ""}</td><td class="num">${c.n ?? ""}</td><td class="num">${c.d ?? ""}</td></tr>`).join("")}
-    </tbody></table></div>${e.classement.some((c) => c.departage) ? `<p class="petit">Égalités de points départagées selon l'article
-    I.202 des règlements sportifs de la FFTT ${e.classement[0].regle === "score_acquis" ? "(rencontres arrêtées au score acquis) :"
-      : "(toutes les parties jouées) : quotient général des parties, puis"} goal-average particulier, c'est-à-dire les
-    rencontres entre les équipes à égalité. ≡ : équipe placée ainsi (détail au survol du rang).</p>` : ""}</div>`
+    </tbody></table></div>${e.classement.some((c) => c.departage) ? `<p class="petit">Égalités de points départagées selon ${{
+      cd77: "le règlement du championnat par équipes du comité 77 (article 5.2) : quotient général des parties, puis",
+      score_acquis: "l'article I.202.1 des règlements sportifs de la FFTT (rencontres arrêtées au score acquis) :" }[e.classement[0].regle]
+      || "l'article I.202.2 des règlements sportifs de la FFTT (toutes les parties jouées) : quotient général des parties, puis"}
+    goal-average particulier, c'est-à-dire les rencontres entre les équipes à égalité. ≡ : équipe placée ainsi (détail au
+    survol du rang).</p>` : ""}${e.classement.some((c) => c.exempt) ? `<p class="petit">Équipe exempte d'une journée : les 3 points
+    de la victoire (règlement du comité 77, article 5.2).</p>` : ""}</div>`
     : '<div class="carte"><h3>Classement de la poule</h3><p class="petit">Pas encore disponible.</p></div>';
   const puces = `<div class="carte"><h3>Adversaires — clique sur une équipe pour voir son club</h3><div class="puces">
     ${rencs.filter((r) => r.adversaire).map((r) => `<a href="#e/${e.id}/j/${r.journee}" class="${r.journee === journee ? "actif" : ""}">

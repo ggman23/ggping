@@ -733,3 +733,7 @@ Pas d'onglet dans l'application pour l'instant.
   quotient général des parties puis goal-average particulier ; procédure recommencée pour les équipes encore
   à égalité ; forfaits comptés à 0. Réalisation : departage.py, adversaires.classement_poule (règle lue sur
   les scores, critère de chaque équipe), notes et ≡ sur la page adversaires et la page des classements.
+- Règlement du comité 77 envoyé (21/11) : article 5.2 : quotient général des parties puis goal-average
+  particulier (a à e), forfait 28 à 0 et 3 manches à 0 par partie, exempte d'une poule incomplète : 3 points ;
+  article 6.1 : toutes les parties sont jouées. Réalisation : departage.CD77 (poules PR, D1, D2..., pas le
+  féminin 77/94), points de l'exempte dans adversaires.classement_poule, notes des pages, journal.

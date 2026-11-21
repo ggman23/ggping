@@ -24,8 +24,10 @@ MAX_HISTORIQUES = 150  # historiques téléchargés au plus par lancement (≈ 1
 
 def classement_poule(poule, rencontres, detail):
     """Classement d'une poule calculé à partir des résultats saisis : points-rencontres de la FFTT, puis
-    départage des égalités selon l'article I.202 des règlements sportifs (departage.py : goal-average
-    particulier, précédé du quotient général des parties quand toutes les parties sont jouées). PG / PP :
+    départage des égalités selon le règlement du comité 77 pour ses poules (article 5.2 : quotient général des
+    parties puis goal-average particulier ; l'exempte d'une journée jouée marque 3 points), sinon l'article I.202
+    des règlements sportifs de la FFTT (departage.py : goal-average particulier, précédé du quotient général des
+    parties quand toutes les parties sont jouées). PG / PP :
     points gagnés / perdus, c'est-à-dire le cumul des scores des rencontres (21-21...), comme sur le site de
     la FFTT. En plus, d'après les feuilles de match : manches gagnées / perdues (sg / sp) et points marqués /
     encaissés dans les manches (pm / pe) ; sans_detail compte les parties jouées dont les manches n'ont pas
@@ -75,7 +77,18 @@ def classement_poule(poule, rencontres, detail):
                               "pts": (d.get("homePoints") or 0, d.get("awayPoints") or 0),
                               "parties": (d.get("homeGamePoints") or 0, d.get("awayGamePoints") or 0),
                               "manches": (manches["home"], manches["away"]), "jeu": (jeu["home"], jeu["away"])})
-    regle, places = departage.classer({n: e["points"] for n, e in equipes.items()}, resultats)
+    # Comité 77 : son règlement l'emporte ; l'équipe exempte d'une journée jouée marque les 3 points de la victoire
+    division = (next(iter(rencontres), None) or {}).get("division") or {}
+    cd77 = bool(division) and departage.regle_du_comite_77(division.get("name"), fftt.feminin({"division": division}))
+    if cd77:
+        jouees = {(r.get("day") or {}).get("position") for r in rencontres if detail.get(r["id"])}
+        for r in rencontres:
+            seule = [fftt.equipe(r, c).get("name") for c in ("homeOpponent", "awayOpponent") if fftt.equipe(r, c).get("name")]
+            if len(seule) == 1 and seule[0] in equipes and (r.get("day") or {}).get("position") in jouees:
+                equipes[seule[0]]["points"] += 3
+                equipes[seule[0]]["exempt"] = equipes[seule[0]].get("exempt", 0) + 1
+    regle, places = departage.classer({n: e["points"] for n, e in equipes.items()}, resultats,
+                                      departage.CD77 if cd77 else None)
     ordre = []
     for nom, rang, critere in places:
         equipes[nom].update(rang=rang, departage=critere, regle=regle)
@@ -237,7 +250,10 @@ def recuperer(client, numero_club="08770250", aujourdhui=None, dossier_import=No
     for e in equipes:  # quelle règle de départage (article I.202) : à comparer au règlement du comité
         cl = e["classement"]
         if cl:
+            totaux = sorted({c["pg"] + c["pp"] for c in cl if c["joues"] == 1})  # après la J1 : parties par rencontre
             print(f"  classement {e['libelle']} : {departage.REGLES[cl[0]['regle']]}"
+                  + (f" ; parties par rencontre : {totaux}" if totaux else "")
+                  + (f" ; exemptes : {sum(c.get('exempt', 0) for c in cl)} x 3 points" if any(c.get("exempt") for c in cl) else "")
                   + (f" ; {sum(1 for c in cl if c['departage'])} équipe(s) départagée(s)" if any(c["departage"] for c in cl) else ""),
                   flush=True)
 

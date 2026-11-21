@@ -44,11 +44,21 @@ def test_classement_poule():
         3: {"homeOpponent": {"team": c}, "awayOpponent": {"team": b}, "homePoints": 2, "awayPoints": 2,
             "homeGamePoints": 21, "awayGamePoints": 21},
     }
+    # Poule du comité 77 (DEP 2) : BETA, exempte de la J1 (jouée), marque les 3 points de la victoire (article 5.2)
     cl = {e["libelle"]: e for e in classement_poule(poule, rencontres, detail)}
-    assert (cl["ALPHA 1"]["rang"], cl["ALPHA 1"]["points"], cl["ALPHA 1"]["v"]) == (1, 3, 1)
+    assert (cl["BETA 2"]["rang"], cl["BETA 2"]["points"], cl["BETA 2"]["exempt"], cl["BETA 2"]["joues"]) == (1, 5, 1, 1)
+    assert (cl["ALPHA 1"]["rang"], cl["ALPHA 1"]["points"], cl["ALPHA 1"]["v"]) == (2, 3, 1)
     assert (cl["VAIRES CVTT 3"]["points"], cl["VAIRES CVTT 3"]["joues"], cl["VAIRES CVTT 3"]["n"], cl["VAIRES CVTT 3"]["d"]) == (3, 2, 1, 1)
     assert (cl["VAIRES CVTT 3"]["pg"], cl["VAIRES CVTT 3"]["pp"]) == (36, 48)
-    assert cl["BETA 2"]["rang"] == 3 and cl["VAIRES CVTT 3"]["rang"] == 2
+    # ALPHA et VAIRES à 3 points : quotient général des parties (27/15 contre 36/48)
+    assert cl["VAIRES CVTT 3"]["rang"] == 3 and cl["ALPHA 1"]["departage"] == "quotient général des parties"
+    assert cl["ALPHA 1"]["regle"] == "cd77"
+    # Poule régionale (L08_R2) : pas de points pour l'exempte, règle de la FFTT (I.202)
+    for r in rencontres:
+        r["division"] = {"name": "L08_R2", "contest": r["division"]["contest"]}
+    cl = {e["libelle"]: e for e in classement_poule(poule, rencontres, detail)}
+    assert [cl[n]["rang"] for n in ("ALPHA 1", "VAIRES CVTT 3", "BETA 2")] == [1, 2, 3] and "exempt" not in cl["BETA 2"]
+    assert cl["ALPHA 1"]["regle"] == "toutes"
 
 
 def test_equipes_et_compositions():

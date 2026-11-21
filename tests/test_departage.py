@@ -72,3 +72,18 @@ def test_egalite_parfaite_ex_aequo_et_cas_lu_sur_les_scores():
     # Rencontres arrêtées au score acquis : des totaux de parties différents
     assert departage.regle_de_la_poule([renc("A", "B", (8, 2)), renc("C", "D", (8, 6))]) == SCORE_ACQUIS
     assert departage.regle_de_la_poule([renc("A", "B", (10, 4)), renc("C", "D", (8, 6))]) == TOUTES
+
+
+def test_reglement_du_comite_77():
+    """Comité 77 (article 5.2) : quotient général des parties puis goal-average particulier ; forfait 28 à 0,
+    chaque partie (14) perdue 3 manches à 0 ; seulement ses poules (PR, D1, D2...), pas le féminin 77/94."""
+    from ttvaires.departage import CD77
+    rencontres = [renc("A", "B", (8, 6)), renc("C", "D", (0, 0), forfait=True)]
+    rencontres[1]["pts"] = (0, 3)
+    ajuste = departage.ajuster_forfaits(rencontres, CD77)[1]
+    assert (ajuste["parties"], ajuste["manches"], ajuste["jeu"]) == ((0, 28), (0, 42), (0, 462))
+    assert departage.regle_du_comite_77("DEP 2 Ph1", False) and departage.regle_du_comite_77("PRE-REG", False)
+    assert not departage.regle_du_comite_77("L08_R2", False) and not departage.regle_du_comite_77("D1 Championnat Feminin 77/94", True)
+    rencontres = [renc("A", "B", (8, 6)), renc("B", "C", (14, 0)), renc("A", "C", (8, 6)),
+                  renc("B", "D", (14, 0)), renc("A", "D", (6, 8)), renc("C", "D", (7, 7))]
+    assert departage.classer({"B": 7, "A": 7, "D": 6, "C": 4}, rencontres, CD77)[1][:2] == [("B", 1, GENERAL), ("A", 2, GENERAL)]

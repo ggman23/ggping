@@ -507,8 +507,20 @@ https://ggping.netlify.app/cal/), avec le **mot de passe du club** (ouverture di
 ## Classement des poules : égalités départagées comme le règlement le dit
 
 Les classements des poules (page adversaires, page et image des classements) sont calculés par l'outil à partir
-des feuilles de match : points-rencontres (victoire 3, nul 2, défaite 1, forfait 0), puis les égalités selon
-l'article I.202 des règlements sportifs de la FFTT 2026-2027 (`ttvaires/departage.py`) :
+des feuilles de match : points-rencontres (victoire 3, nul 2, défaite 1, forfait 0), puis les égalités
+(`ttvaires/departage.py`).
+
+**Poules du comité 77** (PR, D1, D2..., pas le féminin 77/94) : règlement du championnat par équipes du comité
+2026-2027, article 5.2 (toutes les parties sont jouées, article 6.1) :
+
+- égalité de points : quotient général des points-parties (PG / PP de toute la poule), puis, pour les équipes
+  encore à égalité, goal-average particulier sur leurs seules rencontres : points-rencontres, quotient des
+  parties, des manches, des points-jeu, puis tirage au sort (non simulé : ex aequo) ; on recommence au premier
+  critère chaque fois qu'une partie des équipes est départagée ;
+- équipe battue par forfait ou pénalité : 28 à 0, chaque partie (14) perdue 3 manches à 0 (11-0 par manche) ;
+- poule incomplète : l'équipe exempte d'une journée jouée marque les 3 points de la victoire.
+
+**Autres poules** (régionales...) : article I.202 des règlements sportifs de la FFTT 2026-2027 :
 
 - rencontres arrêtées au score acquis (I.202.1) : goal-average particulier, c'est-à-dire un classement sur
   les seules rencontres entre les équipes à égalité : points-rencontres, puis quotient des parties, des
@@ -519,10 +531,11 @@ l'article I.202 des règlements sportifs de la FFTT 2026-2027 (`ttvaires/departa
   égalité, sur leurs seules rencontres ; une équipe battue par forfait l'est par toutes les parties prévues
   à 0 (I.202.2) ou la moitié plus une (I.202.1), 3 manches à 0 et 11-0 par manche.
 
-Le cas se lit sur les scores d'une poule (le même total de parties partout : toutes jouées). Le journal écrit
-la règle de chaque poule de Vaires (« classement … : article I.202.2 … »). ≡ à côté du rang : équipe placée par
-le goal-average particulier (détail au survol). Le règlement du comité 77 n'a pas pu être lu par l'outil
-(cdtt77.fr interdit toute lecture automatique) : s'il prévoit autre chose, l'adapter dans departage.py.
+Le cas se lit sur les scores d'une poule (le même total de points-parties partout : toutes jouées). Le journal
+écrit la règle de chaque poule de Vaires, le total de points-parties par rencontre et les points d'exemptes
+(« classement … : règlement du comité 77, article 5.2 … »). ≡ à côté du rang : équipe placée par le
+goal-average particulier (détail au survol). Le règlement du comité (cdtt77.fr, que l'outil ne lit pas : le
+site interdit toute lecture automatique) a été envoyé le 21/11/2026 ; une nouvelle version : me l'envoyer.
 
 ## Championnat de Paris : /paris/ (les trois équipes de Vaires)
 

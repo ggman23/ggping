@@ -18,14 +18,24 @@ chaque partie 3 manches à 0 et chaque manche 11-0. Le tirage au sort n'est pas 
 ex aequo.
 
 Le cas se lit sur les scores : quand toutes les parties sont jouées, toutes les rencontres d'une poule ont le
-même total de parties (14 à quatre joueurs, 10 à trois) ; arrêtées au score acquis, les totaux varient.
+même total de points-parties (en Seine-et-Marne 42 : 14 parties, 2 points la partie gagnée et 1 la partie perdue,
+d'où « 28 à 0 » pour un forfait) ; arrêtées au score acquis, les totaux varient.
+
+Championnat départemental de Seine-et-Marne (PR, D1, D2...) : règlement du championnat par équipes du comité 77
+2026-2027 (envoyé le 21/11/2026), article 5.2, qui l'emporte : toutes les parties sont jouées (article 6.1 f),
+égalités départagées par le quotient général des parties puis le goal-average particulier (comme I.202.2) ;
+une équipe battue par forfait ou pénalité l'est 28 à 0, chaque partie (14) perdue 3 manches à 0 (et 11-0 par
+manche, comme la FFTT) ; dans une poule incomplète, l'équipe exempte marque les 3 points de la victoire
+(compté par adversaires.classement_poule).
 """
 
 from fractions import Fraction
 
-TOUTES, SCORE_ACQUIS = "toutes", "score_acquis"
+TOUTES, SCORE_ACQUIS, CD77 = "toutes", "score_acquis", "cd77"
 REGLES = {TOUTES: "article I.202.2 (toutes les parties jouées) : quotient général des parties, puis goal-average particulier",
-          SCORE_ACQUIS: "article I.202.1 (arrêt au score acquis) : goal-average particulier"}
+          SCORE_ACQUIS: "article I.202.1 (arrêt au score acquis) : goal-average particulier",
+          CD77: "règlement du comité 77, article 5.2 : quotient général des parties, puis goal-average particulier"}
+FORFAIT_CD77, PARTIES_CD77 = 28, 14  # « battue 28 à 0, chaque partie étant comptée comme perdue 3 manches à 0 »
 GENERAL = "quotient général des parties"
 CRITERES = [("pts", "points-rencontres entre elles"), ("parties", "quotient des parties entre elles"),
             ("manches", "quotient des manches entre elles"), ("jeu", "quotient des points-jeu entre elles")]
@@ -52,7 +62,11 @@ def ajuster_forfaits(rencontres, regle):
     res = []
     for r in rencontres:
         a, b = r["pts"]
-        if r.get("forfait") and a != b and prevues:
+        if r.get("forfait") and a != b and regle == CD77:
+            n, m = FORFAIT_CD77, 3 * PARTIES_CD77
+            r = {**r, "parties": (n, 0) if a > b else (0, n), "manches": (m, 0) if a > b else (0, m),
+                 "jeu": (11 * m, 0) if a > b else (0, 11 * m)}
+        elif r.get("forfait") and a != b and prevues:
             n = prevues if regle == TOUTES else prevues // 2 + 1
             gagne = (n, 0) if a > b else (0, n)
             r = {**r, "parties": gagne, "manches": tuple(3 * x for x in gagne), "jeu": tuple(33 * x for x in gagne)}
@@ -95,6 +109,14 @@ def departager(equipes, rencontres, critere=None):
     return [(equipes, TIRAGE)]
 
 
+def regle_du_comite_77(division, feminin):
+    """Poule du championnat départemental de Seine-et-Marne (PR, D1, D2...), hors championnat féminin 77/94 ?"""
+    from .fftt import division_courte
+
+    niveau = division_courte(division)
+    return not feminin and (niveau == "PR" or niveau.startswith("D"))
+
+
 def classer(points, rencontres, regle=None):
     """Classement d'une poule. `points` : {équipe: points-rencontres} (ordre d'origine gardé entre ex aequo) ;
     `rencontres` : [{dom, ext, pts, parties, manches, jeu : (domicile, extérieur), forfait}].
@@ -105,7 +127,7 @@ def classer(points, rencontres, regle=None):
     for groupe in _groupes(list(points), {n: points[n] for n in points}):
         if len(groupe) == 1:
             places.append((groupe, None))
-        elif regle == TOUTES:
+        elif regle in (TOUTES, CD77):
             s = _cumul(groupe, rencontres, "parties", entre_elles=False)
             sous = _groupes(groupe, {n: quotient(*s[n]) for n in groupe})
             places += [x for g in sous for x in departager(g, rencontres, GENERAL if len(sous) > 1 else None)]
