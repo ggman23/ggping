@@ -747,3 +747,6 @@ Pas d'onglet dans l'application pour l'instant.
   plus de « date à confirmer » ni de texte de pied ; « une autre image avec tous les matchs jusqu'à la fin de
   saison » : programme_saison.png (une ligne par rencontre ; phase 2 du championnat de France d'après le
   calendrier du comité tant que ses poules ne sont pas faites).
+- Infographie de Paris (22/11) : « une belle infographie juste pour le championnat de Paris, au format
+  téléphone, qui ne fasse pas Excel ». Réalisation : infographie_paris.py (paris_infographie.png), groupe
+  « paris » à la une de /club/.

@@ -659,6 +659,12 @@ def image_programme(donnees, dossier, aujourdhui=None):
     return dessiner(donnees, dossier, aujourdhui)
 
 
+def image_paris(dossier, aujourdhui=None):
+    """Infographie du championnat de Paris au format téléphone (voir infographie_paris.py)."""
+    from .infographie_paris import image_paris as dessiner
+    return dessiner(dossier, aujourdhui)
+
+
 def image_classements(donnees, dossier_import, dossier):
     """Classements des poules de toutes les équipes de Vaires (voir classements.py)."""
     from .classements import image_classements as dessiner

@@ -87,3 +87,23 @@ def test_programme_de_la_saison(tmp_path):
     from PIL import Image
     assert Image.open(sorties[1][0]).width == 1080
     assert programme.deux_colonnes([100, 100, 100, 100]) == 2 and programme.deux_colonnes([300, 50, 50, 50, 50, 100]) == 1
+
+
+def test_infographie_du_championnat_de_paris(tmp_path):
+    """Infographie de Paris : noms d'équipes lisibles, chiffres clés, une image portrait au format téléphone."""
+    from PIL import Image
+    from ttvaires import infographie_paris as ip
+
+    assert [ip.joli_nom(n) for n in ("NEUILLY S/MARNE TT 2", "NOISY LE GRAND 1", "BUSSY ST-GEORGES CTT 4", "LES LILAS TT 3")] == [
+        "Neuilly s/Marne TT 2", "Noisy le Grand 1", "Bussy St-Georges CTT 4", "Les Lilas TT 3"]
+    info = ip.donnees_infographie(date(2026, 11, 22))
+    assert info["clubs"] == 17 and dict(info["departements"]) == {"77": 6, "93": 8, "94": 3}
+    assert info["prochaine"] == {"numero": 1, "date": "2026-11-27"}
+    (chemin, titre), = ip.image_paris(tmp_path, date(2026, 11, 22))
+    img = Image.open(chemin)
+    assert titre == "Championnat de Paris" and chemin.name == "paris_infographie.png"
+    assert img.width == 1080 and img.height > 2 * img.width
+    couleurs = {c for _, c in img.convert("RGB").getcolors(1 << 20)}
+    assert set(ip.COULEURS_EQUIPES) <= couleurs and ip.OR in couleurs
+    # Après la saison : plus de prochaine journée, les dates passées en gris
+    assert ip.donnees_infographie(date(2027, 6, 30))["prochaine"] is None

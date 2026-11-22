@@ -236,6 +236,10 @@ téléphone et partagées dans les groupes du club (dossier `sortie\images\` sur
   rencontre, la couleur seule pour domicile / extérieur (lisible une fois réduite par WhatsApp) (Paris et
   jeunes : leurs 7 journées ; championnat de France : les journées de la phase 2 du calendrier du
   comité, « adversaires connus en janvier ») ;
+- **championnat de Paris** (`paris_infographie.png`, avec la page adversaires) : une infographie au format
+  téléphone, pas un tableau : bandeau bleu nuit et tour Eiffel, chiffres clés (3 équipes, 7 journées,
+  17 clubs adverses par département), la prochaine journée en trois cartes, puis pour chaque équipe la
+  frise de ses 7 journées (vert à domicile, orange à l'extérieur, gris une fois passées). À la une ;
 - **classements des poules** (`classements_poules.png`, avec la page adversaires) : la poule de
   chaque équipe de Vaires (# ÉQUIPE PTS J V N D, la ligne de Vaires en rouge), deux cartes par
   rangée sur fond sombre, « après la journée 03 » ; le logo du club est fourni avec l'outil

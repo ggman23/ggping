@@ -103,6 +103,7 @@ def page_adversaires(client, club, ctx, tous_les_historiques=False):
             print(f"  ! championnat des jeunes : page non faite ({type(e).__name__} : {e})", flush=True)
         # Programme de toutes les équipes (France, Paris, jeunes) en une image au format téléphone
         fichiers += faire_images("image_programme", donnees, dossier=ctx.images, aujourdhui=ctx.aujourdhui)
+        fichiers += faire_images("image_paris", dossier=ctx.images, aujourdhui=ctx.aujourdhui)  # infographie de Paris
     return fichiers, resume
 
 
