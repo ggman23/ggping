@@ -567,6 +567,14 @@ https://ggping.netlify.app/paris/), avec le **mot de passe du club** (ouverture 
   équipes et joueurs alignés par l'API de la FFTT, effectif complet et meilleur classement par
   pingpocket.fr (pages lues par **le PC**, options 1 et 8, envoyées au site), forme par l'API. Faite
   par l'étape adversaires de la mise à jour (`paris_vaires.html`, publiée à /paris/ comme /77/).
+- **Disponibilités** (onglet de /paris/) : les joueurs du club (ceux du dernier classement virtuel : licences
+  compétition, pas les loisirs), du mieux au moins bien classé aux points virtuels, une liste par journée (J1 à
+  J7) : toucher le bouton d'un joueur (sans réponse → disponible → pas disponible), ou « Coller les réponses »
+  (les noms reçus, un par ligne : accents, ordre prénom / nom et petites fautes reconnus ; les noms pas trouvés
+  sont listés). « Image à partager » : disponibles à gauche (vert), pas disponibles puis sans réponse à droite
+  (rouge, gris), noms seulement, à télécharger ou partager. Les réponses restent dans le navigateur (le
+  téléphone) qui les a saisies ; la liste des joueurs vient de la mise à jour (`cache/joueurs_vaires.json`,
+  écrit par l'étape du classement virtuel, jamais dans le dépôt).
 - Pas de résultats ni de compositions du championnat de Paris : ses rencontres ne sont pas dans l'API
   de la FFTT (contrôle du 18/11/2026, mise à jour n° 89 : seulement le championnat de France, 42
   rencontres masculines et 7 féminines ; le journal le redit à chaque mise à jour, « Championnat de

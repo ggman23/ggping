@@ -750,3 +750,9 @@ Pas d'onglet dans l'application pour l'instant.
 - Infographie de Paris (22/11) : « une belle infographie juste pour le championnat de Paris, au format
   téléphone, qui ne fasse pas Excel ». Réalisation : infographie_paris.py (paris_infographie.png), groupe
   « paris » à la une de /club/.
+- Disponibilités du championnat de Paris (22/11) : « un tableau de disponibilité de mon club, tous les joueurs
+  sans les loisirs, juste le nom, classés par le dernier classement virtuel, vert si disponible, rouge si non ;
+  au format téléphone : 1re colonne les disponibles, 2e les pas disponibles et en dessous les sans réponse ; à
+  faire pour chaque journée ». Réalisation : onglet « Disponibilités » de /paris/ (une liste par journée,
+  gardée dans le navigateur, collage des réponses avec reconnaissance des noms, image dessinée dans la page),
+  joueurs : paris.memoriser_joueurs (cache, depuis le classement virtuel).

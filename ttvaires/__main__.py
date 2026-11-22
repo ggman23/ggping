@@ -114,7 +114,7 @@ def page_paris(client, club, ctx, tous_les_historiques=False):
     donnees = recuperer_paris(client, club, aujourdhui=ctx.aujourdhui, dossier_import=IMPORT,
                               tous_les_historiques=tous_les_historiques, fichier_etat=CACHE / "effectif_adversaires_paris.json")
     page = ctx.sortie / "paris_vaires.html"
-    page.write_bytes(paris.page(donnees))
+    page.write_bytes(paris.page(donnees, paris.joueurs_memorises(CACHE / "joueurs_vaires.json")))
     joueurs = sum(len(c["joueurs"]) for c in donnees["clubs"].values())
     complets = sum(1 for c in donnees["clubs"].values() if c.get("effectif_complet"))
     print(f"Championnat de Paris : {len(donnees['clubs'])} clubs adverses, {joueurs} joueurs, "
@@ -176,6 +176,9 @@ def page_virtuel(client, club, ctx):
     resume = verifications.afficher_club(donnees["verification"], "feuilles de match des équipes de Vaires")
     resume = " ; ".join([resume] + verifications.afficher_controle_parties(donnees["controle"]))
     html = generer_html(donnees, ctx.sortie / "classement_virtuel.html", GABARIT_VIRTUEL)
+    if not ctx.archive:  # joueurs du club pour le tableau des disponibilités de /paris/
+        from . import paris
+        paris.memoriser_joueurs(donnees, CACHE / "joueurs_vaires.json")
     # Progression des joueurs : les mêmes parties, cumulées semaine après semaine (rien à télécharger de plus)
     progression = donnees_progression(donnees, ctx.aujourdhui)
     page_progression = generer_html(progression, ctx.sortie / "progression_vaires.html", GABARIT_PROGRESSION)

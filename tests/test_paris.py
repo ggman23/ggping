@@ -162,3 +162,32 @@ def test_le_bilan_dit_quand_le_championnat_de_paris_arrive_dans_l_api(tmp_path, 
     competitions["L08_Championnat de Paris"] = 21
     assert m.page_adversaires(None, "08770250", ctx)[1] == (
         "tout est là ; nouveau dans l'API FFTT : L08_Championnat de Paris (21 rencontres de Vaires)")
+
+
+def test_disponibilites_joueurs_du_club_et_noms_colles(tmp_path):
+    """Tableau des disponibilités de /paris/ : les joueurs du dernier classement virtuel (pas les loisirs, ils
+    n'y sont pas), du mieux au moins bien classé, gardés dans le cache ; les noms collés sont reconnus malgré
+    accents, ordre prénom / nom et une petite faute (noms fictifs)."""
+    import shutil
+    import subprocess
+
+    virtuel = {"genere_le": "2026-11-21T09:25", "joueurs": [
+        {"nom": "MARTIN", "prenom": "Paul", "virtuels": 1210.5, "officiels": 1200},
+        {"nom": "DUPONT", "prenom": "Aymerik", "virtuels": 1420.0, "officiels": 1400},
+        {"nom": "LE CERF", "prenom": "Léa", "virtuels": None, "officiels": 905},
+        {"nom": "D'ALMEIDA", "prenom": "Jean-Luc", "virtuels": 640, "officiels": 650}]}
+    chemin = tmp_path / "joueurs_vaires.json"
+    joueurs = paris.memoriser_joueurs(virtuel, chemin)
+    assert [j["nom"] for j in joueurs] == ["DUPONT", "MARTIN", "LE CERF", "D'ALMEIDA"] and joueurs[2]["virtuels"] == 905
+    html = paris.page(None, paris.joueurs_memorises(chemin)).decode("utf-8")
+    assert '"joueurs_vaires": [{"nom": "DUPONT"' in html and "Disponibilités" in html
+    assert paris.joueurs_memorises(tmp_path / "absent.json") is None
+    assert '"joueurs_vaires"' not in paris.page().decode("utf-8")  # pas de tableau sans classement virtuel
+    if not shutil.which("node"):
+        return
+    debut, fin = html.index("const mots ="), html.index("function appliquerCollage")
+    script = ("const JOUEURS_VAIRES = " + json.dumps(joueurs) + ";\nconst nomJ = (j) => `${j.prenom} ${j.nom}`.trim();\n"
+              + html[debut:fin] + "\nconsole.log(JSON.stringify(['Aymerick Dupont', 'paul martin', 'LE CERF Lea', 'Jean Luc d almeida',"
+              " 'Inconnu Total', 'Martin'].map((t) => (trouverJoueur(t) || {}).nom || null)));")
+    sortie = subprocess.run(["node", "-e", script], capture_output=True, text=True, check=True).stdout
+    assert json.loads(sortie) == ["DUPONT", "MARTIN", "LE CERF", "D'ALMEIDA", None, None]

@@ -134,9 +134,35 @@ def donnees(adversaires=None):
             "debut_forme": (sources.get("forme") or {}).get("debut"), "historiques_restants": sources.get("historiques_restants", 0)}
 
 
-def page(adversaires=None):
-    """Page /paris/ (HTML) : le gabarit avec les données."""
-    js = json.dumps(donnees(adversaires), ensure_ascii=False).replace("<", "\\u003c")
+def memoriser_joueurs(virtuel, chemin):
+    """Joueurs de Vaires pour le tableau des disponibilités de /paris/ : ceux du dernier classement virtuel
+    (licences compétition : pas les loisirs), du mieux au moins bien classé, nom, prénom et points virtuels
+    seulement. Gardés dans le cache (pas dans le dépôt) : la page /paris/ les reprend à chaque mise à jour."""
+    joueurs = [{"nom": j.get("nom") or "", "prenom": j.get("prenom") or "", "sexe": j.get("sexe"),
+                "virtuels": j.get("virtuels") if j.get("virtuels") is not None else j.get("officiels")}
+               for j in virtuel.get("joueurs", [])]
+    joueurs.sort(key=lambda j: (-(j["virtuels"] or 0), j["nom"], j["prenom"]))
+    chemin = Path(chemin)
+    chemin.parent.mkdir(parents=True, exist_ok=True)
+    chemin.write_text(json.dumps({"date": virtuel.get("genere_le"), "joueurs": joueurs}, ensure_ascii=False), encoding="utf-8")
+    return joueurs
+
+
+def joueurs_memorises(chemin):
+    """Les joueurs de Vaires gardés par memoriser_joueurs (None si pas encore de classement virtuel)."""
+    try:
+        return json.loads(Path(chemin).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def page(adversaires=None, joueurs=None):
+    """Page /paris/ (HTML) : le gabarit avec les données ; `joueurs` (joueurs_memorises) : le tableau des
+    disponibilités de chaque journée."""
+    d = donnees(adversaires)
+    if joueurs:
+        d["joueurs_vaires"], d["date_virtuel"] = joueurs.get("joueurs", []), joueurs.get("date")
+    js = json.dumps(d, ensure_ascii=False).replace("<", "\\u003c")
     return GABARIT.read_text(encoding="utf-8").replace("__DONNEES_JSON__", js).encode("utf-8")
 
 

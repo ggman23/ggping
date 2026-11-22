@@ -126,6 +126,25 @@ table.verif td.c, table.verif th.c { text-align: center; }
   .carte { break-inside: avoid; }
 }
 .bandeau { margin: 0 0 14px; }
+/* Disponibilités (championnat de Paris) */
+.dispo-tete { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0 12px; }
+.dispo-compte { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.dispo-liste { list-style: none; margin: 0; padding: 0; }
+.dispo-liste li { display: flex; align-items: center; gap: 10px; padding: 7px 4px; border-bottom: 1px solid var(--bord); }
+.dispo-liste .n { flex: 1; min-width: 0; }
+.dispo-liste .pts { color: var(--doux); font-size: 13px; font-variant-numeric: tabular-nums; }
+button.etat { font: inherit; font-size: 14px; font-weight: 700; min-width: 118px; padding: 6px 10px; border-radius: 99px;
+  border: 1px solid var(--bord); background: var(--surface2); color: var(--doux); cursor: pointer; }
+button.etat.oui { background: var(--ok); border-color: var(--ok); color: #fff; }
+button.etat.non { background: var(--danger); border-color: var(--danger); color: #fff; }
+button.action { font: inherit; font-size: 14px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--bord);
+  background: var(--surface); color: var(--texte); cursor: pointer; }
+button.action.principal { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+.coller { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.coller textarea { width: 100%; min-height: 150px; font: inherit; font-size: 14px; padding: 8px; border-radius: 8px;
+  border: 1px solid var(--bord); background: var(--surface); color: var(--texte); }
+@media (max-width: 640px) { .coller { grid-template-columns: 1fr; } }
+#apercu img { max-width: 100%; border: 1px solid var(--bord); border-radius: 8px; margin-top: 10px; }
 .espaces { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px;
   max-width: 1200px; margin: 0 auto; padding: 6px 16px; }
 .espaces a { text-decoration: none; font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 99px;
@@ -315,7 +334,8 @@ function dateTxt(r) {
 /* ---------- Onglets et navigation ---------- */
 function onglets(actif) {
   document.getElementById("onglets").innerHTML = [`<a href="#recap" class="${actif === "recap" ? "actif" : ""}">Récapitulatif</a>`]
-    .concat(EQUIPES.map((e) => `<a href="#e/${e.id}" class="${actif === e.id ? "actif" : ""}">${esc(e.nom_court || e.libelle)}</a>`)).join("");
+    .concat(EQUIPES.map((e) => `<a href="#e/${e.id}" class="${actif === e.id ? "actif" : ""}">${esc(e.nom_court || e.libelle)}</a>`))
+    .concat(JOUEURS_VAIRES.length ? [`<a href="#dispo" class="${actif === "dispo" ? "actif" : ""}">Disponibilités</a>`] : []).join("");
 }
 let vueComptee = null;
 function route() {
@@ -324,7 +344,14 @@ function route() {
   const main = document.getElementById("contenu");
   const e = vue === "e" ? EQUIPES.find((x) => x.id === id) : null;
   let compte;
-  if (e) {
+  if (vue === "dispo" && JOUEURS_VAIRES.length) {
+    const j = journeeDispo(Number(id));
+    onglets("dispo");
+    main.innerHTML = vueDispo(j);
+    window.scrollTo(0, 0);
+    compte = ["vue", `dispo-J${j.numero}`, `disponibilités J${j.numero}`];
+    document.title = `CVTT Vaires · ${TITRE} · disponibilités J${j.numero}`;
+  } else if (e) {
     const r = sous === "j" ? (e.rencontres || []).find((x) => x.journee === Number(journee)) : null;
     onglets(e.id);
     main.innerHTML = vueEquipe(e, r ? r.journee : null);
@@ -542,6 +569,178 @@ function tableEquipes(club, idx) {
     <thead><tr><th>Équipe</th>${js.map((jn) => `<th>J${jn}</th>`).join("")}</tr></thead><tbody>
     ${equipes.map((e) => `<tr><td><b>${esc(e.libelle)}</b><br><span class="petit">${esc(e.division || "")}${e.championnat === "F" ? " · féminin" : ""}</span></td>${js.map((jn) => `<td>${cell(e, jn)}</td>`).join("")}</tr>`).join("")}
     </tbody></table></div></details>`;
+}
+
+/* ---------- Disponibilités des joueurs de Vaires, journée par journée (championnat de Paris) ----------
+   Joueurs : le dernier classement virtuel du club (licences compétition, du mieux au moins bien classé :
+   paris.memoriser_joueurs). Les réponses sont gardées dans ce navigateur (ce téléphone), journée par journée ;
+   « Image à partager » dessine le tableau (disponibles à gauche ; pas disponibles puis sans réponse à droite). */
+const JOUEURS_VAIRES = D.joueurs_vaires || [];
+const CLE_DISPO = `cvtt-vaires-dispo-${ESPACE}`;
+const ETATS = { "": "sans réponse", oui: "disponible", non: "pas disponible" };
+const nomJ = (j) => `${j.prenom} ${j.nom}`.trim();
+const cleJ = (j) => `${j.nom}|${j.prenom}`;
+function lireDispo() { try { return JSON.parse(localStorage.getItem(CLE_DISPO) || "{}"); } catch (e) { return {}; } }
+function ecrireDispo(d) { try { localStorage.setItem(CLE_DISPO, JSON.stringify(d)); } catch (e) { /* stockage indisponible */ } }
+function journeeDispo(n) {
+  const js = D.journees || [];
+  return js.find((j) => j.numero === n) || js.find((j) => j.date >= AUJOURDHUI) || js[js.length - 1] || { numero: 1, date: AUJOURDHUI };
+}
+function reponses(j) { return lireDispo()[`J${j.numero}`] || {}; }
+function changerEtat(n, cle) {
+  const d = lireDispo(), r = (d[`J${n}`] ||= {});
+  const suivant = { "": "oui", oui: "non", non: "" }[r[cle] || ""];
+  if (suivant) r[cle] = suivant; else delete r[cle];
+  ecrireDispo(d);
+  compterAction("bouton", "dispo-etat", "disponibilité changée");
+  route();
+}
+document.addEventListener("click", (ev) => {  // bouton d'un joueur (le nom peut contenir une apostrophe)
+  const b = ev.target.closest("button.etat[data-cle]");
+  if (b) changerEtat(Number(b.dataset.j), b.dataset.cle);
+});
+function effacerJournee(n) {
+  if (!confirm(`Effacer toutes les réponses de la J${n} ?`)) return;
+  const d = lireDispo(); delete d[`J${n}`]; ecrireDispo(d); route();
+}
+function groupes(j) {
+  const r = reponses(j);
+  const g = { oui: [], non: [], "": [] };
+  for (const p of JOUEURS_VAIRES) g[r[cleJ(p)] || ""].push(p);
+  return g;
+}
+function vueDispo(j) {
+  const g = groupes(j), r = reponses(j);
+  const jours = (D.journees || []).map((x) => `<a href="#dispo/${x.numero}" class="${x.numero === j.numero ? "actif" : ""}">J${x.numero} · ${fmtDate(x.date)}</a>`).join("");
+  const ligne = (p) => { const e = r[cleJ(p)] || "";
+    return `<li><span class="n"><b>${esc(nomJ(p))}</b> <span class="pts">${p.virtuels != null ? Math.round(p.virtuels) : ""}</span></span>
+      <button type="button" class="etat ${e}" data-j="${j.numero}" data-cle="${esc(cleJ(p))}">${ETATS[e]}</button></li>`; };
+  return `<h2>Disponibilités · J${j.numero}</h2>
+    <p class="sous">${esc(TITRE)} · ${fmtDate(j.date, true)} · joueurs du club classés par points virtuels${D.date_virtuel
+      ? ` (classement virtuel du ${new Date(D.date_virtuel).toLocaleDateString("fr-FR")})` : ""} · licences loisir exclues</p>
+    <div class="filtres">${jours}</div>
+    <div class="dispo-compte"><span class="badge okb">${pluriel(g.oui.length, "disponible")}</span>
+      <span class="badge brule">${g.non.length} pas disponible${g.non.length > 1 ? "s" : ""}</span>
+      <span class="badge neutre">${g[""].length} sans réponse</span></div>
+    <div class="dispo-tete"><button type="button" class="action principal" onclick="imageDispo(${j.numero})">Image à partager</button>
+      <button type="button" class="action" onclick="document.getElementById('coller').hidden = !document.getElementById('coller').hidden">Coller les réponses</button>
+      <button type="button" class="action" onclick="effacerJournee(${j.numero})">Tout effacer</button></div>
+    <div id="apercu"></div>
+    <div class="carte" id="coller" hidden><h3>Coller les réponses (un nom par ligne, ou séparés par des virgules)</h3>
+      <div class="coller"><label>Disponibles<textarea id="coller-oui" placeholder="Prénom Nom"></textarea></label>
+        <label>Pas disponibles<textarea id="coller-non" placeholder="Prénom Nom"></textarea></label></div>
+      <p><button type="button" class="action principal" onclick="appliquerCollage(${j.numero})">Appliquer</button></p>
+      <p class="petit" id="coller-bilan"></p></div>
+    <div class="carte"><p class="petit">Touche le bouton d'un joueur : sans réponse → disponible → pas disponible. Réponses gardées dans ce
+      navigateur, une liste par journée.</p><ul class="dispo-liste">${JOUEURS_VAIRES.map(ligne).join("")}</ul></div>`;
+}
+
+/* Reconnaître les noms collés : accents, majuscules, ordre prénom / nom et petites fautes (Aymerick / Aymerik) */
+const mots = (t) => String(t || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z]+/g, " ").trim().split(/\s+/).filter(Boolean);
+function distance(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+function trouverJoueur(texte) {
+  const m = mots(texte);
+  if (!m.length) return null;
+  const cle = m.slice().sort().join(" ");
+  const exacts = JOUEURS_VAIRES.filter((p) => mots(nomJ(p)).sort().join(" ") === cle);
+  if (exacts.length === 1) return exacts[0];
+  // Même nom de famille, prénom à une ou deux lettres près
+  const proches = JOUEURS_VAIRES.filter((p) => {
+    const nom = mots(p.nom);
+    if (!nom.every((x) => m.includes(x))) return false;
+    const reste = m.filter((x) => !nom.includes(x)).join(""), prenom = mots(p.prenom).join("");
+    return reste && prenom && distance(reste, prenom) <= Math.min(2, Math.floor(prenom.length / 3));
+  });
+  return proches.length === 1 ? proches[0] : null;
+}
+function appliquerCollage(n) {
+  const d = lireDispo(), r = (d[`J${n}`] ||= {}), inconnus = [];
+  let nb = 0;
+  for (const [id, etat] of [["coller-oui", "oui"], ["coller-non", "non"]])
+    for (const t of document.getElementById(id).value.split(/[\n,;]+/).map((x) => x.trim()).filter(Boolean)) {
+      const p = trouverJoueur(t);
+      if (p) { r[cleJ(p)] = etat; nb++; } else inconnus.push(t);
+    }
+  ecrireDispo(d);
+  compterAction("bouton", "dispo-coller", "réponses collées");
+  route();
+  const bilan = document.getElementById("coller-bilan"), zone = document.getElementById("coller");
+  zone.hidden = !inconnus.length;
+  if (inconnus.length) bilan.textContent = `${nb} réponse(s) enregistrée(s). Pas trouvés dans le club (à toucher à la main) : ${inconnus.join(", ")}.`;
+}
+
+/* Image à partager : 1080 de large, disponibles à gauche, pas disponibles puis sans réponse à droite */
+function imageDispo(n) {
+  const j = journeeDispo(n), g = groupes(j);
+  const L = 1080, M = 24, E = 24, CW = (L - 2 * M - E) / 2, TETE = 190;
+  const H_RUB = 58, H_L = 46, H_S = 36;
+  const gauche = H_RUB + g.oui.length * H_L;
+  const droite = H_RUB + g.non.length * H_L + (g[""].length ? 22 + H_RUB + g[""].length * H_S : 0);
+  const H = TETE + 24 + Math.max(gauche, droite, H_RUB) + 18;
+  const c = document.createElement("canvas"), k = 2;
+  c.width = L * k; c.height = H * k;
+  const x = c.getContext("2d");
+  x.scale(k, k);
+  const police = (t, g = false) => `${g ? "700 " : ""}${t}px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
+  const texte = (t, px, py, taille, couleur, gras = false, largeur = 0) => {
+    let tl = taille;
+    x.font = police(tl, gras);
+    while (largeur && tl > 14 && x.measureText(t).width > largeur) { tl -= 1; x.font = police(tl, gras); }
+    x.fillStyle = couleur; x.textBaseline = "middle"; x.fillText(t, px, py);
+  };
+  const rond = (px, py, w, h, r, couleur) => {
+    x.fillStyle = couleur; x.beginPath();
+    if (x.roundRect) x.roundRect(px, py, w, h, r); else x.rect(px, py, w, h);  // navigateurs anciens : coins droits
+    x.fill();
+  };
+  x.fillStyle = "#ffffff"; x.fillRect(0, 0, L, H);
+  const fond = x.createLinearGradient(0, 0, L, TETE); fond.addColorStop(0, "#10243f"); fond.addColorStop(1, "#1b3a63");
+  x.fillStyle = fond; x.fillRect(0, 0, L, TETE);
+  texte(TITRE.toUpperCase(), M, 36, 24, "#f6c44c", true);
+  texte(`Disponibilités · J${j.numero}`, M, 92, 54, "#ffffff", true);
+  const d = dateObj(j.date);
+  texte(`${["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"][d.getDay()]} ${d.getDate()} ${d.toLocaleDateString("fr-FR", { month: "long" })} ${d.getFullYear()} · CVTT Vaires`,
+    M, 150, 26, "#c4d2e4");
+  const rubrique = (px, py, titre, nb, couleur) => {
+    rond(px, py, CW, H_RUB - 10, 14, couleur);
+    texte(`${titre} · ${nb}`, px + 18, py + (H_RUB - 10) / 2, 28, "#ffffff", true, CW - 36);
+  };
+  const liste = (px, py, joueurs, h, taille, couleur, point) => {
+    joueurs.forEach((p, i) => {
+      const yc = py + i * h + h / 2;
+      if (i % 2 === 0) rond(px, py + i * h + 2, CW, h - 4, 8, "#f4f6f9");
+      x.fillStyle = point; x.beginPath(); x.arc(px + 20, yc, h > 40 ? 7 : 5, 0, 7); x.fill();
+      texte(nomJ(p), px + 38, yc + 1, taille, couleur, h > 40, CW - 50);
+    });
+  };
+  const y0 = TETE + 24;
+  rubrique(M, y0, "Disponibles", g.oui.length, "#1d7a46");
+  liste(M, y0 + H_RUB, g.oui, H_L, 27, "#1c2330", "#1d7a46");
+  const xd = M + CW + E;
+  rubrique(xd, y0, "Pas disponibles", g.non.length, "#b3261e");
+  liste(xd, y0 + H_RUB, g.non, H_L, 27, "#1c2330", "#b3261e");
+  if (g[""].length) {
+    const ys = y0 + H_RUB + g.non.length * H_L + 22;
+    rubrique(xd, ys, "Sans réponse", g[""].length, "#8a93a3");
+    liste(xd, ys + H_RUB, g[""], H_S, 22, "#5b6576", "#b9c0cb");
+  }
+  c.toBlob((blob) => {
+    const nom = `disponibilites_paris_J${j.numero}.png`, url = URL.createObjectURL(blob);
+    const fichier = new File([blob], nom, { type: "image/png" });
+    const peutPartager = navigator.canShare && navigator.canShare({ files: [fichier] });
+    document.getElementById("apercu").innerHTML = `<p><a class="action principal" style="text-decoration:none;display:inline-block;padding:7px 12px;border-radius:8px;background:var(--accent);color:#fff;font-weight:700"
+      href="${url}" download="${nom}" data-lien="image disponibilités">Télécharger l'image</a>
+      ${peutPartager ? '<button type="button" class="action" id="partager-dispo">Partager</button>' : ""}</p><img src="${url}" alt="Disponibilités J${j.numero}">`;
+    if (peutPartager) document.getElementById("partager-dispo").onclick = () =>
+      navigator.share({ files: [fichier], title: `Disponibilités J${j.numero}` }).catch(() => {});
+    compterAction("bouton", "dispo-image", "image des disponibilités");
+  }, "image/png");
 }
 
 /* ---------- Démarrage ---------- */
