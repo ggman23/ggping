@@ -9,6 +9,8 @@ le bilan des vérifications (aucun nom de joueur).
 Utilisé par le workflow GitHub Actions (.github/workflows/mise-a-jour.yml) :
   python -m ttvaires.publier --recuperer URL_DU_SITE   # reprend les pages déjà en ligne
   python -m ttvaires.publier                           # chiffre les pages de sortie/ dans site/
+  python -m ttvaires.publier --republier               # « Publication seule » : rien de nouveau à chiffrer,
+                                                       # le site repris est republié (accueil refait)
 Le mot de passe est lu dans la variable d'environnement MOT_DE_PASSE_SITE.
 """
 
@@ -179,6 +181,20 @@ def ecrire_etat(site, etat):
     return etat
 
 
+def republier(site):
+    """« Publication seule » (mise à jour sans rien relire) : les pages reprises du site en ligne sont
+    gardées telles quelles, avec leur date ; l'accueil est refait avec le gabarit du jour. Les étapes
+    suivantes refont l'espace club (documents des rubriques ajoutés depuis) et les copies."""
+    fichier_etat = site / "etat.json"
+    if not fichier_etat.exists():
+        raise ErreurPublication("Aucun site en ligne à reprendre : lancez d'abord une mise à jour « Tout ».")
+    etat = json.loads(fichier_etat.read_text(encoding="utf-8"))
+    etat.update({"workflow": WORKFLOW, "sel": SEL, "iterations": ITERATIONS})
+    etat = ecrire_etat(site, etat)
+    print(f"Publication seule : {len(etat['fichiers'])} fichier(s) repris du site en ligne, rien n'est relu.")
+    return etat
+
+
 def publier_images(page, date, sortie, site, etat, cle_):
     """Images PNG d'une page : celles du lancement précédent pour cette page sont remplacées
     (leur nombre et leurs noms peuvent changer d'une fois à l'autre : J3 puis J4...)."""
@@ -205,14 +221,19 @@ def main():
     parser.add_argument("--sortie", default=str(RACINE / "sortie"), help="dossier des pages générées")
     parser.add_argument("--site", default=str(RACINE / "site"), help="dossier du site à publier")
     parser.add_argument("--recuperer", metavar="URL", help="reprendre d'abord les fichiers du site en ligne")
+    parser.add_argument("--republier", action="store_true",
+                        help="publication seule : republier le site repris, sans nouvelle page (rien n'est relu)")
     args = parser.parse_args()
     site = Path(args.site)
     if args.recuperer:
         recuperer(args.recuperer, site)
         return
     try:
-        publier(Path(args.sortie), site, os.environ.get("MOT_DE_PASSE_SITE", ""),
-                os.environ.get("GITHUB_REPOSITORY", ""), os.environ.get("GITHUB_REF_NAME", ""))
+        if args.republier:
+            republier(site)
+        else:
+            publier(Path(args.sortie), site, os.environ.get("MOT_DE_PASSE_SITE", ""),
+                    os.environ.get("GITHUB_REPOSITORY", ""), os.environ.get("GITHUB_REF_NAME", ""))
     except ErreurPublication as e:
         print(f"!!! {e}")
         sys.exit(1)

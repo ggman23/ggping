@@ -102,6 +102,7 @@ def test_image_dans_une_rubrique(tmp_path):
     ressources.ajouter("Prépa mentale", image, "club", dossier=depot)
     (r,) = ressources.publier_dans(tmp_path / "club", publier.cle("club"), depot)
     assert [(d["fichier"], d["type"]) for d in r["documents"]] == [("memo.png", "image")]
+    assert "dimensions" not in r["documents"][0]  # illisible pour Pillow : publiée telle quelle, sans aperçu
 
 
 def test_espace_a_mot_de_passe_a_part(tmp_path, monkeypatch):
@@ -150,3 +151,41 @@ def test_espace_a_mot_de_passe_a_part(tmp_path, monkeypatch):
     monkeypatch.setenv("MOT_DE_PASSE_LUNDI", "autre")
     assert ressources.publier_espaces(tmp_path / "s4", publier.cle("club"), depot) == []
     assert (tmp_path / "s4" / "lundi" / "cle-publique.txt").read_text().strip() == ressources.cle_publique("autre", "lundi")
+
+
+def test_grande_image_avec_un_apercu_allege(tmp_path):
+    """Une grande image (affiche 8K) : l'original est publié pour « Télécharger », un aperçu JPEG de
+    2 000 pixels au plus pour l'affichage ; une petite image n'en a pas ; remplacer retire l'ancien aperçu."""
+    from PIL import Image
+
+    depot, club, cle = tmp_path / "ressources", tmp_path / "club", publier.cle("club")
+    grande, petite = tmp_path / "Affiche Paris.png", tmp_path / "memo.jpg"
+    Image.new("RGBA", (1600, 3000), (200, 20, 30, 0)).save(grande)  # transparente : posée sur du blanc
+    Image.new("RGB", (800, 1200), "navy").save(petite)
+    assert ressources.ajouter("Championnat de Paris", grande, "club", dossier=depot) == "affiche-paris.png"
+    ressources.ajouter("Championnat de Paris", petite, "club", dossier=depot)
+    docs = ressources.lire(depot)["rubriques"][0]["documents"]
+    assert [(d["fichier"], d["dimensions"], d.get("apercu")) for d in docs] == [
+        ("affiche-paris.png", [1600, 3000], "affiche-paris.apercu.jpg"), ("memo.jpg", [800, 1200], None)]
+    import io
+    leger = Image.open(io.BytesIO(publier.dechiffrer((depot / "affiche-paris.apercu.jpg.chiffre").read_bytes(), cle)))
+    assert (leger.format, leger.size, leger.getpixel((10, 10))) == ("JPEG", (1067, 2000), (255, 255, 255))
+    rubriques = ressources.publier_dans(club, cle, depot)
+    affiche = rubriques[0]["documents"][0]
+    assert (affiche["chemin"], affiche["apercu"], affiche["type"]) == (
+        "ressources/affiche-paris.png.chiffre", "ressources/affiche-paris.apercu.jpg.chiffre", "image")
+    assert (club / "ressources" / "affiche-paris.apercu.jpg.chiffre").exists()
+    assert "apercu" not in rubriques[0]["documents"][1]
+    # Remplacée par une version plus petite : plus d'aperçu, l'ancien fichier d'aperçu est retiré
+    Image.new("RGB", (1000, 1500), "red").save(grande)
+    ressources.ajouter("Championnat de Paris", grande, "club", dossier=depot)
+    assert not (depot / "affiche-paris.apercu.jpg.chiffre").exists()
+    assert all("apercu" not in d for d in ressources.lire(depot)["rubriques"][0]["documents"])
+
+
+def test_apercus_du_depot_lisibles():
+    """Chaque aperçu inscrit dans la liste du dépôt est présent (chiffré)."""
+    for r in ressources.lire()["rubriques"]:
+        for d in r["documents"]:
+            if d.get("apercu"):
+                assert (ressources.DOSSIER / f"{d['apercu']}.chiffre").exists(), d["apercu"]

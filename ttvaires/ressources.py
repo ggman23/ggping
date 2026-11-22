@@ -10,7 +10,13 @@ Ajouter ou remplacer un document (sur un PC, avec le mot de passe du club) :
 
     python -m ttvaires.ressources ajouter "Prépa mentale" chemin/guide.pdf --titre "Guide du joueur"
 
-puis l'envoyer sur GitHub (commit du dossier ressources/) : la mise à jour suivante le publie.
+puis l'envoyer sur GitHub (commit du dossier ressources/) : la mise à jour suivante le publie
+(« Publication seule » suffit : rien n'est relu à la FFTT).
+
+Une grande image (ex. l'affiche du championnat de Paris en 5461 x 8192, 15 Mo) a en plus un aperçu
+allégé (APERCU_COTE pixels de haut au plus, en JPEG), chiffré à côté (« <nom>.apercu.jpg.chiffre ») :
+l'espace club affiche l'aperçu, léger pour un téléphone, et « Télécharger » ou « Partager » donnent
+l'original.
 Le mot de passe est lu dans la variable MOT_DE_PASSE_CLUB, sinon demandé.
 
 Si le mot de passe du club change, ces documents ne s'ouvrent plus avec la nouvelle clé : la mise à
@@ -47,6 +53,8 @@ RACINE = Path(__file__).resolve().parent.parent
 DOSSIER = RACINE / "ressources"
 LISTE = "ressources.json"
 TYPES = {".html": "page", ".htm": "page", ".pdf": "pdf", ".png": "image", ".jpg": "image", ".jpeg": "image"}
+# Image dont le grand côté dépasse APERCU_SEUIL pixels : aperçu de APERCU_COTE pixels au plus pour l'affichage
+APERCU_SEUIL, APERCU_COTE = 2400, 2000
 STOCKAGE_CLUB = "cvtt-vaires-cle-club"  # clé gardée par l'espace club : la même ouvre les espaces (voir publier_espaces)
 SCELLE = b"SCEL1"  # en-tête d'une page scellée (espace à mot de passe à part)
 CONSIGNE_A_PART = "Page privée : entre son mot de passe (ce n'est pas celui du club)."
@@ -129,6 +137,38 @@ def nom_de_fichier(chemin):
     return base + chemin.suffix.lower()
 
 
+def nom_apercu(fichier):
+    """« affiche.png » -> « affiche.apercu.jpg » (l'aperçu est toujours en JPEG)."""
+    return f"{Path(fichier).stem}.apercu.jpg"
+
+
+def apercu(contenu):
+    """(aperçu JPEG, (largeur, hauteur) de l'original) d'une image dont le grand côté dépasse
+    APERCU_SEUIL ; (None, dimensions) sinon. La transparence d'un PNG est posée sur du blanc. Une image
+    illisible est publiée telle quelle, sans aperçu : (None, None)."""
+    import io
+
+    from PIL import Image, UnidentifiedImageError
+
+    try:
+        image = Image.open(io.BytesIO(contenu))
+    except UnidentifiedImageError:
+        print("  ! image illisible : publiée telle quelle, sans aperçu", flush=True)
+        return None, None
+    with image:
+        dimensions = image.size
+        if max(dimensions) <= APERCU_SEUIL:
+            return None, dimensions
+        image.draft("RGB", (APERCU_COTE, APERCU_COTE))  # JPEG : décodé directement à une taille réduite
+        image = image.convert("RGBA")
+        fond = Image.new("RGB", image.size, "white")
+        fond.paste(image, mask=image.getchannel("A"))
+        fond.thumbnail((APERCU_COTE, APERCU_COTE), Image.LANCZOS)
+        sortie = io.BytesIO()
+        fond.save(sortie, "JPEG", quality=88, optimize=True, progressive=True)
+        return sortie.getvalue(), dimensions
+
+
 def ajouter(rubrique, chemin, mot_de_passe_club, titre=None, description="", fichier=None, dossier=None):
     """Chiffre `chemin` avec la clé du club dans `dossier` et l'inscrit dans la rubrique (créée au
     besoin, à la fin). Un document du même nom est remplacé. Renvoie le nom du fichier publié."""
@@ -142,16 +182,26 @@ def ajouter(rubrique, chemin, mot_de_passe_club, titre=None, description="", fic
     fichier = fichier or nom_de_fichier(chemin)
     contenu = chemin.read_bytes()
     Path(dossier).mkdir(parents=True, exist_ok=True)
-    (Path(dossier) / f"{fichier}.chiffre").write_bytes(chiffrer_stable(contenu, publier.cle(mot_de_passe_club)))
+    cle_club = publier.cle(mot_de_passe_club)
+    (Path(dossier) / f"{fichier}.chiffre").write_bytes(chiffrer_stable(contenu, cle_club))
+    leger, dimensions = apercu(contenu) if TYPES[chemin.suffix.lower()] == "image" else (None, None)
     liste = lire(dossier)
     for r in liste["rubriques"]:
+        for d in r["documents"]:
+            if d["fichier"] == fichier and d.get("apercu"):  # l'aperçu de la version remplacée
+                (Path(dossier) / f"{d['apercu']}.chiffre").unlink(missing_ok=True)
         r["documents"] = [d for d in r["documents"] if d["fichier"] != fichier]
     cible = next((r for r in liste["rubriques"] if r["nom"] == rubrique), None)
     if cible is None:
         cible = {"nom": rubrique, "description": "", "documents": []}
         liste["rubriques"].append(cible)
-    cible["documents"].append({"fichier": fichier, "titre": titre or chemin.stem, "description": description,
-                               "taille": len(contenu)})
+    document = {"fichier": fichier, "titre": titre or chemin.stem, "description": description, "taille": len(contenu)}
+    if dimensions:
+        document["dimensions"] = list(dimensions)
+    if leger:
+        document["apercu"] = nom_apercu(fichier)
+        (Path(dossier) / f"{document['apercu']}.chiffre").write_bytes(chiffrer_stable(leger, cle_club))
+    cible["documents"].append(document)
     liste["rubriques"] = [r for r in liste["rubriques"] if r["documents"]]
     _ecrire(liste, dossier)
     return fichier
@@ -178,9 +228,16 @@ def publier_dans(club, cle_club, dossier=None):
             cible = Path(club) / "ressources" / f"{d['fichier']}.chiffre"
             cible.parent.mkdir(parents=True, exist_ok=True)
             cible.write_bytes(source.read_bytes())
-            documents.append({"fichier": d["fichier"], "chemin": f"ressources/{d['fichier']}.chiffre",
-                              "type": TYPES.get(Path(d["fichier"]).suffix.lower(), "page"), "titre": d["titre"],
-                              "description": d.get("description", ""), "taille": d.get("taille")})
+            document = {"fichier": d["fichier"], "chemin": f"ressources/{d['fichier']}.chiffre",
+                        "type": TYPES.get(Path(d["fichier"]).suffix.lower(), "page"), "titre": d["titre"],
+                        "description": d.get("description", ""), "taille": d.get("taille")}
+            if d.get("dimensions"):
+                document["dimensions"] = d["dimensions"]
+            leger = Path(dossier) / f"{d.get('apercu')}.chiffre"
+            if d.get("apercu") and leger.exists():  # sans aperçu, l'original est affiché
+                (Path(club) / "ressources" / leger.name).write_bytes(leger.read_bytes())
+                document["apercu"] = f"ressources/{leger.name}"
+            documents.append(document)
         if documents:
             rubriques.append({"nom": r["nom"], "description": r.get("description", ""), "documents": documents})
     return rubriques
@@ -325,7 +382,7 @@ def publier_espaces(site, cle_club, dossier=None):
 def main(arguments=None):
     p = argparse.ArgumentParser(prog="python -m ttvaires.ressources", description="Documents des rubriques de l'espace club")
     sous = p.add_subparsers(dest="action", required=True)
-    a = sous.add_parser("ajouter", help="ajouter ou remplacer un document (page .html ou PDF)")
+    a = sous.add_parser("ajouter", help="ajouter ou remplacer un document (page .html, PDF ou image png, jpg)")
     a.add_argument("rubrique", help="nom de la rubrique, par exemple « Prépa mentale »")
     a.add_argument("chemin", type=Path)
     a.add_argument("--titre")

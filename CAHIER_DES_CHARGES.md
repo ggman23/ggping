@@ -756,3 +756,11 @@ Pas d'onglet dans l'application pour l'instant.
   faire pour chaque journée ». Réalisation : onglet « Disponibilités » de /paris/ (une liste par journée,
   gardée dans le navigateur, collage des réponses avec reconnaissance des noms, image dessinée dans la page),
   joueurs : paris.memoriser_joueurs (cache, depuis le classement virtuel).
+- Affiche du championnat de Paris (22/11) : « ajoute cette image afin que les membres de mon club puissent la
+  télécharger », puis « celle que je veux est en 4K, 5461 x 8192 » (la photo reçue dans la conversation était
+  réduite à 1333 x 2000 ; l'originale est arrivée en .zip). Réalisation : rubrique « Championnat de Paris » de
+  /club/, original chiffré (15 Mo) et aperçu allégé (ressources.apercu, 2 000 pixels de haut) affiché dans la
+  page ; « Télécharger » et « Partager » donnent l'original.
+- « Y a-t-il une option dans la mise à jour pour ne mettre à jour que les fichiers ajoutés, sans refaire toute
+  une mise à jour ? » (22/11). Réalisation : choix « Publication seule » (workflow : publication) : rien n'est
+  relu ni archivé, pages en ligne reprises (publier --republier), espace club et copies refaits.

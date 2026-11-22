@@ -129,3 +129,36 @@ def test_classements_des_poules_page_et_image_a_part(tmp_path):
     assert etat["images"]["images/classements_poules.png.chiffre"]["groupe"] == "classements"
     assert etat["images"]["images/classements_poules.png.chiffre"]["page"] == "adversaires"
     assert etat["images"]["images/adversaires_V1.png.chiffre"]["groupe"] == "adversaires"
+
+
+def test_publication_seule_sans_rien_relire(tmp_path):
+    """« Publication seule » : les pages reprises du site en ligne restent telles quelles (date, bilan),
+    l'accueil est refait ; sans site à reprendre, rien n'est publié."""
+    site = tmp_path / "site"
+    site.mkdir()
+    (site / "adversaires.html").write_text("page chiffrée")
+    (site / "images").mkdir()
+    (site / "images" / "programme_equipes.png.chiffre").write_bytes(b"image")
+    etat = {"pages": {"adversaires.html": {"titre": "Adversaires", "date": "2026-11-21T09:25", "verification": "ok"}},
+            "images": {"images/programme_equipes.png.chiffre": {"titre": "Programme", "groupe": "programme"}},
+            "depot": "ggman23/ggping", "branche": "b", "derniere_maj": {"fin": "2026-11-21T09:30", "bilans": []}}
+    (site / "etat.json").write_text(json.dumps(etat))
+    nouvel = publier.republier(site)
+    assert nouvel["fichiers"] == ["adversaires.html", "images/programme_equipes.png.chiffre"]
+    assert nouvel["pages"] == etat["pages"] and nouvel["derniere_maj"] == etat["derniere_maj"]
+    assert (site / "adversaires.html").read_text() == "page chiffrée"
+    assert '"depot": "ggman23/ggping"' in (site / "index.html").read_text()
+    with pytest.raises(publier.ErreurPublication, match="Tout"):
+        publier.republier(tmp_path / "vide")
+
+
+def test_choix_publication_seule_dans_le_workflow_et_l_accueil():
+    from pathlib import Path
+
+    racine = Path(publier.__file__).resolve().parent.parent
+    workflow = (racine / ".github" / "workflows" / "mise-a-jour.yml").read_text(encoding="utf-8")
+    assert "departement, publication]" in workflow and "python -m ttvaires.publier --republier" in workflow
+    # rien n'est relu ni archivé : ces deux étapes sont sautées
+    for etape in ("Récupération des données", "Archives des journées passées"):
+        assert f"- name: {etape}\n        if: ${{{{ inputs.pages != 'publication' }}}}" in workflow
+    assert '<option value="publication">' in (racine / "ttvaires" / "gabarit_accueil.html").read_text(encoding="utf-8")

@@ -11,9 +11,9 @@ on:
   workflow_dispatch:
     inputs:
       pages:
-        description: Pages à mettre à jour
+        description: "Pages à mettre à jour (publication : rien n'est relu, le site est republié avec les documents ajoutés à l'espace club)"
         type: choice
-        options: [tout, resultats, effectif, virtuel, adversaires, indivs, departement]
+        options: [tout, resultats, effectif, virtuel, adversaires, indivs, departement, publication]
         default: tout
       joueurs_77:
         description: "Clubs du 77 : joueurs dont les points virtuels sont relus (les autres gardent leur dernière lecture)"
@@ -89,7 +89,10 @@ jobs:
           MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
         run: python -m ttvaires.synchro --recevoir
 
+      # « publication » (publication seule) : rien n'est relu à la FFTT ni refait ; les pages en ligne
+      # sont reprises et republiées, l'espace club refait avec les documents ajoutés (ressources/)
       - name: Récupération des données
+        if: ${{ inputs.pages != 'publication' }}
         env:
           CHOIX: ${{ inputs.pages || 'tout' }}
           JOUEURS_77: ${{ inputs.joueurs_77 || 'tous' }}  # clubs du 77 : listes relues une fois par semaine (le lundi : toutes)
@@ -119,11 +122,18 @@ jobs:
         id: chiffrement
         env:
           MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}
-        run: python -m ttvaires.publier
+          CHOIX: ${{ inputs.pages || 'tout' }}
+        run: |
+          if [ "$CHOIX" = publication ]; then
+            python -m ttvaires.publier --republier
+          else
+            python -m ttvaires.publier
+          fi
 
       # Archives des journées passées (la J3 dès que la J4 a commencé ; J1, J2... si elles manquent) :
       # refaites à la date de la veille de la journée suivante, publiées une fois pour toutes.
       - name: Archives des journées passées
+        if: ${{ inputs.pages != 'publication' }}
         continue-on-error: true  # une archive ratée est refaite la fois suivante ; le site est publié quand même
         env:
           MOT_DE_PASSE_SITE: ${{ secrets.MOT_DE_PASSE_SITE }}

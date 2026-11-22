@@ -100,10 +100,18 @@ du navigateur) ; « Effacer » le retire. Pour le bouton seul, le droit *Actions
 suffit.
 
 Sans jeton, on peut toujours lancer depuis l'appli ou le site GitHub : *Actions* → *Mise à jour
-du site* → *Run workflow* (choix des pages : tout, résultats, effectif, virtuel, adversaires).
+du site* → *Run workflow* (choix des pages : tout, résultats, effectif, virtuel, adversaires,
+individuels, clubs du 77, publication).
 
 Une page non choisie lors d'une mise à jour reste celle de la mise à jour précédente (sa date
 est affichée sur l'accueil).
+
+**« Publication seule »** (dernier choix de la liste ; `publication` dans *Run workflow*) : rien n'est
+relu, ni à la FFTT ni sur pingpocket.fr, et aucune archive n'est refaite. Les pages déjà en ligne sont
+reprises telles quelles, avec leur date, et le site est republié : c'est ce qu'il faut après avoir
+ajouté un document à l'espace club (affiche, PDF : voir « Rubriques de l'espace club ») ou changé
+l'outil sans vouloir attendre une mise à jour complète. Environ 2 à 3 minutes. Avec le bouton « les 3
+sites », Netlify reçoit aussi la nouvelle version (15 crédits).
 
 ## Si le PC n'a pas envoyé ses données
 
@@ -387,7 +395,8 @@ les titres et les descriptions. Pour ajouter ou remplacer un document, sur le PC
 
     python -m ttvaires.ressources ajouter "Prépa mentale" "C:\chemin\guide.pdf" --titre "Guide du joueur" --description "26 pages"
 
-(le mot de passe du club est demandé), puis envoyer le dossier `ressources/` sur GitHub. Une
+(le mot de passe du club est demandé), puis envoyer le dossier `ressources/` sur GitHub et lancer une
+mise à jour « Publication seule » (2 à 3 minutes, rien n'est relu) ou attendre la suivante. Une
 nouvelle rubrique est créée à la fin si son nom n'existe pas. Si le mot de passe du club change,
 ces documents ne s'ouvrent plus avec la nouvelle clé : la mise à jour le signale dans son journal et
 ne les publie pas ; il faut alors les ajouter de nouveau.
@@ -397,6 +406,13 @@ Une image (png, jpg) peut aussi être un document de rubrique : elle s'affiche c
 site, avec « Télécharger » et « Partager » sur téléphone (partagée avec son vrai type, PNG ou JPEG) :
 ex. le mémo sac de sport, version image du PDF, ou l'affiche du championnat de Paris 2026-2027
 (rubrique « Championnat de Paris », placée en premier dans `ressources.json`).
+
+Une grande image (plus de 2 400 pixels de côté, comme cette affiche en 5461 × 8192, 15 Mo) reçoit en
+plus, à l'ajout, un **aperçu allégé** (2 000 pixels de haut au plus, JPEG, chiffré lui aussi :
+`<nom>.apercu.jpg.chiffre`). L'espace club affiche l'aperçu, rapide à ouvrir sur un téléphone, avec la
+mention « Aperçu allégé » ; « Télécharger » et « Partager » donnent l'original en pleine résolution.
+Pour garder la pleine résolution dans WhatsApp, l'envoyer en « Document » (en « Photo », WhatsApp la
+réduit). Cloudflare Pages refuse les fichiers de plus de 25 Mo : une image plus lourde est à réduire.
 
 ## Espaces à leur propre adresse : /lundi/ (le roi du lundi)
 

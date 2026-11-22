@@ -93,6 +93,7 @@ button { font: inherit; cursor: pointer; }
 .neutre { background: var(--surface2); color: var(--doux); }
 .image-vue { padding: 14px; display: flex; justify-content: center; }
 .image-vue img { width: 100%; max-width: 1080px; height: auto; border-radius: 8px; box-shadow: 0 4px 20px rgba(0, 0, 0, .12); background: #fff; }
+.note-apercu { margin: 0 auto 18px; padding: 0 16px; max-width: 1080px; font-size: 13px; color: var(--doux); text-align: center; }
 .carte-excel { max-width: 460px; margin: 48px auto; padding: 26px 22px; border: 1px solid var(--bord); border-radius: 16px; background: var(--surface); text-align: center; }
 .carte-excel .icone { width: 56px; height: 56px; margin: 0 auto 12px; border-radius: 14px; display: grid; place-items: center; color: #fff; background: var(--excel); }
 .carte-excel .icone svg { width: 30px; height: 30px; }
@@ -237,6 +238,11 @@ async function dechiffrer(chemin, k = cle, type = "application/octet-stream") {
   const clair = await crypto.subtle.decrypt({ name: "AES-GCM", iv: brut.slice(0, 12) }, cleAes, brut.slice(12));
   const blob = await new Response(new Blob([clair]).stream().pipeThrough(new DecompressionStream("gzip"))).blob();
   return new Blob([blob], { type });
+}
+async function apercu(doc) {
+  const id = `${doc.id}#apercu`;
+  if (!cacheClair.has(id)) cacheClair.set(id, await dechiffrer(doc.apercu, cle, "image/jpeg"));
+  return cacheClair.get(id);
 }
 async function contenu(doc) {
   if (!cacheClair.has(doc.id)) {
@@ -383,7 +389,8 @@ async function route() {
   vue.innerHTML = '<p class="message">Ouverture…</p>';
   compter(`/club/${nomCompte(doc)}`, titreCompte(doc));
   try {
-    const blob = await contenu(doc);
+    // Grande image (affiche 8K...) : on affiche son aperçu allégé ; « Télécharger » et « Partager » donnent l'original
+    const blob = doc.apercu ? await apercu(doc) : await contenu(doc);
     if (courant !== doc) return;  // un autre document a été choisi entre-temps
     if (doc.type === "page") {
       urlCourante = URL.createObjectURL(blob);
@@ -405,7 +412,9 @@ async function route() {
       });
     } else if (doc.type === "image") {
       urlCourante = URL.createObjectURL(blob);
-      vue.innerHTML = `<div class="image-vue"><img src="${urlCourante}" alt="${esc(doc.titre)}"></div>`;
+      vue.innerHTML = `<div class="image-vue"><img src="${urlCourante}" alt="${esc(doc.titre)}"></div>`
+        + (doc.apercu ? `<p class="note-apercu">Aperçu allégé. « Télécharger » donne l'original en pleine résolution
+          (${doc.dimensions ? doc.dimensions.join(" × ") + " pixels, " : ""}${taille(doc.taille)}).</p>` : "");
       const fichier = new File([blob], doc.nom, { type: blob.type || "image/png" });  // PNG ou JPEG
       document.getElementById("partager").hidden = !(navigator.canShare && navigator.canShare({ files: [fichier] }));
     } else {
@@ -432,7 +441,10 @@ function enregistrer(blob, nom) {
 }
 document.getElementById("telecharger").addEventListener("click", async () => {
   if (!courant) return;
-  enregistrer(await contenu(courant), courant.nom);
+  const bouton = document.getElementById("telecharger"), libelle = bouton.querySelector(".libelle");
+  bouton.disabled = true; libelle.textContent = "Préparation…";  // un original de 15 Mo met quelques secondes
+  try { enregistrer(await contenu(courant), courant.nom); }
+  finally { bouton.disabled = false; libelle.textContent = "Télécharger"; }
   compter(`club/telechargement/${nomCompte(courant)}`, `Téléchargement · ${titreCompte(courant)}`, true);
 });
 document.getElementById("partager").addEventListener("click", async () => {
