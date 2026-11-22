@@ -743,3 +743,7 @@ Pas d'onglet dans l'application pour l'instant.
   d'adresse ». Réalisation : programme.py (rencontres : 2 prochaines par équipe de France, Paris et jeunes sur
   la même période ou leur prochaine ; dessin 1080 de large, une carte par rencontre, vert / orange et
   pastille DOM / EXT), faite par l'étape adversaires, groupe d'images « programme » à la une de /club/.
+- Programme (22/11) : pictogramme de chaque compétition (carte de France, tour Eiffel, femme en rose, enfant) ;
+  plus de « date à confirmer » ni de texte de pied ; « une autre image avec tous les matchs jusqu'à la fin de
+  saison » : programme_saison.png (une ligne par rencontre ; phase 2 du championnat de France d'après le
+  calendrier du comité tant que ses poules ne sont pas faites).

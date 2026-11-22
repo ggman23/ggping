@@ -1,4 +1,5 @@
-"""Programme des équipes de Vaires en une seule image au format téléphone (programme_equipes.png).
+"""Programme des équipes de Vaires en une image au format téléphone : les prochaines rencontres
+(programme_equipes.png) et toute la saison (programme_saison.png, une ligne par rencontre).
 
 Toutes les rencontres à venir, journée par journée : les 2 prochaines rencontres de chaque équipe du
 championnat de France (les équipes masculines et l'équipe féminine), puis, sur la même période, celles des
@@ -9,17 +10,22 @@ l'adversaire et DOM / EXT, un pictogramme de la compétition (légende en haut) 
 (championnat de France), tour Eiffel (Paris), tête de femme en rose aux cheveux longs (championnat féminin),
 enfant en entier, bras levés, en violet (jeunes).
 
+Le programme de la saison montre toutes les rencontres à venir jusqu'en juin (Paris et jeunes : leurs 7
+journées) ; les journées du championnat de France dont les poules ne sont pas encore faites (phase 2 : en
+janvier) viennent du calendrier du comité (calendrier.py), une ligne pour les équipes masculines et une pour
+l'équipe féminine : « adversaires connus en janvier ».
+
 Faite par l'étape adversaires de la mise à jour (adversaires.recuperer pour le championnat de France), rangée
 dans le groupe d'images « programme » de l'espace club (à la une, comme le récapitulatif).
 """
 
 import re
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 from PIL import Image, ImageDraw
 
 from .images import (BLANC, DOM_FOND, DOM_TEXTE, DOUX, EXT_FOND, EXT_TEXTE, NOIR, PUCE_FOND, SECTION, TITRE_DOUX,
-                     TITRE_FOND, TITRE_TEXTE, _enregistrer, _nettoyer, ajuster, couper, largeur_texte, police)
+                     TITRE_FOND, TITRE_TEXTE, _enregistrer, _nettoyer, ajuster, largeur_texte, police)
 
 LARGEUR, S = 1080, 2
 MARGE = 24
@@ -53,25 +59,58 @@ def ligne(competition, ordre, equipe, detail, r, icone):
             "heure": r.get("heure"), "a_confirmer": bool(r.get("date_a_confirmer"))}
 
 
-def rencontres(france, paris_, jeunes_, aujourdhui):
-    """Lignes du programme, dans l'ordre : date, puis France, Paris, jeunes, puis l'ordre des équipes."""
+def rencontres(france, paris_, jeunes_, aujourdhui, saison=False):
+    """Lignes du programme, dans l'ordre : date, puis France, Paris, jeunes, puis l'ordre des équipes.
+    `saison` : toutes les rencontres à venir jusqu'à la fin de la saison, et les journées du championnat de
+    France pas encore connues (phase suivante : dates du calendrier du comité, adversaires connus plus tard)."""
     auj = aujourdhui.isoformat()
     lignes = []
     for i, e in enumerate((france or {}).get("equipes", [])):
-        a_venir = [r for r in e.get("rencontres", []) if (_date(r) or "") >= auj and not r.get("score")][:JOURNEES_FRANCE]
+        a_venir = [r for r in e.get("rencontres", []) if (_date(r) or "") >= auj and not r.get("score")]
         femmes = e.get("championnat") == "F"
         detail = f"France{' féminin' if femmes else ''} · {division_courte(e.get('division'))}"
         lignes += [ligne("France", (0, femmes, e.get("numero") or i), e.get("nom_court") or e.get("libelle"), detail, r,
-                         "femmes" if femmes else "france") for r in a_venir]
+                         "femmes" if femmes else "france") for r in (a_venir if saison else a_venir[:JOURNEES_FRANCE])]
+    if saison:
+        lignes += journees_a_venir(france, lignes, auj)
     fin = max((l["date"] for l in lignes), default=(aujourdhui + timedelta(days=14)).isoformat())
     for rang, (nom, donnees) in enumerate((("Paris", paris_), ("Jeunes", jeunes_))):
         for i, e in enumerate((donnees or {}).get("equipes", [])):
             a_venir = [r for r in e.get("rencontres", []) if (_date(r) or "") >= auj]
-            dedans = [r for r in a_venir if _date(r) <= fin] or a_venir[:1]
+            dedans = a_venir if saison else [r for r in a_venir if _date(r) <= fin] or a_venir[:1]
             detail = f"Jeunes · {e.get('code')} ans" if nom == "Jeunes" else f"Paris · {e.get('division')}"
             equipe = re.sub(r"\s*·.*", "", e.get("nom_court") or "")  # « Vaires 1 · −15 ans » -> « Vaires 1 »
             lignes += [ligne(nom, (1 + rang, False, i), equipe, detail, r, nom.lower()) for r in dedans]
     return sorted(lignes, key=lambda l: (l["date"], l["ordre"]))
+
+
+def journees_a_venir(france, connues, auj):
+    """Journées du championnat de France après les rencontres connues (la phase suivante : ses poules ne sont
+    faites qu'en janvier), d'après le calendrier du comité : une ligne pour toutes les équipes masculines, une
+    pour l'équipe féminine."""
+    from .calendrier import EVENEMENTS
+
+    equipes = (france or {}).get("equipes", [])
+    hommes = sorted(e.get("numero") or 0 for e in equipes if e.get("championnat") != "F")
+    femmes = [e for e in equipes if e.get("championnat") == "F"]
+    groupes = []
+    if hommes:
+        nom = f"Vaires {hommes[0]} à {hommes[-1]}" if len(hommes) > 1 else f"Vaires {hommes[0]}"
+        groupes.append(("equipes", False, nom, "france", "adversaires"))
+    groupes += [("feminin", True, e.get("nom_court") or e.get("libelle"), "femmes", "adversaire") for e in femmes[:1]]
+    lignes = []
+    for categorie, f, nom, icone, mot in groupes:
+        dernier = max([l["date"] for l in connues if l["competition"] == "France" and (l["icone"] == "femmes") == f] + [auj])
+        for debut, _, cat, titre, detail, _ in EVENEMENTS:
+            if cat == categorie and debut > dernier:
+                j = int(titre[1:]) if titre[1:].isdigit() else None
+                lignes.append({"date": debut, "competition": "France", "ordre": (0, f, 0), "equipe": nom,
+                               "detail": f"France{' féminin' if f else ''}", "icone": icone, "journee": j, "adversaire": None,
+                               "domicile": False, "heure": None, "a_confirmer": False,
+                               # poules de la phase 2 faites en janvier, celles de la phase 1 en septembre
+                               "a_venir": f"{mot} connu{'s' if mot.endswith('s') else ''} en "
+                                          + ("janvier" if int(debut[5:7]) < 7 else "septembre")})
+    return lignes
 
 
 def _jour_long(iso):
@@ -91,25 +130,22 @@ def _pastille(d, x, y, texte, fond, couleur, taille=24, h=40):
     return w
 
 
-def dessiner(lignes, genere_le=None):
-    """Image du programme (largeur 1080, hauteur selon le nombre de rencontres)."""
+def dessiner(lignes, titre="Programme des équipes", compact=False):
+    """Image du programme (largeur 1080, hauteur selon le nombre de rencontres). `compact` (la saison) : une
+    seule ligne par rencontre (équipe, pictogramme, adversaire, DOM / EXT), sans compétition ni heure."""
+    h_jour, h_ligne = (52, 62) if compact else (H_JOUR, H_LIGNE)
     jours = []
     for l in lignes:
         if not jours or jours[-1][0] != l["date"]:
             jours.append((l["date"], []))
         jours[-1][1].append(l)
-    pied = ("Championnat de France : les 2 prochaines rencontres de chaque équipe ; Paris et jeunes : celles de la même "
-            "période. Pas d'adresse : voir les pages du club.")
-    if genere_le:
-        pied += f" Données du {genere_le}."
-    lignes_pied = couper(pied, LARGEUR - 2 * MARGE, 20)
-    hauteur = H_TETE + H_LEGENDE + sum(H_JOUR + len(ls) * H_LIGNE for _, ls in jours) + 24 + 28 * len(lignes_pied) + 20
+    hauteur = H_TETE + H_LEGENDE + sum(h_jour + len(ls) * h_ligne for _, ls in jours) + 16
     img = Image.new("RGB", (LARGEUR * S, hauteur * S), BLANC)
     d = ImageDraw.Draw(img)
 
     # Bandeau
     d.rectangle([0, 0, LARGEUR * S, H_TETE * S], fill=TITRE_FOND)
-    d.text((MARGE * S, 26 * S), "Programme des équipes", font=police(48, True), fill=TITRE_TEXTE)
+    d.text((MARGE * S, 26 * S), titre, font=police(48, True), fill=TITRE_TEXTE)
     periode = f"du {_court(jours[0][0])} au {_court(jours[-1][0])}" if jours else "aucune rencontre à venir"
     d.text((MARGE * S, 92 * S), f"CVTT Vaires · {periode}", font=police(28), fill=TITRE_DOUX)
     # Légende des couleurs
@@ -126,31 +162,36 @@ def dessiner(lignes, genere_le=None):
     y = H_TETE + H_LEGENDE
 
     for jour, ls in jours:
-        d.rectangle([0, y * S, LARGEUR * S, (y + H_JOUR - 8) * S], fill=SECTION)
-        titre = _jour_long(jour)
-        d.text((MARGE * S, (y + 12) * S), titre, font=police(32, True), fill=NOIR)
+        taille_jour = 26 if compact else 32
+        d.rectangle([0, y * S, LARGEUR * S, (y + h_jour - 8) * S], fill=SECTION)
+        titre_jour = _jour_long(jour)
+        d.text((MARGE * S, (y + (h_jour - 8 - taille_jour) / 2 - 1) * S), titre_jour, font=police(taille_jour, True), fill=NOIR)
         journees = []
         for l in ls:
             j = f"{l['competition']} J{l['journee']}"
             if l["journee"] and j not in journees:
                 journees.append(j)
-        detail, taille = ajuster(" · ".join(journees), LARGEUR - 3 * MARGE - largeur_texte(titre, 32, True), 22)
-        d.text(((LARGEUR - MARGE - largeur_texte(detail, taille)) * S, (y + 20) * S), detail, font=police(taille), fill=DOUX)
-        y += H_JOUR
+        detail, taille = ajuster(" · ".join(journees), LARGEUR - 3 * MARGE - largeur_texte(titre_jour, taille_jour, True), 22)
+        d.text(((LARGEUR - MARGE - largeur_texte(detail, taille)) * S, (y + (h_jour - 8 - taille) / 2) * S), detail,
+               font=police(taille), fill=DOUX)
+        y += h_jour
         for l in ls:
-            _carte(img, d, l, y)
-            y += H_LIGNE
-    y += 16
-    for i, t in enumerate(lignes_pied):
-        d.text((MARGE * S, (y + i * 28) * S), t, font=police(20), fill=DOUX)
+            (_ligne_compacte if compact else _carte)(img, d, l, y)
+            y += h_ligne
     return img.resize((LARGEUR, hauteur), Image.LANCZOS)
 
 
+def _couleurs(l):
+    if l["adversaire"] is None:
+        return PUCE_FOND, DOUX
+    return (DOM_FOND, DOM_TEXTE) if l["domicile"] else (EXT_FOND, EXT_TEXTE)
+
+
 def _carte(img, d, l, y):
-    """Une rencontre : équipe et compétition à gauche, adversaire au milieu, DOM / EXT à droite."""
+    """Une rencontre : équipe et compétition à gauche, adversaire au milieu, pictogramme et DOM / EXT à droite."""
     h = H_LIGNE - ECART
-    exempte = l["adversaire"] is None
-    fond, fort = (PUCE_FOND, DOUX) if exempte else (DOM_FOND, DOM_TEXTE) if l["domicile"] else (EXT_FOND, EXT_TEXTE)
+    sans = l["adversaire"] is None
+    fond, fort = _couleurs(l)
     x0, x1 = MARGE, LARGEUR - MARGE
     d.rounded_rectangle([x0 * S, y * S, x1 * S, (y + h) * S], radius=14 * S, fill=fond)
     d.rounded_rectangle([x0 * S, y * S, (x0 + 10) * S, (y + h) * S], radius=5 * S, fill=fort)
@@ -159,19 +200,38 @@ def _carte(img, d, l, y):
     d.text(((x0 + 26) * S, (y + 10) * S), t, font=police(taille, True), fill=NOIR)
     t, taille = ajuster(l["detail"], 250, 22)
     d.text(((x0 + 26) * S, (y + 52) * S), t, font=police(taille), fill=DOUX)
-    # Adversaire
+    # Adversaire (et heure)
     xa, largeur_adv = x0 + 300, x1 - 130 - ICONE - 16 - (x0 + 300)
-    t, taille = ajuster("exempte" if exempte else l["adversaire"], largeur_adv, 32, not exempte)
-    d.text((xa * S, (y + 10) * S), t, font=police(taille, not exempte), fill=DOUX if exempte else NOIR)
-    sous = "" if exempte else " · ".join(filter(None, [l["heure"] and l["heure"].replace(":", "h"),
-                                                        "date à confirmer" if l["a_confirmer"] else None]))
-    if sous:
-        d.text((xa * S, (y + 52) * S), sous, font=police(22, True), fill=fort)
+    t, taille = ajuster(l.get("a_venir") or ("exempte" if sans else l["adversaire"]), largeur_adv, 32, not sans)
+    d.text((xa * S, (y + 10) * S), t, font=police(taille, not sans), fill=DOUX if sans else NOIR)
+    if l["heure"] and not sans:
+        d.text((xa * S, (y + 52) * S), l["heure"].replace(":", "h"), font=police(22, True), fill=fort)
     w = largeur_texte("DOM", 24, True) + 28
-    if not exempte:
+    if not sans:
         texte = "DOM" if l["domicile"] else "EXT"
         _pastille(d, x1 - 20 - (largeur_texte(texte, 24, True) + 28), y + (h - 40) / 2, texte, fort, BLANC)
     icone(img, d, l["icone"], x1 - 20 - w - 16 - ICONE, y + (h - ICONE) / 2, ICONE, fond)
+
+
+def _ligne_compacte(img, d, l, y):
+    """Une rencontre sur une ligne (image de la saison) : équipe, pictogramme, adversaire, DOM / EXT."""
+    h = 54
+    sans = l["adversaire"] is None
+    fond, fort = _couleurs(l)
+    x0, x1 = MARGE, LARGEUR - MARGE
+    d.rounded_rectangle([x0 * S, y * S, x1 * S, (y + h) * S], radius=10 * S, fill=fond)
+    d.rounded_rectangle([x0 * S, y * S, (x0 + 8) * S, (y + h) * S], radius=4 * S, fill=fort)
+    t, taille = ajuster(l["equipe"], 196, 28, True)
+    d.text(((x0 + 22) * S, (y + (h - taille) / 2 - 1) * S), t, font=police(taille, True), fill=NOIR)
+    icone(img, d, l["icone"], x0 + 226, y + 7, 40, fond)
+    w = largeur_texte("DOM", 22, True) + 24
+    xa = x0 + 280
+    texte_adv = l.get("a_venir") or ("exempte" if sans else l["adversaire"])
+    t, taille = ajuster(texte_adv, x1 - 20 - w - 16 - xa, 28, not sans)
+    d.text((xa * S, (y + (h - taille) / 2 - 1) * S), t, font=police(taille, not sans), fill=DOUX if sans else NOIR)
+    if not sans:
+        texte = "DOM" if l["domicile"] else "EXT"
+        _pastille(d, x1 - 16 - (largeur_texte(texte, 22, True) + 28), y + (h - 36) / 2, texte, fort, BLANC, taille=22, h=36)
 
 
 # ---------------------------------------------------------------------------
@@ -233,17 +293,20 @@ def icone(img, d, cle, x, y, taille, fond):
 
 
 def image_programme(france, dossier, aujourdhui=None, paris_=None, jeunes_=None):
-    """[(chemin, titre)] : l'image du programme (aucune s'il n'y a rien à venir)."""
+    """[(chemin, titre)] : le programme des prochaines rencontres (programme_equipes.png) et celui de toute la
+    saison (programme_saison.png) ; aucune image s'il n'y a rien à venir."""
     from . import jeunes, paris
 
     _nettoyer(dossier, "programme_")
     aujourdhui = aujourdhui or date.today()
-    lignes = rencontres(france, paris_ if paris_ is not None else paris.donnees(),
-                        jeunes_ if jeunes_ is not None else jeunes.donnees(), aujourdhui)
-    if not lignes:
-        return []
-    try:
-        genere = datetime.fromisoformat(france["genere_le"]).strftime("%d/%m/%Y %H:%M")
-    except (KeyError, TypeError, ValueError):
-        genere = None
-    return [(_enregistrer(dessiner(lignes, genere), dossier, "programme_equipes.png"), "Programme des équipes")]
+    paris_ = paris_ if paris_ is not None else paris.donnees()
+    jeunes_ = jeunes_ if jeunes_ is not None else jeunes.donnees()
+    sorties = []
+    lignes = rencontres(france, paris_, jeunes_, aujourdhui)
+    if lignes:
+        sorties.append((_enregistrer(dessiner(lignes), dossier, "programme_equipes.png"), "Programme des équipes"))
+    saison = rencontres(france, paris_, jeunes_, aujourdhui, saison=True)
+    if len(saison) > len(lignes):
+        sorties.append((_enregistrer(dessiner(saison, "Programme de la saison", compact=True), dossier, "programme_saison.png"),
+                        "Programme de la saison"))
+    return sorties

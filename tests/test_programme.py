@@ -49,7 +49,7 @@ def test_divisions_courtes():
 
 
 def test_image_au_format_telephone(tmp_path):
-    (sortie,) = programme.image_programme(FRANCE, tmp_path, aujourdhui=date(2026, 11, 22))
+    sortie = programme.image_programme(FRANCE, tmp_path, aujourdhui=date(2026, 11, 22))[0]
     from PIL import Image
     chemin, titre = sortie
     img = Image.open(chemin)
@@ -64,3 +64,22 @@ def test_image_au_format_telephone(tmp_path):
         "france", "femmes", "paris", "jeunes"}
     assert programme.image_programme({"equipes": []}, tmp_path, aujourdhui=date(2027, 7, 1),
                                      paris_={"equipes": []}, jeunes_={"equipes": []}) == []
+
+
+def test_programme_de_la_saison(tmp_path):
+    """Toute la saison : toutes les rencontres de France connues, les journées de la phase 2 du calendrier du
+    comité (une ligne pour les hommes, une pour les femmes), les 7 journées de Paris et des jeunes."""
+    lignes = programme.rencontres(FRANCE, paris.donnees(), jeunes.donnees(), date(2026, 11, 22), saison=True)
+    france = [l for l in lignes if l["competition"] == "France" and l["adversaire"]]
+    assert [(l["equipe"], l["adversaire"]) for l in france][-1] == ("Vaires 4", "PLUS TARD 1")  # pas limité à 2
+    a_venir = [l for l in lignes if l.get("a_venir")]
+    hommes = [l for l in a_venir if l["icone"] == "france"]
+    femmes = [l for l in a_venir if l["icone"] == "femmes"]
+    assert [l["date"] for l in femmes][:2] == ["2027-01-16", "2027-01-23"] and len(femmes) == 7
+    # hommes : après leur dernière rencontre connue (15/01 ici), les journées suivantes du calendrier
+    assert hommes[0]["date"] == "2027-01-22" and hommes[0]["equipe"] == "Vaires 1 à 4"
+    assert {l["a_venir"] for l in a_venir} == {"adversaires connus en janvier", "adversaire connu en janvier"}
+    assert sum(1 for l in lignes if l["competition"] == "Paris") == 21 and lignes[-1]["date"] == "2027-06-04"
+    assert sum(1 for l in lignes if l["competition"] == "Jeunes") == 14  # dont l'exempte des moins de 13 ans
+    sorties = programme.image_programme(FRANCE, tmp_path, aujourdhui=date(2026, 11, 22))
+    assert [t for _, t in sorties] == ["Programme des équipes", "Programme de la saison"]
