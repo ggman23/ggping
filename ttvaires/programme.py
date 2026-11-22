@@ -34,7 +34,7 @@ JOURNEES_FRANCE = 2  # rencontres à venir de chaque équipe du championnat de F
 JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
 MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre",
         "décembre"]
-H_TETE, H_LEGENDE, H_JOUR, H_LIGNE, ECART = 150, 128, 64, 96, 10
+H_TETE, H_LEGENDE, H_JOUR, H_LIGNE, ECART = 118, 66, 64, 96, 10
 ICONE = 56  # pictogramme de la compétition, entre l'adversaire et DOM / EXT
 LEGENDES = [("france", "France"), ("paris", "Paris"), ("femmes", "Féminin"), ("jeunes", "Jeunes")]
 
@@ -134,7 +134,7 @@ def _pastille(d, x, y, texte, fond, couleur, taille=24, h=40):
 def dessiner(lignes, titre="Programme des équipes"):
     """Image des prochaines rencontres (largeur 1080, hauteur selon le nombre de rencontres)."""
     jours = _jours(lignes)
-    hauteur = H_TETE + H_LEGENDE + sum(H_JOUR + len(ls) * H_LIGNE for _, ls in jours) + 16
+    hauteur = H_TETE + H_LEGENDE + sum(H_JOUR + len(ls) * H_LIGNE for _, ls in jours) - ECART
     img = Image.new("RGB", (LARGEUR * S, hauteur * S), BLANC)
     d = ImageDraw.Draw(img)
     _entete(img, d, titre, jours)
@@ -222,7 +222,7 @@ def dessiner_saison(lignes, titre="Programme de la saison"):
     colonnes = [jours[:k], jours[k:]]
     largeur_col = (LARGEUR - 2 * C_MARGE - C_ECART) / 2
     h_corps = max(sum(hauteurs[:k]), sum(hauteurs[k:]))
-    hauteur = H_TETE + H_LEGENDE + h_corps + 16
+    hauteur = H_TETE + H_LEGENDE + h_corps - 5  # sans marge sous la dernière rencontre
     img = Image.new("RGB", (LARGEUR * S, hauteur * S), BLANC)
     d = ImageDraw.Draw(img)
     _entete(img, d, titre, jours)
@@ -263,20 +263,19 @@ def _ligne_colonne(img, d, l, x0, y, largeur):
 
 
 def _entete(img, d, titre, jours):
-    """Bandeau (titre, période) et légendes (couleurs, pictogrammes)."""
+    """Bandeau (titre, période) et, sur une seule ligne, les légendes : couleurs puis pictogrammes."""
     d.rectangle([0, 0, LARGEUR * S, H_TETE * S], fill=TITRE_FOND)
-    d.text((MARGE * S, 26 * S), titre, font=police(48, True), fill=TITRE_TEXTE)
+    d.text((MARGE * S, 12 * S), titre, font=police(46, True), fill=TITRE_TEXTE)
     periode = f"du {_court(jours[0][0])} au {_court(jours[-1][0])}" if jours else "aucune rencontre à venir"
-    d.text((MARGE * S, 92 * S), f"CVTT Vaires · {periode}", font=police(28), fill=TITRE_DOUX)
-    y = H_TETE + 16
+    d.text((MARGE * S, 72 * S), f"CVTT Vaires · {periode}", font=police(28), fill=TITRE_DOUX)
+    y = H_TETE + 12
     x = MARGE
-    x += _pastille(d, x, y, "À domicile", DOM_FOND, DOM_TEXTE) + 14
-    _pastille(d, x, y, "À l'extérieur", EXT_FOND, EXT_TEXTE)
-    x, y = MARGE, H_TETE + 66
+    x += _pastille(d, x, y, "Domicile", DOM_FOND, DOM_TEXTE) + 10
+    x += _pastille(d, x, y, "Extérieur", EXT_FOND, EXT_TEXTE) + 34
     for cle, texte in LEGENDES:
-        icone(img, d, cle, x, y, 44, BLANC)
-        d.text(((x + 50) * S, (y + 10) * S), texte, font=police(24), fill=NOIR)
-        x += 50 + largeur_texte(texte, 24) + 36
+        icone(img, d, cle, x, y - 2, 42, BLANC)
+        d.text(((x + 46) * S, (y + 7) * S), texte, font=police(24), fill=NOIR)
+        x += 46 + largeur_texte(texte, 24) + 26
 
 
 # ---------------------------------------------------------------------------
