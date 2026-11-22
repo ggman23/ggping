@@ -77,9 +77,13 @@ def test_programme_de_la_saison(tmp_path):
     femmes = [l for l in a_venir if l["icone"] == "femmes"]
     assert [l["date"] for l in femmes][:2] == ["2027-01-16", "2027-01-23"] and len(femmes) == 7
     # hommes : après leur dernière rencontre connue (15/01 ici), les journées suivantes du calendrier
-    assert hommes[0]["date"] == "2027-01-22" and hommes[0]["equipe"] == "Vaires 1 à 4"
+    assert hommes[0]["date"] == "2027-01-22" and hommes[0]["equipe"] == "Vaires 1-4"
     assert {l["a_venir"] for l in a_venir} == {"adversaires connus en janvier", "adversaire connu en janvier"}
     assert sum(1 for l in lignes if l["competition"] == "Paris") == 21 and lignes[-1]["date"] == "2027-06-04"
     assert sum(1 for l in lignes if l["competition"] == "Jeunes") == 14  # dont l'exempte des moins de 13 ans
     sorties = programme.image_programme(FRANCE, tmp_path, aujourdhui=date(2026, 11, 22))
     assert [t for _, t in sorties] == ["Programme des équipes", "Programme de la saison"]
+    # Deux colonnes : la saison tient dans une image à peine plus haute que large x 2
+    from PIL import Image
+    assert Image.open(sorties[1][0]).width == 1080
+    assert programme.deux_colonnes([100, 100, 100, 100]) == 2 and programme.deux_colonnes([300, 50, 50, 50, 50, 100]) == 2

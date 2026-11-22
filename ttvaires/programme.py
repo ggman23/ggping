@@ -1,5 +1,6 @@
 """Programme des équipes de Vaires en une image au format téléphone : les prochaines rencontres
-(programme_equipes.png) et toute la saison (programme_saison.png, une ligne par rencontre).
+(programme_equipes.png) et toute la saison (programme_saison.png : deux colonnes, une ligne par rencontre, la
+couleur seule pour domicile / extérieur, pour rester lisible une fois réduite par une messagerie).
 
 Toutes les rencontres à venir, journée par journée : les 2 prochaines rencontres de chaque équipe du
 championnat de France (les équipes masculines et l'équipe féminine), puis, sur la même période, celles des
@@ -95,7 +96,7 @@ def journees_a_venir(france, connues, auj):
     femmes = [e for e in equipes if e.get("championnat") == "F"]
     groupes = []
     if hommes:
-        nom = f"Vaires {hommes[0]} à {hommes[-1]}" if len(hommes) > 1 else f"Vaires {hommes[0]}"
+        nom = f"Vaires {hommes[0]}-{hommes[-1]}" if len(hommes) > 1 else f"Vaires {hommes[0]}"
         groupes.append(("equipes", False, nom, "france", "adversaires"))
     groupes += [("feminin", True, e.get("nom_court") or e.get("libelle"), "femmes", "adversaire") for e in femmes[:1]]
     lignes = []
@@ -130,54 +131,24 @@ def _pastille(d, x, y, texte, fond, couleur, taille=24, h=40):
     return w
 
 
-def dessiner(lignes, titre="Programme des équipes", compact=False):
-    """Image du programme (largeur 1080, hauteur selon le nombre de rencontres). `compact` (la saison) : une
-    seule ligne par rencontre (équipe, pictogramme, adversaire, DOM / EXT), sans compétition ni heure."""
-    h_jour, h_ligne = (52, 62) if compact else (H_JOUR, H_LIGNE)
-    jours = []
-    for l in lignes:
-        if not jours or jours[-1][0] != l["date"]:
-            jours.append((l["date"], []))
-        jours[-1][1].append(l)
-    hauteur = H_TETE + H_LEGENDE + sum(h_jour + len(ls) * h_ligne for _, ls in jours) + 16
+def dessiner(lignes, titre="Programme des équipes"):
+    """Image des prochaines rencontres (largeur 1080, hauteur selon le nombre de rencontres)."""
+    jours = _jours(lignes)
+    hauteur = H_TETE + H_LEGENDE + sum(H_JOUR + len(ls) * H_LIGNE for _, ls in jours) + 16
     img = Image.new("RGB", (LARGEUR * S, hauteur * S), BLANC)
     d = ImageDraw.Draw(img)
-
-    # Bandeau
-    d.rectangle([0, 0, LARGEUR * S, H_TETE * S], fill=TITRE_FOND)
-    d.text((MARGE * S, 26 * S), titre, font=police(48, True), fill=TITRE_TEXTE)
-    periode = f"du {_court(jours[0][0])} au {_court(jours[-1][0])}" if jours else "aucune rencontre à venir"
-    d.text((MARGE * S, 92 * S), f"CVTT Vaires · {periode}", font=police(28), fill=TITRE_DOUX)
-    # Légende des couleurs
-    y = H_TETE + 16
-    x = MARGE
-    x += _pastille(d, x, y, "À domicile", DOM_FOND, DOM_TEXTE) + 14
-    _pastille(d, x, y, "À l'extérieur", EXT_FOND, EXT_TEXTE)
-    # Légende des pictogrammes
-    x, y = MARGE, H_TETE + 66
-    for cle, texte in LEGENDES:
-        icone(img, d, cle, x, y, 44, BLANC)
-        d.text(((x + 50) * S, (y + 10) * S), texte, font=police(24), fill=NOIR)
-        x += 50 + largeur_texte(texte, 24) + 36
+    _entete(img, d, titre, jours)
     y = H_TETE + H_LEGENDE
-
     for jour, ls in jours:
-        taille_jour = 26 if compact else 32
-        d.rectangle([0, y * S, LARGEUR * S, (y + h_jour - 8) * S], fill=SECTION)
+        d.rectangle([0, y * S, LARGEUR * S, (y + H_JOUR - 8) * S], fill=SECTION)
         titre_jour = _jour_long(jour)
-        d.text((MARGE * S, (y + (h_jour - 8 - taille_jour) / 2 - 1) * S), titre_jour, font=police(taille_jour, True), fill=NOIR)
-        journees = []
+        d.text((MARGE * S, (y + 12) * S), titre_jour, font=police(32, True), fill=NOIR)
+        detail, taille = ajuster(_journees(ls), LARGEUR - 3 * MARGE - largeur_texte(titre_jour, 32, True), 22)
+        d.text(((LARGEUR - MARGE - largeur_texte(detail, taille)) * S, (y + 20) * S), detail, font=police(taille), fill=DOUX)
+        y += H_JOUR
         for l in ls:
-            j = f"{l['competition']} J{l['journee']}"
-            if l["journee"] and j not in journees:
-                journees.append(j)
-        detail, taille = ajuster(" · ".join(journees), LARGEUR - 3 * MARGE - largeur_texte(titre_jour, taille_jour, True), 22)
-        d.text(((LARGEUR - MARGE - largeur_texte(detail, taille)) * S, (y + (h_jour - 8 - taille) / 2) * S), detail,
-               font=police(taille), fill=DOUX)
-        y += h_jour
-        for l in ls:
-            (_ligne_compacte if compact else _carte)(img, d, l, y)
-            y += h_ligne
+            _carte(img, d, l, y)
+            y += H_LIGNE
     return img.resize((LARGEUR, hauteur), Image.LANCZOS)
 
 
@@ -213,25 +184,99 @@ def _carte(img, d, l, y):
     icone(img, d, l["icone"], x1 - 20 - w - 16 - ICONE, y + (h - ICONE) / 2, ICONE, fond)
 
 
-def _ligne_compacte(img, d, l, y):
-    """Une rencontre sur une ligne (image de la saison) : équipe, pictogramme, adversaire, DOM / EXT."""
-    h = 54
+def _jours(lignes):
+    jours = []
+    for l in lignes:
+        if not jours or jours[-1][0] != l["date"]:
+            jours.append((l["date"], []))
+        jours[-1][1].append(l)
+    return jours
+
+
+def _journees(ls):
+    journees = []
+    for l in ls:
+        j = f"{l['competition']} J{l['journee']}"
+        if l["journee"] and j not in journees:
+            journees.append(j)
+    return " · ".join(journees)
+
+
+# Programme de la saison : deux colonnes, une ligne par rencontre, la couleur seule pour domicile / extérieur
+C_JOUR, C_LIGNE, C_MARGE, C_ECART = 38, 44, 18, 16
+
+
+def deux_colonnes(hauteurs):
+    """Indice où passer à la seconde colonne (les journées restent dans l'ordre : la première colonne se lit
+    d'abord) : celui qui rend la plus haute des deux colonnes la plus basse possible."""
+    total = sum(hauteurs)
+    return min(range(len(hauteurs) + 1), key=lambda k: max(sum(hauteurs[:k]), total - sum(hauteurs[:k])))
+
+
+def dessiner_saison(lignes, titre="Programme de la saison"):
+    """Toute la saison en deux colonnes (largeur 1080) : moitié moins haute qu'une colonne, lisible une fois
+    réduite par une messagerie."""
+    jours = _jours(lignes)
+    hauteurs = [C_JOUR + len(ls) * C_LIGNE for _, ls in jours]
+    k = deux_colonnes(hauteurs)
+    colonnes = [jours[:k], jours[k:]]
+    largeur_col = (LARGEUR - 2 * C_MARGE - C_ECART) / 2
+    h_corps = max(sum(hauteurs[:k]), sum(hauteurs[k:]))
+    hauteur = H_TETE + H_LEGENDE + h_corps + 16
+    img = Image.new("RGB", (LARGEUR * S, hauteur * S), BLANC)
+    d = ImageDraw.Draw(img)
+    _entete(img, d, titre, jours)
+    for i, colonne in enumerate(colonnes):
+        x0 = C_MARGE + i * (largeur_col + C_ECART)
+        y = H_TETE + H_LEGENDE
+        for jour, ls in colonne:
+            d.rectangle([x0 * S, y * S, (x0 + largeur_col) * S, (y + C_JOUR - 6) * S], fill=SECTION)
+            titre_jour = _jour_long(jour)
+            d.text(((x0 + 10) * S, (y + 7) * S), titre_jour, font=police(22, True), fill=NOIR)
+            reste = largeur_col - 30 - largeur_texte(titre_jour, 22, True)
+            detail, taille = ajuster(_journees(ls), reste, 16, taille_min=12)
+            d.text(((x0 + largeur_col - 10 - largeur_texte(detail, taille)) * S, (y + 11) * S), detail,
+                   font=police(taille), fill=DOUX)
+            y += C_JOUR
+            for l in ls:
+                _ligne_colonne(img, d, l, x0, y, largeur_col)
+                y += C_LIGNE
+    return img.resize((LARGEUR, hauteur), Image.LANCZOS)
+
+
+def _ligne_colonne(img, d, l, x0, y, largeur):
+    """Une rencontre dans une colonne : équipe, pictogramme, adversaire ; fond vert (domicile) ou orange
+    (extérieur), gris sans adversaire (exempte, adversaires pas encore connus)."""
+    h = C_LIGNE - 5
     sans = l["adversaire"] is None
     fond, fort = _couleurs(l)
-    x0, x1 = MARGE, LARGEUR - MARGE
-    d.rounded_rectangle([x0 * S, y * S, x1 * S, (y + h) * S], radius=10 * S, fill=fond)
-    d.rounded_rectangle([x0 * S, y * S, (x0 + 8) * S, (y + h) * S], radius=4 * S, fill=fort)
-    t, taille = ajuster(l["equipe"], 196, 28, True)
-    d.text(((x0 + 22) * S, (y + (h - taille) / 2 - 1) * S), t, font=police(taille, True), fill=NOIR)
-    icone(img, d, l["icone"], x0 + 226, y + 7, 40, fond)
-    w = largeur_texte("DOM", 22, True) + 24
-    xa = x0 + 280
+    x1 = x0 + largeur
+    d.rounded_rectangle([x0 * S, y * S, x1 * S, (y + h) * S], radius=8 * S, fill=fond)
+    d.rounded_rectangle([x0 * S, y * S, (x0 + 7) * S, (y + h) * S], radius=3 * S, fill=fort)
+    t, taille = ajuster(l["equipe"], 112, 22, True, taille_min=16)
+    d.text(((x0 + 16) * S, (y + (h - taille) / 2 - 1) * S), t, font=police(taille, True), fill=NOIR)
+    icone(img, d, l["icone"], x0 + 132, y + (h - 32) / 2, 32, fond)
+    xa = x0 + 172
     texte_adv = l.get("a_venir") or ("exempte" if sans else l["adversaire"])
-    t, taille = ajuster(texte_adv, x1 - 20 - w - 16 - xa, 28, not sans)
+    t, taille = ajuster(texte_adv, x1 - 10 - xa, 21, not sans, taille_min=15)
     d.text((xa * S, (y + (h - taille) / 2 - 1) * S), t, font=police(taille, not sans), fill=DOUX if sans else NOIR)
-    if not sans:
-        texte = "DOM" if l["domicile"] else "EXT"
-        _pastille(d, x1 - 16 - (largeur_texte(texte, 22, True) + 28), y + (h - 36) / 2, texte, fort, BLANC, taille=22, h=36)
+
+
+def _entete(img, d, titre, jours):
+    """Bandeau (titre, période) et légendes (couleurs, pictogrammes)."""
+    d.rectangle([0, 0, LARGEUR * S, H_TETE * S], fill=TITRE_FOND)
+    d.text((MARGE * S, 26 * S), titre, font=police(48, True), fill=TITRE_TEXTE)
+    periode = f"du {_court(jours[0][0])} au {_court(jours[-1][0])}" if jours else "aucune rencontre à venir"
+    d.text((MARGE * S, 92 * S), f"CVTT Vaires · {periode}", font=police(28), fill=TITRE_DOUX)
+    y = H_TETE + 16
+    x = MARGE
+    x += _pastille(d, x, y, "À domicile", DOM_FOND, DOM_TEXTE) + 14
+    _pastille(d, x, y, "À l'extérieur", EXT_FOND, EXT_TEXTE)
+    x, y = MARGE, H_TETE + 66
+    for cle, texte in LEGENDES:
+        icone(img, d, cle, x, y, 44, BLANC)
+        d.text(((x + 50) * S, (y + 10) * S), texte, font=police(24), fill=NOIR)
+        x += 50 + largeur_texte(texte, 24) + 36
 
 
 # ---------------------------------------------------------------------------
@@ -307,6 +352,6 @@ def image_programme(france, dossier, aujourdhui=None, paris_=None, jeunes_=None)
         sorties.append((_enregistrer(dessiner(lignes), dossier, "programme_equipes.png"), "Programme des équipes"))
     saison = rencontres(france, paris_, jeunes_, aujourdhui, saison=True)
     if len(saison) > len(lignes):
-        sorties.append((_enregistrer(dessiner(saison, "Programme de la saison", compact=True), dossier, "programme_saison.png"),
+        sorties.append((_enregistrer(dessiner_saison(saison), dossier, "programme_saison.png"),
                         "Programme de la saison"))
     return sorties

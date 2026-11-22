@@ -232,7 +232,8 @@ téléphone et partagées dans les groupes du club (dossier `sortie\images\` sur
   pastille DOM à domicile, fond orange et pastille EXT à l'extérieur ; pas d'adresse ; un pictogramme
   par compétition : carte de France tricolore, tour Eiffel (Paris), tête de femme en rose (féminin),
   enfant bras levés en violet (jeunes). À la une de l'espace club. Et le **programme de la saison**
-  (`programme_saison.png`) : toutes les rencontres jusqu'en juin, une ligne par rencontre (Paris et
+  (`programme_saison.png`) : toutes les rencontres jusqu'en juin, sur deux colonnes, une ligne par
+  rencontre, la couleur seule pour domicile / extérieur (lisible une fois réduite par WhatsApp) (Paris et
   jeunes : leurs 7 journées ; championnat de France : les journées de la phase 2 du calendrier du
   comité, « adversaires connus en janvier ») ;
 - **classements des poules** (`classements_poules.png`, avec la page adversaires) : la poule de
