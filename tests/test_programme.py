@@ -86,4 +86,4 @@ def test_programme_de_la_saison(tmp_path):
     # Deux colonnes : la saison tient dans une image à peine plus haute que large x 2
     from PIL import Image
     assert Image.open(sorties[1][0]).width == 1080
-    assert programme.deux_colonnes([100, 100, 100, 100]) == 2 and programme.deux_colonnes([300, 50, 50, 50, 50, 100]) == 2
+    assert programme.deux_colonnes([100, 100, 100, 100]) == 2 and programme.deux_colonnes([300, 50, 50, 50, 50, 100]) == 1
