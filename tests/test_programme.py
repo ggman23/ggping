@@ -58,5 +58,9 @@ def test_image_au_format_telephone(tmp_path):
     # Couleurs : vert pour le domicile, orange pour l'extérieur (le fond des cartes)
     couleurs = {c for _, c in img.convert("RGB").getcolors(1 << 20)}
     assert (227, 244, 234) in couleurs and (251, 238, 221) in couleurs
+    # Pictogrammes : carte tricolore (bleu, rouge), tête de femme (rose), enfant (violet), tour Eiffel
+    assert {programme.BLEU, programme.ROUGE_FR, programme.ROSE, programme.VIOLET, programme.TOUR} <= couleurs
+    assert {l["icone"] for l in programme.rencontres(FRANCE, paris.donnees(), jeunes.donnees(), date(2026, 11, 22))} == {
+        "france", "femmes", "paris", "jeunes"}
     assert programme.image_programme({"equipes": []}, tmp_path, aujourdhui=date(2027, 7, 1),
                                      paris_={"equipes": []}, jeunes_={"equipes": []}) == []

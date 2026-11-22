@@ -229,8 +229,9 @@ téléphone et partagées dans les groupes du club (dossier `sortie\images\` sur
   format téléphone, journée par journée : les 2 prochaines rencontres de chaque équipe du championnat
   de France (hommes et femmes) et, sur la même période, celles des équipes du championnat de Paris et
   des jeunes (pour chacune : équipe, compétition et division, adversaire, heure) ; fond vert et
-  pastille DOM à domicile, fond orange et pastille EXT à l'extérieur ; pas d'adresse. À la une de
-  l'espace club ;
+  pastille DOM à domicile, fond orange et pastille EXT à l'extérieur ; pas d'adresse ; un pictogramme
+  par compétition : carte de France tricolore, tour Eiffel (Paris), tête de femme en rose (féminin),
+  enfant bras levés en violet (jeunes). À la une de l'espace club ;
 - **classements des poules** (`classements_poules.png`, avec la page adversaires) : la poule de
   chaque équipe de Vaires (# ÉQUIPE PTS J V N D, la ligne de Vaires en rouge), deux cartes par
   rangée sur fond sombre, « après la journée 03 » ; le logo du club est fourni avec l'outil
