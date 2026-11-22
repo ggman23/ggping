@@ -373,7 +373,7 @@ récapitulatif changerait : surnoms modifiés, photo de la journée ou logos ajo
   téléchargés portent la journée dans leur nom (J2_resultats_vaires.html).
 - Netlify ne reçoit que les fichiers qui ont changé : une archive n'est envoyée qu'une fois.
 
-## Rubriques de l'espace club : Matériel, Prépa mentale
+## Rubriques de l'espace club : Championnat de Paris, Matériel, Prépa mentale
 
 Après les archives, le menu de /club/ (et l'accueil, en tuiles) a des rubriques permanentes faites
 de documents fournis, publiés tels quels : une page HTML (Matériel : forums et communautés sur le
@@ -394,7 +394,9 @@ ne les publie pas ; il faut alors les ajouter de nouveau.
 
 
 Une image (png, jpg) peut aussi être un document de rubrique : elle s'affiche comme les images du
-site, avec « Partager » sur téléphone (ex. le mémo sac de sport, version image du PDF).
+site, avec « Télécharger » et « Partager » sur téléphone (partagée avec son vrai type, PNG ou JPEG) :
+ex. le mémo sac de sport, version image du PDF, ou l'affiche du championnat de Paris 2026-2027
+(rubrique « Championnat de Paris », placée en premier dans `ressources.json`).
 
 ## Espaces à leur propre adresse : /lundi/ (le roi du lundi)
 

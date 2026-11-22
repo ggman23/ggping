@@ -406,7 +406,7 @@ async function route() {
     } else if (doc.type === "image") {
       urlCourante = URL.createObjectURL(blob);
       vue.innerHTML = `<div class="image-vue"><img src="${urlCourante}" alt="${esc(doc.titre)}"></div>`;
-      const fichier = new File([blob], doc.nom, { type: "image/png" });
+      const fichier = new File([blob], doc.nom, { type: blob.type || "image/png" });  // PNG ou JPEG
       document.getElementById("partager").hidden = !(navigator.canShare && navigator.canShare({ files: [fichier] }));
     } else {
       vue.innerHTML = `<div class="carte-excel"><div class="icone">${ICONES.excel}</div><h2>${esc(doc.titre)}</h2>
@@ -439,7 +439,8 @@ document.getElementById("partager").addEventListener("click", async () => {
   if (!courant) return;
   const doc = courant;
   try {
-    await navigator.share({ files: [new File([await contenu(doc)], doc.nom, { type: "image/png" })] });
+    const blob = await contenu(doc);
+    await navigator.share({ files: [new File([blob], doc.nom, { type: blob.type || "image/png" })] });
     compter(`club/partage/${nomCompte(doc)}`, `Partage · ${titreCompte(doc)}`, true);
   } catch (e) { /* partage annulé */ }
 });
