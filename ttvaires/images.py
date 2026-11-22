@@ -653,6 +653,12 @@ def image_recap(donnees, dossier_import, dossier):
     return dessiner(donnees, dossier_import, dossier)
 
 
+def image_programme(donnees, dossier, aujourdhui=None):
+    """Programme des équipes de Vaires (France, Paris, jeunes) en une image au format téléphone (voir programme.py)."""
+    from .programme import image_programme as dessiner
+    return dessiner(donnees, dossier, aujourdhui)
+
+
 def image_classements(donnees, dossier_import, dossier):
     """Classements des poules de toutes les équipes de Vaires (voir classements.py)."""
     from .classements import image_classements as dessiner

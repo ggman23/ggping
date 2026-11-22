@@ -737,3 +737,9 @@ Pas d'onglet dans l'application pour l'instant.
   particulier (a à e), forfait 28 à 0 et 3 manches à 0 par partie, exempte d'une poule incomplète : 3 points ;
   article 6.1 : toutes les parties sont jouées. Réalisation : departage.CD77 (poules PR, D1, D2..., pas le
   féminin 77/94), points de l'exempte dans adversaires.classement_poule, notes des pages, journal.
+- Image du programme (22/11) : « une image au format téléphone, lisible, qui récapitule les rencontres des
+  équipes de Vaires : les 2 journées restantes du championnat de France (6 équipes + l'équipe femmes), les
+  matchs des 3 équipes de Paris et des 2 équipes jeunes ; un code couleur domicile / extérieur ; pas
+  d'adresse ». Réalisation : programme.py (rencontres : 2 prochaines par équipe de France, Paris et jeunes sur
+  la même période ou leur prochaine ; dessin 1080 de large, une carte par rencontre, vert / orange et
+  pastille DOM / EXT), faite par l'étape adversaires, groupe d'images « programme » à la une de /club/.

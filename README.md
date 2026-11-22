@@ -225,6 +225,12 @@ téléphone et partagées dans les groupes du club (dossier `sortie\images\` sur
   points) et des doubles ; le top 5 des perfs ; la place de la photo en haut. Déposer
   `import\photo_J3.jpg` (et une fois pour toutes `logo_gauche.png`, `logo_droite.png`) pour que
   l'outil la complète : voir `import\LISEZ-MOI.txt` (et `surnoms.txt` pour les noms affichés) ;
+- **programme des équipes** (`programme_equipes.png`, avec la page adversaires) : une seule image au
+  format téléphone, journée par journée : les 2 prochaines rencontres de chaque équipe du championnat
+  de France (hommes et femmes) et, sur la même période, celles des équipes du championnat de Paris et
+  des jeunes (pour chacune : équipe, compétition et division, adversaire, heure) ; fond vert et
+  pastille DOM à domicile, fond orange et pastille EXT à l'extérieur ; pas d'adresse. À la une de
+  l'espace club ;
 - **classements des poules** (`classements_poules.png`, avec la page adversaires) : la poule de
   chaque équipe de Vaires (# ÉQUIPE PTS J V N D, la ligne de Vaires en rouge), deux cartes par
   rangée sur fond sombre, « après la journée 03 » ; le logo du club est fourni avec l'outil

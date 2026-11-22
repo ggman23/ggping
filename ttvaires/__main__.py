@@ -101,6 +101,8 @@ def page_adversaires(client, club, ctx, tous_les_historiques=False):
             fichiers.append(page_jeunes(client, club, ctx, tous_les_historiques))
         except Exception as e:  # noqa: BLE001
             print(f"  ! championnat des jeunes : page non faite ({type(e).__name__} : {e})", flush=True)
+        # Programme de toutes les équipes (France, Paris, jeunes) en une image au format téléphone
+        fichiers += faire_images("image_programme", donnees, dossier=ctx.images, aujourdhui=ctx.aujourdhui)
     return fichiers, resume
 
 

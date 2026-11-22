@@ -48,7 +48,8 @@ PUBLIES = {
 }
 
 # Images à partager rangées à part (et non avec la page qui les produit)
-GROUPES_A_PART = {"recap_": "récapitulatif", "classements_": "classements", "progression_": "progression"}
+GROUPES_A_PART = {"recap_": "récapitulatif", "programme_": "programme", "classements_": "classements",
+                  "progression_": "progression"}
 
 
 class ErreurPublication(Exception):
