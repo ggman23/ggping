@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="fr" data-racine="../" data-page="agenda">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="cvtt-cle" content="cvtt-vaires-cle-club">
+<meta name="theme-color" content="#0f2740">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CVTT Vaires">
+<title>Agenda · CVTT Vaires</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="../icones/icone-192.png">
+<link rel="apple-touch-icon" href="../icones/icone-180.png">
+<link rel="stylesheet" href="../commun.css?v=__VERSION__">
+<style>
+.jour { margin: 16px 2px 8px; font-weight: 750; font-size: .92rem; display: flex; gap: 8px; align-items: baseline; }
+.jour .petit { font-weight: 500; }
+a.carte.evenement, .evenement { display: flex; gap: 10px; align-items: center; }
+.evenement .puce { flex: 0 0 auto; }
+.mois { position: sticky; top: 60px; z-index: 5; background: var(--fond); padding: 8px 2px 4px; margin-top: 18px; text-transform: capitalize; }
+@media (min-width: 900px) { .mois { top: 108px; } }
+</style>
+</head>
+<body>
+<main id="contenu"></main>
+<script src="../commun.js?v=__VERSION__"></script>
+<script>
+"use strict";
+const { $, esc, svg, COMPET } = V2;
+const DOUBLONS = ["equipes", "feminin", "paris", "jeunes"];  // déjà là avec les vraies rencontres de Vaires
+const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+let quand = "avenir", quoi = "vaires";
+
+function elements(eq, cal, indivs) {
+  const l = V2.rencontres(eq).map((r) => ({ date: r.date, ordre: 0, html: V2.carteMatch(r, { avecDate: false }), r }));
+  const tours = {};
+  for (const p of indivs?.poules || []) {
+    const n = (p.joueurs || []).filter((j) => j.vaires).length;
+    if (!n) continue;
+    const c = (tours[p.date] ||= { poules: 0, joueurs: 0, competition: p.competition, horaire: p.horaire });
+    c.poules += 1; c.joueurs += n;
+  }
+  for (const [date, t] of Object.entries(tours)) l.push({ date, ordre: 1, html: `<a class="carte evenement" href="../../indivs/">
+    <span class="puce comp jeunes">Indivs</span><span><b>${esc(t.competition)}</b><br><span class="petit">${t.joueurs} joueur${t.joueurs > 1 ? "s" : ""} de Vaires
+    · ${t.poules} poule${t.poules > 1 ? "s" : ""}${t.horaire ? " · " + esc(t.horaire) : ""}</span></span></a>` });
+  if (quoi === "tout") for (const e of cal?.evenements || []) {
+    if (DOUBLONS.includes(e.cat)) continue;
+    const cat = (cal.categories || []).find((c) => c.cle === e.cat) || {};
+    l.push({ date: e.debut, ordre: 2, html: `<div class="carte evenement"><span class="puce">${esc(cat.court || "Comité")}</span>
+      <span><b>${esc(e.titre)}</b>${e.detail ? `<br><span class="petit">${esc(e.detail)}</span>` : ""}${e.fin && e.fin !== e.debut ? `<br><span class="petit">jusqu'au ${esc(V2.dateCourte(e.fin))}</span>` : ""}</span></div>` });
+  }
+  return l;
+}
+
+function rendu(eq, cal, indivs) {
+  let l = elements(eq, cal, indivs).filter((x) => x.date && (quand === "avenir" ? x.date >= V2.AUJ : x.date < V2.AUJ));
+  l.sort((a, b) => (quand === "avenir" ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)) || a.ordre - b.ordre);
+  const seg = (nom, val, actuelle, k) => `<button type="button" data-${k}="${val}" class="${val === actuelle ? "actif" : ""}">${nom}</button>`;
+  let html = `<div class="segments">${seg("À venir", "avenir", quand, "quand")}${seg("Passé", "passe", quand, "quand")}<span style="width:8px"></span>
+      ${seg("Vaires", "vaires", quoi, "quoi")}${seg("Tout le comité", "tout", quoi, "quoi")}</div>
+    <div class="boutons" style="margin:6px 0 4px"><button class="bouton second" type="button" id="ics">${svg("agenda")} Ajouter les matchs de Vaires à mon agenda</button></div>`;
+  let mois = "", jour = "";
+  for (const x of l) {
+    const d = V2.enDate(x.date), m = `${MOIS[d.getMonth()]} ${d.getFullYear()}`;
+    if (m !== mois) { html += `<h2 class="mois">${m}</h2>`; mois = m; jour = ""; }
+    if (x.date !== jour) { html += `<div class="jour">${esc(V2.dateLongue(x.date))}<span class="petit">${Math.abs(V2.ecart(x.date)) < 14 ? esc(V2.relatif(x.date)) : ""}</span></div>`; jour = x.date; }
+    html += `<div class="pile" style="margin-bottom:8px">${x.html}</div>`;
+  }
+  return html + (l.length ? "" : '<p class="vide">Rien à afficher.</p>')
+    + `<p class="petit" style="margin-top:18px">Calendrier du comité : <a href="../../cal/">page Calendrier (site actuel)</a>. L'export agenda est fabriqué
+       sur ton téléphone : rien n'est envoyé.</p>`;
+}
+
+V2.demarrer({ titre: "Agenda", sous: "Matchs de Vaires et dates du comité" }, async () => {
+  const m = $("#contenu");
+  m.innerHTML = V2.squelettes(5);
+  const [eq, cal, indivs] = await Promise.all([V2.equipes(), V2.facultatif("agenda"), V2.facultatif("indivs")]);
+  const afficher = () => {
+    m.innerHTML = rendu(eq, cal, indivs);
+    m.querySelectorAll("[data-quand]").forEach((b) => b.addEventListener("click", () => { quand = b.dataset.quand; afficher(); }));
+    m.querySelectorAll("[data-quoi]").forEach((b) => b.addEventListener("click", () => { quoi = b.dataset.quoi; afficher(); }));
+    $("#ics").addEventListener("click", () => V2.ics(V2.rencontres(eq).filter((r) => r.date >= V2.AUJ), "cvtt-vaires-matchs.ics"));
+  };
+  afficher();
+});
+</script>
+</body>
+</html>

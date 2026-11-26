@@ -414,6 +414,59 @@ mention « Aperçu allégé » ; « Télécharger » et « Partager » donnent l
 Pour garder la pleine résolution dans WhatsApp, l'envoyer en « Document » (en « Photo », WhatsApp la
 réduit). Cloudflare Pages refuse les fichiers de plus de 25 Mo : une image plus lourde est à réduire.
 
+## Version 2 à l'essai : /v2/ (copie Cloudflare)
+
+Une nouvelle version du site, à tester sans rien changer au site actuel : **https://ggping-pap.pages.dev/v2/**
+(l'adresse du projet Cloudflare suivie de /v2/ ; aussi sur Netlify quand la copie y est envoyée ; pas sur le
+site GitHub). Même mot de passe que l'espace club ; un appareil qui a déjà mémorisé celui de /club/ (même
+adresse) entre directement. Un bandeau jaune en haut ramène au site actuel.
+
+Organisation, par question plutôt que par source de données, avec 5 onglets en bas de l'écran (en haut sur
+ordinateur) :
+- **Accueil** (`/v2/`) : la prochaine journée en une phrase, les rencontres de la semaine (une carte par
+  rencontre : couleur et pictogramme de la compétition, domicile en vert, extérieur en orange), « Mon espace »,
+  les derniers résultats, les images à partager, ce qui est nouveau depuis la dernière visite ;
+- **Équipes** (`/v2/equipes/`) : les 12 équipes (France hommes et femmes, Paris, jeunes) ; pour chacune
+  (`#france-4`, `#paris-2`...) : prochaine rencontre, classement de la poule, calendrier et résultats, joueurs
+  habituels, « Ajouter à mon agenda » ;
+- **Rencontre** (`/v2/rencontre/#france-4/6`) : face-à-face, salle avec « Itinéraire » (lien Google Maps) et
+  Waze, place de l'adversaire dans la poule, compo probable adverse et joueurs habituels de Vaires, pronostic,
+  feuille de match une fois jouée, disponibilités (Paris) ;
+- **Joueurs** (`/v2/joueurs/`) : recherche, tri par points virtuels, progression ou nom, filtres femmes et
+  jeunes, petite courbe ; fiche (`#<licence>`) : points officiels et virtuels, objectif (« encore 87,5 points
+  pour passer 10 »), courbe de la saison, perfs et contres, séries, meilleur classement, bilan selon le niveau
+  de l'adversaire, dernières parties, brûlage ;
+- **Agenda** (`/v2/agenda/`) : tous les matchs de Vaires par mois et par jour, les tours des individuels, et
+  au choix les dates du comité ; « Ajouter les matchs de Vaires à mon agenda » (fichier .ics fabriqué dans le
+  navigateur : rien n'est envoyé) ;
+- **Club** (`/v2/club/`) : les pages détaillées du site actuel (ouvertes dans le cadre de la v2), les images à
+  partager, les rubriques (affiche de Paris...), les archives et les autres espaces (/paris/, /jeunes/, /77/,
+  /indivs/, /tournois/, /cal/), les réglages.
+
+En haut de chaque page : la **recherche** (joueur, club adverse, équipe, page) et les **réglages** : « C'est moi »
+(Mon espace : prochaine rencontre de son équipe, ses points, son objectif ; gardé sur l'appareil seulement),
+taille du texte (normale, grande, très grande), apparence (claire, sombre ou comme le téléphone), mode
+administrateur (lien vers la mise à jour du site, /lundi/), déconnexion.
+
+**Application installable** : sur Android (Chrome : menu → « Installer l'application » ou « Ajouter à l'écran
+d'accueil ») et sur iPhone (Safari : Partager → « Sur l'écran d'accueil »), avec l'icône du club ; la dernière
+version consultée reste lisible sans réseau (service worker ; les données restent chiffrées).
+
+Le **pronostic** est une estimation pour le plaisir : probabilité de gagner une partie selon l'écart de points
+(1 / (1 + e^(−écart/150))), sur 12 simples et 2 doubles, entre les 4 joueurs habituels de Vaires les mieux
+classés (points virtuels) et la compo probable adverse ; seulement pour le championnat de France masculin.
+
+Fabrication (ttvaires/v2.py, appelé à la fin de la copie Cloudflare/Netlify) : les pages du site actuel ne
+sont pas modifiées ; la v2 reprend les données (le JSON intégré à chaque page publiée), les rechiffre avec la
+clé du club dans `v2/donnees/*.json.chiffre` et copie les pages de `ttvaires/v2/`, qui ne contiennent aucune
+donnée. Une mise à jour « Publication seule » suffit donc à la refaire. Si la fabrication de la v2 échoue, le
+journal le signale (« Version 2 (/v2/) non publiée ») et le reste de la copie part comme avant. Pour voir les
+pages à une autre date (essais) : `?date=AAAA-MM-JJ` dans l'adresse.
+
+Pas encore dans la v2 (pages du site actuel en attendant) : clubs du 77, individuels, tournois ; simulateur « que
+faut-il pour monter ? », records du club ; disponibilités cochées par les joueurs eux-mêmes et covoiturage
+(il faudrait un stockage partagé en ligne : à décider).
+
 ## Espaces à leur propre adresse : /lundi/ (le roi du lundi)
 
 Une page HTML fournie peut avoir sa propre adresse, à côté de /club/ : **/lundi/** sur chaque site

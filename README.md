@@ -70,6 +70,10 @@ phase, calculés mois par mois comme la FFTT (adversaires d'autres départements
 verte, orange ou rouge selon la fiabilité de l'estimation), pour repérer ceux qui progressent. Listes relues une fois par
 semaine (au choix lors de la mise à jour : tous, jeunes, adultes ou aucun). Voir PUBLICATION.md.
 
+**Version 2 à l'essai** : https://ggping-pap.pages.dev/v2/ (mot de passe du club) : accueil, équipes, rencontres,
+joueurs, agenda et club en 5 onglets, recherche, « Mon espace », installable sur Android et iPhone ; le site
+actuel n'est pas modifié. Voir PUBLICATION.md, « Version 2 à l'essai ».
+
 **Application Android** (APK) : le site (mise à jour), l'espace club, /lundi/ et /indivs/ (GitHub, sinon
 Cloudflare, sinon Netlify) et les deux statistiques en onglets, avec téléchargements et partage d'images : voir
 `android/LISEZ-MOI.md`. Lien direct :

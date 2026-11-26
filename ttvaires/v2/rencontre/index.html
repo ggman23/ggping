@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="fr" data-racine="../" data-page="equipes">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="cvtt-cle" content="cvtt-vaires-cle-club">
+<meta name="theme-color" content="#0f2740">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CVTT Vaires">
+<title>Rencontre · CVTT Vaires</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="../icones/icone-192.png">
+<link rel="apple-touch-icon" href="../icones/icone-180.png">
+<link rel="stylesheet" href="../commun.css?v=__VERSION__">
+<style>
+.face { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; text-align: center; gap: 8px; margin: 14px 0 10px; }
+.face b { font-size: 1.12rem; display: block; }
+.face .milieu { font-size: 1.9rem; font-weight: 850; letter-spacing: .02em; }
+.compo > * { display: grid !important; grid-template-columns: 1fr auto; }
+.partie { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; font-size: .9rem; }
+.partie .sets { grid-column: 1 / -1; text-align: center; font-size: .76rem; color: var(--doux); margin-top: -4px; }
+.partie .gagne { font-weight: 800; }
+</style>
+</head>
+<body>
+<main id="contenu"></main>
+<script src="../commun.js?v=__VERSION__"></script>
+<script>
+"use strict";
+const { $, esc, svg, COMPET } = V2;
+const pts = (j) => j.points_mensuels ?? j.points ?? (j.classement ? j.classement * 100 : null);
+const nomJ = (j) => `${j.prenom || ""} ${j.nom || ""}`.trim();
+// Probabilité de gagner une partie selon l'écart de points (estimation, pour le plaisir)
+const proba = (a, b) => 1 / (1 + Math.exp(-(a - b) / 150));
+
+function pronostic(nous, eux) {
+  if (nous.length < 4 || eux.length < 4) return "";
+  const a = nous.slice(0, 4), b = eux.slice(0, 4), moy = (l) => l.reduce((s, x) => s + x, 0) / l.length;
+  let simples = 0;
+  for (const x of a) for (const y of b) simples += proba(x, y);
+  const attendu = simples / 16 * 12 + proba(moy(a), moy(b)) * 2;  // 12 simples et 2 doubles
+  const n = Math.round(attendu), verdict = attendu >= 8 ? ["v", "Vaires favori"] : attendu <= 6 ? ["d", "Adversaire favori"] : ["n", "Rencontre équilibrée"];
+  return `<div class="section"><h2>Pronostic</h2></div><div class="carte" style="display:flex;gap:14px;align-items:center">
+    <span class="score ${verdict[0]}" style="font-size:1.4rem">${n}–${14 - n}</span>
+    <span><b>${verdict[1]}</b><br><span class="petit">Estimation à partir des points des compos probables (4 habituels de Vaires, compo probable adverse).
+      Pour le plaisir : rien d'officiel.</span></span></div>`;
+}
+
+async function fiche(t, r) {
+  const nomDom = r.domicile ? t.nom : (r.adversaire || "—"), nomExt = r.domicile ? (r.adversaire || "—") : t.nom;
+  const scoreAff = r.score ? (r.domicile ? r.score : [r.score[1], r.score[0]]) : null;
+  const heros = `<section class="carte heros apparait">
+    <span class="puce comp ${t.comp}">${svg(t.comp, true).replace("<svg", '<svg style="width:14px;height:14px"')} ${esc(COMPET[t.comp].court)} · J${r.journee}</span>
+    <div class="face"><div><b>${esc(nomDom)}</b><span class="petit">Domicile</span></div>
+      <div class="milieu">${scoreAff ? `${scoreAff[0]}–${scoreAff[1]}` : "vs"}</div>
+      <div><b>${esc(nomExt)}</b><span class="petit">Extérieur</span></div></div>
+    <p style="margin:0;text-align:center">${esc(V2.dateLongue(r.date))}${r.heure ? " · " + esc(V2.heure(r.heure)) : ""}
+      ${!r.score && r.date >= V2.AUJ ? ` · <b>${esc(V2.relatif(r.date))}</b>` : ""}</p>
+    ${r.score ? `<p style="margin:8px 0 0;text-align:center"><span class="score ${r.issue}">${{ v: "Victoire de Vaires", d: "Défaite de Vaires", n: "Match nul" }[r.issue]}</span></p>` : ""}
+    <p class="petit" style="text-align:center;margin:8px 0 0">${esc(t.age || t.division || "")}${t.poule ? " · " + esc(t.poule) : ""}</p></section>`;
+  if (r.exempt) return heros + '<p class="vide">Vaires est exempt pour cette journée.</p>';
+
+  const s = V2.salle(r);
+  const adresse = s ? encodeURIComponent(s.adresse || s.nom) : "";
+  const salle = s ? `<div class="section"><h2>Salle</h2></div><div class="carte"><h3>${svg("carte").replace("<svg", '<svg style="width:18px;height:18px;vertical-align:-3px"')} ${esc(s.nom || "Salle")}</h3>
+      <p class="petit" style="margin:4px 0 12px">${esc(s.adresse || "adresse inconnue")}</p>
+      ${s.adresse ? `<div class="boutons"><a class="bouton" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${adresse}">${svg("carte")} Itinéraire</a>
+        <a class="bouton second" target="_blank" rel="noopener" href="https://waze.com/ul?q=${adresse}&navigate=yes">Waze</a></div>` : ""}</div>` : "";
+
+  const ligne = t.classement.find((l) => l.libelle === r.advBrut);
+  const adv = ligne && ligne.points != null ? `<p class="petit" style="margin:6px 2px 0">${esc(r.adversaire)} : ${ligne.rang === 1 ? "1er" : ligne.rang + "e"} de la poule avec ${ligne.points} points (${ligne.v ?? 0} V, ${ligne.n ?? 0} N, ${ligne.d ?? 0} D).</p>` : "";
+
+  // Compositions : probable adverse (analyse du site) et habituels de Vaires (classement virtuel)
+  let compos = "", prono = "";
+  const club = t.source.clubs?.[r.advClub], a = r.analyse;
+  const nosJoueurs = (await V2.joueurs().catch(() => [])).filter((j) => j.equipe && j.equipe.replace(/^V/, "") === `${t.numero}${t.comp === "femmes" ? " F" : ""}`);
+  if (club && a && !r.score) {
+    const parId = Object.fromEntries((club.joueurs || []).map((j) => [j.id, j]));
+    const probable = (a.probable || []).map((id) => parId[id]).filter(Boolean);
+    const autres = (a.habitues || []).filter((h) => !(a.probable || []).includes(h.id)).map((h) => ({ j: parId[h.id], nb: h.nb })).filter((x) => x.j);
+    compos = `<div class="section"><h2>Compo probable de ${esc(r.adversaire)}</h2></div>
+      <div class="liste compo">${probable.map((j) => `<div><span class="nom">${esc(nomJ(j))}</span><b>${pts(j) ?? "–"}</b></div>`).join("") || '<div class="petit">Pas encore d\'indice.</div>'}</div>
+      ${autres.length ? `<details style="margin-top:8px"><summary class="petit">Autres joueurs habituels (${autres.length})</summary><div class="liste compo" style="margin-top:8px">
+        ${autres.map((x) => `<div><span class="nom">${esc(nomJ(x.j))} <span class="petit">· ${x.nb} fois</span></span><b>${pts(x.j) ?? "–"}</b></div>`).join("")}</div></details>` : ""}`;
+    if (t.comp === "france") prono = pronostic(nosJoueurs.map((j) => j.virtuels ?? j.officiels ?? 0), probable.map(pts).filter((x) => x != null).sort((x, y) => y - x));
+  }
+  const nous = nosJoueurs.length && !r.score ? `<div class="section"><h2>Joueurs habituels de ${esc(t.nom)}</h2></div><div class="liste compo">
+      ${nosJoueurs.map((j) => `<a href="../joueurs/#${esc(j.id)}"><span class="nom">${esc(j.nomComplet)}</span><b>${V2.nombre(j.virtuels ?? j.officiels)}</b></a>`).join("")}</div>` : "";
+
+  // Feuille de match
+  let feuille = "";
+  const f = r.feuille;
+  if (f && f.parties?.length) {
+    const bilan = (f.bilan || []).map((b) => `<div><span class="nom">${esc(nomJ(b))} <span class="petit">· ${b.points ?? ""}</span></span><b>${b.v}/${b.n}</b></div>`).join("");
+    const parties = f.parties.map((p) => {
+      const g = p.gagne, sets = (p.sets || []).map(([x, y]) => `${x}-${y}`).join(" · ");
+      const cote = (l) => l.map((j) => esc(nomJ(j))).join(" / ");
+      return `<div class="partie"><span class="${g ? "gagne" : ""}">${cote(p.nous)}</span>
+        <span class="score ${g ? "v" : p.non_compte ? "n" : "d"}">${p.forfait ? "forfait" : g ? "V" : "D"}</span>
+        <span class="${g ? "" : "gagne"}" style="text-align:right">${cote(p.eux)}</span>${sets ? `<span class="sets">${sets}</span>` : ""}</div>`;
+    }).join("");
+    feuille = `<div class="section"><h2>Feuille de match</h2><span class="petit">victoires / parties</span></div><div class="liste compo">${bilan}</div>
+      <div class="carte pile" style="margin-top:10px">${parties}</div>`;
+  }
+  const liens = [];
+  if (t.comp === "france" || t.comp === "femmes") liens.push(["../club/#doc/vaires.html", "Analyse complète de l'adversaire (site actuel)"]);
+  if (t.comp === "paris") liens.push([`../../paris/#dispo/${r.journee}`, "Disponibilités des joueurs pour cette journée"], ["../../paris/", "Adversaires du championnat de Paris"]);
+  if (t.comp === "jeunes") liens.push(["../../jeunes/", "Jeunes des clubs adverses"]);
+  if (f) liens.push(["../club/#doc/rencontres_vaires.html", "Toutes les feuilles de match"]);
+  return heros + salle + adv + prono + compos + nous + feuille
+    + `<div class="section"><h2>Pour aller plus loin</h2></div><div class="liste">${liens.map(([l, x]) => `<a href="${l}">${svg("page")}<span class="grow nom">${esc(x)}</span></a>`).join("")}
+       <a href="../equipes/#${t.cle}">${svg("equipes")}<span class="grow nom">${esc(t.nom)} : poule et calendrier</span></a></div>`;
+}
+
+V2.demarrer({ titre: "Rencontre", retour: "../equipes/" }, async () => {
+  const m = $("#contenu");
+  m.innerHTML = V2.squelettes(3);
+  const eq = await V2.equipes();
+  const afficher = async () => {
+    const [cle, j] = decodeURIComponent(location.hash.slice(1)).split("/");
+    const t = eq.find((x) => x.cle === cle), r = t?.rencontres.find((x) => String(x.journee) === j);
+    if (!r) { m.innerHTML = '<p class="vide">Rencontre introuvable. <a href="../equipes/">Voir les équipes</a></p>'; return; }
+    const retour = $(".haut a.bouton-haut");
+    if (retour) retour.href = `../equipes/#${t.cle}`;
+    V2.titre(`${t.nom} · J${r.journee}`, COMPET[t.comp].nom);
+    m.innerHTML = await fiche(t, r);
+    window.scrollTo(0, 0);
+  };
+  window.addEventListener("hashchange", afficher);
+  await afficher();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="fr" data-racine="../" data-page="club">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="cvtt-cle" content="cvtt-vaires-cle-club">
+<meta name="theme-color" content="#0f2740">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CVTT Vaires">
+<title>Club · CVTT Vaires</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="../icones/icone-192.png">
+<link rel="apple-touch-icon" href="../icones/icone-180.png">
+<link rel="stylesheet" href="../commun.css?v=__VERSION__">
+<style>
+a.carte.tuile, .tuile { display: flex; gap: 12px; align-items: center; }
+.tuile .ic { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; flex: 0 0 auto; background: var(--accent-fond); color: var(--accent); }
+.tuile .ic svg { width: 22px; height: 22px; }
+.tuile .ic.img { background: var(--paris-fond); color: var(--paris); }
+.tuile .ic.doc { background: var(--jeunes-fond); color: var(--jeunes); }
+.tuile .ic.esp { background: var(--dom-fond); color: var(--dom); }
+</style>
+</head>
+<body>
+<main id="contenu"></main>
+<script src="../commun.js?v=__VERSION__"></script>
+<script>
+"use strict";
+const { $, esc, svg } = V2;
+const GROUPES = ["récapitulatif", "programme", "paris", "classements", "adversaires", "résultats", "rencontres", "effectif", "classement virtuel", "progression", "individuels"];
+const TITRES = { "récapitulatif": "Récapitulatif de la journée", "programme": "Programme des équipes", "paris": "Championnat de Paris",
+  "classements": "Classements des poules", "adversaires": "Adversaires", "résultats": "Résultats des joueurs", "rencontres": "Feuilles de match",
+  "effectif": "Effectif et brûlages", "classement virtuel": "Classement virtuel", "progression": "Progression des joueurs", "individuels": "Individuels" };
+const ESPACES = { paris: "Championnat de Paris", jeunes: "Championnat des jeunes", 77: "Clubs du 77", indivs: "Individuels (critérium)",
+                  tournois: "Tournois autour de Vaires", cal: "Calendrier du comité" };
+const taille = (o) => !o ? "" : o >= 1e6 ? `${(o / 1e6).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} Mo` : `${Math.max(1, Math.round(o / 1e3))} Ko`;
+let url = null;
+
+const tuile = (href, ic, cls, titre, sous, nouveau) => `<a class="carte tuile" href="${href}"><span class="ic ${cls}">${svg(ic)}</span>
+  <span style="min-width:0;flex:1"><b>${esc(titre)}</b>${sous ? `<br><span class="petit">${esc(sous)}</span>` : ""}</span>
+  ${nouveau ? '<span class="puce nouveau">nouveau</span>' : ""}</a>`;
+
+function accueil(club) {
+  V2.titre("Club", "Documents, images et espaces");
+  const docs = club.documents || [], images = docs.filter((d) => d.type === "image"), pages = docs.filter((d) => d.type !== "image");
+  const lien = (d) => `#doc/${encodeURIComponent(d.fichier)}`;
+  let html = `<div class="section"><h2>Pages détaillées</h2><span class="petit">tableaux complets du site actuel</span></div>
+    <div class="grille">${pages.map((d) => tuile(lien(d), "page", "", d.titre, d.description, V2.estNouveau(d.date))).join("")}</div>`;
+  html += `<div class="section" id="images"><h2>Images à partager</h2></div>`;
+  for (const g of GROUPES) {
+    const l = images.filter((d) => d.groupe === g);
+    if (!l.length) continue;
+    html += `<h3 style="margin:14px 2px 8px;font-size:.92rem">${esc(TITRES[g] || g)}</h3><div class="grille">${l.map((d) =>
+      tuile(lien(d), "image", "img", d.titre, d.date ? V2.dateCourte(d.date) : "", V2.estNouveau(d.date))).join("")}</div>`;
+  }
+  for (const r of club.ressources || []) html += `<div class="section"><h2>${esc(r.nom)}</h2></div><div class="grille">${r.documents.map((d) =>
+    tuile(`#res/${encodeURIComponent(r.nom)}/${encodeURIComponent(d.fichier)}`, d.type === "image" ? "image" : "page", "doc", d.titre,
+      [d.description, d.taille ? taille(d.taille) : ""].filter(Boolean).join(" · "), false)).join("")}</div>`;
+  if ((club.archives || []).length) html += `<div class="section"><h2>Archives des journées</h2></div><div class="liste">${club.archives.map((a) =>
+    `<a href="../../club/#archives/${encodeURIComponent(a.cle)}">${svg("club")}<span class="grow nom">${esc(a.titre)}</span><span class="petit">${esc(a.date_reference ? V2.dateCourte(a.date_reference) : "")}</span></a>`).join("")}</div>`;
+  html += `<div class="section"><h2>Autres espaces</h2><span class="petit">site actuel</span></div><div class="grille">${(club.espaces || []).map((e) =>
+    tuile(`../../${encodeURIComponent(e.chemin)}/`, "externe", "esp", ESPACES[e.chemin] || e.titre, "", false)).join("")}</div>`;
+  if (V2.admin()) html += `<div class="section"><h2>Administration</h2></div><div class="liste">
+    <a href="https://ggman23.github.io/ggping/" target="_blank" rel="noopener">${svg("externe")}<span class="grow nom">Lancer une mise à jour du site</span></a>
+    <a href="../../lundi/">${svg("etoile")}<span class="grow nom">Le roi du lundi</span></a></div>`;
+  return html + `<div class="section"><h2>Réglages</h2></div><div class="liste"><button type="button" id="ouvrir-reglages">${svg("reglages")}<span class="grow nom">Mon espace, taille du texte, apparence</span></button>
+    <a href="../../club/">${svg("retour")}<span class="grow nom">Revenir au site actuel</span></a></div>`;
+}
+
+async function vue(d, rubrique) {
+  V2.titre(d.titre, rubrique || (d.type === "image" ? TITRES[d.groupe] || "Image" : "Page du site actuel"));
+  const m = $("#contenu");
+  m.innerHTML = '<p class="vide">Ouverture…</p>';
+  if (url) { URL.revokeObjectURL(url); url = null; }
+  const blob = await V2.fichierClub(d.apercu || d.chemin, d.apercu ? "x.jpg" : d.fichier);
+  url = URL.createObjectURL(blob);
+  const original = () => d.apercu ? V2.fichierClub(d.chemin, d.fichier) : Promise.resolve(blob);
+  const boutons = `<div class="boutons" style="margin:10px 0">
+    <button class="bouton" type="button" id="tele">${svg("telecharger")} Télécharger</button>
+    ${d.type === "image" ? `<button class="bouton second" type="button" id="part" hidden>${svg("partager")} Partager</button>` : ""}</div>`;
+  if (d.type === "page") m.innerHTML = `<iframe class="cadre" title="${esc(d.titre)}" src="${url}"${rubrique ? ' sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms"' : ""}></iframe>`;
+  else if (d.type === "image") m.innerHTML = `${boutons}<div class="vue-image"><img src="${url}" alt="${esc(d.titre)}"></div>
+    ${d.apercu ? `<p class="petit" style="text-align:center">Aperçu allégé : « Télécharger » donne l'original${d.dimensions ? ` (${d.dimensions.join(" × ")} pixels)` : ""}.</p>` : ""}`;
+  else m.innerHTML = `<div class="carte" style="text-align:center"><h3>${esc(d.titre)}</h3><p class="petit">${esc(d.description || "")}</p>${boutons}</div>`;
+  const tele = $("#tele");
+  if (tele) tele.addEventListener("click", async () => {
+    tele.disabled = true;
+    try { const b = await original(); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = d.fichier.replace(/^.*\//, "").replace(/\.chiffre$/, ""); document.body.append(a); a.click(); a.remove(); }
+    finally { tele.disabled = false; }
+  });
+  const part = $("#part");
+  if (part && navigator.canShare && navigator.canShare({ files: [new File([blob], "x.png", { type: blob.type })] })) {
+    part.hidden = false;
+    part.addEventListener("click", async () => { try { const b = await original(); await navigator.share({ files: [new File([b], d.fichier.replace(/\.chiffre$/, ""), { type: b.type })] }); } catch (e) { /* annulé */ } });
+  }
+}
+
+V2.demarrer({ titre: "Club" }, async () => {
+  const m = $("#contenu");
+  m.innerHTML = V2.squelettes(6);
+  const club = await V2.donnees("club");
+  const afficher = async () => {
+    const h = location.hash.slice(1), retour = $(".haut .bouton-haut");
+    if (h.startsWith("doc/")) {
+      const d = (club.documents || []).find((x) => x.fichier === decodeURIComponent(h.slice(4)));
+      if (d) return vue(d);
+    }
+    if (h.startsWith("res/")) {
+      const [nom, fichier] = h.slice(4).split("/").map(decodeURIComponent);
+      const d = (club.ressources || []).find((r) => r.nom === nom)?.documents.find((x) => x.fichier === fichier);
+      if (d) return vue(d, nom);
+    }
+    m.innerHTML = accueil(club);
+    const b = $("#ouvrir-reglages");
+    if (b) b.addEventListener("click", () => $("#v2-reglages").click());
+    if (h === "images") $("#images").scrollIntoView(); else window.scrollTo(0, 0);
+  };
+  window.addEventListener("hashchange", afficher);
+  await afficher();
+});
+</script>
+</body>
+</html>

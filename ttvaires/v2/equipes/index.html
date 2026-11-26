@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="fr" data-racine="../" data-page="equipes">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="cvtt-cle" content="cvtt-vaires-cle-club">
+<meta name="theme-color" content="#0f2740">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CVTT Vaires">
+<title>Équipes · CVTT Vaires</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="../icones/icone-192.png">
+<link rel="apple-touch-icon" href="../icones/icone-180.png">
+<link rel="stylesheet" href="../commun.css?v=__VERSION__">
+</head>
+<body>
+<main id="contenu"></main>
+<script src="../commun.js?v=__VERSION__"></script>
+<script>
+"use strict";
+const { $, esc, svg, COMPET } = V2;
+// Page détaillée du site actuel pour chaque compétition (ouverte dans le cadre de la v2, ou à son adresse)
+const DETAIL = { france: ["../club/#doc/vaires.html", "Adversaires, compos probables et brûlages"], femmes: ["../club/#doc/vaires.html", "Adversaires et compos probables"],
+                 paris: ["../../paris/", "Championnat de Paris (site actuel) : adversaires, disponibilités"], jeunes: ["../../jeunes/", "Championnat des jeunes (site actuel)"] };
+const rang = (n) => n == null ? "–" : n === 1 ? "1er" : `${n}e`;
+
+function carteEquipe(t) {
+  const prochaine = t.rencontres.find(V2.aVenir), dernier = [...t.rencontres].reverse().find((r) => r.score);
+  return `<a class="carte match ${t.comp}" href="#${t.cle}">
+    <span class="picto">${svg(t.comp, true)}</span>
+    <span class="quoi"><span class="equipe">${esc(t.nom)}</span> <span class="petit">· ${esc(t.age || t.division || "")}</span>
+      <span class="quand">${esc(t.poule || "")}${prochaine ? ` · ${esc(V2.dateCourte(prochaine.date))} ${prochaine.exempt ? "exempt" : (prochaine.domicile ? "reçoit " : "chez ") + esc(prochaine.adversaire)}` : ""}</span></span>
+    <span class="droite"><span class="score ${t.rang === 1 ? "v" : ""}" title="Place dans la poule">${rang(t.rang)}${t.nbEquipes ? `<small style="font-weight:600"> /${t.nbEquipes}</small>` : ""}</span>
+      ${dernier ? `<span class="puce">dernier : <b class="${dernier.issue === "v" ? "hausse" : dernier.issue === "d" ? "baisse" : ""}">${dernier.score[0]}–${dernier.score[1]}</b></span>` : ""}</span></a>`;
+}
+
+function liste(eq) {
+  V2.titre("Équipes", `${eq.length} équipes engagées`);
+  const parComp = Object.keys(COMPET).map((c) => [c, eq.filter((t) => t.comp === c)]).filter(([, l]) => l.length);
+  return parComp.map(([c, l]) => `<div class="section"><h2>${esc(COMPET[c].nom)}</h2></div><div class="pile">${l.map(carteEquipe).join("")}</div>`).join("")
+    + `<p class="petit" style="margin-top:20px">Touche une équipe : sa poule, son calendrier, ses résultats et ses joueurs habituels.</p>`;
+}
+
+async function detail(t) {
+  V2.titre(t.nom, `${COMPET[t.comp].court} · ${t.age || t.division || ""}${t.poule ? " · " + t.poule : ""}`);
+  const prochaine = t.rencontres.find(V2.aVenir);
+  const lignes = t.classement;
+  const vide = !lignes.some((l) => l.points != null);
+  const classement = lignes.length ? `<div class="carte defile" style="padding:6px 4px"><table class="tableau"><thead><tr><th>#</th><th>Équipe</th>
+      <th class="n">Pts</th><th class="n">J</th><th class="n">V</th><th class="n">N</th><th class="n">D</th></tr></thead><tbody>
+      ${lignes.map((l, i) => `<tr class="${l.nous ? "nous" : ""}"><td>${l.rang ?? (vide ? "" : i + 1)}${l.departage ? ` <span title="${esc(l.departage)}">≡</span>` : ""}</td>
+        <td style="white-space:normal">${esc(V2.joli(l.libelle))}</td><td class="n"><b>${l.points ?? "–"}</b></td><td class="n">${l.joues ?? "–"}</td>
+        <td class="n">${l.v ?? "–"}</td><td class="n">${l.n ?? "–"}</td><td class="n">${l.d ?? "–"}</td></tr>`).join("")}</tbody></table>
+      ${vide ? '<p class="petit" style="margin:8px">Classement disponible après la première journée.</p>' : ""}</div>` : "";
+  let joueurs = "";
+  if (t.comp === "france" || t.comp === "femmes") {
+    const js = (await V2.joueurs().catch(() => [])).filter((j) => j.equipe && j.equipe.replace(/^V/, "") === `${t.numero}${t.comp === "femmes" ? " F" : ""}`);
+    if (js.length) joueurs = `<div class="section"><h2>Joueurs habituels</h2><span class="petit">classement virtuel</span></div>
+      <div class="liste">${js.map((j) => `<a href="../joueurs/#${esc(j.id)}" class="${j.id === V2.moi() ? "moi" : ""}"><span class="grow nom">${esc(j.nomComplet)}</span>
+        <span>${V2.nombre(j.virtuels ?? j.officiels)}</span><span class="petit" style="min-width:42px;text-align:right">${j.gain == null ? "" : V2.signe(j.gain)}</span></a>`).join("")}</div>`;
+  }
+  const [lien, texte] = DETAIL[t.comp];
+  return (prochaine ? `<div class="section"><h2>Prochaine rencontre</h2></div>${V2.carteMatch(prochaine, { journee: true })}` : "")
+    + `<div class="section"><h2>Classement de la poule</h2></div>${classement}`
+    + `<div class="section"><h2>Calendrier et résultats</h2></div>
+       <div class="boutons" style="margin-bottom:10px"><button class="bouton second" type="button" id="ics">${svg("agenda")} Ajouter à mon agenda</button></div>
+       <div class="pile">${t.rencontres.map((r) => V2.carteMatch(r, { journee: true })).join("")}</div>`
+    + joueurs
+    + `<div class="section"><h2>Pour aller plus loin</h2></div><div class="liste"><a href="${lien}">${svg("page")}<span class="grow nom">${esc(texte)}</span></a></div>`;
+}
+
+V2.demarrer({ titre: "Équipes" }, async () => {
+  const m = $("#contenu");
+  m.innerHTML = V2.squelettes(5);
+  const eq = await V2.equipes();
+  const afficher = async () => {
+    const t = eq.find((x) => x.cle === decodeURIComponent(location.hash.slice(1)));
+    m.innerHTML = t ? await detail(t) : liste(eq);
+    m.classList.remove("apparait"); void m.offsetWidth; m.classList.add("apparait");
+    const b = $("#ics");
+    if (b && t) b.addEventListener("click", () => V2.ics(t.rencontres, `cvtt-vaires-${t.cle}.ics`));
+    if (t) V2.ecrire(V2.R.dernier, t.cle);
+    window.scrollTo(0, 0);
+  };
+  window.addEventListener("hashchange", afficher);
+  await afficher();
+});
+</script>
+</body>
+</html>

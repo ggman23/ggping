@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr" data-racine="./" data-page="accueil">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="cvtt-cle" content="cvtt-vaires-cle-club">
+<meta name="theme-color" content="#0f2740">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CVTT Vaires">
+<title>CVTT Vaires</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icones/icone-192.png">
+<link rel="apple-touch-icon" href="icones/icone-180.png">
+<link rel="stylesheet" href="commun.css?v=__VERSION__">
+</head>
+<body>
+<main id="contenu"></main>
+<script src="commun.js?v=__VERSION__"></script>
+<script>
+"use strict";
+const { $, esc, svg, COMPET } = V2;
+const GROUPES_UNE = ["récapitulatif", "programme", "paris", "classements"];
+
+V2.demarrer({ titre: "CVTT Vaires", sous: "Tennis de table · Vaires-sur-Marne" }, async () => {
+  const m = $("#contenu");
+  m.innerHTML = V2.squelettes(4);
+  const [eq, js, club] = await Promise.all([V2.equipes(), V2.joueurs().catch(() => []), V2.facultatif("club")]);
+  const prochaines = eq.map((t) => t.rencontres.find(V2.aVenir)).filter(Boolean).sort((a, b) => a.date.localeCompare(b.date));
+  const bientot = prochaines.filter((r) => V2.ecart(r.date) <= 7);
+  const aMontrer = bientot.length ? bientot : prochaines.slice(0, 4);
+  const derniers = eq.map((t) => [...t.rencontres].reverse().find((r) => r.score)).filter(Boolean)
+    .filter((r) => V2.ecart(r.date) >= -21).sort((a, b) => b.date.localeCompare(a.date));
+  const moi = js.find((j) => j.id === V2.moi());
+  const premier = aMontrer[0];
+
+  /* Bandeau : la prochaine journée en une phrase */
+  const jour = premier ? aMontrer.filter((r) => r.date === premier.date) : [];
+  const heros = `<section class="carte heros apparait">
+    <p class="petit" style="margin:0 0 4px">${moi ? `Bonjour ${esc(moi.prenom || "")} !` : "Bienvenue au CVTT Vaires"}</p>
+    <h2 style="font-size:1.35rem">${premier ? `Prochaine rencontre ${esc(V2.relatif(premier.date))}` : "Pas de rencontre à venir"}</h2>
+    ${premier ? `<p style="margin:6px 0 12px">${esc(V2.dateLongue(premier.date))} · ${jour.length} équipe${jour.length > 1 ? "s" : ""} en jeu</p>` : ""}
+    <div class="chiffres">
+      <div class="chiffre"><b>${eq.length}</b><span>équipes</span></div>
+      <div class="chiffre"><b>${eq.filter((t) => t.rang === 1).length}</b><span>en tête de poule</span></div>
+      <div class="chiffre"><b>${derniers.filter((r) => r.issue === "v").length}/${derniers.length}</b><span>victoires récentes</span></div>
+    </div></section>`;
+
+  /* Mon espace */
+  let monEspace = `<a class="carte" href="#" id="choisir-moi" style="display:flex;gap:12px;align-items:center">${svg("etoile")}
+    <span><b>Mon espace</b><br><span class="petit">Choisis ton nom : l'accueil te montrera ta prochaine rencontre, tes points et ton objectif.</span></span></a>`;
+  if (moi) {
+    const v = moi.virtuels ?? moi.officiels ?? 0, palier = (Math.floor(v / 100) + 1) * 100;
+    const equipe = eq.find((t) => moi.equipe && t.comp === (/F$/.test(moi.equipe) ? "femmes" : "france") && t.numero === Number(moi.equipe.replace(/\D/g, "")));
+    const sienne = equipe?.rencontres.find(V2.aVenir);
+    monEspace = `<section class="carte apparait"><div style="display:flex;align-items:center;gap:10px"><h3 style="flex:1">${svg("etoile")} Mon espace</h3>
+        <a class="petit" href="joueurs/#${esc(moi.id)}">Ma fiche</a></div>
+      <div class="chiffres" style="margin:10px 0">
+        <div class="chiffre"><b>${V2.nombre(moi.officiels)}</b><span>points officiels</span></div>
+        <div class="chiffre"><b>${V2.nombre(moi.virtuels)}</b><span>points virtuels</span></div>
+        <div class="chiffre"><b>${moi.gain == null ? "–" : V2.signe(moi.gain)}</b><span>depuis le début de phase</span></div></div>
+      <p style="margin:6px 0">Il te manque <b>${V2.nombre(palier - v)}</b> point${palier - v > 1 ? "s" : ""} pour passer <b>${palier / 100}</b>.</p>
+      <div class="jauge"><i style="width:${v % 100}%"></i></div>
+      ${sienne ? `<p class="petit" style="margin:12px 0 6px">Prochaine rencontre de ${esc(equipe.nom)} :</p>${V2.carteMatch(sienne)}` : ""}</section>`;
+  }
+
+  /* À partager : les dernières images de chaque groupe à la une */
+  const images = (club?.documents || []).filter((d) => d.type === "image");
+  const une = GROUPES_UNE.flatMap((g) => images.filter((d) => d.groupe === g).slice(0, g === "programme" ? 2 : 1));
+  const nouveautes = (club?.documents || []).filter((d) => V2.estNouveau(d.date));
+
+  m.innerHTML = heros
+    + `<div class="section"><h2>${bientot.length ? "Cette semaine" : "Prochaines rencontres"}</h2><a class="lien" href="agenda/">Tout l'agenda</a></div>
+       <div class="pile">${aMontrer.map((r) => V2.carteMatch(r)).join("") || '<p class="vide">Aucune rencontre prévue.</p>'}</div>`
+    + `<div class="section"><h2>Mon espace</h2></div>${monEspace}`
+    + (derniers.length ? `<div class="section"><h2>Derniers résultats</h2><a class="lien" href="equipes/">Toutes les équipes</a></div>
+       <div class="pile">${derniers.map((r) => V2.carteMatch(r)).join("")}</div>` : "")
+    + (une.length ? `<div class="section"><h2>À partager</h2><a class="lien" href="club/#images">Toutes les images</a></div>
+       <div class="grille">${une.map((d) => `<a class="carte" href="club/#doc/${encodeURIComponent(d.fichier)}" style="display:flex;gap:12px;align-items:center">
+         <span class="puce comp paris" style="padding:8px">${svg("image")}</span><span><b>${esc(d.titre)}</b><br><span class="petit">${esc(d.date ? V2.dateCourte(d.date) : "")}</span></span>
+         ${V2.estNouveau(d.date) ? '<span class="puce nouveau" style="margin-left:auto">nouveau</span>' : ""}</a>`).join("")}</div>` : "")
+    + (nouveautes.length ? `<div class="section"><h2>Nouveau depuis ta dernière visite</h2></div>
+       <div class="liste">${nouveautes.slice(0, 8).map((d) => `<a href="club/#doc/${encodeURIComponent(d.fichier)}">${svg(d.type === "image" ? "image" : "page")}
+         <span class="grow nom">${esc(d.titre)}</span><span class="puce nouveau">nouveau</span></a>`).join("")}</div>` : "")
+    + (V2.admin() ? `<div class="section"><h2>Administration</h2></div><div class="liste">
+       <a href="https://ggman23.github.io/ggping/" target="_blank" rel="noopener">${svg("externe")}<span class="grow nom">Lancer une mise à jour du site</span></a>
+       <a href="../lundi/">${svg("etoile")}<span class="grow nom">Le roi du lundi</span></a>
+       <a href="../club/">${svg("club")}<span class="grow nom">Espace club (site actuel)</span></a></div>` : "")
+    + `<p class="petit" style="text-align:center;margin-top:24px">Données du ${V2.MAJ ? esc(V2.dateLongue(V2.MAJ)) + " à " + esc(V2.MAJ.slice(11, 16).replace(":", "h")) : "?"}</p>`;
+  const choisir = $("#choisir-moi");
+  if (choisir) choisir.addEventListener("click", (e) => { e.preventDefault(); $("#v2-reglages").click(); });
+});
+</script>
+</body>
+</html>

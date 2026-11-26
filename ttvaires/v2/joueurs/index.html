@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="fr" data-racine="../" data-page="joueurs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="cvtt-cle" content="cvtt-vaires-cle-club">
+<meta name="theme-color" content="#0f2740">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CVTT Vaires">
+<title>Joueurs · CVTT Vaires</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="../icones/icone-192.png">
+<link rel="apple-touch-icon" href="../icones/icone-180.png">
+<link rel="stylesheet" href="../commun.css?v=__VERSION__">
+<style>
+.ligne-j { display: grid !important; grid-template-columns: 28px 1fr auto 74px; gap: 8px; align-items: center; }
+.ligne-j .rang { color: var(--doux); font-size: .82rem; text-align: right; }
+.ligne-j .pts { text-align: right; font-weight: 750; }
+.ligne-j .pts small { display: block; font-weight: 600; font-size: .76rem; }
+.ligne-j svg.courbe { width: 74px; }
+.barre-niveau { display: grid; grid-template-columns: 130px 1fr auto; gap: 10px; align-items: center; font-size: .88rem; margin: 6px 0; }
+@media (max-width: 360px) { .ligne-j { grid-template-columns: 24px 1fr auto; } .ligne-j svg.courbe { display: none; } }
+@media (max-width: 420px) { .ligne-j { grid-template-columns: 22px 1fr auto 56px; gap: 6px; } .ligne-j svg.courbe { width: 56px; } }
+</style>
+</head>
+<body>
+<main id="contenu"></main>
+<script src="../commun.js?v=__VERSION__"></script>
+<script>
+"use strict";
+const { $, esc, svg } = V2;
+const JEUNE = /^(P|B|M|C|J)/;
+const nomEquipe = (e) => !e || e === "None" ? "" : e.replace(/^V(\d+)( F)?$/, (m, n, f) => `Vaires ${n}${f ? " F" : ""}`);
+const cleEquipe = (e) => { const m = /^V(\d+)( F)?$/.exec(e || ""); return m ? `${m[2] ? "femmes" : "france"}-${m[1]}` : null; };
+let tri = "points", filtre = "tous", texte = "";
+
+function liste(js) {
+  V2.titre("Joueurs", `${js.length} joueurs de Vaires`);
+  let l = js.filter((j) => filtre === "tous" || (filtre === "femmes" ? j.sexe === "F" : JEUNE.test(j.categorie || "")));
+  if (texte) l = l.filter((j) => V2.sansAccent(j.nomComplet).includes(V2.sansAccent(texte)));
+  l = l.slice().sort(tri === "nom" ? (a, b) => (a.nom || "").localeCompare(b.nom || "", "fr")
+    : tri === "progression" ? (a, b) => (b.gain ?? -1e9) - (a.gain ?? -1e9) : () => 0);
+  const seg = (nom, val, actuelle, quoi) => `<button type="button" data-${quoi}="${val}" class="${val === actuelle ? "actif" : ""}">${nom}</button>`;
+  return `<input class="champ" type="search" id="q" placeholder="Chercher un joueur…" value="${esc(texte)}" autocomplete="off">
+    <div class="segments" style="margin-top:10px">${seg("Points virtuels", "points", tri, "tri")}${seg("Progression", "progression", tri, "tri")}${seg("Nom", "nom", tri, "tri")}</div>
+    <div class="segments">${seg("Tous", "tous", filtre, "filtre")}${seg("Femmes", "femmes", filtre, "filtre")}${seg("Jeunes", "jeunes", filtre, "filtre")}</div>
+    <div class="liste" style="margin-top:6px">${l.map((j, i) => `<a class="ligne-j ${j.id === V2.moi() ? "moi" : ""}" href="#${esc(j.id)}">
+      <span class="rang">${tri === "points" ? i + 1 : ""}</span>
+      <span style="min-width:0"><span class="nom" style="display:block">${j.id === V2.moi() ? "★ " : ""}${esc(j.nomComplet)}</span>
+        <span class="petit">${esc([nomEquipe(j.equipe), j.categorie].filter(Boolean).join(" · "))}</span></span>
+      <span class="pts">${V2.nombre(j.virtuels ?? j.officiels)}<small>${j.gain == null ? "" : V2.signe(j.gain)}</small></span>
+      ${j.serie ? V2.courbe(j.serie, { largeur: 120, hauteur: 36, couleur: j.gain < 0 ? "var(--perdu)" : "var(--gagne)" }) : "<span></span>"}</a>`).join("")
+      || '<p class="vide">Aucun joueur.</p>'}</div>
+    <p class="petit" style="margin-top:12px">Points virtuels : estimation des points à la prochaine publication officielle, d'après les parties jouées depuis.</p>`;
+}
+
+async function fiche(j) {
+  V2.titre(j.nomComplet, [nomEquipe(j.equipe), j.categorie].filter(Boolean).join(" · "));
+  const [fi, ef] = await Promise.all([V2.facultatif("fiches"), V2.facultatif("effectif")]);
+  const f = (fi?.joueurs || []).find((x) => x.id === j.id), e = (ef?.joueurs || []).find((x) => x.id === j.id);
+  const v = j.virtuels ?? j.officiels ?? 0, palier = (Math.floor(v / 100) + 1) * 100, estMoi = j.id === V2.moi();
+  const equipe = cleEquipe(j.equipe);
+  let html = `<section class="carte heros apparait">
+    <div style="display:flex;align-items:center;gap:10px"><h2 style="flex:1;font-size:1.3rem">${esc(j.nomComplet)}</h2>
+      <button class="bouton second" type="button" id="moi" style="padding:7px 12px">${svg("etoile")} ${estMoi ? "C'est moi ✓" : "C'est moi"}</button></div>
+    <div class="chiffres" style="margin:12px 0">
+      <div class="chiffre"><b>${V2.nombre(j.officiels)}</b><span>points officiels</span></div>
+      <div class="chiffre"><b>${V2.nombre(j.virtuels)}</b><span>points virtuels</span></div>
+      <div class="chiffre"><b>${j.gain == null ? "–" : V2.signe(j.gain)}</b><span>cette phase</span></div>
+      <div class="chiffre"><b>${j.v ?? f?.bilan?.v ?? 0}–${j.d ?? f?.bilan?.d ?? 0}</b><span>victoires–défaites</span></div></div>
+    <p style="margin:4px 0 8px">Objectif <b>${palier / 100}</b> : encore <b>${V2.nombre(palier - v)}</b> point${palier - v > 1 ? "s" : ""}.</p>
+    <div class="jauge"><i style="width:${v % 100}%"></i></div></section>`;
+  if (f?.courbe?.serie?.length) {
+    const sem = fi.semaines || [];
+    html += `<div class="section"><h2>Courbe de la saison</h2><span class="petit">${esc(f.courbe.tendance || "")}</span></div>
+      <div class="carte">${V2.courbe(f.courbe.serie, { largeur: 600, hauteur: 140, couleur: (j.gain ?? 0) < 0 ? "var(--perdu)" : "var(--accent)" })}
+      <div class="petit" style="display:flex;justify-content:space-between">${sem.length ? `<span>${esc(V2.dateCourte(sem[0]))}</span><span>${esc(V2.dateCourte(sem[sem.length - 1]))}</span>` : ""}</div></div>`;
+  }
+  if (f) {
+    const m = f.historique?.meilleur, s = f.series || {};
+    html += `<div class="section"><h2>En bref</h2></div><div class="chiffres">
+      <div class="chiffre"><b>${f.nb_perfs ?? 0}</b><span>perfs</span></div><div class="chiffre"><b>${f.nb_contres ?? 0}</b><span>contres</span></div>
+      <div class="chiffre"><b>${s.meilleure ?? 0}</b><span>meilleure série de victoires</span></div>
+      <div class="chiffre"><b>${s.en_cours ?? 0}</b><span>série en cours (${s.en_cours_victoires ? "victoires" : "défaites"})</span></div>
+      ${m ? `<div class="chiffre"><b>${m.points}</b><span>meilleur classement (${String(m.mois).padStart(2, "0")}/${m.annee})${m.actuel ? " : c'est maintenant !" : ""}</span></div>` : ""}</div>`;
+    if (f.niveaux?.length) html += `<div class="section"><h2>Selon le niveau de l'adversaire</h2></div><div class="carte">${f.niveaux.map((n) => {
+      const t = n.v + n.d, p = t ? Math.round(100 * n.v / t) : 0;
+      return `<div class="barre-niveau"><span>${esc(n.titre)}</span><div class="jauge"><i style="width:${p}%"></i></div><span>${n.v}–${n.d}</span></div>`; }).join("")}</div>`;
+  }
+  const parties = (j.virtuel?.parties || []).slice().sort((a, b) => b.date.localeCompare(a.date));
+  if (parties.length) html += `<div class="section"><h2>Dernières parties</h2></div><div class="liste">${parties.slice(0, 15).map((p) => `<div>
+      <span class="score ${p.victoire ? "v" : "d"}" style="font-size:.8rem">${p.victoire ? "V" : "D"}</span>
+      <span class="grow"><span class="nom" style="display:block">${esc(V2.joli(p.adversaire))} <span class="petit">(${V2.nombre(p.adv_points)})</span></span>
+        <span class="petit">${esc(V2.dateCourte(p.date))} · ${esc(p.competition || "")}</span></span><span>${V2.signe(p.points)}</span></div>`).join("")}</div>`;
+  if (e?.brulage) {
+    const brule = Object.entries(e.brulage).filter(([, b]) => b.brule).map(([k]) => `V${k}`);
+    html += `<div class="section"><h2>Brûlage</h2></div><div class="carte">${brule.length ? `Ne peut plus jouer en <b>${brule.join(", ")}</b>.` : "Peut jouer dans toutes les équipes."}
+      <span class="petit">${e.equipe_max ? ` Équipe la plus forte jouée : V${e.equipe_max}.` : ""}</span></div>`;
+  }
+  html += `<div class="section"><h2>Pour aller plus loin</h2></div><div class="liste">
+    ${equipe ? `<a href="../equipes/#${equipe}">${svg("equipes")}<span class="grow nom">${esc(nomEquipe(j.equipe))} : poule et calendrier</span></a>` : ""}
+    <a href="../club/#doc/fiches_vaires.html">${svg("page")}<span class="grow nom">Fiche complète : manches, remontées, historique (site actuel)</span></a>
+    <a href="../club/#doc/progression_vaires.html">${svg("page")}<span class="grow nom">Progression comparée des joueurs (site actuel)</span></a></div>`;
+  return html;
+}
+
+V2.demarrer({ titre: "Joueurs" }, async () => {
+  const m = $("#contenu");
+  m.innerHTML = V2.squelettes(6);
+  const js = await V2.joueurs();
+  const afficher = async () => {
+    const id = decodeURIComponent(location.hash.slice(1)), j = js.find((x) => x.id === id);
+    m.innerHTML = j ? await fiche(j) : liste(js);
+    if (j) {
+      window.scrollTo(0, 0);
+      $("#moi").addEventListener("click", () => { V2.ecrire(V2.R.moi, j.id === V2.moi() ? null : j.id); afficher(); });
+    } else brancher();
+  };
+  const brancher = () => {
+    const q = $("#q");
+    q.addEventListener("input", () => {
+      texte = q.value; const pos = q.selectionStart;
+      m.innerHTML = liste(js); brancher();
+      const n = $("#q"); n.focus(); n.setSelectionRange(pos, pos);
+    });
+    m.querySelectorAll("[data-tri]").forEach((b) => b.addEventListener("click", () => { tri = b.dataset.tri; afficher(); }));
+    m.querySelectorAll("[data-filtre]").forEach((b) => b.addEventListener("click", () => { filtre = b.dataset.filtre; afficher(); }));
+  };
+  window.addEventListener("hashchange", afficher);
+  await afficher();
+});
+</script>
+</body>
+</html>

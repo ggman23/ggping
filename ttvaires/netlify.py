@@ -42,7 +42,7 @@ from urllib.parse import quote
 
 import requests
 
-from . import calendrier, publier, ressources
+from . import calendrier, publier, ressources, v2
 
 RACINE = Path(__file__).resolve().parent.parent
 API = "https://api.netlify.com/api/v1"
@@ -339,6 +339,7 @@ def _ajouter_compteurs(dossier, goatcounter, umami):
     espaces = [dossier / e["chemin"] / "index.html" for e in ressources.lire()["espaces"]]
     espaces += [dossier / chemin / "index.html" for chemin, _ in PAGES_A_PART.values()]
     espaces += [dossier / chemin / "index.html" for chemin in PAGES_FIXES]
+    espaces += sorted((dossier / "v2").rglob("index.html"))  # /v2/ : une page vue par chargement
     for page, manuel in [(dossier / "index.html", False), (dossier / "club" / "index.html", True),
                          *((f, True) for f in sorted((dossier / "gg").rglob("index.html"))),
                          *((f, False) for f in espaces)]:
@@ -361,6 +362,12 @@ def construire(site, dossier, mot_de_passe, mot_de_passe_gg, mot_de_passe_club="
         # Espaces protégés à leur propre adresse (ex. /lundi/), mot de passe du club : voir ressources.py
         ressources.publier_espaces(dossier, publier.cle(mot_de_passe_club))
         publier_pages_a_part(site, dossier, cle_site, publier.cle(mot_de_passe_club))  # ex. /indivs/, /tournois/
+        # /v2/ : nouvelle version du site, à l'essai (voir v2.py) ; un échec ne touche pas au reste de la copie
+        try:
+            v2.construire(site, dossier / "v2", cle_site, publier.cle(mot_de_passe_club), dossier / "club" / "index.html")
+        except Exception as e:
+            shutil.rmtree(dossier / "v2", ignore_errors=True)
+            print(f"::warning::Version 2 (/v2/) non publiée : {type(e).__name__} : {e}")
     (dossier / "index.html").write_text(page_publique(site, mot_de_passe), encoding="utf-8")
     (dossier / "robots.txt").write_text("User-agent: *\nDisallow: /\n", encoding="utf-8")
     # En-têtes Netlify : pas de référencement, et des pages toujours à jour (pas de vieille copie en cache)

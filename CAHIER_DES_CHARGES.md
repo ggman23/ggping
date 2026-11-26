@@ -764,3 +764,12 @@ Pas d'onglet dans l'application pour l'instant.
 - « Y a-t-il une option dans la mise à jour pour ne mettre à jour que les fichiers ajoutés, sans refaire toute
   une mise à jour ? » (22/11). Réalisation : choix « Publication seule » (workflow : publication) : rien n'est
   relu ni archivé, pages en ligne reprises (publier --republier), espace club et copies refaits.
+- Améliorations du site (26/11) : propositions sur l'architecture, la navigation et le style, puis « crée une /v2/
+  (ex. https://ggping-pap.pages.dev/v2/), copie du site actuel avec toutes les modifications proposées, sans
+  toucher au site actuel, avec l'architecture et l'arborescence qui te semblent les meilleures (/v2/club...) ».
+  Réalisation (première étape) : v2.py (données des pages publiées rechiffrées avec la clé du club, fabriquée
+  avec la copie Cloudflare/Netlify) et ttvaires/v2/ : accueil, équipes, rencontre, joueurs, agenda, club ;
+  onglets en bas, recherche, Mon espace, taille du texte, mode sombre, mode administrateur, couleur et
+  pictogramme par compétition, cartes sur téléphone, dates parlantes, badge des nouveautés, itinéraire,
+  compo probable, pronostic, objectif de points, export agenda, application installable (manifest, service
+  worker, icône). Pas encore : 77, individuels, tournois, simulateur de montée, records, dispos partagées.
