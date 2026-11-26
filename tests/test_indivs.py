@@ -151,3 +151,41 @@ def test_resultats_du_tour_et_classement_de_la_poule():
              "b": {"v": 1, "d": 1, "points": 5.0, "parties": [{"adv_licence": "c", "victoire": True}]},
              "c": {"v": 1, "d": 1, "points": -1.0, "parties": [{"adv_licence": "a", "victoire": True}]}}
     assert [(c["licence"], c["rang"]) for c in indivs.classement_du_tour(cycle)] == [("b", 1), ("a", 2), ("c", 3)]
+
+
+def test_tour_sans_date_retrouve_dans_les_parties(capsys):
+    """Liste recopiée sans date (qualifiées d'un tour régional, 26/11) : le jour du tour vient des parties de
+    critérium des joueurs, après la recopie des poules (le tour précédent ne compte pas) ; sinon, pas de résultats."""
+    from datetime import date
+
+    crit = {"id": 7, "name": "FED_Critérium Fédéral"}
+
+    def partie(id_, dom, ext, jour, gagnant="home"):
+        return {"id": id_, "date": jour + "T00:00:00", "winner": gagnant, "doubleOpposition": False, "contest": crit,
+                "homePlayer": {"identifier": dom[0], "points": dom[1], "person": {"familyName": dom[2]}},
+                "awayPlayer": {"identifier": ext[0], "points": ext[1], "person": {"familyName": ext[2]}}}
+
+    v, a, b = ("1", 800, "VAIRIENNE"), ("2", 900, "AUTRE"), ("3", 700, "TROISIEME")
+    tour1 = [partie(1, a, v, "2026-10-11"), partie(2, a, b, "2026-10-11"), partie(3, v, b, "2026-10-11")]  # avant la recopie
+    tour2 = [partie(4, v, a, "2026-11-15"), partie(5, b, a, "2026-11-15", "away")]
+    seule = partie(6, b, ("77", 600, "X"), "2026-11-22")  # une seule joueuse ce jour-là : pas un tour de la liste
+    pages = {url_parties("1"): json.dumps({"hydra:member": [tour1[0], tour1[2], tour2[0]]}),
+             url_parties("2"): json.dumps({"hydra:member": [tour1[0], tour1[1], tour2[0], tour2[1]]}),
+             url_parties("3"): json.dumps({"hydra:member": [tour1[1], tour1[2], tour2[1], seule]}),
+             "https://apiv2.fftt.com/api/contests/7": json.dumps({"name": crit["name"], "coefficient": 1.5})}
+    j = lambda x, club: {"licence": x[0], "nom": x[2], "prenom": "P", "points": x[1], "club": club, "cat": "S"}
+    poules = {"maj": "2026-11-11", "poules": [
+        {"id": "p1", "public": "feminines", "competition": "Critérium régional · Tour 2", "titre": "R2 dames (3 qualifiées)",
+         "date": None, "horaire": None, "lieu": None, "joueurs": [j(v, "CVTT VAIRES"), j(a, "CS MEAUX TT"), j(b, "ATT QUINCY")]}]}
+    d = indivs.recuperer(FauxClient(pages), poules, aujourdhui=date(2026, 11, 26))
+    p = d["poules"][0]
+    assert p["date"] == "2026-11-15" and p["date_deduite"] is True
+    assert p["resultats"]["jour"] == "2026-11-15" and {k: (x["v"], x["d"]) for k, x in p["resultats"]["joueurs"].items()} == {
+        "1": (1, 0), "2": (1, 1), "3": (0, 1)}
+    assert "date du tour retrouvée dans les parties pour 1 poule(s)" in capsys.readouterr().out
+    # Avant le tour : ni date ni résultats (les parties du tour précédent ne comptent pas)
+    avant = indivs.recuperer(FauxClient(pages), poules, aujourdhui=date(2026, 11, 14))["poules"][0]
+    assert avant["date"] is None and "resultats" not in avant and "date_deduite" not in avant
+    # Le jour où une seule joueuse de la liste a joué ne suffit pas
+    assert indivs.date_du_tour(poules["poules"][0], {"3": [{"date": "2026-11-22", "competition": "FED_Critérium Fédéral",
+                                                             "championnat": False}]}, "2026-11-11", date(2026, 11, 26)) is None

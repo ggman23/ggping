@@ -800,3 +800,8 @@ Pas d'onglet dans l'application pour l'instant.
   Adversaire, Feuilles de match, Poule, Effectif, Progression, Résultats, Images ; V2.ongletsEquipe), pages du
   site ouvertes dans la fiche sur cette équipe seulement, images en vignettes (agrandir, télécharger, partager),
   « C'est mon équipe » retenu sur l'appareil et « Tout sur Vaires 2 » en haut de l'accueil.
+- Tour d'individuels sans date (26/11) : « pour son tour d'indivs tu as l'air de dire qu'il n'a pas eu lieu, mais il a
+  bien eu lieu » (une joueuse de la liste R2 seniors dames, tour du 15/11). Cause : la liste des qualifiées avait
+  été recopiée sans date, donc les résultats n'étaient pas cherchés. Réalisation : indivs.date_du_tour (jour où le
+  plus de joueurs de la liste ont joué en critérium après la recopie des poules), poule marquée date_deduite et
+  mention « date d'après les parties jouées » sur /indivs/ et dans la v2.

@@ -110,6 +110,7 @@ function poule(p) {
   return `<section class="carte heros apparait"><span class="puce comp jeunes">${esc(p.competition)}</span>
       <h2 style="margin:10px 0 4px;font-size:1.3rem">${esc(p.titre)}</h2>
       <p style="margin:0">${p.date ? esc(V2.dateLongue(p.date)) + (Math.abs(V2.ecart(p.date)) < 14 ? " · <b>" + esc(V2.relatif(p.date)) + "</b>" : "") : "date à préciser"}</p>
+      ${p.date_deduite ? '<p class="petit" style="margin:2px 0 0">Date d\'après les parties jouées (la liste reçue n\'en donnait pas).</p>' : ""}
       ${p.horaire ? `<p class="petit" style="margin:4px 0 0">${esc(p.horaire)}</p>` : ""}
       ${p.lieu ? `<p class="petit" style="margin:4px 0 10px">${esc(p.lieu)}</p><div class="boutons"><a class="bouton" target="_blank" rel="noopener"
         href="https://www.google.com/maps/dir/?api=1&destination=${lieu}">${svg("carte")} Itinéraire</a></div>` : ""}</section>`

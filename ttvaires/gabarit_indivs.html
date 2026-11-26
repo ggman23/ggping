@@ -239,7 +239,7 @@ function vueJoueur(e) {
   const lieu = p.lieu ? `<a data-lien="plan du lieu" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.lieu)}" target="_blank" rel="noopener">${esc(p.lieu)}</a>` : "lieu à préciser";
   return `<div class="contenu">
     <h1>${nomComplet(moi)} <small>${esc(p.titre)}</small></h1>
-    <p class="infos">${esc(p.competition)} · <b>${dateCourte(p.date)}</b>${p.horaire ? " · " + esc(p.horaire) : ""}</p>
+    <p class="infos">${esc(p.competition)} · <b>${dateCourte(p.date)}</b>${p.date_deduite ? " (date d'après les parties jouées)" : ""}${p.horaire ? " · " + esc(p.horaire) : ""}</p>
     <p class="infos">${lieu}</p>
     <div class="chiffres">
       <span class="chiffre">Rang probable <b>${b.rang}</b>/${b.total}</span>

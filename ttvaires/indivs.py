@@ -17,6 +17,10 @@ victoires, puis, entre deux joueurs à égalité qui se sont rencontrés, le vai
 points gagnés. C'est un classement indicatif : la place officielle du groupe (montées, descentes) vient du
 tableau final du tour, publié par le comité.
 
+Une poule recopiée sans date (par exemple la liste des qualifiées d'un tour régional) : le jour du tour est
+retrouvé dans les parties de critérium de ses joueurs (le jour où le plus de joueurs de la liste ont joué, après
+la recopie des poules et jusqu'à aujourd'hui), et la page indique « date d'après les parties jouées ».
+
 Remplacer les poules (nouveau tour) : écrire un fichier JSON de même forme (voir exemple() ou
 `exporter`), puis, avec le mot de passe du club dans MOT_DE_PASSE_CLUB (sinon il est demandé) :
 
@@ -31,6 +35,7 @@ import os
 import re
 import sys
 import unicodedata
+from collections import Counter
 from datetime import date, datetime
 from pathlib import Path
 
@@ -108,6 +113,28 @@ def de_vaires(joueur):
     return _simple(joueur.get("club")) == _simple(CLUB_VAIRES) or joueur.get("numero_club") == "08770250"
 
 
+def _criterium(ligne):
+    return famille_competition(ligne["competition"], ligne["championnat"]) == "Critérium fédéral"
+
+
+def date_du_tour(poule, parties, apres, aujourdhui):
+    """Jour d'un tour recopié sans date (None si rien ne le dit) : le jour où le plus de joueurs de la poule ont joué
+    des parties de critérium, après la recopie des poules (`apres` : la convocation annonce le tour suivant) et
+    jusqu'à aujourd'hui ; à égalité, le plus ancien. Il faut au moins deux joueurs ce jour-là (un seul dans la poule
+    s'il est seul à avoir une licence)."""
+    licences = {j["licence"] for j in poule["joueurs"] if j.get("licence")}
+    compte = Counter()
+    for lic in licences:
+        compte.update({l["date"] for l in parties.get(lic) or [] if _criterium(l)
+                       and (not apres or l["date"] >= apres) and l["date"] <= aujourdhui.isoformat()})
+    if not compte:
+        return None
+    meilleur = max(compte.values())
+    if meilleur < min(2, len(licences)):
+        return None
+    return min(j for j, n in compte.items() if n == meilleur)
+
+
 def resultats_du_tour(poule, parties, aujourdhui):
     """Résultats du tour d'une poule (None avant le tour ou sans aucune partie lue) : pour chaque joueur, ses
     parties de critérium du jour, et le classement de la poule (voir le début du module)."""
@@ -117,8 +144,7 @@ def resultats_du_tour(poule, parties, aujourdhui):
     membres = {j["licence"]: j for j in poule["joueurs"] if j.get("licence")}
     joueurs = {}
     for lic in membres:
-        lignes = [l for l in parties.get(lic) or [] if l["date"] == jour
-                  and famille_competition(l["competition"], l["championnat"]) == "Critérium fédéral"]
+        lignes = [l for l in parties.get(lic) or [] if l["date"] == jour and _criterium(l)]
         if not lignes:
             continue
         joueurs[lic] = {
@@ -176,8 +202,12 @@ def recuperer(client, poules, aujourdhui=None):
     print(f"Individuels : {len(retenues)} poules avec un joueur de Vaires, {len(licences)} joueurs (API FFTT)", flush=True)
     parties = {}  # parties retenues de chaque joueur : résultats des tours déjà joués
     formes = forme_joueurs(client, licences, {}, debut, fin, lignes=parties) if licences else {}
-    sortie, douteuses = [], []
+    sortie, douteuses, deduites = [], [], 0
     for p in retenues:
+        if not p.get("date"):  # liste recopiée sans date : le jour du tour d'après les parties jouées
+            jour = date_du_tour(p, parties, poules.get("maj"), aujourdhui)
+            if jour:
+                p, deduites = {**p, "date": jour, "date_deduite": True}, deduites + 1
         joueurs = []
         for j in p["joueurs"]:
             f = formes.get(j.get("licence"))
@@ -189,6 +219,8 @@ def recuperer(client, poules, aujourdhui=None):
         sortie.append({**{k: v for k, v in p.items() if k != "joueurs"}, "joueurs": joueurs, **({"resultats": tour} if tour else {})})
     for d in douteuses:
         print(f"  ! licence à vérifier : {d}", flush=True)
+    if deduites:
+        print(f"Individuels : date du tour retrouvée dans les parties pour {deduites} poule(s) recopiée(s) sans date", flush=True)
     avec = [p for p in sortie if p.get("resultats")]
     if avec:
         print(f"Individuels : résultats du tour pour {len(avec)} poule(s), "

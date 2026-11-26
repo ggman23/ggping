@@ -571,6 +571,11 @@ parties jouées depuis le début de la phase, les points gagnés ou perdus, les 
   vainqueur de leur partie (≡), puis les points gagnés ; la place officielle du groupe (montées,
   descentes) vient du tableau final du tour, publié par le comité. Les résultats arrivent à la mise à jour
   qui suit leur saisie par le juge-arbitre (« Tout » ou « Individuels »).
+  Une poule recopiée **sans date** (par exemple la liste des 24 qualifiées du tour régional dames) : le jour
+  du tour est retrouvé dans les parties de critérium de ses joueurs (le jour où le plus de joueurs de la
+  liste ont joué, après la recopie des poules et jusqu'à aujourd'hui ; il en faut au moins deux), avec la
+  mention « date d'après les parties jouées ». Le journal de la mise à jour l'indique (« date du tour
+  retrouvée dans les parties pour 1 poule(s) »).
 - Liens : « Club » et « Tournois » en haut de /indivs/ (et dans son menu) ; « Individuels » en haut du
   menu de /club/ (« Aller à », avec « Tournois ») et dans ses « Autres espaces » (menu et accueil).
 
