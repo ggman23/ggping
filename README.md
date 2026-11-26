@@ -75,8 +75,9 @@ joueurs, agenda et club en 5 onglets, recherche, « Mon espace », installable s
 actuel n'est pas modifié. Voir PUBLICATION.md, « Version 2 à l'essai ».
 
 **Application Android** (APK) : le site (mise à jour), l'espace club, /lundi/ et /indivs/ (GitHub, sinon
-Cloudflare, sinon Netlify) et les deux statistiques en onglets, avec téléchargements et partage d'images : voir
-`android/LISEZ-MOI.md`. Lien direct :
+Cloudflare, sinon Netlify) et les deux statistiques en onglets, avec téléchargements et partage d'images ; bouton
+V2 / V1 en haut pour passer de la version 2 à l'essai au site actuel et comparer : voir `android/LISEZ-MOI.md`.
+Lien direct :
 https://github.com/ggman23/ggping/releases/download/application-android/CVTT-Vaires.apk
 
 Sur la copie Netlify, des **statistiques de visite** (pages vues, visiteurs, documents ouverts,

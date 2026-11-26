@@ -14,14 +14,25 @@ Tout sous la main dans une seule application, en huit onglets (en bas de l'écra
 | 📈 **Umami** | les statistiques Umami (https://cloud.umami.is/, ou ton lien de partage : voir plus bas) |
 
 Chaque onglet garde sa page quand on passe à un autre (une mise à jour en cours continue d'être
-suivie). En haut : ⌂ revient à la page de départ de l'onglet, ↻ recharge, ↗ ouvre la page dans le
-navigateur ; un appui long sur un onglet le ramène aussi à sa page de départ. Le bouton Retour
+suivie). En haut : **V2** ouvre la version 2 du site à l'essai (voir plus bas), ⌂ revient à la page de départ
+de l'onglet, ↻ recharge, ↗ ouvre la page dans le navigateur ; un appui long sur un onglet le ramène aussi à sa page de départ. Le bouton Retour
 d'Android revient à la page précédente de l'onglet.
 
 - **Télécharger** (pages, Excel, images) : enregistré dans *Téléchargements/CVTT Vaires*.
 - **Partager** une image : ouvre le menu de partage d'Android (WhatsApp, SMS...).
 - Les liens vers d'autres sites (GitHub, cartes des salles...) s'ouvrent dans le navigateur.
 - Tes visites depuis l'application ne sont **pas comptées** dans les statistiques du club.
+
+## Bouton V2 : la version 2 du site, à l'essai, pour comparer
+
+En haut, à côté du titre, le bouton doré **V2** ouvre la version 2 du site (https://ggping-pap.pages.dev/v2/,
+sinon la copie Netlify ; elle n'est pas sur GitHub). La barre d'onglets du bas de l'application disparaît : la
+v2 a ses propres onglets (Accueil, Équipes, Joueurs, Agenda, Club) en bas de la page. Le bouton devient **V1**
+(contour blanc) : il ramène à l'onglet où tu étais, sur le site actuel. Les deux restent ouverts : on passe de
+l'un à l'autre sans recharger, pour comparer. Même mot de passe que l'espace club ; ⌂, ↻ et ↗ marchent aussi
+dans la v2, et le lien « revenir au site actuel » du bandeau jaune ouvre l'onglet Club. Fermée sur la v2,
+l'application s'y rouvre. Tant qu'aucune mise à jour n'a publié la v2 (« Publication seule » suffit), V2
+affiche « site indisponible ».
 
 ## Onglets Club, Paris, Jeunes, Lundi et Indivs : trois copies du même espace
 

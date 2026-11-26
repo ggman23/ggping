@@ -773,3 +773,7 @@ Pas d'onglet dans l'application pour l'instant.
   pictogramme par compétition, cartes sur téléphone, dates parlantes, badge des nouveautés, itinéraire,
   compo probable, pronostic, objectif de points, export agenda, application installable (manifest, service
   worker, icône). Pas encore : 77, individuels, tournois, simulateur de montée, records, dispos partagées.
+- Application (26/11) : « crée une nouvelle apk avec un bouton qui me permet de tester la v2 et de revenir au site
+  actuel afin de comparer ». Réalisation : bouton V2 / V1 dans la barre du haut (Principale.java) : onglet « v2 »
+  sans bouton en bas (Cloudflare puis Netlify, témoin du club), la barre d'onglets de l'appli masquée dans la
+  v2, retour à l'onglet d'avant ; les deux pages restent ouvertes.

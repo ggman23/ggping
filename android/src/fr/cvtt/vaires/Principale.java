@@ -56,7 +56,9 @@ import java.util.regex.Pattern;
 /**
  * Application CVTT Vaires : huit onglets, chacun avec sa page qui reste ouverte quand on passe
  * de l'un à l'autre : le site GitHub (mise à jour), l'espace club, le championnat de Paris (/paris/),
- * le championnat des jeunes (/jeunes/), /lundi/, les individuels (/indivs/), GoatCounter et Umami. Le
+ * le championnat des jeunes (/jeunes/), /lundi/, les individuels (/indivs/), GoatCounter et Umami.
+ * Le bouton « V2 » de la barre du haut ouvre la version 2 du site, à l'essai (/v2/, sans bouton en bas :
+ * elle a ses propres onglets) ; « V1 » ramène à l'onglet d'avant, pour comparer. Le
  * club, /paris/, /jeunes/, /lundi/ et /indivs/ sont publiés en trois copies
  * identiques : l'onglet ouvre la première qui répond, GitHub, sinon Cloudflare, sinon Netlify, sinon
  * une page d'erreur avec « Réessayer ».
@@ -106,7 +108,7 @@ public class Principale extends Activity {
     static final String GITHUB = "https://ggman23.github.io/ggping/", CLOUDFLARE = "https://ggping-pap.pages.dev/",
             NETLIFY = "https://ggping.netlify.app/";
     static final String[] COPIES = {GITHUB, CLOUDFLARE, NETLIFY}, NOMS_COPIES = {"GitHub", "Cloudflare", "Netlify"};
-    static final int MISE_A_JOUR = 0, CLUB = 1, PARIS = 2, JEUNES = 3, LUNDI = 4, INDIVS = 5, GOATCOUNTER = 6, UMAMI = 7;
+    static final int MISE_A_JOUR = 0, CLUB = 1, PARIS = 2, JEUNES = 3, LUNDI = 4, INDIVS = 5, GOATCOUNTER = 6, UMAMI = 7, V2 = 8;
     // Le témoin est la clé sous laquelle les pages du club, de /paris/, /jeunes/ et /lundi/ gardent le mot de passe
     // (ttvaires/ressources.py) : Cloudflare Pages, par exemple, répond par la page d'accueil à une
     // adresse qui n'existe pas. Il est au début des pages (balise meta cvtt-cle) depuis la mise à jour
@@ -128,6 +130,10 @@ public class Principale extends Activity {
         new Onglet("goatcounter", "GoatCounter", "📊", new String[]{"https://ggman23.goatcounter.com/"},
                 new String[]{"GoatCounter"}, "", null, "goatcounter.com"),
         new Onglet("umami", "Umami", "📈", new String[]{"https://cloud.umami.is/"}, new String[]{"Umami"}, "", null, "umami.is"),
+        // Version 2 du site, à l'essai : publiée seulement sur Cloudflare et Netlify (pas sur GitHub). Pas de
+        // bouton en bas : on y va et on en revient par le bouton V2 / V1 de la barre du haut.
+        new Onglet("v2", "Version 2", "✨", new String[]{CLOUDFLARE, NETLIFY}, new String[]{"Cloudflare", "Netlify"}, "v2/",
+                TEMOIN_CLUB, "ggping-pap.pages.dev", "ggping.netlify.app"),
     };
     static final String[] ANCIEN_ORDRE = {"maj", "club", "goatcounter", "umami"};  // version 1.3 (réglages)
     static final String REESSAYER = "cvtt-appli://reessayer";  // bouton de la page d'erreur
@@ -135,7 +141,9 @@ public class Principale extends Activity {
     static final int DELAI_CONNEXION = 5000, DELAI_LECTURE = 8000, LECTURE_MAX = 4 * 1024 * 1024;
     static final String DOSSIER = "CVTT Vaires";  // dans Téléchargements
     static final int TAILLE_MAX = 60 * 1024 * 1024;
-    static final int ROUGE = Color.rgb(204, 16, 40), NUIT = Color.rgb(27, 42, 74), GRIS = Color.rgb(91, 101, 118);
+    static final int ROUGE = Color.rgb(204, 16, 40), NUIT = Color.rgb(27, 42, 74), GRIS = Color.rgb(91, 101, 118),
+            OR = Color.rgb(217, 165, 33);
+    static final String AVANT_V2 = "avant_v2";  // réglage : onglet où revenir en quittant la version 2
 
     private final WebView[] pages = new WebView[ONGLETS.length];
     private final TextView[] boutons = new TextView[ONGLETS.length];
@@ -147,7 +155,8 @@ public class Principale extends Activity {
     // la page affichée (sinon Retour ramènerait à la page en échec, qui renverrait aussitôt ici)
     private final String[] viderSur = new String[ONGLETS.length];
     private FrameLayout cadre;
-    private TextView titre;
+    private LinearLayout bas;
+    private TextView titre, bascule;
     private ProgressBar avancement;
     private int courant = -1;
     private String injection = "";
@@ -181,6 +190,18 @@ public class Principale extends Activity {
         titre.setTypeface(Typeface.DEFAULT_BOLD);
         titre.setSingleLine(true);
         barre.addView(titre, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        bascule = action("V2", "Essayer la version 2 du site", v -> basculer());
+        bascule.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        bascule.setTypeface(Typeface.DEFAULT_BOLD);
+        bascule.setPadding(dp(12), dp(5), dp(12), dp(5));
+        bascule.setOnLongClickListener(v -> {
+            Toast.makeText(this, bascule.getContentDescription(), Toast.LENGTH_SHORT).show();
+            return true;
+        });
+        LinearLayout.LayoutParams marge = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        marge.setMargins(0, 0, dp(4), 0);
+        barre.addView(bascule, marge);
         TextView maison = action("⌂", "Page de départ de l'onglet", v -> demarrer(courant));
         maison.setOnLongClickListener(v -> { departDorigine(courant); return true; });
         barre.addView(maison);
@@ -200,10 +221,11 @@ public class Principale extends Activity {
         cadre.setBackgroundColor(Color.WHITE);
         racine.addView(cadre, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
 
-        LinearLayout bas = new LinearLayout(this);
+        bas = new LinearLayout(this);
         bas.setBackgroundColor(Color.WHITE);
         bas.setElevation(dp(8));
         for (int i = 0; i < ONGLETS.length; i++) {
+            if (i == V2) continue;  // la version 2 : bouton V2 / V1 en haut
             final int n = i;
             TextView b = new TextView(this);
             b.setText(ONGLETS[i].symbole + "\n" + ONGLETS[i].court);
@@ -274,16 +296,52 @@ public class Principale extends Activity {
         courant = n;
         for (int i = 0; i < ONGLETS.length; i++) {
             if (pages[i] != null) pages[i].setVisibility(i == n ? View.VISIBLE : View.GONE);
+            if (boutons[i] == null) continue;  // la version 2 n'a pas de bouton en bas
             boutons[i].setTextColor(i == n ? ROUGE : GRIS);
             boutons[i].setTypeface(i == n ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
             GradientDrawable trait = new GradientDrawable();
             trait.setColor(i == n ? Color.rgb(253, 236, 238) : Color.WHITE);
             boutons[i].setBackground(trait);
         }
+        bas.setVisibility(n == V2 ? View.GONE : View.VISIBLE);  // la version 2 a ses propres onglets, en bas de la page
+        majBascule();
         majTitre();
         majAvancement();
-        reglages.edit().putString("onglet_cle", ONGLETS[n].cle).apply();
+        SharedPreferences.Editor modif = reglages.edit().putString("onglet_cle", ONGLETS[n].cle);
+        if (n != V2) modif.putString(AVANT_V2, ONGLETS[n].cle);
+        modif.apply();
         return nouvelle;
+    }
+
+    /** Bouton V2 / V1 : la version 2 du site (à l'essai), puis retour à l'onglet d'avant, pour comparer. */
+    private void basculer() {
+        if (courant == V2) {
+            choisir(indiceDe(reglages.getString(AVANT_V2, "club")));
+            return;
+        }
+        if (!reglages.getBoolean("v2_vue", false)) {
+            message("Version 2 du site, à l'essai. Le bouton V1, en haut, ramène au site actuel.");
+            reglages.edit().putBoolean("v2_vue", true).apply();
+        }
+        choisir(V2);
+    }
+
+    /** V2 (fond or) depuis le site actuel ; V1 (contour blanc) dans la version 2. */
+    private void majBascule() {
+        boolean dansV2 = courant == V2;
+        bascule.setText(dansV2 ? "V1" : "V2");
+        bascule.setContentDescription(dansV2 ? "Revenir au site actuel" : "Essayer la version 2 du site");
+        GradientDrawable fond = new GradientDrawable();
+        fond.setCornerRadius(dp(14));
+        if (dansV2) {
+            fond.setColor(Color.TRANSPARENT);
+            fond.setStroke(dp(2), Color.WHITE);
+            bascule.setTextColor(Color.WHITE);
+        } else {
+            fond.setColor(OR);
+            bascule.setTextColor(NUIT);
+        }
+        bascule.setBackground(fond);
     }
 
     private WebView pageCourante() {
@@ -431,6 +489,8 @@ public class Principale extends Activity {
                 + "<h2 style='margin:.3em 0 .6em'>" + o.titre + " : site indisponible</h2>"
                 + "<p>" + (o.racines.length > 1 ? "Aucune copie du site ne répond :" : "Le site ne répond pas :") + "</p>"
                 + "<ul>" + liste + "</ul>"
+                + (n == V2 ? "<p>La version 2 n'est en ligne qu'après une mise à jour du site (« Publication seule » suffit). "
+                        + "Le bouton V1, en haut, ramène au site actuel.</p>" : "")
                 + "<p>Vérifie la connexion internet du téléphone (Wi-Fi ou données mobiles), puis réessaie.</p>"
                 + "<p><a href='" + REESSAYER + "' style='display:inline-block;background:#cc1028;color:#fff;"
                 + "padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold'>Réessayer</a></p>";
