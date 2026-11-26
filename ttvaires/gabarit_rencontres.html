@@ -98,6 +98,14 @@ function bandeauVerif(V) {
     Relancer plus tard : les résultats sont en général saisis dans les 48 h après la rencontre.</div>`;
 }
 
+/* Vue d'une seule équipe (« Par équipe » de l'espace club) : #seule/<code> (v1 à v6, v1f) n'affiche que cette
+   équipe, avec un lien « Voir toutes les équipes » (#toutes). */
+const codeEquipe = (t) => { const m = /(\d+)(\s*F)?\s*$/i.exec(String(t || "").replace(/\s*·.*$/, "")); return m ? `v${m[1]}${m[2] ? "f" : ""}` : null; };
+let SEULE = (/^#seule\/(v\d+f?)/.exec(location.hash) || [])[1] || null;
+const bandeauSeule = (nom) => `<div class="bandeau-seule" style="background:#fff4d6;color:#6b4500;border-radius:10px;padding:9px 12px;margin:10px 0;font-size:14px">
+  Vue de <b>${esc(nom)}</b> seulement · <a href="#toutes" style="color:inherit;font-weight:700">Voir toutes les équipes</a></div>`;
+const nomDuCode = (c) => c ? c.replace(/^v(\d+)(f?)$/, (m, n, f) => `Vaires ${n}${f ? " F" : ""}`) : "";
+const codeRencontre = (r) => `v${r.numero}${r.feminine ? "f" : ""}`;
 let journee = null, equipe = "toutes";
 
 function joueurs(js) {
@@ -157,20 +165,27 @@ function afficher() {
   const main = document.getElementById("contenu");
   const verif = bandeauVerif(D.verification);
   if (!D.journees.length) { main.innerHTML = verif + '<p class="vide">Aucune rencontre jouée pour le moment.</p>'; return; }
-  document.getElementById("onglets").innerHTML = D.journees.map((j) => `<a href="#J${j}" class="${journee === j ? "actif" : ""}">J${j}</a>`).join("");
-  const duJour = D.rencontres.filter((r) => r.journee === journee);
+  const journees = SEULE ? D.journees.filter((j) => D.rencontres.some((r) => r.journee === j && codeRencontre(r) === SEULE)) : D.journees;
+  document.getElementById("onglets").innerHTML = journees.map((j) => `<a href="#J${j}" class="${journee === j ? "actif" : ""}">J${j}</a>`).join("")
+    + (SEULE ? '<a href="#toutes">Toutes les équipes</a>' : "");
+  const duJour = D.rencontres.filter((r) => r.journee === journee && (!SEULE || codeRencontre(r) === SEULE));
   const equipes = [...new Set(duJour.map((r) => r.equipe))];
   if (equipe !== "toutes" && !equipes.includes(equipe)) equipe = "toutes";
   const filtres = `<div class="filtres">${["toutes", ...equipes].map((e) =>
     `<button data-equipe="${esc(e)}" class="${e === equipe ? "actif" : ""}">${e === "toutes" ? "Toutes" : esc(nomEquipe(e).replace("Vaires ", "V"))}</button>`).join("")}</div>`;
-  const cartes = duJour.filter((r) => equipe === "toutes" || r.equipe === equipe).map(carte).join("");
-  main.innerHTML = verif + filtres + cartes + `<p class="note">Manches dans l'ordre, score de Vaires en premier (vert : manche gagnée
+  const cartes = duJour.filter((r) => SEULE || equipe === "toutes" || r.equipe === equipe).map(carte).join("")
+    || (SEULE ? '<p class="vide">Pas de feuille de match pour cette journée.</p>' : "");
+  main.innerHTML = verif + (SEULE ? bandeauSeule(nomDuCode(SEULE)) : filtres) + cartes + `<p class="note">Manches dans l'ordre, score de Vaires en premier (vert : manche gagnée
     par Vaires). En gras : le vainqueur de la partie. A, B, C, D / W, X, Y, Z : lettres de la feuille de match.</p>`;
   main.querySelectorAll("[data-equipe]").forEach((b) => b.addEventListener("click", () => { equipe = b.dataset.equipe; afficher(); }));
 }
 function route() {
+  const h = location.hash.slice(1);
+  if (h.startsWith("seule/")) { SEULE = h.slice(6) || null; history.replaceState(null, "", "#"); }
+  if (h === "toutes") { SEULE = null; history.replaceState(null, "", "#"); }
+  const jouees = SEULE ? D.journees.filter((x) => D.rencontres.some((r) => r.journee === x && codeRencontre(r) === SEULE)) : D.journees;
   const j = Number(location.hash.replace("#J", ""));
-  journee = D.journees.includes(j) ? j : D.journees[D.journees.length - 1];
+  journee = jouees.includes(j) ? j : jouees.length ? jouees[jouees.length - 1] : D.journees[D.journees.length - 1];
   afficher();
 }
 document.getElementById("sous-titre").textContent =

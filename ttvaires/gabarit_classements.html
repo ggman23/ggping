@@ -101,7 +101,22 @@ const ligne = (l) => `<tr${l.nous ? ' class="nous"' : ""}>
   <td class="c groupe sup">${l.sg ?? ""}${l.sans_detail ? "*" : ""}</td><td class="c sup">${l.sp ?? ""}</td>
   <td class="c groupe sup">${l.pm ?? ""}</td><td class="c sup">${l.pe ?? ""}</td></tr>`;
 
-document.getElementById("contenu").innerHTML = D.poules.length ? D.poules.map((p) => `<section class="carte">
+// La colonne équipe se cale juste après la colonne du rang (largeur réelle, variable selon l'écran)
+const caler = () => document.querySelectorAll("table").forEach((t) => {
+  const r = t.querySelector("td.r, th.r");
+  if (r) t.style.setProperty("--rang", r.getBoundingClientRect().width + "px");
+});
+/* Vue d'une seule équipe (« Par équipe » de l'espace club) : #seule/<code> (v1 à v6, v1f) n'affiche que cette
+   équipe, avec un lien « Voir toutes les équipes » (#toutes). */
+const codeEquipe = (t) => { const m = /(\d+)(\s*F)?\s*$/i.exec(String(t || "").replace(/\s*·.*$/, "")); return m ? `v${m[1]}${m[2] ? "f" : ""}` : null; };
+let SEULE = (/^#seule\/(v\d+f?)/.exec(location.hash) || [])[1] || null;
+const bandeauSeule = (nom) => `<div class="bandeau-seule" style="background:#fff4d6;color:#6b4500;border-radius:10px;padding:9px 12px;margin:10px 0;font-size:14px">
+  Vue de <b>${esc(nom)}</b> seulement · <a href="#toutes" style="color:inherit;font-weight:700">Voir toutes les équipes</a></div>`;
+const nomDuCode = (c) => c ? c.replace(/^v(\d+)(f?)$/, (m, n, f) => `Vaires ${n}${f ? " F" : ""}`) : "";
+function rendre() {
+  if (location.hash === "#toutes") SEULE = null;
+  const poules = SEULE ? D.poules.filter((p) => codeEquipe(p.equipe) === SEULE) : D.poules;
+  document.getElementById("contenu").innerHTML = (SEULE ? bandeauSeule(nomDuCode(SEULE)) : "") + (poules.length ? poules.map((p) => `<section class="carte">
     <div class="tete"><h2>${esc(p.equipe)}</h2>
       <p>Classement de la poule<br><span>${esc([p.division, p.poule].filter(Boolean).join(" • "))}</span></p></div>
     <div class="defile"><table>
@@ -112,15 +127,13 @@ document.getElementById("contenu").innerHTML = D.poules.length ? D.poules.map((p
         <th class="c groupe" title="points marqués dans les sets">PM</th><th class="c" title="points encaissés dans les sets">PE</th></tr></thead>
       <tbody>${p.lignes.map(ligne).join("")}</tbody>
     </table></div>${p.lignes.some((l) => l.departage) && p.regle ? `<p class="regle">Égalités : ${esc(p.regle)}.</p>` : ""}</section>`).join("")
-  : '<p class="vide">Pas encore de classement : aucune poule trouvée pour les équipes du club.</p>';
+  : '<p class="vide">Pas encore de classement : aucune poule trouvée pour les équipes du club.</p>');
+  caler();
+}
 
-// La colonne équipe se cale juste après la colonne du rang (largeur réelle, variable selon l'écran)
-const caler = () => document.querySelectorAll("table").forEach((t) => {
-  const r = t.querySelector("td.r, th.r");
-  if (r) t.style.setProperty("--rang", r.getBoundingClientRect().width + "px");
-});
-caler();
+rendre();
 addEventListener("resize", caler);
+addEventListener("hashchange", () => { SEULE = (/^#seule\/(v\d+f?)/.exec(location.hash) || [])[1] || null; rendre(); });
 </script>
 </body>
 </html>

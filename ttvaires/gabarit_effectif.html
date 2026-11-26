@@ -137,10 +137,19 @@ function bandeauVerif(V, consequence) {
     <ul>${ms.map((m) => `<li>J${m.journee} · ${esc(m.equipe)} contre ${esc(adv(m))} (${fmtDate(m.date)}) : ${esc(m.libelle)}</li>`).join("")}</ul>
     Relancer plus tard : les résultats sont en général saisis dans les 48 h après la rencontre.</div>`;
 }
+/* Vue d'une seule équipe (« Par équipe » de l'espace club) : #seule/<code> (v1 à v6, v1f) n'affiche que cette
+   équipe, avec un lien « Voir toutes les équipes » (#toutes). */
+const codeEquipe = (t) => { const m = /(\d+)(\s*F)?\s*$/i.exec(String(t || "").replace(/\s*·.*$/, "")); return m ? `v${m[1]}${m[2] ? "f" : ""}` : null; };
+let SEULE = (/^#seule\/(v\d+f?)/.exec(location.hash) || [])[1] || null;
+const bandeauSeule = (nom) => `<div class="bandeau-seule" style="background:#fff4d6;color:#6b4500;border-radius:10px;padding:9px 12px;margin:10px 0;font-size:14px">
+  Vue de <b>${esc(nom)}</b> seulement · <a href="#toutes" style="color:inherit;font-weight:700">Voir toutes les équipes</a></div>`;
+const nomDuCode = (c) => c ? c.replace(/^v(\d+)(f?)$/, (m, n, f) => `Vaires ${n}${f ? " F" : ""}`) : "";
+
 /* ---------- Onglets ---------- */
 let vue = "club", filtre = "tous", recherche = "", tri = { col: "points", sens: -1 };
 function onglets() {
-  const l = [["club", "Club"], ...D.equipes.map((e) => [e.id, e.nom_court]), ["autres", "Non réinscrits · loisirs"]];
+  const seule = D.equipes.find((e) => e.id === SEULE);
+  const l = seule ? [[seule.id, seule.nom_court], ["toutes", "Toutes les équipes"]] : [["club", "Club"], ...D.equipes.map((e) => [e.id, e.nom_court]), ["autres", "Non réinscrits · loisirs"]];
   document.getElementById("onglets").innerHTML = l.map(([id, t]) => `<a href="#${id}" class="${vue === id ? "actif" : ""}">${esc(t)}</a>`).join("");
 }
 function bandeaux() {
@@ -260,7 +269,7 @@ function afficher() {
   onglets();
   const e = D.equipes.find((x) => x.id === vue);
   const main = document.getElementById("contenu");
-  main.innerHTML = vue === "autres" ? vueAutres() : e ? vueEquipe(e) : vueClub();
+  main.innerHTML = (SEULE && e ? bandeauSeule(e.nom_court) : "") + (vue === "autres" ? vueAutres() : e ? vueEquipe(e) : vueClub());
   main.querySelectorAll("th.tri").forEach((th) => th.addEventListener("click", () => {
     const col = th.dataset.t;
     tri = tri.col === col ? { col, sens: -tri.sens } : { col, sens: col === "points" ? -1 : 1 };
@@ -277,7 +286,13 @@ function afficher() {
   });
 }
 function route() {
-  const h = location.hash.slice(1);
+  let h = location.hash.slice(1);
+  if (h.startsWith("seule/")) {
+    SEULE = D.equipes.some((e) => e.id === h.slice(6)) ? h.slice(6) : null;
+    if (SEULE) { h = SEULE; history.replaceState(null, "", "#" + h); }
+  }
+  if (h === "toutes") { SEULE = null; h = "club"; history.replaceState(null, "", "#club"); }
+  if (SEULE) h = SEULE;
   vue = h === "autres" || D.equipes.some((e) => e.id === h) ? h : "club";
   afficher();
   window.scrollTo(0, 0);

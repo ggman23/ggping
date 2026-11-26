@@ -130,7 +130,15 @@ const J = D.joueurs || [];
 const PAR_ID = new Map(J.map((j) => [j.id, j]));
 const nomCourt = (j) => `${j.nom || ""} ${(j.prenom || "").charAt(0)}.`.trim();
 const nomLong = (j) => `${j.nom || ""} ${j.prenom || ""}`.trim();
-const EQUIPES = [...new Set(J.map((j) => j.equipe || ""))].sort((a, b) => (a === "") - (b === "") || a.localeCompare(b, "fr", { numeric: true }));
+const TOUTES_EQUIPES = [...new Set(J.map((j) => j.equipe || ""))].sort((a, b) => (a === "") - (b === "") || a.localeCompare(b, "fr", { numeric: true }));
+/* Vue d'une seule équipe (« Par équipe » de l'espace club) : #seule/<code> (v1 à v6, v1f) n'affiche que cette
+   équipe, avec un lien « Voir toutes les équipes » (#toutes). */
+const codeEquipe = (t) => { const m = /(\d+)(\s*F)?\s*$/i.exec(String(t || "").replace(/\s*·.*$/, "")); return m ? `v${m[1]}${m[2] ? "f" : ""}` : null; };
+let SEULE = (/^#seule\/(v\d+f?)/.exec(location.hash) || [])[1] || null;
+const bandeauSeule = (nom) => `<div class="bandeau-seule" style="background:#fff4d6;color:#6b4500;border-radius:10px;padding:9px 12px;margin:10px 0;font-size:14px">
+  Vue de <b>${esc(nom)}</b> seulement · <a href="#toutes" style="color:inherit;font-weight:700">Voir toutes les équipes</a></div>`;
+const nomDuCode = (c) => c ? c.replace(/^v(\d+)(f?)$/, (m, n, f) => `Vaires ${n}${f ? " F" : ""}`) : "";
+const EQUIPES = SEULE ? TOUTES_EQUIPES.filter((e) => codeEquipe(e) === SEULE) : TOUTES_EQUIPES;
 
 /* Sélection : chaque joueur garde sa couleur tant qu'il est affiché (la couleur suit le joueur, pas son rang). */
 let choix = [];  // [{ id, slot }]
@@ -141,11 +149,15 @@ let modeChoisi = ["points", "evolution"].includes(lire("progression-mode")) ? li
 let mode = "points";
 const fixerMode = () => { mode = modeChoisi || (choix.length > 1 ? "evolution" : "points"); };
 try { choix = JSON.parse(lire("progression-choix") || "[]").filter((c) => PAR_ID.has(c.id)).slice(0, MAX); } catch (e) { choix = []; }
+if (SEULE) {  // vue d'une équipe : ses joueurs sur le graphe (les mieux classés), sans toucher au choix enregistré
+  choix = J.filter((j) => codeEquipe(j.equipe) === SEULE).sort((a, b) => b.serie[b.serie.length - 1] - a.serie[a.serie.length - 1])
+    .slice(0, MAX).map((j, i) => ({ id: j.id, slot: i + 1 }));
+}
 if (!choix.length && J.length) {
   const premier = J.slice().sort((a, b) => b.total - a.total)[0];
   choix = [{ id: premier.id, slot: 1 }];
 }
-const sauver = () => { ecrire("progression-choix", JSON.stringify(choix)); if (modeChoisi) ecrire("progression-mode", modeChoisi); };
+const sauver = () => { if (SEULE) return; ecrire("progression-choix", JSON.stringify(choix)); if (modeChoisi) ecrire("progression-mode", modeChoisi); };
 function ajouter(id) {
   if (!id || choix.some((c) => c.id === id) || choix.length >= MAX) return;
   const pris = new Set(choix.map((c) => c.slot));
@@ -376,7 +388,7 @@ function mini(j) {
 }
 function tableTous() {
   const filtre = document.getElementById("filtre").value, tri = document.getElementById("tri").value;
-  ecrire("progression-filtre", filtre); ecrire("progression-tri", tri);
+  if (!SEULE) { ecrire("progression-filtre", filtre); ecrire("progression-tri", tri); }
   const liste = J.filter((j) => filtre === "*" || (j.equipe || "") === filtre);
   const cles = { total: (j) => -j.total, points: (j) => -j.serie[j.serie.length - 1] };
   liste.sort((a, b) => tri === "nom" ? nomLong(a).localeCompare(nomLong(b), "fr") : (cles[tri](a) - cles[tri](b)) || nomLong(a).localeCompare(nomLong(b), "fr"));
@@ -401,9 +413,11 @@ function dessinerTout() { fixerMode(); menuAjout(); puces(); graphe(); tableChoi
 
 /* ---------- Démarrage ---------- */
 const filtre = document.getElementById("filtre");
-filtre.innerHTML = `<option value="*">Toutes les équipes</option>` + EQUIPES.map((e) =>
+filtre.innerHTML = (SEULE ? "" : `<option value="*">Toutes les équipes</option>`) + EQUIPES.map((e) =>
   `<option value="${esc(e)}">${e ? esc(e.replace(/^V(\d+)( F)?$/, (m, n, f) => `Vaires ${n}${f ? " F" : ""}`)) : "Sans équipe cette phase"}</option>`).join("");
-filtre.value = EQUIPES.includes(lire("progression-filtre")) ? lire("progression-filtre") : "*";
+filtre.value = SEULE ? EQUIPES[0] || "*" : EQUIPES.includes(lire("progression-filtre")) ? lire("progression-filtre") : "*";
+if (SEULE) document.body.insertAdjacentHTML("afterbegin", bandeauSeule(nomDuCode(SEULE)).replace('margin:10px 0', "margin:10px"));
+window.addEventListener("hashchange", () => location.reload());  // « Voir toutes les équipes »
 document.getElementById("tri").value = ["total", "points", "nom"].includes(lire("progression-tri")) ? lire("progression-tri") : "total";
 filtre.addEventListener("change", tableTous);
 document.getElementById("tri").addEventListener("change", tableTous);

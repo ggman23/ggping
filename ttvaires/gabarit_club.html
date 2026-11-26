@@ -117,6 +117,17 @@ button { font: inherit; cursor: pointer; }
   .accueil { padding: 20px 14px 32px; }
 }
 @media (min-width: 861px) { #retour { display: none; } }
+/* Vue par équipe : un bouton par équipe */
+.equipes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 10px 0 4px; }
+.equipes a { display: block; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--bord); background: var(--surface);
+  color: inherit; text-decoration: none; }
+.equipes a b { display: block; font-size: 15px; }
+.equipes a span { display: block; font-size: 12px; color: var(--doux); }
+.equipes a.actif, .equipes a:hover { border-color: var(--accent); background: var(--accent-fond); }
+.mon-equipe { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--bandeau);
+  color: #fff; text-decoration: none; margin: 8px 0 2px; }
+.mon-equipe b { font-size: 17px; }
+.mon-equipe span { opacity: .85; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -197,6 +208,18 @@ const rubriques = (D.ressources || []).map((r) => ({ ...r, docs: r.documents.map
 const ESPACES = D.espaces || [];
 const lienEspace = (e) => `<a class="doc" href="../${encodeURIComponent(e.chemin)}/"><span class="icone page">${ICONES.page}</span>
   <span class="texte"><b>${esc(e.titre)}</b><span>/${esc(e.chemin)}/</span></span></a>`;
+/* Vue par équipe : chaque équipe de Vaires (France, femmes, Paris, jeunes) avec ses pages, en vue « une seule équipe »
+   (#seule/<code> dans la page), et ses images à partager (prochain adversaire, feuille de match, disponibles, brûlés,
+   progression). Le reste de l'espace club ne change pas. */
+const EQUIPES = D.equipes || [];
+const EQUIPE_CLE = "cvtt-club-equipe";  // dernière équipe choisie sur cet appareil
+const NOMS_COMP = { france: "Championnat de France", femmes: "Championnat féminin", paris: "Championnat de Paris", jeunes: "Championnat des jeunes" };
+const PAGES_EQUIPE = [["vaires.html", "Adversaires", "Prochain adversaire, ses joueurs, compo probable, calendrier"],
+  ["rencontres_vaires.html", "Feuilles de match", "Chaque rencontre jouée : parties, joueurs, scores"],
+  ["classements_vaires.html", "Classement de la poule", "Points, victoires, nuls, défaites"],
+  ["effectif_vaires.html", "Effectif et brûlages", "Joueurs possibles et brûlés pour l'équipe"],
+  ["progression_vaires.html", "Progression des joueurs", "Les joueurs de l'équipe semaine après semaine"],
+  ["resultats_vaires.html", "Résultats des joueurs", "Points gagnés ou perdus à chaque journée"]];
 const parId = new Map([...docs, ...archives.flatMap((a) => a.docs), ...rubriques.flatMap((r) => r.docs)].map((d) => [d.id, d]));
 const taille = (o) => !o ? "" : o >= 1e6 ? `${(o / 1e6).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} Mo` : `${Math.max(1, Math.round(o / 1e3))} Ko`;
 /* PDF : affiché dans la page quand le navigateur sait le faire (ordinateur) ; sur téléphone (et dans
@@ -213,7 +236,7 @@ const recaps = images.filter((d) => A_LA_UNE.includes(d.groupe));
 const jour = (iso) => iso ? new Date(iso + "T12:00").toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }) : "";
 let cle = null;
 const cacheClair = new Map();  // id -> Blob déchiffré
-let courant = null, urlCourante = null, retourVers = "";
+let courant = null, urlCourante = null, retourVers = "", seuleCourante = null;
 
 /* ---------- Statistiques de visite ----------
    Seulement si la copie Netlify a des compteurs (GoatCounter, Umami : window.compteur, voir
@@ -301,6 +324,8 @@ function construireMenu() {
     /* Accès direct aux autres espaces (individuels, tournois), aussi listés en bas du menu */
     (ESPACES.length ? `<nav class="raccourcis" aria-label="Autres espaces"><span>Aller à</span>${ESPACES.map((e) =>
       `<a href="../${encodeURIComponent(e.chemin)}/">${esc(e.titre)}</a>`).join("")}</nav>` : "")
+    + (EQUIPES.length ? `<h2>Par équipe</h2>${EQUIPES.map((t) => `<a class="doc" href="#equipe/${encodeURIComponent(t.code)}" data-id="equipe/${esc(t.code)}">
+        <span class="icone page">${ICONES.page}</span><span class="texte"><b>${esc(t.nom)}</b><span>${esc(NOMS_COMP[t.competition] || "")}</span></span></a>`).join("")}` : "")
     + `<h2>Pages et Excel</h2>${pages.map((d) => ligne(d)).join("")}`
     + (images.length ? `<h2>Images à partager</h2>${listeImages(images)}` : "")
     + (archives.length ? `<h2>Archives des journées passées</h2>` + archives.map((a) =>
@@ -320,6 +345,32 @@ function construireMenu() {
 }
 
 /* ---------- Vues : accueil, archive d'une journée, document ---------- */
+function choixEquipes(actif) {
+  return `<div class="equipes">${EQUIPES.map((t) => `<a href="#equipe/${encodeURIComponent(t.code)}" class="${t.code === actif ? "actif" : ""}">
+    <b>${esc(t.nom)}</b><span>${esc(NOMS_COMP[t.competition] || "")}${t.division ? " · " + esc(t.division) : ""}</span></a>`).join("")}</div>`;
+}
+const imagesEquipe = (t) => t.espace === "paris" ? [...images.filter((d) => d.groupe === "paris"), ...rubriques.flatMap((r) => r.docs).filter((d) => /paris/.test(d.fichier))]
+  : t.espace ? [] : images.filter((d) => new RegExp(`_${t.code.toUpperCase()}(?:_|\\.)`).test(d.fichier));
+function vueEquipe(t) {
+  const lien = (d) => `#equipe/${encodeURIComponent(t.code)}/${encodeURIComponent(d.id)}`;
+  const pages = t.espace
+    ? [`<a class="tuile" href="../${t.espace}/#seule/${encodeURIComponent(t.seule)}"><span class="icone page" style="background: var(--page)">${ICONES.page}</span>
+        <b>${esc(NOMS_COMP[t.competition])} : ${esc(t.nom)}</b><span>Poule, calendrier, adversaires et leurs joueurs (vue de l'équipe seulement)</span></a>`]
+      .concat(t.espace === "paris" ? [`<a class="tuile" href="../paris/#dispo"><span class="icone page" style="background: var(--page)">${ICONES.page}</span>
+        <b>Disponibilités des joueurs</b><span>Qui est disponible pour chaque journée</span></a>`] : [])
+    : PAGES_EQUIPE.filter(([f]) => parId.has(f)).map(([f, titre, texte]) => `<a class="tuile" href="${lien(parId.get(f))}">
+        <span class="icone page" style="background: var(--page)">${ICONES.page}</span><b>${esc(titre)}</b><span>${esc(texte)}</span></a>`);
+  const imgs = [...imagesEquipe(t), ...images.filter((d) => d.groupe === "programme")];
+  return `<div class="accueil"><h1>${esc(t.nom)}</h1>
+    <p>${esc([NOMS_COMP[t.competition], t.division, t.poule].filter(Boolean).join(" · "))}. Seulement ce qui concerne ${esc(t.nom)} :
+      les pages s'ouvrent sur cette équipe (lien « Voir toutes les équipes » en haut de chacune).</p>
+    <h2 class="titre-section">Ses pages</h2><div class="tuiles">${pages.join("")}</div>
+    ${imgs.length ? `<h2 class="titre-section">Ses images à partager</h2><div class="tuiles">${imgs.map((d) => `<a class="tuile" href="${lien(d)}">
+      <span class="icone image" style="background: var(--image)">${ICONES.image}</span><b>${esc(d.titre)}</b>
+      <span>${esc(d.rubrique || TITRES_GROUPES[d.groupe] || "")}</span></a>`).join("")}</div>` : ""}
+    ${t.espace && !imgs.length ? "<p>Pas encore de résultats ni d'images pour cette équipe : ils arriveront avec les premières journées.</p>" : ""}
+    <h2 class="titre-section">Les autres équipes</h2>${choixEquipes(t.code)}</div>`;
+}
 function tuile(d) {
   return `<a class="tuile" href="#${encodeURIComponent(d.id)}">
     <span class="icone ${d.type}" style="background: var(--${d.type})">${ICONES[d.type]}</span><b>${esc(d.titre)}</b>
@@ -328,7 +379,12 @@ function tuile(d) {
     ${d.verification ? `<span class="etat ${classe(d.verification)}">${esc(d.verification)}</span>` : ""}</a>`;
 }
 function accueil() {
+  const mienne = EQUIPES.find((t) => t.code === lire(EQUIPE_CLE));
   return `<div class="accueil"><h1>Espace club</h1>
+    ${EQUIPES.length ? `<h2 class="titre-section">Par équipe</h2>
+      ${mienne ? `<a class="mon-equipe" href="#equipe/${encodeURIComponent(mienne.code)}"><b>Ton équipe : ${esc(mienne.nom)}</b><span>ses pages et ses images ›</span></a>` : ""}
+      <p>Seulement ce qui concerne une équipe (adversaires, feuilles de match, poule, effectif, images) :</p>${choixEquipes(null)}
+      <h2 class="titre-section">Toutes les équipes</h2>` : ""}
     <p>Choisis une page, l'Excel ou une image : tu peux la regarder ici puis la télécharger.</p>
     <div class="tuiles">${[...recaps, ...pages].map(tuile).join("")}</div>
     ${archives.length ? `<h2 class="titre-section">Archives des journées passées</h2><div class="tuiles">${archives.map((a) =>
@@ -354,15 +410,19 @@ async function route() {
   if (!cle) return;
   const h = decodeURIComponent(location.hash.slice(1));
   const archive = h.startsWith("archives/") ? archives.find((a) => a.cle === h.slice(9)) || null : null;
-  const doc = archive ? null : parId.get(h) || null;
+  const mEq = /^equipe\/([a-z0-9]+)(?:\/(.+))?$/.exec(h);
+  const equipe = mEq ? EQUIPES.find((t) => t.code === mEq[1]) || null : null;
+  const doc = archive ? null : parId.get(equipe ? mEq[2] || "" : h) || null;
   const appli = document.getElementById("appli"), vue = document.getElementById("vue");
-  const actif = doc?.archive ? `archives/${doc.archive.cle}` : h;
+  const actif = equipe ? `equipe/${equipe.code}` : doc?.archive ? `archives/${doc.archive.cle}` : h;
+  if (equipe) ecrire(EQUIPE_CLE, equipe.code);
+  seuleCourante = equipe && doc && doc.type === "page" && !equipe.espace ? equipe.seule : null;
   document.querySelectorAll("#menu .doc").forEach((a) => a.classList.toggle("actif", a.dataset.id === actif));
   if (urlCourante) { URL.revokeObjectURL(urlCourante); urlCourante = null; }
   courant = doc;
-  retourVers = doc?.archive ? `archives/${doc.archive.cle}` : "";
-  document.querySelector("#retour span").textContent = retourVers ? "Archive" : "Menu";
-  appli.classList.toggle("document", !!(doc || archive));
+  retourVers = doc?.archive ? `archives/${doc.archive.cle}` : equipe && doc ? `equipe/${equipe.code}` : "";
+  document.querySelector("#retour span").textContent = retourVers.startsWith("equipe/") ? "Équipe" : retourVers ? "Archive" : "Menu";
+  appli.classList.toggle("document", !!(doc || archive || equipe));
   document.getElementById("telecharger").hidden = !doc;
   document.getElementById("partager").hidden = true;
   const titre = document.getElementById("titre"), sous = document.getElementById("sous-titre");
@@ -373,6 +433,14 @@ async function route() {
     document.getElementById("tout-archive").addEventListener("click", (ev) => toutTelecharger(archive.docs, ev.target, archive));
     vue.scrollTop = 0;
     compter(`/club/archives/${archive.cle}`, `Archive · ${archive.titre}`);
+    return;
+  }
+  if (equipe && !doc) {
+    titre.textContent = `${equipe.nom} · espace club`;
+    sous.textContent = [NOMS_COMP[equipe.competition], equipe.division].filter(Boolean).join(" · ");
+    vue.innerHTML = vueEquipe(equipe);
+    vue.scrollTop = 0;
+    compter(`/club/equipe/${equipe.code}`, `Par équipe · ${equipe.nom}`);
     return;
   }
   if (!doc) {
@@ -396,7 +464,7 @@ async function route() {
       urlCourante = URL.createObjectURL(blob);
       // Page fournie (rubriques) : isolée de l'espace club (pas d'accès à la clé ni aux autres documents)
       const isolee = doc.rubrique ? ' sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms"' : "";
-      vue.innerHTML = `<iframe title="${esc(doc.titre)}" src="${urlCourante}"${isolee}></iframe>`;
+      vue.innerHTML = `<iframe title="${esc(doc.titre)}" src="${urlCourante}${seuleCourante ? "#seule/" + encodeURIComponent(seuleCourante) : ""}"${isolee}></iframe>`;
     } else if (doc.type === "pdf" && PDF_INTEGRE) {
       urlCourante = URL.createObjectURL(blob);
       vue.innerHTML = `<iframe title="${esc(doc.titre)}" src="${urlCourante}"></iframe>`;

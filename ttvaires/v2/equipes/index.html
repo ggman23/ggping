@@ -20,9 +20,6 @@
 <script>
 "use strict";
 const { $, esc, svg, COMPET } = V2;
-// Page détaillée du site actuel pour chaque compétition (ouverte dans le cadre de la v2, ou à son adresse)
-const DETAIL = { france: ["../club/#doc/vaires.html", "Adversaires, compos probables et brûlages"], femmes: ["../club/#doc/vaires.html", "Adversaires et compos probables"],
-                 paris: ["../../paris/", "Championnat de Paris (site actuel) : adversaires, disponibilités"], jeunes: ["../../jeunes/", "Championnat des jeunes (site actuel)"] };
 const rang = (n) => n == null ? "–" : n === 1 ? "1er" : `${n}e`;
 
 function carteEquipe(t) {
@@ -40,6 +37,38 @@ function liste(eq) {
   const parComp = Object.keys(COMPET).map((c) => [c, eq.filter((t) => t.comp === c)]).filter(([, l]) => l.length);
   return V2.sousNav("equipes", "vaires") + parComp.map(([c, l]) => `<div class="section"><h2>${esc(COMPET[c].nom)}</h2></div><div class="pile">${l.map(carteEquipe).join("")}</div>`).join("")
     + `<p class="petit" style="margin-top:20px">Touche une équipe : sa poule, son calendrier, ses résultats et ses joueurs habituels.</p>`;
+}
+
+/* Vue par équipe : les pages du site actuel ouvertes sur cette équipe seulement (#seule/<code>) et ses images
+   (prochain adversaire, feuille de match, joueurs disponibles et brûlés, progression), comme dans l'espace club. */
+const PAGES_EQUIPE = [["vaires.html", "Adversaires", "Prochain adversaire, ses joueurs, compo probable"],
+  ["rencontres_vaires.html", "Feuilles de match", "Chaque rencontre jouée : parties et scores"],
+  ["classements_vaires.html", "Classement de la poule", "Points, victoires, nuls, défaites, départages"],
+  ["effectif_vaires.html", "Effectif et brûlages", "Joueurs possibles et brûlés pour l'équipe"],
+  ["progression_vaires.html", "Progression des joueurs", "Les joueurs de l'équipe semaine après semaine"],
+  ["resultats_vaires.html", "Résultats des joueurs", "Points gagnés ou perdus à chaque journée"]];
+const codeEquipe = (t) => t.comp === "femmes" ? `v${t.numero}f` : `v${t.numero}`;  // v2, v1f (pages du site) ; Paris, jeunes : v1...
+function pagesEtImages(t, club) {
+  const tuile = (href, ic, titre, texte) => `<a href="${href}">${svg(ic)}<span class="grow"><span class="nom" style="display:block">${esc(titre)}</span>
+    <span class="petit">${esc(texte)}</span></span></a>`;
+  const docs = club?.documents || [];
+  let pages;
+  if (t.comp === "paris" || t.comp === "jeunes") {
+    pages = [tuile(`../../${t.comp}/#seule/${codeEquipe(t)}`, "page", `${COMPET[t.comp].nom} : ${t.nom}`, "Poule, calendrier, adversaires et leurs joueurs (site actuel)")];
+    if (t.comp === "paris") pages.push(tuile("../../paris/#dispo", "agenda", "Disponibilités des joueurs", "Qui est disponible pour chaque journée (site actuel)"));
+  } else {
+    pages = PAGES_EQUIPE.filter(([f]) => docs.some((d) => d.fichier === f))
+      .map(([f, titre, texte]) => tuile(`../club/#doc/${encodeURIComponent(f)}/seule/${codeEquipe(t)}`, "page", titre, texte));
+  }
+  const suffixe = new RegExp(`_${codeEquipe(t).toUpperCase()}(?:_|\\.)`);
+  const images = t.comp === "paris" ? docs.filter((d) => d.groupe === "paris")
+    : t.comp === "jeunes" ? [] : docs.filter((d) => d.type === "image" && suffixe.test(d.fichier));
+  const affiche = t.comp === "paris" ? (club?.ressources || []).flatMap((r) => r.documents.map((d) => ({ ...d, rubrique: r.nom }))).filter((d) => /paris/.test(d.fichier)) : [];
+  return `<div class="section"><h2>Les pages de ${esc(t.nom)}</h2><span class="petit">sur cette équipe seulement</span></div>
+    <div class="liste">${pages.join("")}</div>`
+    + (images.length || affiche.length ? `<div class="section"><h2>Les images de ${esc(t.nom)}</h2><span class="petit">à partager</span></div>
+      <div class="liste">${images.map((d) => tuile(`../club/#doc/${encodeURIComponent(d.fichier)}`, "image", d.titre, d.date ? V2.dateCourte(d.date) : "")).join("")}
+        ${affiche.map((d) => tuile(`../club/#res/${encodeURIComponent(d.rubrique)}/${encodeURIComponent(d.fichier)}`, "image", d.titre, d.rubrique)).join("")}</div>` : "");
 }
 
 async function detail(t) {
@@ -60,14 +89,14 @@ async function detail(t) {
       <div class="liste">${js.map((j) => `<a href="../joueurs/#${esc(j.id)}" class="${j.id === V2.moi() ? "moi" : ""}"><span class="grow nom">${esc(j.nomComplet)}</span>
         <span>${V2.nombre(j.virtuels ?? j.officiels)}</span><span class="petit" style="min-width:42px;text-align:right">${j.gain == null ? "" : V2.signe(j.gain)}</span></a>`).join("")}</div>`;
   }
-  const [lien, texte] = DETAIL[t.comp];
+  const club = await V2.facultatif("club");
   return (prochaine ? `<div class="section"><h2>Prochaine rencontre</h2></div>${V2.carteMatch(prochaine, { journee: true })}` : "")
     + `<div class="section"><h2>Classement de la poule</h2></div>${classement}`
     + `<div class="section"><h2>Calendrier et résultats</h2></div>
        <div class="boutons" style="margin-bottom:10px"><button class="bouton second" type="button" id="ics">${svg("agenda")} Ajouter à mon agenda</button></div>
        <div class="pile">${t.rencontres.map((r) => V2.carteMatch(r, { journee: true })).join("")}</div>`
     + joueurs
-    + `<div class="section"><h2>Pour aller plus loin</h2></div><div class="liste"><a href="${lien}">${svg("page")}<span class="grow nom">${esc(texte)}</span></a></div>`;
+    + pagesEtImages(t, club);
 }
 
 V2.demarrer({ titre: "Équipes" }, async () => {

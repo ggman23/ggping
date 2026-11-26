@@ -785,3 +785,12 @@ Pas d'onglet dans l'application pour l'instant.
   critérium du jour, déjà lues pour la forme : virtuel.forme_joueurs(lignes=...)), carte « Résultats du tour » et
   colonne « Tour » de /indivs/ ; v2 : /v2/indivs/, /v2/77/ (clubs et joueurs), /v2/tournois/, grille du mois
   (/v2/agenda/#calendrier), sous-rubriques par onglet, recherche des clubs et joueurs du 77, individuels à l'accueil.
+- Rien de perdu dans la v2, et vue par équipe (26/11) : « tu as oublié dans la v2 la page des forums et communautés
+  du monde entier et tout ce qui était pour la préparation mentale ; la v2 doit reprendre exactement tout ce qu'il
+  y avait dans la v1. » Puis : « garder la vue club, mais ajouter une vue par équipe (v1 et v2) : le capitaine de
+  Vaires 2 ne voit que Vaires 2 : la partie de la page adversaires, ses feuilles de match, son classement de poule,
+  son effectif et brûlage, ses images (prochain adversaire, feuille de match, joueurs disponibles, progression) ;
+  idem pour Vaires 1 à 6, Vaires 1 F, Paris et jeunes ». Réalisation : #seule/<code> dans les pages (adversaires,
+  feuilles, classements, effectif, progression, résultats, /paris/, /jeunes/), « Par équipe » de /club/
+  (netlify.equipes_du_club, #equipe/<code>), fiche d'équipe de la v2 avec ses pages et ses images ; v2 Club :
+  documents du club en tête, PDF affichés sur ordinateur, Tout télécharger, état des vérifications.

@@ -41,12 +41,21 @@ const tuile = (href, ic, cls, titre, sous, nouveau) => `<a class="carte tuile" h
   <span style="min-width:0;flex:1"><b>${esc(titre)}</b>${sous ? `<br><span class="petit">${esc(sous)}</span>` : ""}</span>
   ${nouveau ? '<span class="puce nouveau">nouveau</span>' : ""}</a>`;
 
-function accueil(club) {
+const verifie = (v) => !v ? "" : /NON GÉNÉRÉE|manquant|non lues|non récupéré/.test(v) ? `⚠ ${v}` : v;
+function accueil(club, eq) {
   V2.titre("Club", "Documents, images et espaces");
   const docs = club.documents || [], images = docs.filter((d) => d.type === "image"), pages = docs.filter((d) => d.type !== "image");
   const lien = (d) => `#doc/${encodeURIComponent(d.fichier)}`;
-  let html = `<div class="section"><h2>Pages détaillées</h2><span class="petit">tableaux complets du site actuel</span></div>
-    <div class="grille">${pages.map((d) => tuile(lien(d), "page", "", d.titre, d.description, V2.estNouveau(d.date))).join("")}</div>`;
+  // Par équipe : la fiche de chaque équipe (ses pages sur cette équipe seulement, ses images)
+  let html = eq.length ? `<div class="section"><h2>Par équipe</h2><span class="petit">seulement ce qui concerne une équipe</span></div>
+    <div class="segments" style="flex-wrap:wrap">${eq.map((t) => `<a href="../equipes/#${t.cle}">${esc(t.nom.replace(/ · .*/, ""))}${t.comp === "paris" ? " Paris" : t.comp === "jeunes" ? " " + esc(t.age ? t.age.replace("moins de ", "−").replace(" ans", "") : "jeunes") : ""}</a>`).join("")}</div>` : "";
+  // Documents fournis (affiche, matériel, préparation mentale) : en tête, pour ne pas les chercher
+  for (const r of club.ressources || []) html += `<div class="section"><h2>${esc(r.nom)}</h2></div><div class="grille">${r.documents.map((d) =>
+    tuile(`#res/${encodeURIComponent(r.nom)}/${encodeURIComponent(d.fichier)}`, d.type === "image" ? "image" : "page", "doc", d.titre,
+      [d.description, d.type === "pdf" ? "PDF" : "", d.taille ? taille(d.taille) : ""].filter(Boolean).join(" · "), false)).join("")}</div>`;
+  html += `<div class="section"><h2>Pages détaillées</h2><span class="petit">tableaux complets du site actuel</span></div>
+    <div class="grille">${pages.map((d) => tuile(lien(d), d.type === "excel" ? "telecharger" : "page", "", d.titre,
+      [d.description, verifie(d.verification)].filter(Boolean).join(" · "), V2.estNouveau(d.date))).join("")}</div>`;
   html += `<div class="section" id="images"><h2>Images à partager</h2></div>`;
   for (const g of GROUPES) {
     const l = images.filter((d) => d.groupe === g);
@@ -54,9 +63,6 @@ function accueil(club) {
     html += `<h3 style="margin:14px 2px 8px;font-size:.92rem">${esc(TITRES[g] || g)}</h3><div class="grille">${l.map((d) =>
       tuile(lien(d), "image", "img", d.titre, d.date ? V2.dateCourte(d.date) : "", V2.estNouveau(d.date))).join("")}</div>`;
   }
-  for (const r of club.ressources || []) html += `<div class="section"><h2>${esc(r.nom)}</h2></div><div class="grille">${r.documents.map((d) =>
-    tuile(`#res/${encodeURIComponent(r.nom)}/${encodeURIComponent(d.fichier)}`, d.type === "image" ? "image" : "page", "doc", d.titre,
-      [d.description, d.taille ? taille(d.taille) : ""].filter(Boolean).join(" · "), false)).join("")}</div>`;
   if ((club.archives || []).length) html += `<div class="section"><h2>Archives des journées</h2></div><div class="liste">${club.archives.map((a) =>
     `<a href="../../club/#archives/${encodeURIComponent(a.cle)}">${svg("club")}<span class="grow nom">${esc(a.titre)}</span><span class="petit">${esc(a.date_reference ? V2.dateCourte(a.date_reference) : "")}</span></a>`).join("")}</div>`;
   // Autres espaces : la page de la v2 quand elle existe, sinon celle du site actuel
@@ -67,11 +73,14 @@ function accueil(club) {
   if (V2.admin()) html += `<div class="section"><h2>Administration</h2></div><div class="liste">
     <a href="https://ggman23.github.io/ggping/" target="_blank" rel="noopener">${svg("externe")}<span class="grow nom">Lancer une mise à jour du site</span></a>
     <a href="../../lundi/">${svg("etoile")}<span class="grow nom">Le roi du lundi</span></a></div>`;
-  return html + `<div class="section"><h2>Réglages</h2></div><div class="liste"><button type="button" id="ouvrir-reglages">${svg("reglages")}<span class="grow nom">Mon espace, taille du texte, apparence</span></button>
+  return html + `<div class="boutons" style="margin-top:16px"><button class="bouton second" type="button" id="tout">${svg("telecharger")} Tout télécharger (${docs.length} fichiers)</button></div>
+    <div class="section"><h2>Réglages</h2></div><div class="liste"><button type="button" id="ouvrir-reglages">${svg("reglages")}<span class="grow nom">Mon espace, taille du texte, apparence</span></button>
     <a href="../../club/">${svg("retour")}<span class="grow nom">Revenir au site actuel</span></a></div>`;
 }
 
-async function vue(d, rubrique) {
+const MOBILE = /iPhone|iPad|iPod|Android/.test(navigator.userAgent) || window.__appliCvtt;
+const PDF_INTEGRE = navigator.pdfViewerEnabled === true && !MOBILE;
+async function vue(d, rubrique, seule = null) {
   V2.titre(d.titre, rubrique || (d.type === "image" ? TITRES[d.groupe] || "Image" : "Page du site actuel"));
   const m = $("#contenu");
   m.innerHTML = '<p class="vide">Ouverture…</p>';
@@ -82,7 +91,8 @@ async function vue(d, rubrique) {
   const boutons = `<div class="boutons" style="margin:10px 0">
     <button class="bouton" type="button" id="tele">${svg("telecharger")} Télécharger</button>
     ${d.type === "image" ? `<button class="bouton second" type="button" id="part" hidden>${svg("partager")} Partager</button>` : ""}</div>`;
-  if (d.type === "page") m.innerHTML = `<iframe class="cadre" title="${esc(d.titre)}" src="${url}"${rubrique ? ' sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms"' : ""}></iframe>`;
+  if (d.type === "page") m.innerHTML = `<iframe class="cadre" title="${esc(d.titre)}" src="${url}${seule ? "#seule/" + encodeURIComponent(seule) : ""}"${rubrique ? ' sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms"' : ""}></iframe>`;
+  else if (d.type === "pdf" && PDF_INTEGRE) m.innerHTML = `${boutons}<iframe class="cadre" title="${esc(d.titre)}" src="${url}"></iframe>`;
   else if (d.type === "image") m.innerHTML = `${boutons}<div class="vue-image"><img src="${url}" alt="${esc(d.titre)}"></div>
     ${d.apercu ? `<p class="petit" style="text-align:center">Aperçu allégé : « Télécharger » donne l'original${d.dimensions ? ` (${d.dimensions.join(" × ")} pixels)` : ""}.</p>` : ""}`;
   else m.innerHTML = `<div class="carte" style="text-align:center"><h3>${esc(d.titre)}</h3><p class="petit">${esc(d.description || "")}</p>${boutons}</div>`;
@@ -99,22 +109,42 @@ async function vue(d, rubrique) {
   }
 }
 
+// Document introuvable ou illisible (copie pas encore à jour, réseau) : un message plutôt qu'« Ouverture… » sans fin
+async function ouvrir(f) {
+  try { await f(); }
+  catch (e) {
+    $("#contenu").innerHTML = `<div class="carte"><b>Ce document ne s'ouvre pas pour le moment.</b>
+      <p class="petit">${esc(e.message)} · <a href="../../club/">l'ouvrir dans l'espace club du site actuel</a></p></div>`;
+  }
+}
 V2.demarrer({ titre: "Club" }, async () => {
   const m = $("#contenu");
   m.innerHTML = V2.squelettes(6);
-  const club = await V2.donnees("club");
+  const [club, eq] = await Promise.all([V2.donnees("club"), V2.equipes().catch(() => [])]);
   const afficher = async () => {
     const h = location.hash.slice(1), retour = $(".haut .bouton-haut");
     if (h.startsWith("doc/")) {
-      const d = (club.documents || []).find((x) => x.fichier === decodeURIComponent(h.slice(4)));
-      if (d) return vue(d);
+      const [fichier, seule] = decodeURIComponent(h.slice(4)).split("/seule/");
+      const d = (club.documents || []).find((x) => x.fichier === fichier);
+      if (d) return ouvrir(() => vue(d, null, seule || null));
     }
     if (h.startsWith("res/")) {
       const [nom, fichier] = h.slice(4).split("/").map(decodeURIComponent);
       const d = (club.ressources || []).find((r) => r.nom === nom)?.documents.find((x) => x.fichier === fichier);
-      if (d) return vue(d, nom);
+      if (d) return ouvrir(() => vue(d, nom));
     }
-    m.innerHTML = accueil(club);
+    m.innerHTML = accueil(club, eq);
+    $("#tout").addEventListener("click", async (ev) => {  // tous les fichiers du jour, l'un après l'autre (comme l'espace club)
+      const b = ev.currentTarget; b.disabled = true;
+      const docs = club.documents || [];
+      for (const [i, d] of docs.entries()) {
+        b.textContent = `Téléchargement ${i + 1}/${docs.length}…`;
+        try { const blob = await V2.fichierClub(d.chemin, d.fichier); const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+          a.download = d.fichier; document.body.append(a); a.click(); a.remove(); } catch (e) { /* fichier suivant */ }
+        await new Promise((ok) => setTimeout(ok, 600));
+      }
+      b.disabled = false; b.textContent = "Tout télécharger";
+    });
     const b = $("#ouvrir-reglages");
     if (b) b.addEventListener("click", () => $("#v2-reglages").click());
     if (h === "images") $("#images").scrollIntoView(); else window.scrollTo(0, 0);

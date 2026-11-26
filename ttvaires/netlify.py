@@ -179,6 +179,23 @@ def publier_pages_a_part(site, dossier, cle_site, cle_club):
     return publiees
 
 
+def equipes_du_club(site, cle_site):
+    """Équipes de Vaires pour la vue « Par équipe » de /club/ : code (v2, v1f, p1, j2), « seule » (le code de
+    l'équipe dans sa page : #seule/<code>), nom, compétition, division, poule et espace (/paris/, /jeunes/ ou
+    les pages du club). Aucun nom de joueur. Lues dans les pages publiées (adversaires, /paris/, /jeunes/)."""
+    res = []
+    fr = v2.lire_page(site, "adversaires.html", cle_site) or {}
+    for e in fr.get("equipes", []):
+        res.append({"code": e["id"], "seule": e["id"], "nom": e.get("nom_court") or e.get("libelle"),
+                    "competition": "femmes" if e.get("championnat") == "F" else "france",
+                    "division": e.get("division"), "poule": e.get("poule"), "espace": None})
+    for espace, page, lettre in (("paris", "paris.html", "p"), ("jeunes", "jeunes.html", "j")):
+        for e in (v2.lire_page(site, page, cle_site) or {}).get("equipes", []):
+            res.append({"code": f"{lettre}{e['numero']}", "seule": e["id"], "nom": e.get("nom_court") or e.get("libelle"),
+                        "competition": espace, "division": e.get("age") or e.get("division"), "poule": e.get("poule"), "espace": espace})
+    return res
+
+
 def espace_club(site, club, cle_site, cle_club):
     """/club/ : chaque page, l'Excel et chaque image (du jour, et de chaque journée archivée),
     re-chiffrés avec la clé du club sous leur nom d'origine, et la page de navigation
@@ -201,8 +218,13 @@ def espace_club(site, club, cle_site, cle_club):
     (club / "fichiers" / "verif.chiffre").write_bytes(chiffrer_stable(VERIF_CLUB, cle_club))
     # Rubriques permanentes après les archives (Matériel, Prépa mentale...) : documents fournis, voir ressources.py
     rubriques = ressources.publier_dans(club, cle_club)
+    try:
+        equipes = equipes_du_club(site, cle_site)
+    except Exception as e:  # la vue par équipe ne doit jamais empêcher l'espace club
+        print(f"::warning::Vue par équipe de /club/ : équipes non lues ({type(e).__name__})")
+        equipes = []
     donnees = {"maj": (etat.get("derniere_maj") or {}).get("fin"), "sel": publier.SEL, "iterations": publier.ITERATIONS,
-               "documents": documents, "archives": archives, "ressources": rubriques,
+               "documents": documents, "archives": archives, "ressources": rubriques, "equipes": equipes,
                # Autres espaces listés dans /club/ : individuels et tournois ; pas les espaces fournis
                # (ressources.py, ex. /lundi/ : pour l'administrateur et l'application seulement)
                "espaces": [{"chemin": chemin, "titre": titre} for publie, (chemin, titre) in PAGES_A_PART.items()

@@ -78,7 +78,8 @@ V2.demarrer({ titre: "CVTT Vaires", sous: "Tennis de table · Vaires-sur-Marne" 
         <div class="chiffre"><b>${moi.gain == null ? "–" : V2.signe(moi.gain)}</b><span>depuis le début de phase</span></div></div>
       <p style="margin:6px 0">Il te manque <b>${V2.nombre(palier - v)}</b> point${palier - v > 1 ? "s" : ""} pour passer <b>${palier / 100}</b>.</p>
       <div class="jauge"><i style="width:${v % 100}%"></i></div>
-      ${sienne ? `<p class="petit" style="margin:12px 0 6px">Prochaine rencontre de ${esc(equipe.nom)} :</p>${V2.carteMatch(sienne)}` : ""}</section>`;
+      ${sienne ? `<p class="petit" style="margin:12px 0 6px">Prochaine rencontre de ${esc(equipe.nom)} :</p>${V2.carteMatch(sienne)}` : ""}
+      ${equipe ? `<p style="margin:12px 0 0"><a href="equipes/#${equipe.cle}">Tout sur ${esc(equipe.nom)} : poule, feuilles, effectif, images ›</a></p>` : ""}</section>`;
   }
 
   /* À partager : les dernières images de chaque groupe à la une */
@@ -93,6 +94,10 @@ V2.demarrer({ titre: "CVTT Vaires", sous: "Tennis de table · Vaires-sur-Marne" 
     + (derniers.length ? `<div class="section"><h2>Derniers résultats</h2><a class="lien" href="equipes/">Toutes les équipes</a></div>
        <div class="pile">${derniers.map((r) => V2.carteMatch(r)).join("")}</div>` : "")
     + individuels(indivs)
+    + ((club?.ressources || []).length ? `<div class="section"><h2>Documents du club</h2><a class="lien" href="club/">Tout le club</a></div>
+       <div class="grille">${club.ressources.map((r) => `<a class="carte" href="club/#res/${encodeURIComponent(r.nom)}/${encodeURIComponent(r.documents[0].fichier)}" style="display:flex;gap:12px;align-items:center">
+         <span class="puce comp jeunes" style="padding:8px">${svg(r.documents[0].type === "image" ? "image" : "page")}</span>
+         <span><b>${esc(r.nom)}</b><br><span class="petit">${r.documents.length} document${r.documents.length > 1 ? "s" : ""} : ${esc(r.documents.map((d) => d.titre).slice(0, 2).join(", "))}${r.documents.length > 2 ? "…" : ""}</span></span></a>`).join("")}</div>` : "")
     + (une.length ? `<div class="section"><h2>À partager</h2><a class="lien" href="club/#images">Toutes les images</a></div>
        <div class="grille">${une.map((d) => `<a class="carte" href="club/#doc/${encodeURIComponent(d.fichier)}" style="display:flex;gap:12px;align-items:center">
          <span class="puce comp paris" style="padding:8px">${svg("image")}</span><span><b>${esc(d.titre)}</b><br><span class="petit">${esc(d.date ? V2.dateCourte(d.date) : "")}</span></span>

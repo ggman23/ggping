@@ -256,15 +256,33 @@ function dateTxt(r) {
   return `${fmtDate(dateRenc(r))}${heure(r)}${reportee}`;
 }
 
+/* Vue d'une seule équipe (« Par équipe » de l'espace club) : #seule/<code> (v1 à v6, v1f ; à /paris/ et /jeunes/ : v1,
+   v2...) n'affiche que cette équipe, avec un lien « Voir toutes les équipes » (#toutes). */
+const codeEquipe = (t) => { const m = /(\d+)(\s*F)?\s*$/i.exec(String(t || "").replace(/\s*·.*$/, "")); return m ? `v${m[1]}${m[2] ? "f" : ""}` : null; };
+let SEULE = (/^#seule\/(v\d+f?)/.exec(location.hash) || [])[1] || null;
+const bandeauSeule = (nom) => `<div class="bandeau-seule" style="background:#fff4d6;color:#6b4500;border-radius:10px;padding:9px 12px;margin:10px 0;font-size:14px">
+  Vue de <b>${esc(nom)}</b> seulement · <a href="#toutes" style="color:inherit;font-weight:700">Voir toutes les équipes</a></div>`;
+
 /* ---------- Onglets et navigation ---------- */
 function onglets(actif) {
+  if (SEULE) {
+    const e = EQUIPES.find((x) => x.id === SEULE);
+    document.getElementById("onglets").innerHTML = `<a href="#e/${e.id}" class="actif">${esc(e.nom_court || e.libelle)}</a><a href="#toutes">Toutes les équipes</a>`;
+    return;
+  }
   const liens = [`<a href="#recap" class="${actif === "recap" ? "actif" : ""}">Récapitulatif</a>`]
     .concat(EQUIPES.map((e) => `<a href="#e/${e.id}" class="${actif === e.id ? "actif" : ""}">${esc(e.nom_court || e.libelle)}</a>`))
     .concat(VERIF ? [`<a href="#verif" class="${actif === "verif" ? "actif" : ""}">Vérifications${MANQUANTS ? ` <span class="badge brule">${MANQUANTS}</span>` : " ✓"}</a>`] : []);
   document.getElementById("onglets").innerHTML = liens.join("");
 }
 function route() {
-  const h = decodeURIComponent(location.hash.slice(1));
+  let h = decodeURIComponent(location.hash.slice(1));
+  if (h.startsWith("seule/")) {
+    SEULE = EQUIPES.some((x) => x.id === h.split("/")[1]) ? h.split("/")[1] : null;
+    if (SEULE) { h = `e/${SEULE}`; history.replaceState(null, "", "#" + h); }
+  }
+  if (h === "toutes") { SEULE = null; h = ""; history.replaceState(null, "", "#"); }
+  if (SEULE && !h.startsWith(`e/${SEULE}`)) h = `e/${SEULE}`;
   const [vue, id, sous, journee] = h.split("/");
   const main = document.getElementById("contenu");
   if (vue === "verif" && VERIF) {
@@ -273,7 +291,8 @@ function route() {
     window.scrollTo(0, 0);
   } else if (vue === "e" && EQUIPES.some((e) => e.id === id)) {
     onglets(id);
-    main.innerHTML = vueEquipe(EQUIPES.find((e) => e.id === id), sous === "j" ? Number(journee) : null);
+    const e = EQUIPES.find((x) => x.id === id);
+    main.innerHTML = (SEULE ? bandeauSeule(e.nom_court || e.libelle) : "") + vueEquipe(e, sous === "j" ? Number(journee) : null);
     if (sous === "j") document.getElementById("panneau")?.scrollIntoView({ behavior: "smooth", block: "start" });
     else window.scrollTo(0, 0);
   } else {

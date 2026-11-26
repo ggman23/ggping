@@ -331,15 +331,30 @@ function dateTxt(r) {
   return `${fmtDate(dateRenc(r))}${r.heure ? " " + esc(r.heure) : ""}${reportee}${confirmer}`;
 }
 
+/* Vue d'une seule équipe (« Par équipe » de l'espace club) : #seule/<code> (v1 à v6, v1f ; à /paris/ et /jeunes/ : v1,
+   v2...) n'affiche que cette équipe, avec un lien « Voir toutes les équipes » (#toutes). */
+const codeEquipe = (t) => { const m = /(\d+)(\s*F)?\s*$/i.exec(String(t || "").replace(/\s*·.*$/, "")); return m ? `v${m[1]}${m[2] ? "f" : ""}` : null; };
+let SEULE = (/^#seule\/(v\d+f?)/.exec(location.hash) || [])[1] || null;
+const bandeauSeule = (nom) => `<div class="bandeau-seule" style="background:#fff4d6;color:#6b4500;border-radius:10px;padding:9px 12px;margin:10px 0;font-size:14px">
+  Vue de <b>${esc(nom)}</b> seulement · <a href="#toutes" style="color:inherit;font-weight:700">Voir toutes les équipes</a></div>`;
+
 /* ---------- Onglets et navigation ---------- */
 function onglets(actif) {
-  document.getElementById("onglets").innerHTML = [`<a href="#recap" class="${actif === "recap" ? "actif" : ""}">Récapitulatif</a>`]
-    .concat(EQUIPES.map((e) => `<a href="#e/${e.id}" class="${actif === e.id ? "actif" : ""}">${esc(e.nom_court || e.libelle)}</a>`))
-    .concat(JOUEURS_VAIRES.length ? [`<a href="#dispo" class="${actif === "dispo" ? "actif" : ""}">Disponibilités</a>`] : []).join("");
+  const seule = EQUIPES.find((x) => x.id === SEULE);
+  document.getElementById("onglets").innerHTML = (seule ? [] : [`<a href="#recap" class="${actif === "recap" ? "actif" : ""}">Récapitulatif</a>`])
+    .concat((seule ? [seule] : EQUIPES).map((e) => `<a href="#e/${e.id}" class="${actif === e.id ? "actif" : ""}">${esc(e.nom_court || e.libelle)}</a>`))
+    .concat(JOUEURS_VAIRES.length ? [`<a href="#dispo" class="${actif === "dispo" ? "actif" : ""}">Disponibilités</a>`] : [])
+    .concat(seule ? ['<a href="#toutes">Toutes les équipes</a>'] : []).join("");
 }
 let vueComptee = null;
 function route() {
-  const h = decodeURIComponent(location.hash.slice(1));
+  let h = decodeURIComponent(location.hash.slice(1));
+  if (h.startsWith("seule/")) {
+    SEULE = EQUIPES.some((x) => x.id === h.split("/")[1]) ? h.split("/")[1] : null;
+    if (SEULE) { h = `e/${SEULE}`; history.replaceState(null, "", "#" + h); }
+  }
+  if (h === "toutes") { SEULE = null; h = ""; history.replaceState(null, "", "#"); }
+  if (SEULE && !h.startsWith(`e/${SEULE}`) && !h.startsWith("dispo")) h = `e/${SEULE}`;
   const [vue, id, sous, journee] = h.split("/");
   const main = document.getElementById("contenu");
   const e = vue === "e" ? EQUIPES.find((x) => x.id === id) : null;
@@ -354,7 +369,7 @@ function route() {
   } else if (e) {
     const r = sous === "j" ? (e.rencontres || []).find((x) => x.journee === Number(journee)) : null;
     onglets(e.id);
-    main.innerHTML = vueEquipe(e, r ? r.journee : null);
+    main.innerHTML = (SEULE ? bandeauSeule(e.nom_court || e.libelle) : "") + vueEquipe(e, r ? r.journee : null);
     if (r) document.getElementById("panneau")?.scrollIntoView({ behavior: "smooth", block: "start" });
     else window.scrollTo(0, 0);
     compte = r ? ["fiche", `${e.id}-J${r.journee} ${r.adversaire ? r.adversaire.libelle : "exempt"}`, `${e.nom_court} J${r.journee} contre ${r.adversaire ? r.adversaire.libelle : "exempt"}`]

@@ -414,6 +414,31 @@ mention « Aperçu allégé » ; « Télécharger » et « Partager » donnent l
 Pour garder la pleine résolution dans WhatsApp, l'envoyer en « Document » (en « Photo », WhatsApp la
 réduit). Cloudflare Pages refuse les fichiers de plus de 25 Mo : une image plus lourde est à réduire.
 
+## Vue par équipe (espace club et v2)
+
+L'espace club garde tout ce qu'il avait (pages, Excel, images, archives, rubriques) ; en plus, en tête de son
+menu et de son accueil, **Par équipe** : un bouton par équipe (Vaires 1 à 6, Vaires 1 F, les trois équipes de
+Paris, les deux équipes jeunes). La page d'une équipe (`/club/#equipe/v2`, `#equipe/v1f`, `#equipe/p2`,
+`#equipe/j1`) ne montre que ce qui la concerne :
+- **ses pages**, ouvertes sur cette équipe seulement : adversaires, feuilles de match, classement de sa poule,
+  effectif et brûlages pour elle, progression de ses joueurs, résultats de ses joueurs ; pour Paris et les
+  jeunes, sa page de /paris/ ou /jeunes/ (et les disponibilités pour Paris) ;
+- **ses images à partager** : prochain adversaire, feuille de match, joueurs disponibles (en plusieurs images et
+  en image unique), joueurs brûlés, progression ; pour Paris, l'infographie et l'affiche ; et le programme des
+  équipes.
+
+La dernière équipe choisie est retenue sur l'appareil (« Ton équipe : Vaires 2 » en haut de l'accueil). En bas
+du téléphone, « Équipe » ramène de la page ouverte à la page de l'équipe.
+
+Chaque page du site sait s'afficher pour une seule équipe : adresse `#seule/<code>` (`v1` à `v6`, `v1f` ; à
+/paris/ et /jeunes/ : `v1`, `v2`...), un bandeau « Vue de Vaires 2 seulement · Voir toutes les équipes », les
+onglets réduits à cette équipe ; « Voir toutes les équipes » rend la page entière. Cela marche aussi pour les
+pages ouvertes à part (ex. https://ggman23.github.io/ggping/paris/#seule/v2).
+
+Dans la **v2**, la fiche de chaque équipe (onglet Équipes) a les mêmes « pages de Vaires 2 » (sur cette
+équipe seulement) et « images de Vaires 2 », en plus de sa poule, son calendrier et ses joueurs ; la page Club
+commence par « Par équipe », puis les documents du club (affiche de Paris, Matériel, Prépa mentale).
+
 ## Version 2 à l'essai : /v2/ (copie Cloudflare)
 
 Une nouvelle version du site, à tester sans rien changer au site actuel : **https://ggping-pap.pages.dev/v2/**
@@ -449,9 +474,11 @@ ordinateur) :
   les parties de chacun, puis la poule de la plus forte à la plus faible avec la forme et le niveau de chaque
   adversaire) et **Tournois** (`/v2/tournois/` : les blocs PingRadar de la page Tournois, autour de Vaires, ce
   week-end, le week-end prochain, Île-de-France, Seine-et-Marne) ;
-- **Club** (`/v2/club/`) : les pages détaillées du site actuel (ouvertes dans le cadre de la v2), les images à
-  partager, les rubriques (affiche de Paris...), les archives et les autres espaces (/paris/, /jeunes/, /77/,
-  /indivs/, /tournois/, /cal/), les réglages.
+- **Club** (`/v2/club/`) : dans l'ordre, « Par équipe », les documents du club (affiche du championnat de Paris,
+  Matériel : forums et communautés du monde entier, Prépa mentale : mémo du sac de sport et guides en PDF, affichés
+  dans la page sur ordinateur), les pages détaillées du site actuel (avec l'état de leurs vérifications, ouvertes
+  dans le cadre de la v2), les images à partager, les archives, les autres espaces, « Tout télécharger » et les
+  réglages. L'accueil de la v2 a aussi un bloc « Documents du club ».
 
 En haut de chaque page : la **recherche** (joueur, club adverse, équipe, page) et les **réglages** : « C'est moi »
 (Mon espace : prochaine rencontre de son équipe, ses points, son objectif ; gardé sur l'appareil seulement),

@@ -81,7 +81,16 @@ function bandeauVerif(V, consequence) {
     <ul>${ms.map((m) => `<li>J${m.journee} · ${esc(m.equipe)} contre ${esc(adv(m))} (${fmtDate(m.date)}) : ${esc(m.libelle)}</li>`).join("")}</ul>
     Relancer plus tard : les résultats sont en général saisis dans les 48 h après la rencontre.</div>`;
 }
+/* Vue d'une seule équipe (« Par équipe » de l'espace club) : #seule/<code> (v1 à v6, v1f) n'affiche que cette
+   équipe, avec un lien « Voir toutes les équipes » (#toutes). */
+const codeEquipe = (t) => { const m = /(\d+)(\s*F)?\s*$/i.exec(String(t || "").replace(/\s*·.*$/, "")); return m ? `v${m[1]}${m[2] ? "f" : ""}` : null; };
+let SEULE = (/^#seule\/(v\d+f?)/.exec(location.hash) || [])[1] || null;
+const bandeauSeule = (nom) => `<div class="bandeau-seule" style="background:#fff4d6;color:#6b4500;border-radius:10px;padding:9px 12px;margin:10px 0;font-size:14px">
+  Vue de <b>${esc(nom)}</b> seulement · <a href="#toutes" style="color:inherit;font-weight:700">Voir toutes les équipes</a></div>`;
+const nomDuCode = (c) => c ? c.replace(/^v(\d+)(f?)$/, (m, n, f) => `Vaires ${n}${f ? " F" : ""}`) : "";
 let vue = null, tri = null, ouverts = new Set();
+const deLEquipe = (l) => !SEULE || codeEquipe(l.equipe) === SEULE;
+const cumulDeLEquipe = (c) => !SEULE || (c.equipes || []).some((e) => codeEquipe(e) === SEULE);
 
 // Deux rencontres la même journée (masculine le vendredi, féminine le samedi) : chaque ligne rappelle l'autre.
 const courte = (e) => String(e).toUpperCase().replace("VAIRES", "V").replace(/\s+/g, "");
@@ -142,15 +151,16 @@ function afficher() {
   const verif = bandeauVerif(D.verification, "les points de ces rencontres ne sont pas encore comptés :");
   if (!D.journees.length) { main.innerHTML = verif + '<p class="vide">Aucune feuille de match disponible pour le moment.</p>'; return; }
   document.getElementById("onglets").innerHTML = D.journees.map((j) => `<a href="#J${j.numero}" class="${vue === "J" + j.numero ? "actif" : ""}">J${j.numero}</a>`).join("")
-    + `<a href="#cumul" class="${vue === "cumul" ? "actif" : ""}">Cumul</a>`;
+    + `<a href="#cumul" class="${vue === "cumul" ? "actif" : ""}">Cumul</a>` + (SEULE ? '<a href="#toutes">Toutes les équipes</a>' : "");
+  const seule = SEULE ? bandeauSeule(nomDuCode(SEULE)) : "";
   if (vue === "cumul") {
-    main.innerHTML = verif + `<p class="sous">Points gagnés ou perdus à chaque journée, total depuis la J1 et classement virtuel
-      (points officiels + total).</p>${tableau(D.cumuls, colonnesCumul(), false)}${note()}`;
+    main.innerHTML = verif + seule + `<p class="sous">Points gagnés ou perdus à chaque journée, total depuis la J1 et classement virtuel
+      (points officiels + total).</p>${tableau(D.cumuls.filter(cumulDeLEquipe), colonnesCumul(), false)}${note()}`;
   } else {
     const j = Number(vue.slice(1));
     const info = D.journees.find((x) => x.numero === j);
-    const lignes = D.lignes.filter((l) => l.journee === j);
-    main.innerHTML = verif + `<p class="sous">Journée ${j} — ${info.dates.map(fmtDate).join(", ")}. Points J${j} = classement virtuel
+    const lignes = D.lignes.filter((l) => l.journee === j && deLEquipe(l));
+    main.innerHTML = verif + seule + `<p class="sous">Journée ${j} — ${info.dates.map(fmtDate).join(", ")}. Points J${j} = classement virtuel
       (points officiels + total depuis la J1). Meilleure victoire = écart avec le mieux classé des joueurs battus,
       ses points entre parenthèses. Clique sur un joueur pour le détail de ses parties.</p>`
       + tableau(lignes, colonnesJournee(j), true) + note();
@@ -172,7 +182,9 @@ function note() {
     : "à partir des points inscrits sur les feuilles de match"}. Clique sur un titre de colonne pour trier.</p>`;
 }
 function route() {
-  const h = location.hash.slice(1);
+  let h = location.hash.slice(1);
+  if (h.startsWith("seule/")) { SEULE = h.slice(6) || null; h = ""; history.replaceState(null, "", "#"); }
+  if (h === "toutes") { SEULE = null; h = ""; history.replaceState(null, "", "#"); }
   const dernier = D.journees.length ? "J" + D.journees[D.journees.length - 1].numero : "cumul";
   const nouvelle = h === "cumul" || D.journees.some((j) => "J" + j.numero === h) ? h : dernier;
   if (nouvelle !== vue) tri = null;
