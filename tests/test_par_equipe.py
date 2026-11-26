@@ -5,6 +5,7 @@ import json
 import re
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -74,3 +75,50 @@ def test_equipes_de_l_espace_club(tmp_path):
     donnees = json.loads(page.split('<script id="donnees" type="application/json">')[1].split("</script>")[0])
     assert [e["code"] for e in donnees["equipes"]] == ["v2", "v1f", "p1", "j1"] and "FICTIFNOM" not in page
     assert "Par équipe" in page and "#equipe/" in page and '"#seule/" + encodeURIComponent(seuleCourante)' in page
+
+
+V2_DIR = Path(netlify.__file__).with_name("v2")
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="node absent")
+def test_onglets_en_haut_de_la_fiche_d_equipe_v2():
+    """v2 (26/11) : la fiche d'une équipe a ses onglets en haut (Résumé, pages du site sur cette équipe, Images) ;
+    les images de l'équipe d'abord (adversaire, feuille, disponibles « image unique » avant les morceaux, brûlés)."""
+    js = (V2_DIR / "commun.js").read_text(encoding="utf-8")
+    bloc = js[js.index("  const PAGES_EQUIPE"):js.index("  /* ---------- Cadre de page")]
+    image = lambda f, g: {"fichier": f, "type": "image", "groupe": g}
+    club = {"documents": [{"fichier": "vaires.html", "type": "page"}, {"fichier": "effectif_vaires.html", "type": "page"},
+                          image("effectif_disponibles_V2_1.png", "effectif"), image("effectif_disponibles_V2_complet.png", "effectif"),
+                          image("effectif_brules_V2.png", "effectif"), image("rencontres_J5_V2.png", "rencontres"),
+                          image("adversaires_V2.png", "adversaires"), image("adversaires_V1F.png", "adversaires"),
+                          image("progression_V2.png", "progression"), image("paris_infographie.png", "paris"),
+                          image("programme_equipes.png", "programme")],
+            "ressources": [{"nom": "Championnat de Paris", "documents": [image("affiche-championnat-de-paris.jpg", None)]}]}
+    essai = ('const RACINE = "../";\n' + bloc + f"const club = {json.dumps(club)};\n"
+             "const voir = (t) => ongletsEquipe(t, club).map((o) => [o.id, o.nom, o.externe || (o.doc && o.doc.fichier) || null,"
+             " o.images ? o.images.siennes.map((d) => d.fichier) : null]);\n"
+             'console.log(JSON.stringify({ v2: voir({ comp: "france", numero: 2 }), f1: voir({ comp: "femmes", numero: 1 }),'
+             ' p2: voir({ comp: "paris", numero: 2 }), j1: voir({ comp: "jeunes", numero: 1 }) }));')
+    r = subprocess.run(["node", "-e", essai], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    o = json.loads(r.stdout)
+    assert o["v2"] == [["resume", "Résumé", None, None], ["adversaire", "Adversaire", "vaires.html", None],
+                       ["effectif", "Effectif", "effectif_vaires.html", None],
+                       ["images", "Images (6)", None, ["adversaires_V2.png", "rencontres_J5_V2.png", "effectif_disponibles_V2_complet.png",
+                                                       "effectif_disponibles_V2_1.png", "effectif_brules_V2.png", "progression_V2.png"]]]
+    assert o["f1"][-1] == ["images", "Images (1)", None, ["adversaires_V1F.png"]]
+    assert o["p2"] == [["resume", "Résumé", None, None], ["poule", "Poule et adversaires", "../../paris/#seule/v2", None],
+                       ["dispos", "Disponibilités", "../../paris/#dispo", None],
+                       ["images", "Images (2)", None, ["paris_infographie.png", "affiche-championnat-de-paris.jpg"]]]
+    assert o["j1"] == [["resume", "Résumé", None, None], ["poule", "Poule et adversaires", "../../jeunes/#seule/v1", None],
+                       ["images", "Images", None, []]]
+
+
+def test_fiche_d_equipe_et_mon_equipe_sur_l_accueil_v2():
+    equipe = (V2_DIR / "equipes" / "index.html").read_text(encoding="utf-8")
+    assert 'class="segments equipe-nav"' in equipe and "V2.ongletsEquipe(t, club)" in equipe and "#seule/" in equipe
+    assert "C'est mon équipe" in equipe and "V2.R.equipe" in equipe and "vignette" in equipe
+    accueil = (V2_DIR / "index.html").read_text(encoding="utf-8")
+    assert "m.innerHTML = heros + monEquipe" in accueil and "Tout sur ${esc(mienne.nom)}" in accueil
+    assert "data-mienne" in accueil and "V2.ongletsEquipe(mienne, club)" in accueil
+    assert ".equipe-nav { position: sticky" in (V2_DIR / "commun.css").read_text(encoding="utf-8")

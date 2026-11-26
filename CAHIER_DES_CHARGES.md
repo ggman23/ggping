@@ -794,3 +794,9 @@ Pas d'onglet dans l'application pour l'instant.
   feuilles, classements, effectif, progression, résultats, /paris/, /jeunes/), « Par équipe » de /club/
   (netlify.equipes_du_club, #equipe/<code>), fiche d'équipe de la v2 avec ses pages et ses images ; v2 Club :
   documents du club en tête, PDF affichés sur ordinateur, Tout télécharger, état des vérifications.
+- Vue par équipe plus visible dans la v2 (26/11) : « dans la v2 tu as pas mis une vue par équipe où on voit tout ce
+  qui concerne Vaires 2 ? » ; la vue existait en bas de la fiche d'équipe, proposition d'onglets en haut : « Oui
+  mets plutôt en haut de page, c'est plus visible ». Réalisation : onglets collés en haut de la fiche (Résumé,
+  Adversaire, Feuilles de match, Poule, Effectif, Progression, Résultats, Images ; V2.ongletsEquipe), pages du
+  site ouvertes dans la fiche sur cette équipe seulement, images en vignettes (agrandir, télécharger, partager),
+  « C'est mon équipe » retenu sur l'appareil et « Tout sur Vaires 2 » en haut de l'accueil.

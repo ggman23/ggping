@@ -435,9 +435,20 @@ Chaque page du site sait s'afficher pour une seule équipe : adresse `#seule/<co
 onglets réduits à cette équipe ; « Voir toutes les équipes » rend la page entière. Cela marche aussi pour les
 pages ouvertes à part (ex. https://ggman23.github.io/ggping/paris/#seule/v2).
 
-Dans la **v2**, la fiche de chaque équipe (onglet Équipes) a les mêmes « pages de Vaires 2 » (sur cette
-équipe seulement) et « images de Vaires 2 », en plus de sa poule, son calendrier et ses joueurs ; la page Club
-commence par « Par équipe », puis les documents du club (affiche de Paris, Matériel, Prépa mentale).
+Dans la **v2**, la fiche de chaque équipe (onglet Équipes, ou « Par équipe » en tête de la page Club) a des
+**onglets en haut de la page**, qui restent collés sous la barre du haut quand on fait défiler :
+**Résumé** (sa place, sa prochaine rencontre, le classement de sa poule, son calendrier, ses joueurs habituels) ·
+**Adversaire** · **Feuilles de match** · **Poule** · **Effectif** · **Progression** · **Résultats** (les pages du
+site actuel, ouvertes dans la fiche sur cette équipe seulement) · **Images** (ses images en vignettes, puis le
+programme du club ; une vignette touchée s'agrandit, avec Télécharger et Partager). Pour Paris : Résumé ·
+Poule et adversaires · Disponibilités · Images ; pour les jeunes : Résumé · Poule et adversaires. Chaque
+onglet a son adresse : `/v2/equipes/#france-2`, `#france-2/effectif`, `#france-2/images`, `#femmes-1/feuilles`,
+`#paris-2/dispos`...
+
+Le bouton « ☆ C'est mon équipe » de la fiche la retient sur l'appareil : l'**accueil** de la v2 montre alors, juste
+sous le bandeau, « **Tout sur Vaires 2** » (sa place, sa prochaine rencontre) et un raccourci vers chaque
+onglet. Sans équipe choisie, l'accueil propose « Choisis ton équipe » avec un bouton par équipe (celle touchée
+est retenue) ; sinon, c'est l'équipe du joueur choisi dans « Mon espace ».
 
 ## Version 2 à l'essai : /v2/ (copie Cloudflare)
 

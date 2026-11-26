@@ -63,12 +63,33 @@ V2.demarrer({ titre: "CVTT Vaires", sous: "Tennis de table · Vaires-sur-Marne" 
       <div class="chiffre"><b>${derniers.filter((r) => r.issue === "v").length}/${derniers.length}</b><span>victoires récentes</span></div>
     </div></section>`;
 
+  /* Mon équipe : tout ce qui concerne une équipe, en évidence en haut de l'accueil (choisie sur sa fiche, sinon celle du joueur choisi) */
+  const equipeDuJoueur = (j) => j && j.equipe ? eq.find((t) => t.comp === (/F$/.test(j.equipe) ? "femmes" : "france") && t.numero === Number(j.equipe.replace(/\D/g, ""))) : null;
+  const mienne = eq.find((t) => t.cle === V2.lire(V2.R.equipe)) || equipeDuJoueur(moi);
+  const etiquette = (t) => `${t.nom.replace(/ · .*/, "")}${t.comp === "paris" ? " Paris" : t.comp === "jeunes" ? " " + (t.age ? t.age.replace("moins de ", "−").replace(" ans", "") : "jeunes") : ""}`;
+  let monEquipe;
+  if (mienne) {
+    const p = mienne.rencontres.find(V2.aVenir);
+    const raccourcis = V2.ongletsEquipe(mienne, club).filter((o) => o.id !== "resume");
+    monEquipe = `<section class="carte mon-equipe apparait"><a href="equipes/#${mienne.cle}" class="match ${mienne.comp}" style="border-left:0;padding:0;color:inherit">
+        <span class="picto" style="margin-left:0">${svg(mienne.comp, true)}</span>
+        <span class="quoi"><span class="petit" style="display:block">Mon équipe</span><span class="equipe" style="display:block;font-size:1.12rem">Tout sur ${esc(mienne.nom)}</span>
+          <span class="quand">${mienne.rang ? `${mienne.rang === 1 ? "1er" : mienne.rang + "e"}${mienne.nbEquipes ? "/" + mienne.nbEquipes : ""} de la poule` : esc(mienne.poule || "")}${p ? ` · ${esc(V2.dateCourte(p.date))} ${p.exempt ? "exempt" : (p.domicile ? "reçoit " : "chez ") + esc(p.adversaire)}` : ""}</span></span>
+        <span class="droite" style="font-size:1.7rem;font-weight:300">›</span></a>
+      <div class="raccourcis">${raccourcis.map((o) => `<a href="equipes/#${mienne.cle}/${o.id}">${esc(o.nom)}</a>`).join("")}</div>
+      <p class="petit" style="margin:10px 0 0"><a href="equipes/">Changer d'équipe</a> (puis « C'est mon équipe » sur sa page)</p></section>`;
+  } else {
+    monEquipe = `<section class="carte mon-equipe apparait"><h3 style="display:flex;gap:8px;align-items:center">${svg("equipes")} Mon équipe</h3>
+      <p class="petit" style="margin:4px 0 0">Choisis ton équipe : son adversaire, ses feuilles de match, sa poule, son effectif et ses images, réunis sur une seule page.</p>
+      <div class="raccourcis">${eq.map((t) => `<a href="equipes/#${t.cle}" data-mienne="${esc(t.cle)}">${esc(etiquette(t))}</a>`).join("")}</div></section>`;
+  }
+
   /* Mon espace */
   let monEspace = `<a class="carte" href="#" id="choisir-moi" style="display:flex;gap:12px;align-items:center">${svg("etoile")}
     <span><b>Mon espace</b><br><span class="petit">Choisis ton nom : l'accueil te montrera ta prochaine rencontre, tes points et ton objectif.</span></span></a>`;
   if (moi) {
     const v = moi.virtuels ?? moi.officiels ?? 0, palier = (Math.floor(v / 100) + 1) * 100;
-    const equipe = eq.find((t) => moi.equipe && t.comp === (/F$/.test(moi.equipe) ? "femmes" : "france") && t.numero === Number(moi.equipe.replace(/\D/g, "")));
+    const equipe = equipeDuJoueur(moi);
     const sienne = equipe?.rencontres.find(V2.aVenir);
     monEspace = `<section class="carte apparait"><div style="display:flex;align-items:center;gap:10px"><h3 style="flex:1">${svg("etoile")} Mon espace</h3>
         <a class="petit" href="joueurs/#${esc(moi.id)}">Ma fiche</a></div>
@@ -87,7 +108,7 @@ V2.demarrer({ titre: "CVTT Vaires", sous: "Tennis de table · Vaires-sur-Marne" 
   const une = GROUPES_UNE.flatMap((g) => images.filter((d) => d.groupe === g).slice(0, g === "programme" ? 2 : 1));
   const nouveautes = (club?.documents || []).filter((d) => V2.estNouveau(d.date));
 
-  m.innerHTML = heros
+  m.innerHTML = heros + monEquipe
     + `<div class="section"><h2>${bientot.length ? "Cette semaine" : "Prochaines rencontres"}</h2><a class="lien" href="agenda/">Tout l'agenda</a></div>
        <div class="pile">${aMontrer.map((r) => V2.carteMatch(r)).join("") || '<p class="vide">Aucune rencontre prévue.</p>'}</div>`
     + `<div class="section"><h2>Mon espace</h2></div>${monEspace}`
@@ -110,6 +131,7 @@ V2.demarrer({ titre: "CVTT Vaires", sous: "Tennis de table · Vaires-sur-Marne" 
        <a href="../lundi/">${svg("etoile")}<span class="grow nom">Le roi du lundi</span></a>
        <a href="../club/">${svg("club")}<span class="grow nom">Espace club (site actuel)</span></a></div>` : "")
     + `<p class="petit" style="text-align:center;margin-top:24px">Données du ${V2.MAJ ? esc(V2.dateLongue(V2.MAJ)) + " à " + esc(V2.MAJ.slice(11, 16).replace(":", "h")) : "?"}</p>`;
+  for (const a of m.querySelectorAll("[data-mienne]")) a.addEventListener("click", () => V2.ecrire(V2.R.equipe, a.dataset.mienne));
   const choisir = $("#choisir-moi");
   if (choisir) choisir.addEventListener("click", (e) => { e.preventDefault(); $("#v2-reglages").click(); });
 });

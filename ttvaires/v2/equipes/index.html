@@ -36,46 +36,44 @@ function liste(eq) {
   V2.titre("Équipes", `${eq.length} équipes engagées`);
   const parComp = Object.keys(COMPET).map((c) => [c, eq.filter((t) => t.comp === c)]).filter(([, l]) => l.length);
   return V2.sousNav("equipes", "vaires") + parComp.map(([c, l]) => `<div class="section"><h2>${esc(COMPET[c].nom)}</h2></div><div class="pile">${l.map(carteEquipe).join("")}</div>`).join("")
-    + `<p class="petit" style="margin-top:20px">Touche une équipe : sa poule, son calendrier, ses résultats et ses joueurs habituels.</p>`;
+    + `<p class="petit" style="margin-top:20px">Touche une équipe : tout ce qui la concerne, avec des onglets en haut de sa page (résumé, adversaire, feuilles de match, poule, effectif, progression, images).</p>`;
 }
 
-/* Vue par équipe : les pages du site actuel ouvertes sur cette équipe seulement (#seule/<code>) et ses images
-   (prochain adversaire, feuille de match, joueurs disponibles et brûlés, progression), comme dans l'espace club. */
-const PAGES_EQUIPE = [["vaires.html", "Adversaires", "Prochain adversaire, ses joueurs, compo probable"],
-  ["rencontres_vaires.html", "Feuilles de match", "Chaque rencontre jouée : parties et scores"],
-  ["classements_vaires.html", "Classement de la poule", "Points, victoires, nuls, défaites, départages"],
-  ["effectif_vaires.html", "Effectif et brûlages", "Joueurs possibles et brûlés pour l'équipe"],
-  ["progression_vaires.html", "Progression des joueurs", "Les joueurs de l'équipe semaine après semaine"],
-  ["resultats_vaires.html", "Résultats des joueurs", "Points gagnés ou perdus à chaque journée"]];
-const codeEquipe = (t) => t.comp === "femmes" ? `v${t.numero}f` : `v${t.numero}`;  // v2, v1f (pages du site) ; Paris, jeunes : v1...
-function pagesEtImages(t, club) {
-  const tuile = (href, ic, titre, texte) => `<a href="${href}">${svg(ic)}<span class="grow"><span class="nom" style="display:block">${esc(titre)}</span>
-    <span class="petit">${esc(texte)}</span></span></a>`;
-  const docs = club?.documents || [];
-  let pages;
-  if (t.comp === "paris" || t.comp === "jeunes") {
-    pages = [tuile(`../../${t.comp}/#seule/${codeEquipe(t)}`, "page", `${COMPET[t.comp].nom} : ${t.nom}`, "Poule, calendrier, adversaires et leurs joueurs (site actuel)")];
-    if (t.comp === "paris") pages.push(tuile("../../paris/#dispo", "agenda", "Disponibilités des joueurs", "Qui est disponible pour chaque journée (site actuel)"));
-  } else {
-    pages = PAGES_EQUIPE.filter(([f]) => docs.some((d) => d.fichier === f))
-      .map(([f, titre, texte]) => tuile(`../club/#doc/${encodeURIComponent(f)}/seule/${codeEquipe(t)}`, "page", titre, texte));
-  }
-  const suffixe = new RegExp(`_${codeEquipe(t).toUpperCase()}(?:_|\\.)`);
-  const images = t.comp === "paris" ? docs.filter((d) => d.groupe === "paris")
-    : t.comp === "jeunes" ? [] : docs.filter((d) => d.type === "image" && suffixe.test(d.fichier));
-  const affiche = t.comp === "paris" ? (club?.ressources || []).flatMap((r) => r.documents.map((d) => ({ ...d, rubrique: r.nom }))).filter((d) => /paris/.test(d.fichier)) : [];
-  return `<div class="section"><h2>Les pages de ${esc(t.nom)}</h2><span class="petit">sur cette équipe seulement</span></div>
-    <div class="liste">${pages.join("")}</div>`
-    + (images.length || affiche.length ? `<div class="section"><h2>Les images de ${esc(t.nom)}</h2><span class="petit">à partager</span></div>
-      <div class="liste">${images.map((d) => tuile(`../club/#doc/${encodeURIComponent(d.fichier)}`, "image", d.titre, d.date ? V2.dateCourte(d.date) : "")).join("")}
-        ${affiche.map((d) => tuile(`../club/#res/${encodeURIComponent(d.rubrique)}/${encodeURIComponent(d.fichier)}`, "image", d.titre, d.rubrique)).join("")}</div>` : "");
+/* Fiche d'une équipe (« Tout sur Vaires 2 ») : des onglets en haut de la page, collés sous la barre du haut.
+   Résumé (prochaine rencontre, poule, calendrier, joueurs) ; puis les pages du site actuel ouvertes sur cette équipe
+   seulement (Adversaire, Feuilles de match, Poule, Effectif, Progression, Résultats) ; puis ses images en vignettes.
+   Adresse : equipes/#france-2 (résumé), equipes/#france-2/effectif, equipes/#france-2/images... */
+const mienne = () => V2.lire(V2.R.equipe);
+const blobs = new Map();  // documents déjà déchiffrés (un seul déchiffrement par visite)
+function ouvrirDoc(chemin, nom) {
+  if (!blobs.has(chemin)) blobs.set(chemin, V2.fichierClub(chemin, nom).then((b) => ({ blob: b, url: URL.createObjectURL(b) }))
+    .catch((e) => { blobs.delete(chemin); throw e; }));
+  return blobs.get(chemin);
+}
+const nomCourt = (t, titre) => {  // « Vaires 2 : joueurs disponibles (1/3) » → « Joueurs disponibles (1/3) »
+  let x = String(titre || "");
+  if (x.toLowerCase().startsWith(t.nom.toLowerCase())) x = x.slice(t.nom.length).replace(/^\s*[:·]\s*/, "");
+  x = x.replace(/\s*·\s*Vaires \d+( F)?$/, "");
+  return x.charAt(0).toUpperCase() + x.slice(1);
+};
+
+function barre(t, onglets, actif) {
+  return `<nav class="segments equipe-nav" aria-label="Tout sur ${esc(t.nom)}">${onglets.map((o) =>
+    `<a href="#${t.cle}${o.id === "resume" ? "" : "/" + o.id}" class="${o.id === actif ? "actif" : ""}"${o.id === actif ? ' aria-current="page"' : ""}>${esc(o.nom)}</a>`).join("")}</nav>`;
 }
 
-async function detail(t) {
-  V2.titre(t.nom, `${COMPET[t.comp].court} · ${t.age || t.division || ""}${t.poule ? " · " + t.poule : ""}`);
+async function resume(t) {
   const prochaine = t.rencontres.find(V2.aVenir);
   const lignes = t.classement;
   const vide = !lignes.some((l) => l.points != null);
+  const est = mienne() === t.cle;
+  const heros = `<section class="carte heros apparait"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span class="puce comp ${t.comp}">${esc(COMPET[t.comp].court)}</span><span class="petit">${esc(t.age || t.division || "")}${t.poule ? " · " + esc(t.poule) : ""}</span></div>
+    <div style="display:flex;gap:10px;align-items:center;margin:10px 0 2px"><h2 style="flex:1;font-size:1.4rem">${esc(t.nom)}</h2>
+      <button type="button" class="mon-choix ${est ? "oui" : ""}" id="mienne" title="Elle s'affichera en haut de l'accueil">${est ? "★ Mon équipe" : "☆ C'est mon équipe"}</button></div>
+    <div class="chiffres" style="margin-top:10px"><div class="chiffre"><b>${rang(t.rang)}${t.nbEquipes ? `<small>/${t.nbEquipes}</small>` : ""}</b><span>place dans la poule</span></div>
+      <div class="chiffre"><b>${t.rencontres.filter((r) => r.issue === "v").length}–${t.rencontres.filter((r) => r.issue === "n").length}–${t.rencontres.filter((r) => r.issue === "d").length}</b><span>victoires, nuls, défaites</span></div>
+      <div class="chiffre"><b>${t.rencontres.filter((r) => !r.score && !r.exempt).length}</b><span>rencontres à jouer</span></div></div></section>`;
   const classement = lignes.length ? `<div class="carte defile" style="padding:6px 4px"><table class="tableau"><thead><tr><th>#</th><th>Équipe</th>
       <th class="n">Pts</th><th class="n">J</th><th class="n">V</th><th class="n">N</th><th class="n">D</th></tr></thead><tbody>
       ${lignes.map((l, i) => `<tr class="${l.nous ? "nous" : ""}"><td>${l.rang ?? (vide ? "" : i + 1)}${l.departage ? ` <span title="${esc(l.departage)}">≡</span>` : ""}</td>
@@ -89,28 +87,115 @@ async function detail(t) {
       <div class="liste">${js.map((j) => `<a href="../joueurs/#${esc(j.id)}" class="${j.id === V2.moi() ? "moi" : ""}"><span class="grow nom">${esc(j.nomComplet)}</span>
         <span>${V2.nombre(j.virtuels ?? j.officiels)}</span><span class="petit" style="min-width:42px;text-align:right">${j.gain == null ? "" : V2.signe(j.gain)}</span></a>`).join("")}</div>`;
   }
-  const club = await V2.facultatif("club");
-  return (prochaine ? `<div class="section"><h2>Prochaine rencontre</h2></div>${V2.carteMatch(prochaine, { journee: true })}` : "")
+  return heros
+    + (prochaine ? `<div class="section"><h2>Prochaine rencontre</h2></div>${V2.carteMatch(prochaine, { journee: true })}` : "")
     + `<div class="section"><h2>Classement de la poule</h2></div>${classement}`
     + `<div class="section"><h2>Calendrier et résultats</h2></div>
        <div class="boutons" style="margin-bottom:10px"><button class="bouton second" type="button" id="ics">${svg("agenda")} Ajouter à mon agenda</button></div>
        <div class="pile">${t.rencontres.map((r) => V2.carteMatch(r, { journee: true })).join("")}</div>`
-    + joueurs
-    + pagesEtImages(t, club);
+    + joueurs;
+}
+
+// Une page du site actuel, ouverte sur cette équipe seulement, dans le cadre de la fiche
+async function page(t, o) {
+  if (o.externe) return `<iframe class="cadre equipe" title="${esc(o.nom)}" src="${esc(o.externe)}"></iframe>
+    <p class="petit" style="margin:6px 2px">Page du site actuel · <a href="${esc(o.externe)}">l'ouvrir en grand</a></p>`;
+  try {
+    const { url } = await ouvrirDoc(o.doc.chemin, o.doc.fichier);
+    return `<iframe class="cadre equipe" title="${esc(o.nom)} · ${esc(t.nom)}" src="${url}#seule/${encodeURIComponent(V2.codeEquipe(t))}"></iframe>
+      <p class="petit" style="margin:6px 2px">${esc(o.doc.titre)} du site actuel, sur ${esc(t.nom)} seulement ·
+        <a href="../club/#doc/${encodeURIComponent(o.doc.fichier)}">toutes les équipes</a></p>`;
+  } catch (e) {
+    return `<div class="carte"><b>Cette page ne s'ouvre pas pour le moment.</b><p class="petit">${esc(e.message)} ·
+      <a href="../../club/#equipe/${encodeURIComponent(V2.codeEquipe(t))}">l'espace club du site actuel</a></p></div>`;
+  }
+}
+
+// Les images de l'équipe en vignettes ; touche une vignette pour l'agrandir, la télécharger ou la partager
+const vignette = (d, i) => `<button type="button" class="vignette" data-i="${i}"><span class="img">${svg("image")}</span>
+  <span class="leg">${esc(d.titreCourt)}</span>${d.date ? `<span class="petit">${esc(V2.dateCourte(d.date))}${V2.estNouveau(d.date) ? ' · <b class="hausse">nouveau</b>' : ""}</span>` : ""}</button>`;
+function images(t, o) {
+  const liste = [...o.images.siennes.map((d) => ({ ...d, titreCourt: nomCourt(t, d.titre) })), ...o.images.club.map((d) => ({ ...d, titreCourt: d.titre }))];
+  const n = o.images.siennes.length;
+  return { liste, html: (n ? `<div class="section" style="margin-top:6px"><h2>Les images de ${esc(t.nom)}</h2><span class="petit">à partager</span></div>
+      <div class="vignettes">${liste.slice(0, n).map(vignette).join("")}</div>` : "")
+    + (o.images.club.length ? `<div class="section"><h2>Pour tout le club</h2></div><div class="vignettes">${liste.slice(n).map((d, i) => vignette(d, n + i)).join("")}</div>` : "")
+    + `<p class="petit" style="margin-top:14px">Touche une image pour l'agrandir, la télécharger ou la partager.</p>` };
+}
+async function chargerVignettes(liste) {
+  for (const b of document.querySelectorAll(".vignette")) {
+    const d = liste[Number(b.dataset.i)];
+    if (!b.isConnected) return;  // autre onglet ouvert entre-temps
+    try { const { url } = await ouvrirDoc(d.apercu || d.chemin, d.apercu ? "x.jpg" : d.fichier); if (b.isConnected) b.querySelector(".img").innerHTML = `<img src="${url}" alt="">`; }
+    catch (e) { /* vignette suivante */ }
+  }
+}
+async function agrandir(d) {
+  const { racine } = V2.fenetre(d.titreCourt, '<p class="vide">Ouverture…</p>');
+  const zone = racine.querySelector(".fenetre");
+  try {
+    const { blob, url } = await ouvrirDoc(d.apercu || d.chemin, d.apercu ? "x.jpg" : d.fichier);
+    const original = async () => d.apercu ? (await ouvrirDoc(d.chemin, d.fichier)).blob : blob;
+    const nom = d.fichier.replace(/^.*\//, "").replace(/\.chiffre$/, "");
+    zone.querySelector(".vide").outerHTML = `<div class="boutons" style="margin-bottom:10px"><button class="bouton" type="button" data-a="tele">${svg("telecharger")} Télécharger</button>
+      <button class="bouton second" type="button" data-a="part" hidden>${svg("partager")} Partager</button></div>
+      <div class="vue-image"><img src="${url}" alt="${esc(d.titre)}"></div>
+      ${d.apercu ? `<p class="petit" style="text-align:center">Aperçu allégé : « Télécharger » donne l'original${d.dimensions ? ` (${d.dimensions.join(" × ")} pixels)` : ""}.</p>` : ""}`;
+    zone.querySelector('[data-a="tele"]').addEventListener("click", async (e) => {
+      const b = e.currentTarget; b.disabled = true;
+      try { const o = await original(); const a = document.createElement("a"); a.href = URL.createObjectURL(o); a.download = nom; document.body.append(a); a.click(); a.remove(); }
+      finally { b.disabled = false; }
+    });
+    const part = zone.querySelector('[data-a="part"]');
+    if (navigator.canShare && navigator.canShare({ files: [new File([blob], "x.png", { type: blob.type })] })) {
+      part.hidden = false;
+      part.addEventListener("click", async () => { try { const o = await original(); await navigator.share({ files: [new File([o], nom, { type: o.type })] }); } catch (e) { /* annulé */ } });
+    }
+  } catch (e) {
+    zone.querySelector(".vide").outerHTML = `<p class="petit">Cette image ne s'ouvre pas pour le moment (${esc(e.message)}).</p>`;
+  }
 }
 
 V2.demarrer({ titre: "Équipes" }, async () => {
   const m = $("#contenu");
   m.innerHTML = V2.squelettes(5);
-  const eq = await V2.equipes();
+  const [eq, club] = await Promise.all([V2.equipes(), V2.facultatif("club")]);
+  let tour = 0;  // un changement d'onglet rapide : seul le dernier affichage compte
   const afficher = async () => {
-    const t = eq.find((x) => x.cle === decodeURIComponent(location.hash.slice(1)));
-    m.innerHTML = t ? await detail(t) : liste(eq);
-    m.classList.remove("apparait"); void m.offsetWidth; m.classList.add("apparait");
-    const b = $("#ics");
-    if (b && t) b.addEventListener("click", () => V2.ics(t.rencontres, `cvtt-vaires-${t.cle}.ics`));
-    if (t) V2.ecrire(V2.R.dernier, t.cle);
+    const jeton = ++tour;
+    const [cle, id = "resume"] = decodeURIComponent(location.hash.slice(1)).split("/");
+    const t = eq.find((x) => x.cle === cle);
+    if (!t) { m.innerHTML = liste(eq); window.scrollTo(0, 0); return; }
+    V2.titre(t.nom, `${COMPET[t.comp].court} · ${t.age || t.division || ""}${t.poule ? " · " + t.poule : ""}`);
+    const onglets = V2.ongletsEquipe(t, club), o = onglets.find((x) => x.id === id) || onglets[0];
+    m.innerHTML = barre(t, onglets, o.id) + '<div id="vue-equipe"><p class="vide">Ouverture…</p></div>';
+    const nav = $(".equipe-nav"), a = nav.querySelector(".actif");
+    if (a) nav.scrollLeft = a.offsetLeft - (nav.clientWidth - a.offsetWidth) / 2;
     window.scrollTo(0, 0);
+    const vue = $("#vue-equipe");
+    if (o.id === "resume") {
+      const html = await resume(t);
+      if (jeton !== tour) return;
+      vue.innerHTML = html;
+      $("#ics").addEventListener("click", () => V2.ics(t.rencontres, `cvtt-vaires-${t.cle}.ics`));
+      $("#mienne").addEventListener("click", (e) => {
+        const oui = mienne() !== t.cle;
+        V2.ecrire(V2.R.equipe, oui ? t.cle : null);
+        e.currentTarget.classList.toggle("oui", oui);
+        e.currentTarget.textContent = oui ? "★ Mon équipe" : "☆ C'est mon équipe";
+      });
+    } else if (o.id === "images") {
+      const { liste: l, html } = images(t, o);
+      vue.innerHTML = html;
+      vue.addEventListener("click", (e) => { const b = e.target.closest(".vignette"); if (b) agrandir(l[Number(b.dataset.i)]); });
+      chargerVignettes(l);
+    } else {
+      const html = await page(t, o);
+      if (jeton !== tour) return;
+      vue.innerHTML = html;
+    }
+    vue.classList.add("apparait");
+    V2.ecrire(V2.R.dernier, t.cle);
   };
   window.addEventListener("hashchange", afficher);
   await afficher();

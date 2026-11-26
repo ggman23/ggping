@@ -14,7 +14,7 @@ const V2 = (() => {
 
   /* ---------- Réglages de l'appareil (taille du texte, thème), appliqués avant tout affichage ---------- */
   const R = { moi: "cvtt-v2-moi", taille: "cvtt-v2-taille", theme: "cvtt-v2-theme", admin: "cvtt-v2-admin",
-              visite: "cvtt-v2-visite", precedente: "cvtt-v2-precedente", dernier: "cvtt-v2-dernier" };
+              visite: "cvtt-v2-visite", precedente: "cvtt-v2-precedente", dernier: "cvtt-v2-dernier", equipe: "cvtt-v2-equipe" };
   const appliquer = () => {
     const t = lire(R.taille), th = lire(R.theme);
     t ? document.documentElement.dataset.taille = t : delete document.documentElement.dataset.taille;
@@ -225,6 +225,37 @@ const V2 = (() => {
   const sousNav = (rubrique, actif) => `<nav class="segments sous" aria-label="Sous-rubriques">${SOUS[rubrique].map(([c, n, l]) =>
     `<a href="${RACINE}${l}" class="${c === actif ? "actif" : ""}"${c === actif ? ' aria-current="page"' : ""}>${esc(n)}</a>`).join("")}</nav>`;
 
+  /* ---------- Vue par équipe : les onglets de la fiche d'une équipe (« Tout sur Vaires 2 ») ----------
+     Les pages du site actuel s'ouvrent sur cette équipe seulement (#seule/<code>) ; les images sont celles de l'équipe
+     (prochain adversaire, feuille de match, joueurs disponibles et brûlés, progression), comme dans l'espace club. */
+  const PAGES_EQUIPE = [["adversaire", "vaires.html", "Adversaire"], ["feuilles", "rencontres_vaires.html", "Feuilles de match"],
+    ["poule", "classements_vaires.html", "Poule"], ["effectif", "effectif_vaires.html", "Effectif"],
+    ["progression", "progression_vaires.html", "Progression"], ["resultats", "resultats_vaires.html", "Résultats"]];
+  const ORDRE_IMAGES = ["adversaires", "rencontres", "effectif", "progression", "paris"];
+  const codeEquipe = (t) => t.comp === "femmes" ? `v${t.numero}f` : `v${t.numero}`;  // v2, v1f (pages du site) ; Paris, jeunes : v1...
+  function imagesEquipe(t, club) {
+    const docs = club?.documents || [];
+    const suffixe = new RegExp(`_${codeEquipe(t).toUpperCase()}(?:_|\\.)`);
+    const rang = (d) => [ORDRE_IMAGES.indexOf(d.groupe), /_complet\./.test(d.fichier) ? 0 : /brules/.test(d.fichier) ? 2 : 1];
+    const siennes = (t.comp === "paris" ? docs.filter((d) => d.type === "image" && d.groupe === "paris")
+      : t.comp === "jeunes" ? [] : docs.filter((d) => d.type === "image" && suffixe.test(d.fichier)))
+      .map((d, i) => ({ d, i, r: rang(d) })).sort((a, b) => a.r[0] - b.r[0] || a.r[1] - b.r[1] || a.i - b.i).map((x) => x.d);
+    if (t.comp === "paris") for (const r of club?.ressources || []) siennes.push(...r.documents.filter((d) => d.type === "image" && /paris/i.test(d.fichier + r.nom)).map((d) => ({ ...d, rubrique: r.nom })));
+    return { siennes, club: docs.filter((d) => d.type === "image" && d.groupe === "programme") };
+  }
+  function ongletsEquipe(t, club) {
+    const docs = club?.documents || [], l = [{ id: "resume", nom: "Résumé" }];
+    if (t.comp === "paris" || t.comp === "jeunes") {
+      l.push({ id: "poule", nom: "Poule et adversaires", externe: `${RACINE}../${t.comp}/#seule/${codeEquipe(t)}` });
+      if (t.comp === "paris") l.push({ id: "dispos", nom: "Disponibilités", externe: `${RACINE}../paris/#dispo` });
+    } else {
+      for (const [id, fichier, nom] of PAGES_EQUIPE) { const d = docs.find((x) => x.fichier === fichier); if (d) l.push({ id, nom, doc: d }); }
+    }
+    const im = imagesEquipe(t, club);
+    if (im.siennes.length || im.club.length) l.push({ id: "images", nom: im.siennes.length ? `Images (${im.siennes.length})` : "Images", images: im });
+    return l;
+  }
+
   /* ---------- Cadre de page : bandeau d'essai, barre du haut, onglets ---------- */
   const ONGLETS = [["accueil", "Accueil", ""], ["equipes", "Équipes", "equipes/"], ["joueurs", "Joueurs", "joueurs/"],
                    ["agenda", "Agenda", "agenda/"], ["club", "Club", "club/"]];
@@ -391,5 +422,6 @@ const V2 = (() => {
 
   return { RACINE, PAGE, MAJ, VERSION, AUJ, $, esc, lire, ecrire, R, svg, COMPET, joli, sansAccent, iso, enDate, ecart, dateCourte, dateLongue, relatif, heure,
            donnees, facultatif, fichierClub, equipes, rencontres, aVenir, lienRencontre, salle, carteMatch, courbe, signe, nombre, squelettes,
-           joueurs, moi, estNouveau, depuis, titre, fenetre, demarrer, ics, sousNav, admin: () => !!lire(R.admin) };
+           joueurs, moi, estNouveau, depuis, titre, fenetre, demarrer, ics, sousNav, codeEquipe, imagesEquipe, ongletsEquipe,
+           admin: () => !!lire(R.admin) };
 })();
