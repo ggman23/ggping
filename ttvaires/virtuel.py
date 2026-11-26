@@ -233,19 +233,21 @@ def resume_forme(lignes, officiels):
     }
 
 
-def forme_joueurs(client, licences, detail_rencontres, debut, fin, ttl=JOUR, message="parties des joueurs adverses"):
+def forme_joueurs(client, licences, detail_rencontres, debut, fin, ttl=JOUR, message="parties des joueurs adverses", lignes=None):
     """Forme de joueurs d'autres clubs (page adversaires) : {licence: resume_forme(...), ou None si
     l'API n'a pas répondu pour ce joueur}. Même calcul que le classement virtuel, avec une économie :
     les feuilles de match déjà lues et le détail des parties hors championnat déjà lu (page des clubs du
     77) disent si une partie est non comptée ou gagnée par forfait ; aucun détail n'est demandé ici (une
     requête par partie). Une victoire par forfait hors championnat dont le détail n'a pas encore été lu
-    compte donc encore (environ 1 partie sur 80 ; une partie sans adversaire, elle, est bien écartée)."""
+    compte donc encore (environ 1 partie sur 80 ; une partie sans adversaire, elle, est bien écartée).
+    `lignes` (dict, facultatif) : rempli avec les parties retenues de chaque joueur (voir analyser), par
+    exemple pour les résultats d'un tour de critérium (indivs.py), sans autre requête."""
     toutes = _lire_parties(client, sorted(licences), ttl=ttl, message=message)
     # Forfaits et parties non comptées hors championnat : le détail déjà lu (clubs du 77), sans nouvelle requête
     hors = {p["id"] for ps in toutes.values() if ps for p in ps if isinstance(p.get("id"), int) and _simple(p)
             and debut <= (p.get("date") or "")[:10] <= fin and not est_championnat((p.get("contest") or {}).get("name"))}
     etats = {**lire_etats_parties(client, hors), **etats_des_feuilles(detail_rencontres)}
-    return formes_depuis_parties(client, toutes, etats, debut, fin)
+    return formes_depuis_parties(client, toutes, etats, debut, fin, lignes)
 
 
 def lire_etats_parties(client, ids, a_lire=(), message="détail des parties"):
@@ -268,7 +270,7 @@ def lire_etats_parties(client, ids, a_lire=(), message="détail des parties"):
     return etats
 
 
-def formes_depuis_parties(client, toutes, etats, debut, fin):
+def formes_depuis_parties(client, toutes, etats, debut, fin, lignes_par_joueur=None):
     """{licence: resume_forme(...) avec le nom, ou None} à partir des listes de parties déjà lues ;
     etats : ce que l'on sait de chaque partie (feuilles de match, détail lu) : non comptée, forfait."""
     from . import mensuel  # (mensuel s'appuie sur ce module)
@@ -283,6 +285,8 @@ def formes_depuis_parties(client, toutes, etats, debut, fin):
         lignes, officiels, _ = analyser(lic, parties, competitions, etats, debut, fin)
         if references:  # calcul mois par mois, comme la FFTT
             mensuel.recalculer(lignes, lic, officiels.most_common(1)[0][0] if officiels else None, references)
+        if lignes_par_joueur is not None:
+            lignes_par_joueur[lic] = lignes
         res[lic] = resume_forme(lignes, officiels)
         res[lic]["nom"] = _nom_du_joueur(lic, parties)
     return res

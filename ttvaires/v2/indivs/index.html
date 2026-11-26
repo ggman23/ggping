@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="fr" data-racine="../" data-page="agenda">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="cvtt-cle" content="cvtt-vaires-cle-club">
+<meta name="theme-color" content="#0f2740">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CVTT Vaires">
+<title>Individuels · CVTT Vaires</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="../icones/icone-192.png">
+<link rel="apple-touch-icon" href="../icones/icone-180.png">
+<link rel="stylesheet" href="../commun.css?v=__VERSION__">
+<style>
+.classement > * { display: grid !important; grid-template-columns: 30px 1fr auto 52px; gap: 8px; align-items: center; }
+.classement .rang { font-weight: 800; text-align: center; }
+.classement .club { display: block; font-size: .78rem; color: var(--doux); }
+.classement .vd { font-weight: 700; white-space: nowrap; }
+.classement .pm { text-align: right; font-weight: 750; }
+.classement .vaires { background: var(--accent-fond); }
+details.parties { border-top: 1px solid var(--bord); padding: 8px 14px; }
+details.parties summary { cursor: pointer; }
+details.parties ul { list-style: none; margin: 8px 0 2px; padding: 0; display: grid; gap: 6px; }
+details.parties li { display: flex; gap: 8px; align-items: center; font-size: .9rem; }
+.niveau { font-size: .72rem; }
+</style>
+</head>
+<body>
+<main id="contenu"></main>
+<script src="../commun.js?v=__VERSION__"></script>
+<script>
+"use strict";
+const { $, esc, svg } = V2;
+const off = (j) => j.points ?? j.forme?.officiels ?? null;
+const virt = (j) => (j.forme && j.forme.virtuels != null ? j.forme.virtuels : off(j));
+const nomJ = (j) => `${j.prenom || ""} ${j.nom || ""}`.trim();
+const parVirt = (js) => js.slice().sort((a, b) => (virt(b) ?? -1) - (virt(a) ?? -1));
+const fait = (p) => p.date && p.date < V2.AUJ;
+// Niveau d'un adversaire pour un joueur de Vaires (comme la page actuelle)
+function niveau(adv, moi) {
+  const a = virt(adv), m = virt(moi);
+  if (a == null || m == null || adv === moi) return "";
+  const d = a - m;
+  if (d >= 50) return '<span class="puce niveau" style="background:var(--perdu-fond);color:var(--perdu)">plus fort</span>';
+  if (d > -50 || (adv.forme?.points || 0) >= 30) return '<span class="puce niveau" style="background:var(--nul-fond);color:var(--nul)">à surveiller</span>';
+  return '<span class="puce niveau" style="background:var(--gagne-fond);color:var(--gagne)">à sa portée</span>';
+}
+const pm = (x) => x == null ? "" : x > 0 ? `<span class="hausse">+${V2.nombre(x)}</span>` : x < 0 ? `<span class="baisse">${V2.nombre(x)}</span>` : "0";
+const vairois = (p) => p.joueurs.filter((j) => j.vaires);
+const reference = (p) => vairois(p).find((j) => j.licence === V2.moi()) || vairois(p)[0];
+
+function cartePoule(p) {
+  const r = p.resultats, n = r ? r.classement.length : p.joueurs.length;
+  const lignes = vairois(p).map((j) => {
+    const c = r?.classement.find((x) => x.licence === j.licence);
+    const info = c ? `<b>${c.rang}</b><small>/${n}</small> · ${c.v}–${c.d} ${pm(c.points)}`
+      : `rang probable <b>${parVirt(p.joueurs).indexOf(j) + 1}</b><small>/${n}</small>`;
+    return `<div style="display:flex;justify-content:space-between;gap:8px;margin-top:4px"><span>${j.licence === V2.moi() ? "★ " : ""}${esc(nomJ(j))}</span><span>${info}</span></div>`;
+  }).join("");
+  return `<a class="carte" href="#${encodeURIComponent(p.id)}">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="puce comp jeunes">${esc({ adultes: "Adultes", jeunes: "Jeunes", feminines: "Féminines" }[p.public] || p.public)}</span>
+      <b>${esc(p.titre)}</b>${r ? '<span class="puce" style="margin-left:auto">résultats</span>' : ""}</div>
+    <div class="petit" style="margin:4px 0">${esc(p.competition)} · ${p.date ? esc(V2.dateCourte(p.date)) + (Math.abs(V2.ecart(p.date)) < 14 ? " · " + esc(V2.relatif(p.date)) : "") : "date à préciser"}</div>
+    ${lignes}</a>`;
+}
+
+function liste(d) {
+  V2.titre("Individuels", "Critérium fédéral et autres compétitions");
+  const avenir = d.poules.filter((p) => !fait(p)).sort((a, b) => (a.date || "9").localeCompare(b.date || "9"));
+  const joues = d.poules.filter(fait).sort((a, b) => b.date.localeCompare(a.date));
+  return V2.sousNav("agenda", "indivs")
+    + (avenir.length ? `<div class="section"><h2>À venir</h2></div><div class="pile">${avenir.map(cartePoule).join("")}</div>` : "")
+    + (joues.length ? `<div class="section"><h2>Tours joués</h2><span class="petit">résultats et classement de la poule</span></div>
+        <div class="pile">${joues.map(cartePoule).join("")}</div>` : "")
+    + (d.poules.length ? "" : '<p class="vide">Aucune poule avec un joueur de Vaires.</p>')
+    + `<p class="petit" style="margin-top:16px">Poules recopiées des convocations${d.maj_poules ? " (mises à jour le " + esc(V2.dateCourte(d.maj_poules)) + ")" : ""} ;
+       forme et résultats lus dans l'API de la FFTT.</p>`;
+}
+
+function resultats(p, moi) {
+  const r = p.resultats;
+  if (!r) return p.date && p.date < V2.AUJ ? '<div class="carte petit">Résultats du tour pas encore lus (ils arrivent avec la mise à jour suivante, une fois saisis par le juge-arbitre).</div>' : "";
+  const js = Object.fromEntries(p.joueurs.map((j) => [j.licence, j])), n = r.classement.length;
+  const mien = moi && r.classement.find((c) => c.licence === moi.licence);
+  const ligne = (c) => { const j = js[c.licence] || {}; return `<div class="${j.vaires ? "vaires" : ""}">
+      <span class="rang">${c.rang}${c.departage === "partie entre eux" ? '<small title="départagés par leur partie">≡</small>' : ""}</span>
+      <span style="min-width:0"><b>${j.licence === V2.moi() ? "★ " : ""}${esc(nomJ(j))}</b><span class="club">${esc(V2.joli(j.club || ""))} · ${off(j) ?? "–"} pts</span></span>
+      <span class="vd">${c.v}–${c.d}</span><span class="pm">${pm(c.points)}</span></div>`; };
+  const partie = (x) => { const a = js[x.adv_licence]; return `<li><span class="score ${x.victoire ? "v" : "d"}" style="font-size:.78rem">${x.victoire ? "V" : "D"}</span>
+      <span style="flex:1">${esc(a ? nomJ(a) : V2.joli(x.adversaire))} <span class="petit">(${x.adv_points})</span>
+      ${(x.manches || []).length ? `<br><span class="petit">${esc(x.manches.map(([u, v]) => `${u}-${v}`).join(" · "))}</span>` : ""}</span>${pm(x.points)}</li>`; };
+  return `<div class="section"><h2>Résultats du tour</h2><span class="petit">${esc(V2.dateCourte(r.jour))}</span></div>
+    ${mien ? `<div class="chiffres" style="margin-bottom:10px"><div class="chiffre"><b>${mien.rang}<small>/${n}</small></b><span>classement de ${esc(moi.prenom || nomJ(moi))}</span></div>
+      <div class="chiffre"><b>${mien.v}–${mien.d}</b><span>victoires–défaites</span></div><div class="chiffre"><b>${pm(mien.points)}</b><span>points du jour</span></div></div>` : ""}
+    <div class="liste classement">${r.classement.map(ligne).join("")}</div>
+    <div class="liste" style="margin-top:10px">${r.classement.map((c) => { const j = js[c.licence] || {}, x = r.joueurs[c.licence];
+      return `<details class="parties"${moi && c.licence === moi.licence ? " open" : ""}><summary><b>${esc(nomJ(j))}</b> · ${x.v} V, ${x.d} D · ${pm(x.points)}</summary>
+        <ul>${x.parties.map(partie).join("")}</ul></details>`; }).join("")}</div>
+    <p class="petit">Classement indicatif : victoires, puis la partie entre deux joueurs à égalité, puis les points gagnés. La place
+      officielle (montées, descentes) vient du tableau final du tour.${r.sans_resultat.length ? ` ${r.sans_resultat.length} joueur(s) sans partie lue ce jour-là.` : ""}</p>`;
+}
+
+function poule(p) {
+  V2.titre(p.titre, p.competition);
+  const moi = reference(p), lieu = p.lieu ? encodeURIComponent(p.lieu) : "";
+  const tries = parVirt(p.joueurs);
+  return `<section class="carte heros apparait"><span class="puce comp jeunes">${esc(p.competition)}</span>
+      <h2 style="margin:10px 0 4px;font-size:1.3rem">${esc(p.titre)}</h2>
+      <p style="margin:0">${p.date ? esc(V2.dateLongue(p.date)) + (Math.abs(V2.ecart(p.date)) < 14 ? " · <b>" + esc(V2.relatif(p.date)) + "</b>" : "") : "date à préciser"}</p>
+      ${p.horaire ? `<p class="petit" style="margin:4px 0 0">${esc(p.horaire)}</p>` : ""}
+      ${p.lieu ? `<p class="petit" style="margin:4px 0 10px">${esc(p.lieu)}</p><div class="boutons"><a class="bouton" target="_blank" rel="noopener"
+        href="https://www.google.com/maps/dir/?api=1&destination=${lieu}">${svg("carte")} Itinéraire</a></div>` : ""}</section>`
+    + resultats(p, moi)
+    + `<div class="section"><h2>${p.titre.includes("qualifiées") ? "Les qualifiées" : "La poule"}</h2><span class="petit">de la plus forte à la plus faible (points virtuels)</span></div>
+      <div class="liste">${tries.map((j, i) => `<div class="${j.vaires ? "moi" : ""}" style="display:grid;grid-template-columns:24px 1fr auto;gap:8px">
+        <span class="petit">${i + 1}</span><span style="min-width:0"><b>${esc(nomJ(j))}</b> ${moi ? niveau(j, moi) : ""}
+          <span class="petit" style="display:block">${esc(V2.joli(j.club || ""))}${j.cat ? " · " + esc(j.cat) : ""} · phase ${j.forme ? `${j.forme.v}/${j.forme.v + j.forme.d} ${pm(j.forme.points)}` : "non lue"}</span></span>
+        <span style="text-align:right"><b>${V2.nombre(virt(j))}</b><span class="petit" style="display:block">${off(j) ?? ""}</span></span></div>`).join("")}</div>
+      <p class="petit">${moi ? `Niveaux par rapport à ${esc(nomJ(moi))} : plus fort (50 points virtuels de plus), à surveiller (moins de 50 points d'écart, ou en grande forme), à sa portée.` : ""}</p>
+      <div class="liste"><a href="../../indivs/">${svg("page")}<span class="grow nom">Page Individuels du site actuel</span></a></div>`;
+}
+
+V2.demarrer({ titre: "Individuels" }, async () => {
+  const m = $("#contenu");
+  m.innerHTML = V2.squelettes(4);
+  const d = await V2.donnees("indivs");
+  const afficher = () => {
+    const p = d.poules.find((x) => x.id === decodeURIComponent(location.hash.slice(1)));
+    m.innerHTML = p ? poule(p) : liste(d);
+    window.scrollTo(0, 0);
+  };
+  window.addEventListener("hashchange", afficher);
+  afficher();
+});
+</script>
+</body>
+</html>

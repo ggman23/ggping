@@ -1,7 +1,8 @@
 /* CVTT Vaires, version 2 : service worker. Toujours le réseau d'abord (pages et données à jour) ; sans
    réseau (salle mal couverte), la dernière version gardée. Les données restent chiffrées dans le cache. */
 const CACHE = "cvtt-v2-__VERSION__";
-const COQUILLE = ["./", "commun.css", "commun.js", "equipes/", "rencontre/", "joueurs/", "agenda/", "club/", "manifest.webmanifest", "icones/icone-192.png"];
+const COQUILLE = ["./", "commun.css", "commun.js", "equipes/", "rencontre/", "joueurs/", "agenda/", "club/", "indivs/", "77/", "tournois/",
+                  "manifest.webmanifest", "icones/icone-192.png"];
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => Promise.allSettled(COQUILLE.map((u) => c.add(u)))).then(() => self.skipWaiting()));
 });

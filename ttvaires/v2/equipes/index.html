@@ -38,7 +38,7 @@ function carteEquipe(t) {
 function liste(eq) {
   V2.titre("Équipes", `${eq.length} équipes engagées`);
   const parComp = Object.keys(COMPET).map((c) => [c, eq.filter((t) => t.comp === c)]).filter(([, l]) => l.length);
-  return parComp.map(([c, l]) => `<div class="section"><h2>${esc(COMPET[c].nom)}</h2></div><div class="pile">${l.map(carteEquipe).join("")}</div>`).join("")
+  return V2.sousNav("equipes", "vaires") + parComp.map(([c, l]) => `<div class="section"><h2>${esc(COMPET[c].nom)}</h2></div><div class="pile">${l.map(carteEquipe).join("")}</div>`).join("")
     + `<p class="petit" style="margin-top:20px">Touche une équipe : sa poule, son calendrier, ses résultats et ses joueurs habituels.</p>`;
 }
 

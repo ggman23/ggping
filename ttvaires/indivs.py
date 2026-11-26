@@ -10,6 +10,13 @@ compétitions jouées (même calcul que la forme des adversaires en championnat,
 
 La page est publiée chiffrée avec le mot de passe du club, à son adresse : /indivs/ (comme /club/).
 
+Une fois le tour joué (date de la poule passée), les **résultats du tour** : pour chaque joueur de la poule,
+ses parties de critérium ce jour-là (adversaire, victoire ou défaite, manches, points gagnés ou perdus),
+tirées des parties déjà lues pour la forme (aucune requête de plus), et le **classement de la poule** :
+victoires, puis, entre deux joueurs à égalité qui se sont rencontrés, le vainqueur de leur partie, puis les
+points gagnés. C'est un classement indicatif : la place officielle du groupe (montées, descentes) vient du
+tableau final du tour, publié par le comité.
+
 Remplacer les poules (nouveau tour) : écrire un fichier JSON de même forme (voir exemple() ou
 `exporter`), puis, avec le mot de passe du club dans MOT_DE_PASSE_CLUB (sinon il est demandé) :
 
@@ -28,7 +35,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from . import fftt, publier
-from .virtuel import forme_joueurs
+from .virtuel import famille_competition, forme_joueurs
 
 RACINE = Path(__file__).resolve().parent.parent
 FICHIER = RACINE / "ressources" / "indivs.json.chiffre"
@@ -101,6 +108,64 @@ def de_vaires(joueur):
     return _simple(joueur.get("club")) == _simple(CLUB_VAIRES) or joueur.get("numero_club") == "08770250"
 
 
+def resultats_du_tour(poule, parties, aujourdhui):
+    """Résultats du tour d'une poule (None avant le tour ou sans aucune partie lue) : pour chaque joueur, ses
+    parties de critérium du jour, et le classement de la poule (voir le début du module)."""
+    jour = poule.get("date")
+    if not jour or jour > aujourdhui.isoformat():
+        return None
+    membres = {j["licence"]: j for j in poule["joueurs"] if j.get("licence")}
+    joueurs = {}
+    for lic in membres:
+        lignes = [l for l in parties.get(lic) or [] if l["date"] == jour
+                  and famille_competition(l["competition"], l["championnat"]) == "Critérium fédéral"]
+        if not lignes:
+            continue
+        joueurs[lic] = {
+            "v": sum(l["victoire"] for l in lignes), "d": sum(not l["victoire"] for l in lignes),
+            "points": round(sum(l["points"] for l in lignes), 1),
+            "parties": [{"adv_licence": l["adv_licence"], "adversaire": l["adversaire"], "adv_points": l["adv_points"],
+                         "victoire": l["victoire"], "points": round(l["points"], 1), "manches": l.get("manches"),
+                         "dans_la_poule": l["adv_licence"] in membres} for l in lignes]}
+    if not joueurs:
+        return None
+    return {"jour": jour, "joueurs": joueurs, "classement": classement_du_tour(joueurs, membres),
+            "sans_resultat": sorted(set(membres) - set(joueurs))}
+
+
+def classement_du_tour(joueurs, membres=None):
+    """[{licence, rang, v, d, points, departage}] : victoires, puis le vainqueur de la partie entre deux joueurs à
+    égalité qui se sont rencontrés, puis les points gagnés, puis les points officiels ; ex aequo à égalité complète."""
+    membres = membres or {}
+
+    def gagne_contre(a, b):
+        for p in joueurs[a]["parties"]:
+            if p["adv_licence"] == b:
+                return p["victoire"]
+        return None
+
+    groupes = {}
+    for lic, r in joueurs.items():
+        groupes.setdefault(r["v"], []).append(lic)
+    ordre = []
+    for v in sorted(groupes, reverse=True):
+        g = sorted(groupes[v], key=lambda l: (-joueurs[l]["points"], -(membres.get(l, {}).get("points") or 0), l))
+        departage = {l: "points gagnés" if len(g) > 1 else None for l in g}
+        if len(g) == 2 and gagne_contre(*g) is not None:
+            if gagne_contre(g[1], g[0]):
+                g.reverse()
+            departage = {l: "partie entre eux" for l in g}
+        ordre += [(l, departage[l]) for l in g]
+    res, precedent = [], None
+    for i, (lic, departage) in enumerate(ordre):
+        r = joueurs[lic]
+        cle = (r["v"], r["points"]) if departage != "partie entre eux" else None
+        rang = precedent[1] if precedent and cle is not None and precedent[0] == cle else i + 1
+        res.append({"licence": lic, "rang": rang, "v": r["v"], "d": r["d"], "points": r["points"], "departage": departage})
+        precedent = (cle, rang)
+    return res
+
+
 def recuperer(client, poules, aujourdhui=None):
     """Données de la page : chaque poule où joue un joueur de Vaires, avec la forme de chaque joueur."""
     aujourdhui = aujourdhui or date.today()
@@ -109,7 +174,8 @@ def recuperer(client, poules, aujourdhui=None):
     retenues = [p for p in poules["poules"] if any(de_vaires(j) for j in p["joueurs"])]
     licences = sorted({j["licence"] for p in retenues for j in p["joueurs"] if j.get("licence")})
     print(f"Individuels : {len(retenues)} poules avec un joueur de Vaires, {len(licences)} joueurs (API FFTT)", flush=True)
-    formes = forme_joueurs(client, licences, {}, debut, fin) if licences else {}
+    parties = {}  # parties retenues de chaque joueur : résultats des tours déjà joués
+    formes = forme_joueurs(client, licences, {}, debut, fin, lignes=parties) if licences else {}
     sortie, douteuses = [], []
     for p in retenues:
         joueurs = []
@@ -119,9 +185,14 @@ def recuperer(client, poules, aujourdhui=None):
             if coherent is False:
                 douteuses.append(f"{j['nom']} {j['prenom']} ({j['licence']} : {f['nom']} pour l'API)")
             joueurs.append({**j, "vaires": de_vaires(j), "forme": f, "licence_douteuse": coherent is False})
-        sortie.append({**{k: v for k, v in p.items() if k != "joueurs"}, "joueurs": joueurs})
+        tour = resultats_du_tour(p, parties, aujourdhui)
+        sortie.append({**{k: v for k, v in p.items() if k != "joueurs"}, "joueurs": joueurs, **({"resultats": tour} if tour else {})})
     for d in douteuses:
         print(f"  ! licence à vérifier : {d}", flush=True)
+    avec = [p for p in sortie if p.get("resultats")]
+    if avec:
+        print(f"Individuels : résultats du tour pour {len(avec)} poule(s), "
+              f"{sum(len(p['resultats']['joueurs']) for p in avec)} joueurs avec des parties", flush=True)
     muets = sum(1 for lic in licences if formes.get(lic) is None)
     return {
         "genere_le": datetime.now().isoformat(timespec="minutes"), "debut": debut, "maj_poules": poules.get("maj"),
@@ -138,6 +209,9 @@ def resume(donnees):
         texte += f", {c['sans_reponse']} sans partie lue"
     if c["licences_douteuses"]:
         texte += f", {len(c['licences_douteuses'])} licence(s) à vérifier"
+    tours = sum(1 for p in donnees["poules"] if p.get("resultats"))
+    if tours:
+        texte += f", résultats du tour : {tours} poule(s)"
     return texte
 
 

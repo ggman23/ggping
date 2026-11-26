@@ -22,11 +22,27 @@
 "use strict";
 const { $, esc, svg, COMPET } = V2;
 const GROUPES_UNE = ["récapitulatif", "programme", "paris", "classements"];
+// Individuels : les résultats du dernier tour (trois semaines) et le prochain tour des joueurs de Vaires
+function individuels(d) {
+  if (!d) return "";
+  const nom = (j) => `${j.prenom || ""} ${j.nom || ""}`.trim();
+  const recents = d.poules.filter((p) => p.resultats && V2.ecart(p.date) >= -21);
+  const lignes = recents.flatMap((p) => p.joueurs.filter((j) => j.vaires).map((j) => ({ p, j, c: p.resultats.classement.find((x) => x.licence === j.licence) })))
+    .filter((x) => x.c).sort((a, b) => a.c.rang - b.c.rang);
+  const prochain = d.poules.filter((p) => p.date && p.date >= V2.AUJ).sort((a, b) => a.date.localeCompare(b.date))[0];
+  if (!lignes.length && !prochain) return "";
+  return `<div class="section"><h2>Individuels</h2><a class="lien" href="indivs/">Toutes les poules</a></div><div class="liste">
+    ${lignes.map(({ p, j, c }) => `<a href="indivs/#${encodeURIComponent(p.id)}"><span class="grow"><span class="nom" style="display:block">${esc(nom(j))}</span>
+      <span class="petit">${esc(p.titre)} · ${esc(V2.dateCourte(p.date))}</span></span>
+      <span style="text-align:right"><b>${c.rang}</b><small>/${p.resultats.classement.length}</small><br><span class="petit">${c.v}–${c.d} ${V2.signe(c.points)}</span></span></a>`).join("")}
+    ${prochain ? `<a href="indivs/#${encodeURIComponent(prochain.id)}">${svg("agenda")}<span class="grow"><span class="nom" style="display:block">Prochain tour : ${esc(V2.relatif(prochain.date))}</span>
+      <span class="petit">${esc(prochain.competition)} · ${esc(V2.dateCourte(prochain.date))}</span></span></a>` : ""}</div>`;
+}
 
 V2.demarrer({ titre: "CVTT Vaires", sous: "Tennis de table · Vaires-sur-Marne" }, async () => {
   const m = $("#contenu");
   m.innerHTML = V2.squelettes(4);
-  const [eq, js, club] = await Promise.all([V2.equipes(), V2.joueurs().catch(() => []), V2.facultatif("club")]);
+  const [eq, js, club, indivs] = await Promise.all([V2.equipes(), V2.joueurs().catch(() => []), V2.facultatif("club"), V2.facultatif("indivs")]);
   const prochaines = eq.map((t) => t.rencontres.find(V2.aVenir)).filter(Boolean).sort((a, b) => a.date.localeCompare(b.date));
   const bientot = prochaines.filter((r) => V2.ecart(r.date) <= 7);
   const aMontrer = bientot.length ? bientot : prochaines.slice(0, 4);
@@ -76,6 +92,7 @@ V2.demarrer({ titre: "CVTT Vaires", sous: "Tennis de table · Vaires-sur-Marne" 
     + `<div class="section"><h2>Mon espace</h2></div>${monEspace}`
     + (derniers.length ? `<div class="section"><h2>Derniers résultats</h2><a class="lien" href="equipes/">Toutes les équipes</a></div>
        <div class="pile">${derniers.map((r) => V2.carteMatch(r)).join("")}</div>` : "")
+    + individuels(indivs)
     + (une.length ? `<div class="section"><h2>À partager</h2><a class="lien" href="club/#images">Toutes les images</a></div>
        <div class="grille">${une.map((d) => `<a class="carte" href="club/#doc/${encodeURIComponent(d.fichier)}" style="display:flex;gap:12px;align-items:center">
          <span class="puce comp paris" style="padding:8px">${svg("image")}</span><span><b>${esc(d.titre)}</b><br><span class="petit">${esc(d.date ? V2.dateCourte(d.date) : "")}</span></span>

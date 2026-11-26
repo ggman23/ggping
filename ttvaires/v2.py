@@ -11,7 +11,10 @@ Organisation (par question plutôt que par source de données) :
 - /v2/equipes/    toutes les équipes (France hommes et femmes, Paris, jeunes) : poule, calendrier, joueurs ;
 - /v2/rencontre/  fiche d'une rencontre : salle et itinéraire, compo probable adverse, pronostic, feuille ;
 - /v2/joueurs/    joueurs de Vaires : recherche, fiche, objectif de points ;
-- /v2/agenda/     tout le calendrier (Vaires et comité), export vers l'agenda du téléphone ;
+- /v2/agenda/     tout le calendrier (Vaires et comité), en liste ou en grille du mois (#calendrier), export vers
+                  l'agenda du téléphone ; /v2/indivs/ (poules, résultats du tour, classement de la poule) et
+                  /v2/tournois/ (PingRadar) dans le même onglet ;
+- /v2/77/         clubs du 77 et tous leurs joueurs (onglets Équipes et Joueurs) ;
 - /v2/club/       documents, images, archives, rubriques, autres espaces, réglages ; les pages détaillées
                   du site actuel s'y ouvrent dans le cadre de la v2.
 
@@ -35,7 +38,7 @@ STATIQUE = Path(__file__).with_name("v2")
 SOURCES = {"france": "adversaires.html", "effectif": "effectif.html", "virtuel": "classement_virtuel.html",
            "fiches": "fiches.html", "progression": "progression.html", "resultats": "resultats.html",
            "rencontres": "rencontres.html", "classements": "classements.html", "paris": "paris.html",
-           "jeunes": "jeunes.html", "indivs": "indivs.html"}
+           "jeunes": "jeunes.html", "indivs": "indivs.html", "departement": "77.html"}
 CHIFFRE = re.compile(r'<script id="chiffre" type="text/plain">([^<]+)</script>')
 DONNEES_SCRIPT = re.compile(r'<script id="donnees" type="application/json">(.*?)</script>', re.S)
 VERIF = b"cvtt-vaires-club"  # le même témoin que /club/ (netlify.VERIF_CLUB)

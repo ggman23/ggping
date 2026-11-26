@@ -67,6 +67,11 @@ tr.vaires td:nth-child(2) b::after { content: " · Vaires"; color: var(--accent)
 .details { display: flex; flex-wrap: wrap; gap: 4px; }
 .note { background: var(--att-fond); color: var(--att); border-radius: 8px; padding: 8px 10px; font-size: 13.5px; margin: 10px 0 0; }
 .legende { font-size: 13px; color: var(--doux); margin: 8px 0 0; }
+details.parties { border-top: 1px solid var(--bord); padding: 6px 2px; }
+details.parties summary { cursor: pointer; font-size: 14px; }
+details.parties ul { margin: 6px 0 2px; padding-left: 18px; font-size: 13.5px; }
+details.parties li { margin: 2px 0; }
+.manches { color: var(--doux); font-size: 12px; }
 #retour { display: none; }
 @media (max-width: 860px) {
   .corps { grid-template-columns: 1fr; }
@@ -203,12 +208,14 @@ function vueEnsemble() {
     <p class="infos">Poules des joueurs de Vaires et forme de leurs adversaires depuis le début de la phase (toutes compétitions).
       Choisir un joueur dans la liste.</p>
     ${SECTIONS.map((s) => `<div class="carte"><h2>${esc(s.titre)}</h2><div class="defil"><table>
-      <thead><tr><th>Joueur</th><th>Poule</th><th>Date</th><th class="num">Rang probable</th><th>Adversaires</th></tr></thead><tbody>
-      ${s.entrees.map((e) => { const b = bilan(e); return `<tr>
+      <thead><tr><th>Joueur</th><th>Poule</th><th>Date</th><th class="num">Rang probable</th><th>Tour</th><th>Adversaires</th></tr></thead><tbody>
+      ${s.entrees.map((e) => { const b = bilan(e), t = rangTour(e.p, e.j); return `<tr>
         <td class="nom"><a href="#j/${encodeURIComponent(e.cle)}"><b>${nomComplet(e.j)}</b></a><span class="club">${formeTxt(e.j.forme)}</span></td>
         <td>${esc(e.p.titre)}<span class="petit"><br>${esc(e.p.competition)}</span></td>
         <td>${dateCourte(e.p.date)}</td>
         <td class="num">${b.rang}<span class="petit">/${b.total}</span></td>
+        <td>${t ? `<b>${t.rang}</b><span class="petit">/${e.p.resultats.classement.length}</span> · ${t.v}–${t.d} <b class="${t.points > 0 ? "plus" : t.points < 0 ? "moins" : ""}">${signe(t.points)}</b>`
+          : e.p.date && e.p.date <= new Date().toISOString().slice(0, 10) ? '<span class="petit">pas lu</span>' : '<span class="petit">à venir</span>'}</td>
         <td><span class="badge ko">${b.n.ko} plus forts</span> <span class="badge att">${b.n.att} à surveiller</span></td></tr>`; }).join("")}
       </tbody></table></div></div>`).join("")}
     ${notes()}</div>`;
@@ -243,6 +250,7 @@ function vueJoueur(e) {
     </div>
     <a class="bouton" href="${lienImage(p)}">Image de la poule à partager (espace club)</a>
     ${p.titre.includes("qualifiées") ? '<p class="note">Liste des qualifiées : les poules sont faites sur place.</p>' : ""}
+    ${resultatsTour(p, moi)}
     <div class="carte"><h2>${p.titre.includes("qualifiées") ? "Les qualifiées" : "La poule"}, de la plus forte à la plus faible</h2>
       <div class="defil"><table>
         <thead><tr><th class="num">#</th><th>Joueur</th><th class="num" title="Points virtuels ; en petit, points officiels">Virt.</th>
@@ -251,6 +259,44 @@ function vueJoueur(e) {
           <th>Compétitions</th></tr></thead>
         <tbody>${lignes}</tbody></table></div>
       ${notes(true)}</div></div>`;
+}
+
+/* Résultats du tour (date de la poule passée) : classement indicatif de la poule (victoires, puis la partie entre
+   deux joueurs à égalité, puis les points gagnés : voir indivs.py) et parties de chacun ce jour-là. */
+const parLicence = (p) => Object.fromEntries(p.joueurs.map((j) => [j.licence, j]));
+const rangTour = (p, j) => (p.resultats && p.resultats.classement.find((c) => c.licence === j.licence)) || null;
+function partieTxt(p, x) {
+  const adv = parLicence(p)[x.adv_licence];
+  const manches = (x.manches || []).map(([a, b]) => `${a}-${b}`).join(" ");
+  return `<li><span class="badge ${x.victoire ? "ok" : "ko"}">${x.victoire ? "V" : "D"}</span> contre ${adv ? nomComplet(adv) : esc(x.adversaire)}
+    <span class="petit">(${x.adv_points})</span> <b class="${x.points > 0 ? "plus" : x.points < 0 ? "moins" : ""}">${signe(x.points)}</b>
+    ${manches ? `<span class="manches">· ${esc(manches)}</span>` : ""}${x.dans_la_poule ? "" : ' <span class="petit">(hors liste)</span>'}</li>`;
+}
+function resultatsTour(p, moi) {
+  const r = p.resultats;
+  if (!r) return "";
+  const js = parLicence(p), mien = rangTour(p, moi), n = r.classement.length;
+  const lignes = r.classement.map((c) => { const j = js[c.licence] || {}; return `<tr class="${j === moi ? "moi" : j.vaires ? "vaires" : ""}">
+      <td class="num">${c.rang}${c.departage === "partie entre eux" ? ' <span class="petit" title="Départagés par leur partie">≡</span>' : ""}</td>
+      <td class="nom"><b>${nomComplet(j)}</b><span class="club">${esc(j.club || "")}</span></td>
+      <td class="num">${officiels(j) ?? "—"}</td><td class="num">${c.v}–${c.d}</td>
+      <td class="num"><b class="${c.points > 0 ? "plus" : c.points < 0 ? "moins" : ""}">${signe(c.points)}</b></td></tr>`; }).join("");
+  const details = r.classement.map((c) => { const j = js[c.licence] || {}, x = r.joueurs[c.licence];
+    return `<details class="parties"${j === moi ? " open" : ""}><summary><b>${nomComplet(j)}</b> · ${x.v} V, ${x.d} D ·
+      <b class="${x.points > 0 ? "plus" : x.points < 0 ? "moins" : ""}">${signe(x.points)}</b></summary><ul>${x.parties.map((y) => partieTxt(p, y)).join("")}</ul></details>`; }).join("");
+  return `<div class="carte"><h2>Résultats du tour (${dateCourte(r.jour)})</h2>
+    ${mien ? `<div class="chiffres"><span class="chiffre">Classement <b>${mien.rang}</b>/${n}</span>
+      <span class="chiffre ok">Victoires <b>${mien.v}</b></span><span class="chiffre ko">Défaites <b>${mien.d}</b></span>
+      <span class="chiffre">Points <b class="${mien.points > 0 ? "plus" : mien.points < 0 ? "moins" : ""}">${signe(mien.points)}</b></span></div>`
+      : '<p class="note">Pas de partie lue pour lui ce jour-là (absent, ou parties pas encore saisies par le juge-arbitre).</p>'}
+    <div class="defil"><table><thead><tr><th class="num">#</th><th>Joueur</th><th class="num" title="Points officiels de la convocation">Pts</th>
+      <th class="num">V–D</th><th class="num" title="Points gagnés ou perdus ce jour-là">±</th></tr></thead><tbody>${lignes}</tbody></table></div>
+    <h3 style="font-size:15px;margin:14px 0 4px">Les parties de chacun</h3>${details}
+    <p class="legende">Classement indicatif : victoires, puis, entre deux joueurs à égalité qui se sont rencontrés, le vainqueur
+      de leur partie, puis les points gagnés. La place officielle du groupe (montées, descentes) vient du tableau final du tour,
+      publié par le comité. Points : gagnés ou perdus sur chaque partie (coefficient du critérium).
+      ${r.sans_resultat.length ? `${r.sans_resultat.length} joueur${r.sans_resultat.length > 1 ? "s" : ""} de la liste sans partie lue ce jour-là
+        (absents, ou résultats pas encore saisis).` : ""}</p></div>`;
 }
 
 function notes(courtes) {

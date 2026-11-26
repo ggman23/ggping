@@ -89,7 +89,7 @@ def test_pages_de_la_v2_coherentes():
     """Chaque page charge le style et le code communs, se situe (racine, rubrique) et garde le repère de
     l'application Android ; les cinq onglets mènent à des pages qui existent."""
     pages = sorted(v2.STATIQUE.rglob("index.html"))
-    assert {p.parent.name for p in pages} == {"v2", "equipes", "rencontre", "joueurs", "agenda", "club"}
+    assert {p.parent.name for p in pages} == {"v2", "equipes", "rencontre", "joueurs", "agenda", "club", "indivs", "77", "tournois"}
     for p in pages:
         html = p.read_text(encoding="utf-8")
         profondeur = len(p.relative_to(v2.STATIQUE).parts) - 1

@@ -215,6 +215,16 @@ const V2 = (() => {
   const depuis = () => Number(lire(R.precedente) || Date.now());
   const estNouveau = (date) => date && new Date(date).getTime() > depuis();
 
+  /* ---------- Sous-rubriques de chaque onglet (barre de segments en haut de la page) ---------- */
+  const SOUS = {
+    agenda: [["liste", "Agenda", "agenda/"], ["calendrier", "Calendrier", "agenda/#calendrier"], ["indivs", "Individuels", "indivs/"],
+             ["tournois", "Tournois", "tournois/"]],
+    equipes: [["vaires", "Équipes de Vaires", "equipes/"], ["clubs", "Clubs du 77", "77/"]],
+    joueurs: [["vaires", "Joueurs de Vaires", "joueurs/"], ["77", "Tous les joueurs du 77", "77/#joueurs"]],
+  };
+  const sousNav = (rubrique, actif) => `<nav class="segments sous" aria-label="Sous-rubriques">${SOUS[rubrique].map(([c, n, l]) =>
+    `<a href="${RACINE}${l}" class="${c === actif ? "actif" : ""}"${c === actif ? ' aria-current="page"' : ""}>${esc(n)}</a>`).join("")}</nav>`;
+
   /* ---------- Cadre de page : bandeau d'essai, barre du haut, onglets ---------- */
   const ONGLETS = [["accueil", "Accueil", ""], ["equipes", "Équipes", "equipes/"], ["joueurs", "Joueurs", "joueurs/"],
                    ["agenda", "Agenda", "agenda/"], ["club", "Club", "club/"]];
@@ -260,7 +270,7 @@ const V2 = (() => {
     const q = $("#v2-q", f.racine), res = $("#v2-res", f.racine);
     q.focus();
     res.innerHTML = '<p class="petit">Chargement…</p>';
-    const [eq, js, club] = await Promise.all([equipes(), joueurs(), facultatif("club")]);
+    const [eq, js, club, dep] = await Promise.all([equipes(), joueurs(), facultatif("club"), facultatif("departement")]);
     const index = [];
     for (const j of js) index.push({ t: j.nomComplet, s: `Joueur de Vaires · ${nombre(j.virtuels ?? j.officiels)} pts`, l: `${RACINE}joueurs/#${j.id}`, k: "joueurs" });
     for (const t of eq) index.push({ t: t.nom, s: `${COMPET[t.comp].nom} · ${t.division || ""}`, l: `${RACINE}equipes/#${t.cle}`, k: "equipes" });
@@ -270,6 +280,10 @@ const V2 = (() => {
       index.push({ t: r.adversaire, s: `Adversaire de ${r.equipe.nom} (${COMPET[r.equipe.comp].court}) · J${r.journee} ${dateCourte(r.date)}`, l: lienRencontre(r), k: "equipes" });
     }
     for (const d of club?.documents || []) if (d.type !== "image") index.push({ t: d.titre, s: "Page du site", l: `${RACINE}club/#doc/${encodeURIComponent(d.fichier)}`, k: "club" });
+    for (const c of dep?.clubs || []) {  // clubs et joueurs du 77
+      index.push({ t: joli(c.nom), s: `Club du 77 · ${c.joueurs.filter((j) => !j[3]).length} joueurs`, l: `${RACINE}77/#club/${c.numero}`, k: "equipes" });
+      for (const j of c.joueurs) if (!j[3] && !c.vaires) index.push({ t: joli(j[4]), s: `${joli(c.nom)} · ${j[0]} pts`, l: `${RACINE}77/#joueurs/${encodeURIComponent(j[4])}`, k: "joueurs" });
+    }
     const afficher = () => {
       const m = sansAccent(q.value.trim());
       if (m.length < 2) { res.innerHTML = '<p class="petit">Tape au moins deux lettres.</p>'; return; }
@@ -377,5 +391,5 @@ const V2 = (() => {
 
   return { RACINE, PAGE, MAJ, VERSION, AUJ, $, esc, lire, ecrire, R, svg, COMPET, joli, sansAccent, iso, enDate, ecart, dateCourte, dateLongue, relatif, heure,
            donnees, facultatif, fichierClub, equipes, rencontres, aVenir, lienRencontre, salle, carteMatch, courbe, signe, nombre, squelettes,
-           joueurs, moi, estNouveau, depuis, titre, fenetre, demarrer, ics, admin: () => !!lire(R.admin) };
+           joueurs, moi, estNouveau, depuis, titre, fenetre, demarrer, ics, sousNav, admin: () => !!lire(R.admin) };
 })();

@@ -109,3 +109,45 @@ def test_une_image_par_poule_sans_nom_dans_les_titres(tmp_path):
     moi, fort = donnees["poules"][0]["joueurs"][:2]
     assert indivs.niveau(fort, moi) == "plus fort" and indivs.niveau(moi, fort) == "à sa portée"
     assert [x["nom"] for x in indivs.par_virtuels(donnees["poules"][0]["joueurs"])] == ["FORT", "DUPOND", "FAIBLE"]
+
+
+def test_resultats_du_tour_et_classement_de_la_poule():
+    """Tour joué : les parties de critérium du jour de chaque joueur de la poule (déjà lues pour la forme, aucune
+    requête de plus), V/D et points gagnés ; classement : victoires, puis la partie entre deux joueurs à égalité,
+    puis les points. Une partie de championnat le même jour ne compte pas ; un adversaire hors liste, si."""
+    from datetime import date
+
+    crit = {"id": 7, "name": "FED_Critérium Fédéral"}
+    champ = {"id": 1, "name": "Championnat par équipes M"}
+
+    def partie(id_, dom, ext, gagnant="home", jour="2026-11-15", contest=crit):
+        return {"id": id_, "date": jour + "T00:00:00", "winner": gagnant, "doubleOpposition": False, "contest": contest,
+                "homePlayer": {"identifier": dom[0], "points": dom[1], "person": {"familyName": dom[2]}},
+                "awayPlayer": {"identifier": ext[0], "points": ext[1], "person": {"familyName": ext[2]}}}
+
+    v, f, e, x = ("1", 1000, "VAIRIEN"), ("2", 1200, "FORT"), ("3", 800, "ERREUR"), ("88", 900, "INVITE")
+    g11, g12, g13 = partie(11, v, e), partie(12, f, e), partie(13, v, f)          # 1 bat 3 ; 2 bat 3 ; 1 bat 2
+    g14 = partie(14, f, x)                                                         # 2 bat un joueur hors liste
+    g15 = partie(15, v, x, "away", contest=champ)                                  # championnat : hors tour
+    g16 = partie(16, v, f, "away", jour="2026-10-10")                              # autre jour : hors tour
+    pages = {url_parties("1"): json.dumps({"hydra:member": [g11, g13, g15, g16]}),
+             url_parties("2"): json.dumps({"hydra:member": [g12, g13, g14, g16]}),
+             url_parties("3"): json.dumps({"hydra:member": [g11, g12]}),
+             "https://apiv2.fftt.com/api/contests/7": json.dumps({"name": crit["name"], "coefficient": 1.5}),
+             "https://apiv2.fftt.com/api/contests/1": json.dumps({"name": champ["name"], "coefficient": 1})}
+    d = indivs.recuperer(FauxClient(pages), _poules(), aujourdhui=date(2026, 11, 20))
+    r = d["poules"][0]["resultats"]
+    assert r["jour"] == "2026-11-15" and r["sans_resultat"] == []
+    assert {k: (x["v"], x["d"]) for k, x in r["joueurs"].items()} == {"1": (2, 0), "2": (2, 1), "3": (0, 2)}
+    assert [(c["licence"], c["rang"], c["departage"]) for c in r["classement"]] == [
+        ("1", 1, "partie entre eux"), ("2", 2, "partie entre eux"), ("3", 3, None)]
+    hors = [p for p in r["joueurs"]["2"]["parties"] if not p["dans_la_poule"]]
+    assert [p["adv_licence"] for p in hors] == ["88"] and r["joueurs"]["1"]["points"] > 0 > r["joueurs"]["3"]["points"]
+    assert "résultats du tour : 1 poule(s)" in indivs.resume(d)
+    # Avant le tour : pas de résultats
+    assert "resultats" not in indivs.recuperer(FauxClient(pages), _poules(), aujourdhui=date(2026, 11, 14))["poules"][0]
+    # Égalité à trois (cycle) : départagés par les points gagnés
+    cycle = {"a": {"v": 1, "d": 1, "points": 2.0, "parties": [{"adv_licence": "b", "victoire": True}]},
+             "b": {"v": 1, "d": 1, "points": 5.0, "parties": [{"adv_licence": "c", "victoire": True}]},
+             "c": {"v": 1, "d": 1, "points": -1.0, "parties": [{"adv_licence": "a", "victoire": True}]}}
+    assert [(c["licence"], c["rang"]) for c in indivs.classement_du_tour(cycle)] == [("b", 1), ("a", 2), ("c", 3)]

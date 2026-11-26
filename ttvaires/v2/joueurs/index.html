@@ -42,7 +42,7 @@ function liste(js) {
   l = l.slice().sort(tri === "nom" ? (a, b) => (a.nom || "").localeCompare(b.nom || "", "fr")
     : tri === "progression" ? (a, b) => (b.gain ?? -1e9) - (a.gain ?? -1e9) : () => 0);
   const seg = (nom, val, actuelle, quoi) => `<button type="button" data-${quoi}="${val}" class="${val === actuelle ? "actif" : ""}">${nom}</button>`;
-  return `<input class="champ" type="search" id="q" placeholder="Chercher un joueur…" value="${esc(texte)}" autocomplete="off">
+  return V2.sousNav("joueurs", "vaires") + `<input class="champ" type="search" id="q" placeholder="Chercher un joueur…" value="${esc(texte)}" autocomplete="off">
     <div class="segments" style="margin-top:10px">${seg("Points virtuels", "points", tri, "tri")}${seg("Progression", "progression", tri, "tri")}${seg("Nom", "nom", tri, "tri")}</div>
     <div class="segments">${seg("Tous", "tous", filtre, "filtre")}${seg("Femmes", "femmes", filtre, "filtre")}${seg("Jeunes", "jeunes", filtre, "filtre")}</div>
     <div class="liste" style="margin-top:6px">${l.map((j, i) => `<a class="ligne-j ${j.id === V2.moi() ? "moi" : ""}" href="#${esc(j.id)}">

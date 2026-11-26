@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="fr" data-racine="../" data-page="equipes">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="cvtt-cle" content="cvtt-vaires-cle-club">
+<meta name="theme-color" content="#0f2740">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CVTT Vaires">
+<title>Clubs du 77 · CVTT Vaires</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="../icones/icone-192.png">
+<link rel="apple-touch-icon" href="../icones/icone-180.png">
+<link rel="stylesheet" href="../commun.css?v=__VERSION__">
+<style>
+.lc > * { display: grid !important; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center; }
+.lc .rang { color: var(--doux); font-size: .82rem; text-align: right; }
+.lc .droite { text-align: right; font-weight: 750; }
+.lc .droite small { display: block; font-weight: 600; font-size: .74rem; color: var(--doux); }
+.lc .vaires { background: var(--accent-fond); }
+</style>
+</head>
+<body>
+<main id="contenu"></main>
+<script src="../commun.js?v=__VERSION__"></script>
+<script>
+"use strict";
+const { $, esc, svg } = V2;
+const JEUNES = ["P", "B", "M", "C", "J"];
+const lettre = (cat) => String(cat || "").charAt(0);
+const actifs = (c) => c.joueurs.filter((j) => !j[3]);  // sans les licences loisir
+const moyenne = (l) => l.length ? Math.round(l.reduce((a, b) => a + b, 0) / l.length) : null;
+function stats(c) {
+  const pts = actifs(c).map((j) => j[0]).filter(Boolean).sort((a, b) => b - a);
+  return { joueurs: actifs(c).length, loisirs: c.joueurs.length - actifs(c).length, top4: moyenne(pts.slice(0, 4)), top10: moyenne(pts.slice(0, 10)),
+           meilleur: pts[0] ?? null, mille: pts.filter((p) => p >= 1000).length, femmes: actifs(c).filter((j) => j[1] === "F").length };
+}
+let triClubs = "top4", texte = "", sexe = "T", jeunes = false, limite = 100;
+
+function clubs(d) {
+  V2.titre("Clubs du 77", `${d.clubs.length} clubs de Seine-et-Marne`);
+  const l = d.clubs.map((c) => ({ c, s: stats(c) })).sort(triClubs === "nom" ? (a, b) => a.c.nom.localeCompare(b.c.nom, "fr")
+    : triClubs === "joueurs" ? (a, b) => b.s.joueurs - a.s.joueurs : (a, b) => (b.s.top4 ?? 0) - (a.s.top4 ?? 0));
+  const seg = (nom, val) => `<button type="button" data-tri="${val}" class="${val === triClubs ? "actif" : ""}">${nom}</button>`;
+  return V2.sousNav("equipes", "clubs")
+    + `<div class="segments">${seg("Force (4 meilleurs)", "top4")}${seg("Joueurs", "joueurs")}${seg("Nom", "nom")}</div>
+    <div class="liste lc">${l.map(({ c, s }, i) => `<a href="#club/${c.numero}" class="${c.vaires ? "vaires" : ""}">
+      <span class="rang">${triClubs === "nom" ? "" : i + 1}</span>
+      <span style="min-width:0"><span class="nom" style="display:block">${esc(V2.joli(c.nom))}</span>
+        <span class="petit">${s.joueurs} joueurs · ${s.mille} à 1000+ · équipe la plus haute : ${esc(c.meilleur_niveau || "–")}</span></span>
+      <span class="droite">${triClubs === "joueurs" ? s.joueurs : s.top4 ?? "–"}<small>${triClubs === "joueurs" ? "joueurs" : "moy. 4 meilleurs"}</small></span></a>`).join("")}</div>
+    <p class="petit" style="margin-top:12px"><a href="#joueurs">Tous les joueurs du 77</a> · force : moyenne des points des 4 meilleurs joueurs (sans les loisirs).</p>`;
+}
+
+function club(d, c) {
+  const s = stats(c);
+  V2.titre(V2.joli(c.nom), `Club du 77${c.date_liste ? " · liste du " + V2.dateCourte(c.date_liste) : ""}`);
+  const js = c.joueurs.slice().sort((a, b) => b[0] - a[0]);
+  return `<section class="carte heros apparait"><h2 style="font-size:1.3rem">${esc(V2.joli(c.nom))}</h2>
+      <div class="chiffres" style="margin-top:12px">
+        <div class="chiffre"><b>${s.joueurs}</b><span>joueurs${s.loisirs ? ` (+${s.loisirs} loisirs)` : ""}</span></div>
+        <div class="chiffre"><b>${s.top4 ?? "–"}</b><span>moyenne des 4 meilleurs</span></div>
+        <div class="chiffre"><b>${s.meilleur ?? "–"}</b><span>meilleur joueur</span></div>
+        <div class="chiffre"><b>${s.mille}</b><span>joueurs à 1000 points ou plus</span></div>
+        <div class="chiffre"><b>${s.femmes}</b><span>joueuses</span></div></div></section>
+    <div class="section"><h2>Équipes</h2><span class="petit">force : moyenne des joueurs alignés</span></div>
+    <div class="liste lc">${(c.equipes || []).map((e) => `<div><span class="rang">${e.numero}</span>
+      <span style="min-width:0"><span class="nom" style="display:block">${esc(V2.joli(e.nom))}</span><span class="petit">${esc(e.division || "")}${e.feminin ? " · féminine" : ""}</span></span>
+      <span class="droite">${e.force ?? "–"}<small>${e.nb ? e.nb + " joueurs" : ""}</small></span></div>`).join("") || '<div class="petit">Aucune équipe.</div>'}</div>
+    <div class="section"><h2>Joueurs</h2><span class="petit">par points</span></div>
+    <div class="liste lc">${js.map((j, i) => `<div><span class="rang">${j[3] ? "" : i + 1}</span>
+      <span style="min-width:0"><span class="nom" style="display:block">${esc(V2.joli(j[4]))}</span>
+        <span class="petit">${esc(j[2] || "")}${j[1] === "F" ? " · F" : ""}${j[3] ? " · loisir" : ""}</span></span>
+      <span class="droite">${j[0] || "–"}${j[5] ? `<small>virtuels ${V2.nombre(j[5][0])} (${j[5][1] > 0 ? "+" : ""}${V2.nombre(j[5][1])})</small>` : ""}</span></div>`).join("")}</div>
+    <div class="liste" style="margin-top:12px"><a href="#">${svg("retour")}<span class="grow nom">Tous les clubs du 77</span></a>
+      <a href="../../77/">${svg("page")}<span class="grow nom">Comparaison des clubs et poules (site actuel)</span></a></div>`;
+}
+
+function joueurs(d) {
+  V2.titre("Joueurs du 77", "Tous les licenciés compétition de Seine-et-Marne");
+  let l = d.clubs.flatMap((c) => actifs(c).map((j) => ({ j, c })));
+  if (sexe !== "T") l = l.filter((x) => x.j[1] === sexe);
+  if (jeunes) l = l.filter((x) => JEUNES.includes(lettre(x.j[2])));
+  const q = V2.sansAccent(texte.trim());
+  if (q.length >= 2) l = l.filter((x) => V2.sansAccent(x.j[4]).includes(q) || V2.sansAccent(x.c.nom).includes(q));
+  l.sort((a, b) => b.j[0] - a.j[0]);
+  const seg = (nom, cle, val, actuel) => `<button type="button" data-${cle}="${val}" class="${val === actuel ? "actif" : ""}">${nom}</button>`;
+  return V2.sousNav("joueurs", "77")
+    + `<input class="champ" type="search" id="q" placeholder="Nom d'un joueur ou d'un club…" value="${esc(texte)}" autocomplete="off">
+    <div class="segments" style="margin-top:10px">${seg("Tous", "sexe", "T", sexe)}${seg("Hommes", "sexe", "M", sexe)}${seg("Femmes", "sexe", "F", sexe)}
+      <button type="button" data-jeunes="1" class="${jeunes ? "actif" : ""}">Jeunes</button></div>
+    <p class="petit" style="margin:4px 2px 8px">${l.length.toLocaleString("fr-FR")} joueurs</p>
+    <div class="liste lc">${l.slice(0, limite).map(({ j, c }, i) => `<a href="#club/${c.numero}" class="${c.vaires ? "vaires" : ""}">
+      <span class="rang">${i + 1}</span>
+      <span style="min-width:0"><span class="nom" style="display:block">${esc(V2.joli(j[4]))}</span>
+        <span class="petit">${esc(V2.joli(c.nom))} · ${esc(j[2] || "")}${j[1] === "F" ? " · F" : ""}</span></span>
+      <span class="droite">${j[0] || "–"}${j[5] ? `<small>${j[5][1] > 0 ? "+" : ""}${V2.nombre(j[5][1])} virtuels</small>` : ""}</span></a>`).join("") || '<p class="vide">Personne.</p>'}</div>
+    ${l.length > limite ? `<div class="boutons" style="margin-top:10px"><button class="bouton second" type="button" id="plus">Afficher ${Math.min(100, l.length - limite)} de plus</button></div>` : ""}`;
+}
+
+V2.demarrer({ titre: "Clubs du 77" }, async () => {
+  const m = $("#contenu");
+  m.innerHTML = V2.squelettes(6);
+  const d = await V2.donnees("departement");
+  const afficher = (garderPosition = false) => {
+    const h = decodeURIComponent(location.hash.slice(1));
+    const c = h.startsWith("club/") ? d.clubs.find((x) => x.numero === h.slice(5)) : null;
+    if (h.startsWith("joueurs/")) { texte = h.slice(8); history.replaceState(null, "", "#joueurs"); }
+    m.innerHTML = c ? club(d, c) : h.startsWith("joueurs") ? joueurs(d) : clubs(d);
+    m.querySelectorAll("[data-tri]").forEach((b) => b.addEventListener("click", () => { triClubs = b.dataset.tri; afficher(); }));
+    m.querySelectorAll("[data-sexe]").forEach((b) => b.addEventListener("click", () => { sexe = b.dataset.sexe; limite = 100; afficher(); }));
+    m.querySelectorAll("[data-jeunes]").forEach((b) => b.addEventListener("click", () => { jeunes = !jeunes; limite = 100; afficher(); }));
+    const plus = $("#plus");
+    if (plus) plus.addEventListener("click", () => { limite += 100; afficher(true); });
+    const q = $("#q");
+    if (q) q.addEventListener("input", () => {
+      texte = q.value; limite = 100; const pos = q.selectionStart;
+      afficher(true); const n = $("#q"); n.focus(); n.setSelectionRange(pos, pos);
+    });
+    if (!garderPosition) window.scrollTo(0, 0);
+  };
+  window.addEventListener("hashchange", () => afficher());
+  afficher();
+});
+</script>
+</body>
+</html>

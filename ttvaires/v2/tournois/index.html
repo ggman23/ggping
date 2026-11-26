@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr" data-racine="../" data-page="agenda">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="cvtt-cle" content="cvtt-vaires-cle-club">
+<meta name="theme-color" content="#0f2740">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CVTT Vaires">
+<title>Tournois · CVTT Vaires</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="../icones/icone-192.png">
+<link rel="apple-touch-icon" href="../icones/icone-180.png">
+<link rel="stylesheet" href="../commun.css?v=__VERSION__">
+<style>
+.cadre-pingradar { background: var(--surface); border-radius: var(--rayon); box-shadow: var(--ombre); border: 1px solid var(--bord); padding: 8px; display: flex; justify-content: center; }
+.cadre-pingradar iframe { display: block; width: 100%; border: 0; color-scheme: light; background: transparent; }
+</style>
+</head>
+<body>
+<main id="contenu"></main>
+<script src="../commun.js?v=__VERSION__"></script>
+<script>
+"use strict";
+/* Tournois à venir : blocs « prochains tournois » de PingRadar (pingradar.fr/integrer), comme la page Tournois du site
+   actuel : des cadres sans script ni cookie, mis à jour par PingRadar (d'après la liste des tournois de la FFTT) ; l'outil
+   ne fait aucune requête pour les tournois. */
+const { $, esc, svg } = V2;
+const PINGRADAR = "https://pingradar.fr", VAIRES = "77479";  // code INSEE de Vaires-sur-Marne
+const BLOCS = [
+  { cle: "autour", titre: "Autour de Vaires", texte: "Les 10 prochains tournois à moins de 100 km.", params: { commune: VAIRES, radius_km: 100, period: "upcoming" } },
+  { cle: "week-end", titre: "Ce week-end", texte: "Samedi et dimanche, à moins de 100 km.", nombre: 5, params: { commune: VAIRES, radius_km: 100, period: "weekend" } },
+  { cle: "week-end-prochain", titre: "Week-end prochain", texte: "À moins de 100 km.", nombre: 5, params: { commune: VAIRES, radius_km: 100, period: "next_weekend" } },
+  { cle: "ile-de-france", titre: "Île-de-France", texte: "Les 10 prochains tournois de la région.", params: { region: 11 } },
+  { cle: "seine-et-marne", titre: "Seine-et-Marne", texte: "Les 10 prochains tournois du 77.", params: { department: 77 } },
+];
+const HAUTEURS = { standard: { 5: 641, 10: 1101 }, compact: { 5: 599, 10: 999 } };
+function cadre(b) {
+  const compact = matchMedia("(max-width: 600px)").matches, format = compact ? "compact" : "standard", nombre = b.nombre || 10;
+  const q = new URLSearchParams({ ...b.params, count: nombre, layout: format });
+  return `<iframe src="${PINGRADAR}/integrer/prochains-tournois?${esc(q)}" height="${HAUTEURS[format][nombre]}" style="max-width:${compact ? 360 : 640}px"
+    loading="lazy" referrerpolicy="no-referrer" title="Prochains tournois : ${esc(b.titre)}, par PingRadar"></iframe>`;
+}
+V2.demarrer({ titre: "Tournois", sous: "Tournois à venir, par PingRadar" }, async () => {
+  const m = $("#contenu");
+  const afficher = () => {
+    const b = BLOCS.find((x) => x.cle === location.hash.slice(1)) || BLOCS[0];
+    m.innerHTML = V2.sousNav("agenda", "tournois")
+      + `<div class="segments">${BLOCS.map((x) => `<a href="#${x.cle}" class="${x === b ? "actif" : ""}">${esc(x.titre)}</a>`).join("")}</div>
+      <p class="petit" style="margin:4px 2px 10px">${esc(b.texte)} Touche un tournoi pour ouvrir sa fiche (tableaux, tarifs, inscription).</p>
+      <div class="cadre-pingradar">${cadre(b)}</div>
+      <div class="section"><h2>Chercher plus</h2></div>
+      <div class="liste"><a href="${PINGRADAR}/tournois?commune=${VAIRES}&radius_km=100" target="_blank" rel="noopener">${svg("recherche")}<span class="grow"><span class="nom" style="display:block">Recherche PingRadar</span>
+        <span class="petit">par date, distance, points</span></span>${svg("externe")}</a>
+        <a href="https://monclub.fftt.com/tournaments/search" target="_blank" rel="noopener">${svg("page")}<span class="grow"><span class="nom" style="display:block">Liste officielle de la FFTT</span>
+        <span class="petit">recherche de tournois</span></span>${svg("externe")}</a></div>
+      <p class="petit" style="margin-top:12px">Tournois proposés par <a href="${PINGRADAR}/" target="_blank" rel="noopener">PingRadar</a> (site indépendant, d'après la liste des
+        tournois de la FFTT), mis à jour en continu.</p>`;
+  };
+  window.addEventListener("hashchange", afficher);
+  afficher();
+});
+</script>
+</body>
+</html>

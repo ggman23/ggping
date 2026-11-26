@@ -777,3 +777,11 @@ Pas d'onglet dans l'application pour l'instant.
   actuel afin de comparer ». Réalisation : bouton V2 / V1 dans la barre du haut (Principale.java) : onglet « v2 »
   sans bouton en bas (Cloudflare puis Netlify, témoin du club), la barre d'onglets de l'appli masquée dans la
   v2, retour à l'onglet d'avant ; les deux pages restent ouvertes.
+- v2 et individuels (26/11) : « il manque la page des indivs, la page des clubs du 77 avec tous les joueurs du 77, une
+  vue type calendrier dans l'agenda, la page tournois. Pour les individuels, quand les journées sont terminées,
+  avoir les résultats de chacun avec les points de chacun (points gagnés/perdus), les résultats des autres
+  adversaires de sa poule pour faire le classement de la poule, et voir son classement dans la poule ; dans la
+  version actuelle et dans la v2 ». Réalisation : indivs.resultats_du_tour et classement_du_tour (parties de
+  critérium du jour, déjà lues pour la forme : virtuel.forme_joueurs(lignes=...)), carte « Résultats du tour » et
+  colonne « Tour » de /indivs/ ; v2 : /v2/indivs/, /v2/77/ (clubs et joueurs), /v2/tournois/, grille du mois
+  (/v2/agenda/#calendrier), sous-rubriques par onglet, recherche des clubs et joueurs du 77, individuels à l'accueil.

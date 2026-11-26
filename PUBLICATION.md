@@ -426,19 +426,29 @@ ordinateur) :
 - **Accueil** (`/v2/`) : la prochaine journée en une phrase, les rencontres de la semaine (une carte par
   rencontre : couleur et pictogramme de la compétition, domicile en vert, extérieur en orange), « Mon espace »,
   les derniers résultats, les images à partager, ce qui est nouveau depuis la dernière visite ;
-- **Équipes** (`/v2/equipes/`) : les 12 équipes (France hommes et femmes, Paris, jeunes) ; pour chacune
+- **Équipes** (`/v2/equipes/`) : sous-rubriques « Équipes de Vaires » et **Clubs du 77** (`/v2/77/` : les 55
+  clubs classés par force (moyenne des 4 meilleurs), nombre de joueurs ou nom ; la fiche d'un club : ses
+  chiffres, ses équipes et tous ses joueurs avec leurs points virtuels) ; les 12 équipes (France hommes et
+  femmes, Paris, jeunes) ; pour chacune
   (`#france-4`, `#paris-2`...) : prochaine rencontre, classement de la poule, calendrier et résultats, joueurs
   habituels, « Ajouter à mon agenda » ;
 - **Rencontre** (`/v2/rencontre/#france-4/6`) : face-à-face, salle avec « Itinéraire » (lien Google Maps) et
   Waze, place de l'adversaire dans la poule, compo probable adverse et joueurs habituels de Vaires, pronostic,
   feuille de match une fois jouée, disponibilités (Paris) ;
-- **Joueurs** (`/v2/joueurs/`) : recherche, tri par points virtuels, progression ou nom, filtres femmes et
+- **Joueurs** (`/v2/joueurs/`) : sous-rubriques « Joueurs de Vaires » et **Tous les joueurs du 77**
+  (`/v2/77/#joueurs` : recherche par nom ou par club, filtres hommes, femmes, jeunes, par 100) ; recherche, tri par points virtuels, progression ou nom, filtres femmes et
   jeunes, petite courbe ; fiche (`#<licence>`) : points officiels et virtuels, objectif (« encore 87,5 points
   pour passer 10 »), courbe de la saison, perfs et contres, séries, meilleur classement, bilan selon le niveau
   de l'adversaire, dernières parties, brûlage ;
 - **Agenda** (`/v2/agenda/`) : tous les matchs de Vaires par mois et par jour, les tours des individuels, et
   au choix les dates du comité ; « Ajouter les matchs de Vaires à mon agenda » (fichier .ics fabriqué dans le
-  navigateur : rien n'est envoyé) ;
+  navigateur : rien n'est envoyé). Sous-rubriques en haut : **Calendrier** (`#calendrier` : la grille du mois,
+  une pastille de couleur par rencontre ou date, avec son libellé sur ordinateur ; mois précédent ou suivant ;
+  touche un jour pour voir son programme), **Individuels** (`/v2/indivs/` : les poules à venir et les tours
+  joués ; pour chaque poule, le lieu avec l'itinéraire, les **résultats du tour** et le classement de la poule,
+  les parties de chacun, puis la poule de la plus forte à la plus faible avec la forme et le niveau de chaque
+  adversaire) et **Tournois** (`/v2/tournois/` : les blocs PingRadar de la page Tournois, autour de Vaires, ce
+  week-end, le week-end prochain, Île-de-France, Seine-et-Marne) ;
 - **Club** (`/v2/club/`) : les pages détaillées du site actuel (ouvertes dans le cadre de la v2), les images à
   partager, les rubriques (affiche de Paris...), les archives et les autres espaces (/paris/, /jeunes/, /77/,
   /indivs/, /tournois/, /cal/), les réglages.
@@ -463,9 +473,13 @@ donnée. Une mise à jour « Publication seule » suffit donc à la refaire. Si 
 journal le signale (« Version 2 (/v2/) non publiée ») et le reste de la copie part comme avant. Pour voir les
 pages à une autre date (essais) : `?date=AAAA-MM-JJ` dans l'adresse.
 
-Pas encore dans la v2 (pages du site actuel en attendant) : clubs du 77, individuels, tournois ; simulateur « que
-faut-il pour monter ? », records du club ; disponibilités cochées par les joueurs eux-mêmes et covoiturage
-(il faudrait un stockage partagé en ligne : à décider).
+La recherche du haut trouve aussi les clubs et les joueurs du 77 ; l'accueil montre les résultats du dernier
+tour des individuels (trois semaines) et le prochain tour.
+
+Pas encore dans la v2 (pages du site actuel en attendant) : disponibilités de Paris, adversaires détaillés de Paris
+et des jeunes, comparaison des clubs et poules du 77 ; simulateur « que faut-il pour monter ? », records du club ;
+disponibilités cochées par les joueurs eux-mêmes et covoiturage (il faudrait un stockage partagé en ligne : à
+décider).
 
 ## Espaces à leur propre adresse : /lundi/ (le roi du lundi)
 
@@ -509,6 +523,16 @@ parties jouées depuis le début de la phase, les points gagnés ou perdus, les 
   <prénom> » quand un seul joueur de Vaires est dans la poule. Leurs titres ne donnent que la poule et
   sa date (la liste des images est visible sans mot de passe ; les images, elles, sont chiffrées).
   Sur /indivs/, le bouton « Image de la poule à partager » ouvre celle de la poule dans l'espace club.
+- **Résultats du tour** : une fois la date de la poule passée, la fiche de chaque joueur de Vaires a une
+  carte « Résultats du tour » : sa journée (classement dans la poule, victoires, défaites, points gagnés ou
+  perdus), le **classement de la poule** (victoires–défaites et points du jour de chacun, ceux de Vaires sur
+  fond bleu) et **les parties de chacun** (adversaire et ses points, V ou D, manches, points gagnés ou
+  perdus ; la sienne ouverte). La vue d'ensemble a une colonne « Tour » (classement, V–D, points). Ce sont
+  les parties de critérium du jour du tour, tirées des parties déjà lues pour la forme : aucune requête de
+  plus. Classement indicatif : victoires, puis, entre deux joueurs à égalité qui se sont rencontrés, le
+  vainqueur de leur partie (≡), puis les points gagnés ; la place officielle du groupe (montées,
+  descentes) vient du tableau final du tour, publié par le comité. Les résultats arrivent à la mise à jour
+  qui suit leur saisie par le juge-arbitre (« Tout » ou « Individuels »).
 - Liens : « Club » et « Tournois » en haut de /indivs/ (et dans son menu) ; « Individuels » en haut du
   menu de /club/ (« Aller à », avec « Tournois ») et dans ses « Autres espaces » (menu et accueil).
 

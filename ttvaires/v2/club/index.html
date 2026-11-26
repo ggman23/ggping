@@ -59,8 +59,11 @@ function accueil(club) {
       [d.description, d.taille ? taille(d.taille) : ""].filter(Boolean).join(" · "), false)).join("")}</div>`;
   if ((club.archives || []).length) html += `<div class="section"><h2>Archives des journées</h2></div><div class="liste">${club.archives.map((a) =>
     `<a href="../../club/#archives/${encodeURIComponent(a.cle)}">${svg("club")}<span class="grow nom">${esc(a.titre)}</span><span class="petit">${esc(a.date_reference ? V2.dateCourte(a.date_reference) : "")}</span></a>`).join("")}</div>`;
-  html += `<div class="section"><h2>Autres espaces</h2><span class="petit">site actuel</span></div><div class="grille">${(club.espaces || []).map((e) =>
-    tuile(`../../${encodeURIComponent(e.chemin)}/`, "externe", "esp", ESPACES[e.chemin] || e.titre, "", false)).join("")}</div>`;
+  // Autres espaces : la page de la v2 quand elle existe, sinon celle du site actuel
+  const V2_PAGES = { indivs: "../indivs/", 77: "../77/", tournois: "../tournois/", cal: "../agenda/#calendrier" };
+  html += `<div class="section"><h2>Autres espaces</h2></div><div class="grille">${(club.espaces || []).map((e) =>
+    tuile(V2_PAGES[e.chemin] || `../../${encodeURIComponent(e.chemin)}/`, V2_PAGES[e.chemin] ? "page" : "externe", "esp", ESPACES[e.chemin] || e.titre,
+      V2_PAGES[e.chemin] ? "" : "site actuel", false)).join("")}</div>`;
   if (V2.admin()) html += `<div class="section"><h2>Administration</h2></div><div class="liste">
     <a href="https://ggman23.github.io/ggping/" target="_blank" rel="noopener">${svg("externe")}<span class="grow nom">Lancer une mise à jour du site</span></a>
     <a href="../../lundi/">${svg("etoile")}<span class="grow nom">Le roi du lundi</span></a></div>`;
