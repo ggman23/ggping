@@ -56,7 +56,8 @@ function cartePoule(p) {
   const lignes = vairois(p).map((j) => {
     const c = r?.classement.find((x) => x.licence === j.licence);
     const info = c ? `<b>${c.rang}</b><small>/${n}</small> · ${c.v}–${c.d} ${pm(c.points)}`
-      : `rang probable <b>${parVirt(p.joueurs).indexOf(j) + 1}</b><small>/${n}</small>`;
+      : r ? '<span class="petit">pas de partie lue</span>'
+      : `rang probable <b>${parVirt(p.joueurs).indexOf(j) + 1}</b><small>/${p.joueurs.length}</small>`;
     return `<div style="display:flex;justify-content:space-between;gap:8px;margin-top:4px"><span>${j.licence === V2.moi() ? "★ " : ""}${esc(nomJ(j))}</span><span>${info}</span></div>`;
   }).join("");
   return `<a class="carte" href="#${encodeURIComponent(p.id)}">
