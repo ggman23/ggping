@@ -776,7 +776,8 @@ des données).
   le format de Python arrondissait au pair : 911,2 sur l'image du classement virtuel, 911,3 sur la page).
 - **Catégorie d'âge dans les images** (28/11) : quand le nom et la catégorie (« M2 », « V45 », « (L) ») ne tenaient pas
   ensemble dans la colonne Joueur, la catégorie sautait (colonne plus étroite depuis « V1 / P1 »). Le nom se raccourcit
-  maintenant d'abord (« GRIFFE K. », puis « GRIFFE », puis une police un peu plus petite) ; toutes les images à
+  maintenant d'abord (« GRIFFE K. », puis « GRIFFE », puis une police un peu plus petite, et pour un nom très long
+  « DELACROIX DOMIN… ») ; toutes les images à
   catégorie en profitent (classement virtuel, effectif, clubs du 77). Les données ont la catégorie de tous les joueurs.
 - **Surnoms** (secret SURNOMS, import/surnoms.txt) : un surnom qui peut se confondre avec le nom d'un autre joueur de
   l'image (« Marc G » à côté de « Marc Go. ») n'est pas pris : le nom distinctif reste (« Marc Gu. »).
