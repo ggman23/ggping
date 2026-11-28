@@ -59,7 +59,7 @@ MAX_DETAILS = 2500
 MAX_EXTERIEURS = 3000    # borne de sécurité : adversaires d'autres départements lus au plus par lancement (2 349 au 15/11/2026)
 # Troisième cercle (28/11) : les adversaires des adversaires de Vaires d'autres départements (championnat de Paris,
 # critérium, tournois) ; sans leurs parties, la valeur du mois de ces adversaires de Vaires est estimée
-MAX_CERCLE3 = 1500      # par lancement (environ 7 minutes : le lundi dure déjà 35 minutes sur 60 permises) ; le reste au suivant
+MAX_CERCLE3 = 3000      # borne de sécurité par lancement (environ 14 minutes au plus) ; le reste au suivant
 
 
 def debut_de_semaine(instant):
