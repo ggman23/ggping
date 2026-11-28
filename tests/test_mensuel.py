@@ -93,15 +93,3 @@ def test_incertitudes_et_niveaux_de_fiabilite():
     assert [mensuel.niveau(n) for n in (0, 1, 5, 6, 20, 21)] == [0, 1, 1, 2, 2, 3]
     assert mensuel.References({"a": {}}).estimee("a", "2026-11-02") is None  # fichier d'avant : on ne sait pas
 
-
-def test_recalcul_par_date_de_prise_en_compte():
-    """Contrôle du 28/11 : une partie jouée en octobre mais prise en compte en novembre compte dans la période de
-    novembre ; les valeurs viennent de la table « _effet »."""
-    lues = mensuel.References({"a": {"2026-10": 1000, "2026-11": 1010}, "b": {"2026-10": 1200, "2026-11": 1200},
-                               mensuel.CLE_EFFET: {"a": {"2026-10": 1000, "2026-11": 1004}, "b": {"2026-10": 1200, "2026-11": 1190}}})
-    ligne = {**_ligne("2026-10-25", "b", 1200, True), "effet": "2026-11-03"}
-    assert mensuel.periode_de(ligne) == "2026-10" and mensuel.periode_de(ligne, effet=True) == "2026-11"
-    [par_date] = mensuel.recalculer([dict(ligne)], "a", 1000, lues)
-    [par_effet] = mensuel.recalculer([dict(ligne)], "a", 1000, lues, effet=True)
-    assert (par_date["pts_joueur"], par_date["adv_points"]) == (1000, 1200)
-    assert (par_effet["pts_joueur"], par_effet["adv_points"]) == (1004, 1190)

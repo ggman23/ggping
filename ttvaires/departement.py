@@ -197,26 +197,17 @@ def joueurs_du_club(listes):
     return sortie
 
 
-def _controle_prise_en_compte(lignes, references, references_effet, vaires_ext, courante):
-    """Journal (chiffres seulement) : parties rangées dans un autre mois par leur date de prise en compte, et valeur du
-    mois en cours des adversaires de Vaires d'autres départements selon les deux calculs."""
-    vues, decalages = set(), []
+def _controle_prise_en_compte(lignes):
+    """Journal (chiffres seulement) : parties dont la date de prise en compte (effectiveDate) tombe dans un autre mois
+    que leur date. Le 28/11/2026 : 0 sur 92 251 ; le calcul mois par mois range donc les parties par leur date."""
+    vues, decalees = set(), 0
     for ls in lignes.values():
         for l in ls:
-            if l["id"] in vues:
-                continue
-            vues.add(l["id"])
-            if mensuel.periode_de(l, True) != mensuel.periode(l["date"]):
-                decalages.append((datetime.fromisoformat(l["effet"]) - datetime.fromisoformat(l["date"])).days)
-    decalages.sort()
-    print(f"  date de prise en compte (effectiveDate) : {len(decalages)} parties sur {len(vues)} dans un autre mois que celui de "
-          f"leur date" + (f" (décalage : {decalages[len(decalages) // 2]} jours en médiane, de {decalages[0]} à {decalages[-1]})"
-                          if decalages else ""), flush=True)
-    paires = sorted((references.get(x, {}).get(courante), references_effet.get(x, {}).get(courante)) for x in vaires_ext)
-    differentes = [(a, b) for a, b in paires if a is not None and b is not None and round(a, 2) != round(b, 2)]
-    print(f"  adversaires de Vaires d'autres départements, valeur au début de {courante} : différente selon la date de prise "
-          f"en compte pour {len(differentes)} sur {len(paires)}"
-          + (" (" + " ; ".join(f"{a:.1f} → {b:.1f}" for a, b in differentes[:40]) + ")" if differentes else ""), flush=True)
+            if l["id"] not in vues:
+                vues.add(l["id"])
+                decalees += mensuel.periode(l.get("effet") or l["date"]) != mensuel.periode(l["date"])
+    print(f"  date de prise en compte (effectiveDate) : {decalees} parties sur {len(vues)} dans un autre mois que celui de leur date",
+          flush=True)
 
 
 def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire=None, cibles=None):
@@ -320,13 +311,9 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
     # Fiabilité : valeur du mois estimée des joueurs qui ont joué, après la première période, un joueur non lu
     premiere = mensuel.periode(debut)
     estime = mensuel.incertitudes(lignes, depart, premiere)
-    # Contrôle (28/11) : le même calcul, chaque partie dans le mois de sa date de prise en compte (effectiveDate) ;
-    # enregistré à part, non affiché, pour comparer aux valeurs de la FFTT (chiffres seulement dans le journal)
-    references_effet = {}
-    mensuel.calcul_mensuel(lignes, depart, references_effet, effet=True)
-    _controle_prise_en_compte(lignes, references, references_effet, vaires_ext, mensuel.periode(fin))
+    _controle_prise_en_compte(lignes)
     mensuel.enregistrer(client, {**references, mensuel.CLE_77: sorted(du_77), mensuel.CLE_PREMIERE: premiere,
-                                 mensuel.CLE_ESTIME: estime, mensuel.CLE_EFFET: references_effet})  # pages de Vaires
+                                 mensuel.CLE_ESTIME: estime})  # pour les pages de Vaires (refaites dans la même mise à jour)
     variables, avec_parties = mensuel.points_variables(lignes)
     ecart = sum(abs(sum(points_m[lic]) - sum(l["points"] for l in lignes[lic])) for lic in toutes if lic in lignes) / max(1, len(toutes))
     print(f"  points des joueurs lus dans les parties : différents d'une partie à l'autre pour {variables} joueurs sur {avec_parties} ; "

@@ -450,7 +450,8 @@ def test_licence_loisir_de_vaires_qui_a_joue(tmp_path):
 
 def test_forfaits_des_adversaires_de_vaires_et_date_de_prise_en_compte(tmp_path, capsys):
     """28/11 : le détail des parties hors championnat des adversaires de Vaires d'autres départements est lu (un forfait
-    ne compte pas dans leur valeur du mois) ; contrôle par date de prise en compte, enregistré à part, chiffres au journal."""
+    ne compte pas dans leur valeur du mois) ; parties rangées dans un autre mois par leur date de prise en compte : comptées
+    au journal (le calcul garde la date de la partie)."""
     from ttvaires.resultats import points_partie
     tournoi = _partie(5, "x", 900, 1000, True, jour="2026-10-10")             # x « bat » y en tournoi... par forfait
     tournoi["awayPlayer"]["identifier"], tournoi["contest"] = "y", {"id": 2, "name": "Tournoi de Lagny"}
@@ -466,9 +467,7 @@ def test_forfaits_des_adversaires_de_vaires_et_date_de_prise_en_compte(tmp_path,
     ref = mensuel.References.lire(client)
     gain = points_partie(900, 950, True, 1)
     assert ref.valeur("x", "2026-11-07") == round(900 + gain, 2)                 # forfait écarté ; la partie du 25/10 en octobre
-    assert ref.valeur("x", "2026-11-07", effet=True) == 900                       # par prise en compte : en novembre
     sortie = capsys.readouterr().out
     assert "parties hors championnat des adversaires de Vaires d'autres départements : 1, détail connu pour 1 (1 lus maintenant) : 1 forfaits" in sortie
     assert "date de prise en compte (effectiveDate) : 1 parties sur" in sortie
-    assert f"différente selon la date de prise en compte pour 1 sur 1 ({900 + gain:.1f} → 900.0)" in sortie
     assert d["virtuels"]["adversaires_vaires"] == 1

@@ -954,17 +954,16 @@ D'où viennent les données :
   contre une mise à jour bloquée ; le lundi dure 35 à 50 minutes). Le journal
   donne les nombres (« troisième cercle : N adversaires de Vaires d'autres départements, M de leurs
   adversaires hors du 77 », et combien restent à valeur estimée).
-- **Écart de 911,3 / 912 (28/11)** : les deux joueurs signalés ont joué le même adversaire de Paris (autre
-  département), à 852,2 pour l'outil après le troisième cercle (851,2 avant). La FFTT le compte forcément à 850 ou
-  moins : défaite à −7 × 0,75 depuis 900 et victoire à 5 × 0,75 depuis 902 demandent toutes deux un écart d'au
-  moins 50. Le troisième cercle n'était donc pas la cause. Deux pistes, mesurées à la mise à jour suivante : le
-  détail des parties hors championnat des adversaires de Vaires d'autres départements est maintenant lu
-  (forfaits et parties non comptées écartés, comme pour le 77 ; MAX_DETAILS_VAIRES_EXT = 1 500, une fois, gardé) ;
-  et un calcul de contrôle range chaque partie dans le mois de sa **date de prise en compte** (effectiveDate de
-  l'API) au lieu de sa date : enregistré à part (`mensuel.CLE_EFFET`), non affiché, il donne `virtuels_effet` à
-  chaque joueur de la page chiffrée et, au journal, le nombre de parties décalées et la valeur du mois des
-  adversaires de Vaires selon les deux calculs (chiffres seulement). S'il retrouve 911,3 et 914,8, il deviendra
-  le calcul affiché.
+- **Forfaits des adversaires de Vaires d'autres départements (28/11)** : écart de 911,3 / 912 signalé. Les deux
+  joueurs avaient joué le même adversaire de Paris (autre département), compté 852,2 par l'outil quand la FFTT le
+  comptait à moins de 850 (défaite à −7 × 0,75 depuis 900, victoire à 5 × 0,75 depuis 902). Cause : une victoire
+  par forfait en tournoi (+6), que la FFTT ne compte pas ; seul le détail d'une partie dit qu'elle est un forfait.
+  Le détail des parties hors championnat des adversaires de Vaires d'autres départements est donc lu (une fois,
+  gardé ; MAX_DETAILS_VAIRES_EXT = 1 500 par mise à jour ; 470 parties, 5 forfaits au 28/11). Mise à jour n° 122 :
+  l'adversaire à 846,2, les deux joueurs à 911,25 et 914,75, comme la FFTT (911,3 et 914,8). Un autre joueur de la
+  même équipe adverse, vérifié dans l'application FFTT (situation de fin octobre : 889,0), est à 889,0 dans l'outil.
+  Piste écartée : la date de prise en compte des parties (effectiveDate) ; 0 partie sur 92 251 dans un autre mois
+  que celui de sa date (décompte gardé au journal, par surveillance).
 - **Affichage** : points virtuels à une décimale, comme l'appli FFTT (909,5). Règle de la FFTT
   (règlements administratifs, juillet 2025) : une situation mensuelle garde ses décimales ; les
   points publiés sur la licence sont arrondis à l'entier le plus proche (1525,50 donne 1526), et en

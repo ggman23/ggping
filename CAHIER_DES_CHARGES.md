@@ -851,3 +851,7 @@ Pas d'onglet dans l'application pour l'instant.
   seul adversaire de Paris commun aux deux, compté 852,2 (851,2 avant le troisième cercle) quand la FFTT a 850 ou
   moins. Ajouts : détail (forfaits) des parties hors championnat des adversaires de Vaires d'autres départements,
   calcul de contrôle par date de prise en compte (effectiveDate), comparés à la prochaine mise à jour.
+- Mise à jour n° 122 (28/11) : 911,25 et 914,75, comme la FFTT (911,3 et 914,8). Cause : une victoire par forfait
+  de l'adversaire de Paris en tournoi, comptée par l'outil ; le détail des parties hors championnat des adversaires de
+  Vaires d'autres départements est maintenant lu. Captures de l'application FFTT d'un autre joueur de cette équipe
+  (fin octobre 889,0) : 889,0 dans l'outil. Date de prise en compte : piste écartée (aucune partie décalée).
