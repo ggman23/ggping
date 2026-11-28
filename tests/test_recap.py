@@ -117,3 +117,7 @@ def test_recap_de_paris_avec_les_equipes_jeunes(tmp_path):
     # Sans données des jeunes : l'image de Paris seule, comme avant
     [(_, seul)] = recap.image_recap(paris, None, tmp_path, prefixe="paris_")
     assert seul.startswith("Paris · ")
+    # Par le chemin de la mise à jour (faire_images → images.image_recap) : les jeunes doivent suivre (oubli du 28/11)
+    from ttvaires import __main__ as m
+    [chemin] = m.faire_images("image_recap", paris, None, dossier=tmp_path, prefixe="paris_", jeunes=jeunes)
+    assert m._titres_images[str(chemin)].startswith("Paris + jeunes · ")

@@ -695,10 +695,11 @@ def images_rencontres(donnees, dossier, prefixe=""):
     return sorties
 
 
-def image_recap(donnees, dossier_import, dossier, prefixe=""):
-    """Récapitulatif de la journée sur le modèle de l'image du club (voir recap.py)."""
+def image_recap(donnees, dossier_import, dossier, prefixe="", jeunes=None):
+    """Récapitulatif de la journée sur le modèle de l'image du club (voir recap.py) ; `jeunes` : les équipes jeunes
+    ajoutées à celui de Paris."""
     from .recap import image_recap as dessiner
-    return dessiner(donnees, dossier_import, dossier, prefixe)
+    return dessiner(donnees, dossier_import, dossier, prefixe, jeunes=jeunes)
 
 
 def image_programme(donnees, dossier, aujourdhui=None):
