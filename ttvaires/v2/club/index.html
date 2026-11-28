@@ -20,6 +20,18 @@ a.carte.tuile, .tuile { display: flex; gap: 12px; align-items: center; }
 .tuile .ic.img { background: var(--paris-fond); color: var(--paris); }
 .tuile .ic.doc { background: var(--jeunes-fond); color: var(--jeunes); }
 .tuile .ic.esp { background: var(--dom-fond); color: var(--dom); }
+/* Rubriques (28/11) : de grosses cartes sur l'accueil du club, une rangée de boutons dans chaque rubrique */
+a.carte.rub { display: flex; gap: 14px; align-items: center; padding: 16px; }
+.rub .pastille { width: 50px; height: 50px; border-radius: 14px; display: grid; place-items: center; color: #fff; flex: 0 0 auto; }
+.rub .pastille svg { width: 27px; height: 27px; }
+.rub b { font-size: 1.12rem; }
+details.groupe { background: var(--surface); border: 1px solid var(--bord); border-radius: var(--rayon); margin: 0 0 10px; overflow: hidden; }
+details.groupe > summary { cursor: pointer; padding: 13px 16px; font-weight: 700; display: flex; gap: 8px; align-items: center; list-style: none; }
+details.groupe > summary::-webkit-details-marker { display: none; }
+details.groupe > summary::before { content: "▸"; color: var(--doux); }
+details.groupe[open] > summary::before { content: "▾"; }
+details.groupe > summary .petit { margin-left: auto; }
+details.groupe .liste { border: 0; border-top: 1px solid var(--bord); border-radius: 0; box-shadow: none; }
 </style>
 </head>
 <body>
@@ -42,9 +54,87 @@ const tuile = (href, ic, cls, titre, sous, nouveau) => `<a class="carte tuile" h
   <span style="min-width:0;flex:1"><b>${esc(titre)}</b>${sous ? `<br><span class="petit">${esc(sous)}</span>` : ""}</span>
   ${nouveau ? '<span class="puce nouveau">nouveau</span>' : ""}</a>`;
 
+/* ---------- Rubriques : France, Paris, jeunes, joueurs, documents ; « Tout » garde la page complète ---------- */
+const RUBRIQUES = [
+  { id: "france", nom: "Championnat de France", texte: "Vaires 1 à 6 et Vaires 1 F : adversaires, feuilles, poules, résultats, brûlages", comp: "france" },
+  { id: "paris", nom: "Championnat de Paris", texte: "Vaires 1 à 3 : poules, adversaires, feuilles de match, résultats, disponibilités", comp: "paris" },
+  { id: "jeunes", nom: "Championnat des jeunes", texte: "Moins de 15 et moins de 13 ans : poules, adversaires, feuilles de match", comp: "jeunes" },
+  { id: "joueurs", nom: "Joueurs du club", texte: "Classement virtuel, progression, fiches des joueurs", couleur: "#2b8a3e", ic: "joueurs" },
+  { id: "individuels", nom: "Individuels", texte: "Critérium : poules et résultats des joueurs de Vaires", couleur: "#e8590c", ic: "etoile", lien: "../indivs/" },
+  { id: "documents", nom: "Documents du club", texte: "Affiche, matériel, préparation mentale", couleur: "#8a5a00", ic: "club" },
+  { id: "tout", nom: "Tout", texte: "Toutes les pages et toutes les images sur une seule page", couleur: "#495057", ic: "page" },
+];
+const RUB = Object.fromEntries(RUBRIQUES.map((r) => [r.id, r]));
+const PAGES_JOUEURS = ["classement_virtuel.html", "progression_vaires.html", "fiches_vaires.html"];
+const PAGES_CHAMP = ["rencontres_vaires.html", "classements_vaires.html", "resultats_vaires.html"];  // pages à sélecteur
+const GROUPES_FRANCE = ["récapitulatif", "classements", "rencontres", "résultats", "adversaires", "effectif"];
+const TYPES_CHAMP = [[/recap_/, "Récapitulatif de la journée"], [/classements_/, "Classements des poules"], [/rencontres_/, "Feuilles de match"],
+  [/resultats_/, "Résultats des joueurs"], [/effectif_/, "Effectif et brûlages"], [/adversaires_/, "Prochains adversaires"],
+  [/progression_/, "Progression des joueurs"], [/infographie/, "Infographie"], [/affiche/, "Affiche du championnat"], [/./, "Autres images"]];
+const pastille = (r) => r.comp ? `<span class="pastille" style="background:var(--${r.comp})">${svg(r.comp, true)}</span>`
+  : `<span class="pastille" style="background:${r.couleur}">${svg(r.ic)}</span>`;
+const changer = (actif) => `<nav class="segments sous" aria-label="Rubriques du club">${RUBRIQUES.map((r) =>
+  `<a href="${r.lien || "#r/" + r.id}" class="${r.id === actif ? "actif" : ""}">${esc(r.nom.replace(/^Championnat (de |des )/, "").replace(/^./, (c) => c.toUpperCase()).replace(" du club", ""))}</a>`).join("")}</nav>`;
+function groupeImages(titre, liste, ouvert) {
+  if (!liste.length) return "";
+  return `<details class="groupe"${ouvert ? " open" : ""}><summary>${esc(titre)}<span class="petit">${liste.length} image${liste.length > 1 ? "s" : ""}</span></summary>
+    <div class="liste">${liste.map((d) => `<a href="${d.rubrique ? `#res/${encodeURIComponent(d.rubrique)}/${encodeURIComponent(d.fichier)}` : `#doc/${encodeURIComponent(d.fichier)}`}">
+      ${svg("image")}<span class="grow nom">${esc(d.titre)}</span>${V2.estNouveau(d.date) ? '<span class="puce nouveau">nouveau</span>' : ""}</a>`).join("")}</div></details>`;
+}
+function accueilRubriques(club, eq) {
+  V2.titre("Club", "Choisis une rubrique");
+  const mienne = eq.find((t) => t.cle === V2.lire(V2.R.equipe));
+  return (mienne ? `<a class="carte" href="../equipes/#${mienne.cle}" style="display:flex;gap:12px;align-items:center;margin-bottom:10px">${svg("etoile")}
+      <span><b>Mon équipe : ${esc(mienne.nom)}</b><br><span class="petit">tout sur ton équipe ›</span></span></a>` : "")
+    + `<div class="pile">${RUBRIQUES.map((r) => `<a class="carte rub" href="${r.lien || "#r/" + r.id}">${pastille(r)}
+      <span><b>${esc(r.nom)}</b><br><span class="petit">${esc(r.texte)}</span></span></a>`).join("")}</div>
+    <div class="section"><h2>Autres espaces</h2></div><div class="liste">
+      <a href="../77/">${svg("page")}<span class="grow nom">Clubs du 77</span></a><a href="../tournois/">${svg("page")}<span class="grow nom">Tournois</span></a>
+      <a href="../agenda/#calendrier">${svg("agenda")}<span class="grow nom">Calendrier</span></a></div>
+    <div class="section"><h2>Réglages</h2></div><div class="liste"><button type="button" id="ouvrir-reglages">${svg("reglages")}<span class="grow nom">Mon espace, taille du texte, apparence</span></button>
+      <a href="../../club/">${svg("retour")}<span class="grow nom">Revenir au site actuel</span></a></div>`;
+}
+function vueRubrique(club, eq, id) {
+  const r = RUB[id];
+  V2.titre(r.nom, "Club");
+  const docs = club.documents || [], images = docs.filter((d) => d.type === "image"), pages = docs.filter((d) => d.type !== "image");
+  const prog = images.filter((d) => d.groupe === "programme");
+  const tete = changer(id) + `<p class="petit" style="margin:4px 2px 12px">${esc(r.texte)}.</p>`;
+  if (id === "documents") return tete + ((club.ressources || []).map((rb) => `<div class="section"><h2>${esc(rb.nom)}</h2></div><div class="grille">${rb.documents.map((d) =>
+    tuile(`#res/${encodeURIComponent(rb.nom)}/${encodeURIComponent(d.fichier)}`, d.type === "image" ? "image" : "page", "doc", d.titre,
+      [d.description, d.type === "pdf" ? "PDF" : "", d.taille ? taille(d.taille) : ""].filter(Boolean).join(" · "), false)).join("")}</div>`).join("")
+    || '<p class="vide">Aucun document pour le moment.</p>');
+  let liste = [], groupes = [];
+  if (id === "france") {
+    liste = pages.filter((d) => !PAGES_JOUEURS.includes(d.fichier)).map((d) => tuile(`#doc/${encodeURIComponent(d.fichier)}`, d.type === "excel" ? "telecharger" : "page", "", d.titre,
+      [d.description, verifie(d.verification)].filter(Boolean).join(" · "), V2.estNouveau(d.date)));
+    groupes = [...GROUPES_FRANCE.map((g) => [TITRES[g] || g, images.filter((d) => d.groupe === g)]), ["Programme des équipes", prog]];
+  } else if (id === "paris" || id === "jeunes") {
+    liste = [tuile(`../../${id}/`, "page", "", `${r.nom} : poules et adversaires`, "Calendrier, salles, classement, joueurs des clubs adverses", false)];
+    if (id === "paris") liste.push(tuile("../../paris/#dispo", "agenda", "", "Disponibilités des joueurs", "Qui est disponible pour chaque journée", false));
+    liste.push(...PAGES_CHAMP.map((f) => pages.find((d) => d.fichier === f)).filter(Boolean).map((d) =>
+      tuile(`#doc/${encodeURIComponent(d.fichier)}/${id}`, "page", "", d.titre, `${r.nom} seulement`, false)));
+    const siennes = [...images.filter((d) => d.groupe === id),
+      ...(id === "paris" ? (club.ressources || []).flatMap((rb) => rb.documents.filter((d) => d.type === "image" && /paris/i.test(d.fichier)).map((d) => ({ ...d, rubrique: rb.nom }))) : [])];
+    groupes = [...TYPES_CHAMP.map(([, titre]) => [titre, siennes.filter((d) => (TYPES_CHAMP.find(([m]) => m.test(d.fichier)) || [])[1] === titre)]), ["Programme des équipes", prog]];
+  } else if (id === "joueurs") {
+    liste = PAGES_JOUEURS.map((f) => pages.find((d) => d.fichier === f)).filter(Boolean).map((d) => tuile(`#doc/${encodeURIComponent(d.fichier)}`, "page", "", d.titre, d.description, V2.estNouveau(d.date)));
+    liste.unshift(tuile("../joueurs/", "joueurs", "", "Joueurs de Vaires", "Points, courbe et fiche de chaque joueur (v2)", false));
+    groupes = [["Classement virtuel", images.filter((d) => d.groupe === "classement virtuel")], ["Progression des joueurs", images.filter((d) => d.groupe === "progression")]];
+  }
+  const equipes = r.comp ? eq.filter((t) => r.comp === "france" ? ["france", "femmes"].includes(t.comp) : t.comp === r.comp) : [];
+  const avec = groupes.filter(([, l]) => l.length);
+  return tete
+    + (equipes.length ? `<div class="section"><h2>Une seule équipe</h2></div><div class="segments" style="flex-wrap:wrap">${equipes.map((t) =>
+        `<a href="../equipes/#${t.cle}">${esc(t.nom.replace(/ · .*/, ""))}</a>`).join("")}</div>` : "")
+    + (liste.length ? `<div class="section"><h2>Les pages</h2></div><div class="grille">${liste.join("")}</div>` : "")
+    + (avec.length ? `<div class="section"><h2>Les images à partager</h2></div>${avec.map(([t, l], i) => groupeImages(t, l, i === 0)).join("")}`
+      : '<p class="vide">Pas encore d\'image pour cette rubrique : elles arrivent avec les résultats.</p>');
+}
+
 const verifie = (v) => !v ? "" : /NON GÉNÉRÉE|manquant|non lues|non récupéré/.test(v) ? `⚠ ${v}` : v;
 function accueil(club, eq) {
-  V2.titre("Club", "Documents, images et espaces");
+  V2.titre("Tout le club", "Documents, images et espaces");
   const docs = club.documents || [], images = docs.filter((d) => d.type === "image"), pages = docs.filter((d) => d.type !== "image");
   const lien = (d) => `#doc/${encodeURIComponent(d.fichier)}`;
   // Par équipe : la fiche de chaque équipe (ses pages sur cette équipe seulement, ses images)
@@ -81,7 +171,7 @@ function accueil(club, eq) {
 
 const MOBILE = /iPhone|iPad|iPod|Android/.test(navigator.userAgent) || window.__appliCvtt;
 const PDF_INTEGRE = navigator.pdfViewerEnabled === true && !MOBILE;
-async function vue(d, rubrique, seule = null) {
+async function vue(d, rubrique, suite = null) {
   V2.titre(d.titre, rubrique || (d.type === "image" ? TITRES[d.groupe] || "Image" : "Page du site actuel"));
   const m = $("#contenu");
   m.innerHTML = '<p class="vide">Ouverture…</p>';
@@ -92,7 +182,7 @@ async function vue(d, rubrique, seule = null) {
   const boutons = `<div class="boutons" style="margin:10px 0">
     <button class="bouton" type="button" id="tele">${svg("telecharger")} Télécharger</button>
     ${d.type === "image" ? `<button class="bouton second" type="button" id="part" hidden>${svg("partager")} Partager</button>` : ""}</div>`;
-  if (d.type === "page") m.innerHTML = `<iframe class="cadre" title="${esc(d.titre)}" src="${url}${seule ? "#seule/" + encodeURIComponent(seule) : ""}"${rubrique ? ' sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms"' : ""}></iframe>`;
+  if (d.type === "page") m.innerHTML = `<iframe class="cadre" title="${esc(d.titre)}" src="${url}${suite ? "#" + suite : ""}"${rubrique ? ' sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms"' : ""}></iframe>`;
   else if (d.type === "pdf" && PDF_INTEGRE) m.innerHTML = `${boutons}<iframe class="cadre" title="${esc(d.titre)}" src="${url}"></iframe>`;
   else if (d.type === "image") m.innerHTML = `${boutons}<div class="vue-image"><img src="${url}" alt="${esc(d.titre)}"></div>
     ${d.apercu ? `<p class="petit" style="text-align:center">Aperçu allégé : « Télécharger » donne l'original${d.dimensions ? ` (${d.dimensions.join(" × ")} pixels)` : ""}.</p>` : ""}`;
@@ -125,16 +215,28 @@ V2.demarrer({ titre: "Club" }, async () => {
   const afficher = async () => {
     const h = location.hash.slice(1), retour = $(".haut .bouton-haut");
     if (h.startsWith("doc/")) {
-      const [fichier, seule] = decodeURIComponent(h.slice(4)).split("/seule/");
+      // #doc/<fichier>[/<suite>] : suite = seule/v2 (une équipe), paris (championnat de la page), paris/seule/v2
+      const [fichier, ...suite] = decodeURIComponent(h.slice(4)).split("/");
       const d = (club.documents || []).find((x) => x.fichier === fichier);
-      if (d) return ouvrir(() => vue(d, null, seule || null));
+      if (d) return ouvrir(() => vue(d, null, suite.join("/") || null));
+    }
+    if (h.startsWith("r/") && RUB[h.slice(2)]) {
+      const id = h.slice(2);
+      if (id !== "tout") { m.innerHTML = vueRubrique(club, eq, id); window.scrollTo(0, 0); return; }
+    }
+    if (!h) {
+      m.innerHTML = accueilRubriques(club, eq);
+      const r = $("#ouvrir-reglages");
+      if (r) r.addEventListener("click", () => $("#v2-reglages").click());
+      window.scrollTo(0, 0);
+      return;
     }
     if (h.startsWith("res/")) {
       const [nom, fichier] = h.slice(4).split("/").map(decodeURIComponent);
       const d = (club.ressources || []).find((r) => r.nom === nom)?.documents.find((x) => x.fichier === fichier);
       if (d) return ouvrir(() => vue(d, nom));
     }
-    m.innerHTML = accueil(club, eq);
+    m.innerHTML = changer("tout") + accueil(club, eq);
     $("#tout").addEventListener("click", async (ev) => {  // tous les fichiers du jour, l'un après l'autre (comme l'espace club)
       const b = ev.currentTarget; b.disabled = true;
       const docs = club.documents || [];

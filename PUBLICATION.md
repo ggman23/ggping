@@ -675,6 +675,36 @@ Le cas se lit sur les scores d'une poule (le même total de points-parties parto
 goal-average particulier (détail au survol). Le règlement du comité (cdtt77.fr, que l'outil ne lit pas : le
 site interdit toute lecture automatique) a été envoyé le 21/11/2026 ; une nouvelle version : me l'envoyer.
 
+## Espace club rangé par rubriques (28/11)
+
+« Il faut une navigation simple et intuitive avec les choses bien rangées » : l'accueil de **/club/** n'a plus que
+de **gros boutons de rubriques**, chacun avec une ligne d'explication :
+
+- **Championnat de France** : ses pages (Adversaires, Feuilles de match, Classements des poules, Résultats des joueurs
+  et l'Excel, Effectif et brûlages), un bouton par équipe (Vaires 1 à 6, Vaires 1 F), et ses images rangées par type
+  dans des sections qui se déplient (Récapitulatif, Classements, Feuilles de match, Résultats, Adversaires, Effectif,
+  Programme) ;
+- **Championnat de Paris** : /paris/ (poules et adversaires), Disponibilités, puis Feuilles de match, Classement de la
+  poule et Résultats des joueurs ouverts directement sur Paris (`#paris`), Vaires 1 à 3, et les images de Paris
+  (récapitulatif, classements, feuilles, résultats, infographie, affiche) ;
+- **Championnat des jeunes** : de même (/jeunes/, pages ouvertes sur les jeunes) ;
+- **Par équipe** (toutes les équipes, par championnat), **Joueurs du club** (Classement virtuel, Progression,
+  Fiches, et leurs images), **Individuels** (/indivs/ et les images des poules), **Documents du club** (affiche,
+  matériel, préparation mentale), **Archives** ;
+- **Tout** : l'ancienne page complète (toutes les pages, toutes les images, archives, documents, « Tout
+  télécharger »).
+
+Dans chaque rubrique, une rangée de boutons en haut (France · Paris · Jeunes · Par équipe · Joueurs · Individuels ·
+Documents · Archives · Tout) passe directement à une autre. Sur ordinateur, le menu de gauche n'a plus que ces
+rubriques (et les autres espaces) ; sur téléphone, il n'y a plus de menu à gauche : l'accueil sert de menu et
+« Retour » remonte d'un cran (document → sa rubrique → accueil). Adresses : `/club/#rubrique/paris`,
+`/club/#rubrique/paris/rencontres_vaires.html` (page ouverte sur Paris). Les anciennes adresses (`#equipe/v2`,
+`#archives/...`, un document) marchent toujours.
+
+La page Club de la **v2** est rangée de la même façon : cartes de rubriques (France, Paris, jeunes, joueurs,
+individuels, documents, Tout), rangée de boutons en haut de chaque rubrique (`/v2/club/#r/paris`), images en sections
+qui se déplient ; une page s'ouvre sur un championnat avec `#doc/<page>/paris`.
+
 ## Championnat de Paris et des jeunes dans les pages du club (depuis le 28/11)
 
 Les rencontres du championnat de Paris IDF (« L08_Championnat de Paris IDF », 21 rencontres de Vaires) et du

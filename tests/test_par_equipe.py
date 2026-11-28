@@ -125,3 +125,18 @@ def test_fiche_d_equipe_et_mon_equipe_sur_l_accueil_v2():
     assert "m.innerHTML = heros + monEquipe" in accueil and "Tout sur ${esc(mienne.nom)}" in accueil
     assert "data-mienne" in accueil and "V2.ongletsEquipe(mienne, club)" in accueil
     assert ".equipe-nav { position: sticky" in (V2_DIR / "commun.css").read_text(encoding="utf-8")
+
+
+def test_espace_club_range_par_rubriques_v1_et_v2():
+    """28/11 : l'accueil de l'espace club n'a que de gros boutons de rubriques (France, Paris, jeunes, par équipe,
+    joueurs, individuels, documents, archives, « Tout ») ; chaque rubrique a seulement ses pages et ses images, et une
+    rangée de boutons pour changer de rubrique ; les pages à sélecteur s'ouvrent sur le championnat (#paris)."""
+    club = netlify.GABARIT_CLUB.read_text(encoding="utf-8")
+    for rubrique in ("france", "paris", "jeunes", "equipes", "joueurs", "individuels", "documents", "archives", "tout"):
+        assert f'id: "{rubrique}"' in club
+    assert "function vueRubrique(id)" in club and "function changerDeRubrique(actif)" in club and "function vueTout()" in club
+    assert "details class=\"groupe-images\"" in club and "seuleCourante = rubrique" in club
+    assert "#menu { display: none; }" in club  # téléphone : les gros boutons servent de menu
+    v2club = (V2_DIR / "club" / "index.html").read_text(encoding="utf-8")
+    assert "function accueilRubriques(club, eq)" in v2club and "function vueRubrique(club, eq, id)" in v2club
+    assert '`#doc/${encodeURIComponent(d.fichier)}/${id}`' in v2club and 'suite.join("/")' in v2club

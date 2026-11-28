@@ -814,3 +814,9 @@ Pas d'onglet dans l'application pour l'instant.
   club, jeunes : qui peut jouer selon la catégorie (brûlage à préciser plus tard), livraison par étapes.
   Première étape : rencontres, feuilles (groupes de 3), résultats et classements de Paris et des jeunes lus dans
   l'API, pages avec sélecteur, images paris_ / jeunes_, vue par équipe de Paris.
+- Espace club rangé (28/11) : « ça ne va pas la présentation ; dans club il faudrait les raccourcis aux rubriques : si je
+  clique sur championnat de France, j'ai que ce qui concerne le championnat de France, puis avec les boutons je
+  sélectionne championnat de Paris... La page où il y a tout peut rester, avec un bouton « Tout ». Navigation simple
+  et intuitive, bien rangée : dans le menu de gauche il y a tellement de liens d'images qu'on est obligé de trop
+  scroller ». Réalisation : accueil en gros boutons de rubriques, une rangée de boutons dans chaque rubrique, images
+  par type dans des sections repliables, menu de gauche réduit aux rubriques, « Tout » = l'ancienne page ; idem v2.

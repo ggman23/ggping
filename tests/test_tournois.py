@@ -59,7 +59,8 @@ def test_blocs_pingradar_et_liens_entre_les_espaces():
     indivs = netlify.Path(netlify.__file__).with_name("gabarit_indivs.html").read_text(encoding="utf-8")
     assert "`${BASE}/tournois/`" in indivs and 'id="vers-tournois"' in indivs
     club = netlify.GABARIT_CLUB.read_text(encoding="utf-8")
-    assert 'class="raccourcis"' in club  # accès direct aux autres espaces en haut du menu de /club/
+    # accès direct aux autres espaces : « Autres espaces » de l'accueil et du menu de /club/ (rubriques depuis le 28/11)
+    assert "Autres espaces" in club and "lienEspace" in club and 'class="autres"' in club
 
 
 # ---------------------------------------------------------------------------
