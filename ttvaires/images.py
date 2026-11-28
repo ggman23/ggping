@@ -280,7 +280,7 @@ def _avec_suffixe(cel, place, taille):
     t, tl = (cel.alternatives or [cel.texte])[-1], taille
     while tl > taille * 0.72 and largeur_texte(t, tl, cel.gras) > place:
         tl -= 0.5
-    while len(t) > 6 and largeur_texte(t, tl, cel.gras) > place:  # nom très long : « CAMPUS CEDEC… » plutôt que sans catégorie
+    while len(t) > 6 and largeur_texte(t, tl, cel.gras) > place:  # nom très long : « DELACROIX DOMIN… » plutôt que sans catégorie
         t = t[:-2].rstrip() + "…"
     return (t, tl) if largeur_texte(t, tl, cel.gras) <= place else None
 
