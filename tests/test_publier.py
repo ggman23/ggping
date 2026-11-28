@@ -162,3 +162,25 @@ def test_choix_publication_seule_dans_le_workflow_et_l_accueil():
     for etape in ("Récupération des données", "Archives des journées passées"):
         assert f"- name: {etape}\n        if: ${{{{ inputs.pages != 'publication' }}}}" in workflow
     assert '<option value="publication">' in (racine / "ttvaires" / "gabarit_accueil.html").read_text(encoding="utf-8")
+
+
+def test_images_de_paris_gardees_et_image_manquante_signalee(tmp_path, capsys):
+    """28/11 : l'infographie de Paris n'efface plus les autres images paris_ (faites avant elle), et une image
+    effacée entre-temps est signalée au lieu de bloquer toute la publication. Images de Paris : groupe « paris »."""
+    _crypto()
+    pytest.importorskip("PIL")
+    from ttvaires import images
+
+    sortie, site = tmp_path / "sortie", tmp_path / "site"
+    (sortie / "images").mkdir(parents=True)
+    (sortie / "images" / "paris_resultats_J1.png").write_bytes(b"\x89PNG")
+    images.image_paris(sortie / "images")
+    assert (sortie / "images" / "paris_resultats_J1.png").exists() and (sortie / "images" / "paris_infographie.png").exists()
+    (sortie / "bilan.json").write_text(json.dumps({"debut": "2026-11-28T09:00", "fin": "2026-11-28T09:30", "pages": [
+        {"nom": "résultats", "resume": "ok", "fichiers": [], "images": [
+            {"fichier": "images/paris_resultats_J1.png", "titre": "Paris · Résultats J1"},
+            {"fichier": "images/paris_resultats_cumul.png", "titre": "Paris · Résultats : cumul"}]}]}))
+    etat = publier.publier(sortie, site, "secret")
+    assert list(etat["images"]) == ["images/paris_resultats_J1.png.chiffre"]
+    assert etat["images"]["images/paris_resultats_J1.png.chiffre"]["groupe"] == "paris"
+    assert "image introuvable, non publiée : images/paris_resultats_cumul.png" in capsys.readouterr().out

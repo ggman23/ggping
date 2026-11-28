@@ -176,6 +176,6 @@ def dessiner(info):
 
 def image_paris(dossier, aujourdhui=None):
     """[(chemin, titre)] : l'infographie du championnat de Paris."""
-    _nettoyer(dossier, "paris_")
+    _nettoyer(dossier, "paris_infographie")  # pas les autres images paris_ (feuilles, résultats... faites avant)
     info = donnees_infographie(aujourdhui or date.today())
     return [(_enregistrer(dessiner(info), dossier, "paris_infographie.png"), "Championnat de Paris")]

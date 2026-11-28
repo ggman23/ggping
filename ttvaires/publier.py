@@ -205,6 +205,9 @@ def publier_images(page, date, sortie, site, etat, cle_):
         del etat["images"][publie]
     for ordre, image in enumerate(page.get("images", [])):
         nom = image["fichier"]
+        if not (sortie / nom).exists():  # effacée depuis par une autre étape : signalée, sans bloquer la publication
+            print(f"  ! image introuvable, non publiée : {nom}", flush=True)
+            continue
         publie = f"images/{Path(nom).name}.chiffre"
         (site / publie).parent.mkdir(parents=True, exist_ok=True)
         (site / publie).write_bytes(chiffrer((sortie / nom).read_bytes(), cle_))
