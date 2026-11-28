@@ -83,11 +83,15 @@ th.c, td.c { width: 1%; padding-left: 9px; padding-right: 9px; }
 <script>
 "use strict";
 const D = JSON.parse(document.getElementById("donnees").textContent);
+// Championnat de la page (sélecteur en haut : France, Paris, jeunes) : « phase 1 2026-2027 » ou « Championnat de Paris 2026-2027 »
+const CHAMP = D.championnat || "france";
+const periode = () => CHAMP === "france" ? `phase ${D.phase} ${D.saison}` : `${{ paris: "Championnat de Paris", jeunes: "Championnat des jeunes" }[CHAMP]} ${D.saison}`;
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const deux = (n) => String(n).padStart(2, "0");
 
 document.getElementById("sous-titre").textContent =
-  `${D.journee ? "Après la journée " + deux(D.journee) : "Avant la première journée"} • Phase ${D.phase} • ${D.saison.replace("-", "–")}`;
+  CHAMP === "france" ? `${D.journee ? "Après la journée " + deux(D.journee) : "Avant la première journée"} • Phase ${D.phase} • ${D.saison.replace("-", "–")}`
+    : `${CHAMP === "paris" ? "Championnat de Paris" : "Championnat des jeunes"} • ${D.journee ? "Après la journée " + deux(D.journee) : "Avant la première journée"} • ${D.saison.replace("-", "–")}`;
 document.getElementById("quand").textContent = `${D.club.nom} · ${D.date_reference
   ? "archive, état au " + new Date(D.date_reference + "T12:00").toLocaleDateString("fr-FR")
   : "données du " + new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`;

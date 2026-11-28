@@ -102,7 +102,7 @@ async function page(t, o) {
     <p class="petit" style="margin:6px 2px">Page du site actuel · <a href="${esc(o.externe)}">l'ouvrir en grand</a></p>`;
   try {
     const { url } = await ouvrirDoc(o.doc.chemin, o.doc.fichier);
-    return `<iframe class="cadre equipe" title="${esc(o.nom)} · ${esc(t.nom)}" src="${url}#seule/${encodeURIComponent(V2.codeEquipe(t))}"></iframe>
+    return `<iframe class="cadre equipe" title="${esc(o.nom)} · ${esc(t.nom)}" src="${url}#${o.championnat ? o.championnat + "/" : ""}seule/${encodeURIComponent(V2.codeEquipe(t))}"></iframe>
       <p class="petit" style="margin:6px 2px">${esc(o.doc.titre)} du site actuel, sur ${esc(t.nom)} seulement ·
         <a href="../club/#doc/${encodeURIComponent(o.doc.fichier)}">toutes les équipes</a></p>`;
   } catch (e) {

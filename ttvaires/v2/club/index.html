@@ -28,8 +28,9 @@ a.carte.tuile, .tuile { display: flex; gap: 12px; align-items: center; }
 <script>
 "use strict";
 const { $, esc, svg } = V2;
-const GROUPES = ["récapitulatif", "programme", "paris", "classements", "adversaires", "résultats", "rencontres", "effectif", "classement virtuel", "progression", "individuels"];
+const GROUPES = ["récapitulatif", "programme", "paris", "jeunes", "classements", "adversaires", "résultats", "rencontres", "effectif", "classement virtuel", "progression", "individuels"];
 const TITRES = { "récapitulatif": "Récapitulatif de la journée", "programme": "Programme des équipes", "paris": "Championnat de Paris",
+  "jeunes": "Championnat des jeunes",
   "classements": "Classements des poules", "adversaires": "Adversaires", "résultats": "Résultats des joueurs", "rencontres": "Feuilles de match",
   "effectif": "Effectif et brûlages", "classement virtuel": "Classement virtuel", "progression": "Progression des joueurs", "individuels": "Individuels" };
 const ESPACES = { paris: "Championnat de Paris", jeunes: "Championnat des jeunes", 77: "Clubs du 77", indivs: "Individuels (critérium)",

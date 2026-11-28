@@ -67,6 +67,7 @@ tr.avec-m td { border-bottom: 0; }
   tr.avec-m td { border-bottom: 0; padding-bottom: 2px; }
 }
 @media print { header { position: static; } nav, .filtres { display: none; } }
+tr.groupe-paris td { background: var(--accent-fond, #e7effb); font-weight: 600; padding: 7px 10px; text-align: left; }
 </style>
 </head>
 <body>
@@ -80,6 +81,9 @@ tr.avec-m td { border-bottom: 0; }
 <script>
 "use strict";
 const D = JSON.parse(document.getElementById("donnees").textContent);
+// Championnat de la page (sélecteur en haut : France, Paris, jeunes) : « phase 1 2026-2027 » ou « Championnat de Paris 2026-2027 »
+const CHAMP = D.championnat || "france";
+const periode = () => CHAMP === "france" ? `phase ${D.phase} ${D.saison}` : `${{ paris: "Championnat de Paris", jeunes: "Championnat des jeunes" }[CHAMP]} ${D.saison}`;
 const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 function fmtDate(iso) { const d = new Date(iso + "T12:00:00"); return `${JOURS[d.getDay()]} ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`; }
@@ -126,14 +130,23 @@ function resultat(p) {
   return `<span class="pr ${p.gagne ? "g" : p.gagne === false ? "p" : ""}">${txt}</span>`;
 }
 function carte(r) {
-  const [n, e] = r.score || [];
+  // Championnat de Paris : le résultat de la rencontre se lit en points-parties (6, 5 ou 4 par partie gagnée selon le groupe)
+  const pp = r.points_partie || [];
+  const [n, e] = CHAMP !== "france" && pp[0] != null && pp[1] != null ? pp : r.score || [];
   const issue = !r.score ? "" : n > e ? "v" : n < e ? "d" : "n";
   const tete = `<div class="tete"><h2>${esc(nomEquipe(r.equipe))}</h2>
     ${r.score && r.parties.length ? `<span class="res ${issue}">${{ v: "Victoire", d: "Défaite", n: "Nul" }[issue]} ${n}-${e}</span>` : ""}
     <div class="info">${r.domicile ? "reçoit" : "se déplace à"} <b>${esc(r.adversaire)}</b> · ${fmtDate(r.date)}${r.heure ? " " + esc(r.heure) : ""}
       · ${esc(r.division)}</div></div>`;
   if (!r.parties.length) return `<section class="carte">${tete}<p class="vide">${esc(r.forfait ? "Rencontre perdue ou gagnée par forfait" : r.libelle)}</p></section>`;
-  const lignes = r.parties.map((p, i) => `
+  const groupes = Object.fromEntries((r.groupes || []).map((g) => [g.numero, g]));
+  const titreGroupe = (p, i) => {  // Paris : une ligne de titre au début de chaque groupe de 3 joueurs
+    if (!(r.groupes || []).length || (i > 0 && r.parties[i - 1].groupe === p.groupe)) return "";
+    const g = groupes[p.groupe] || { score: [0, 0], points: [0, 0], bareme: 0 };
+    return `<tr class="groupe-paris"><td colspan="6">Groupe ${p.groupe} · <b>${g.score[0]}-${g.score[1]}</b> ·
+      ${g.points[0]}-${g.points[1]} points (${g.bareme} par partie gagnée)</td></tr>`;
+  };
+  const lignes = r.parties.map((p, i) => titreGroupe(p, i) + `
     <tr class="avec-m">
       <td class="n">${i + 1}</td>
       <td class="g ${p.gagne ? "b" : ""}">${joueurs(p.nous)}</td>
@@ -175,8 +188,10 @@ function afficher() {
     `<button data-equipe="${esc(e)}" class="${e === equipe ? "actif" : ""}">${e === "toutes" ? "Toutes" : esc(nomEquipe(e).replace("Vaires ", "V"))}</button>`).join("")}</div>`;
   const cartes = duJour.filter((r) => SEULE || equipe === "toutes" || r.equipe === equipe).map(carte).join("")
     || (SEULE ? '<p class="vide">Pas de feuille de match pour cette journée.</p>' : "");
-  main.innerHTML = verif + (SEULE ? bandeauSeule(nomDuCode(SEULE)) : filtres) + cartes + `<p class="note">Manches dans l'ordre, score de Vaires en premier (vert : manche gagnée
-    par Vaires). En gras : le vainqueur de la partie. A, B, C, D / W, X, Y, Z : lettres de la feuille de match.</p>`;
+  main.innerHTML = verif + (SEULE ? bandeauSeule(nomDuCode(SEULE)) : filtres) + cartes + `<p class="note">${CHAMP === "paris"
+    ? "Championnat de Paris : équipes de 9 (3 groupes de 3), 6 (2 groupes) ou 3 joueurs, 9 parties par groupe ; une partie gagnée rapporte 6 points en groupe 1, 5 en groupe 2 et 4 en groupe 3 : le score de la rencontre est la somme. "
+    : ""}Manches dans l'ordre, score de Vaires en premier (vert : manche gagnée
+    par Vaires). En gras : le vainqueur de la partie. Lettres : celles de la feuille de match.</p>`;
   main.querySelectorAll("[data-equipe]").forEach((b) => b.addEventListener("click", () => { equipe = b.dataset.equipe; afficher(); }));
 }
 function route() {
@@ -189,7 +204,7 @@ function route() {
   afficher();
 }
 document.getElementById("sous-titre").textContent =
-  `${D.club.nom} · phase ${D.phase} ${D.saison} · ${D.date_reference ? "archive, état au " + new Date(D.date_reference + "T12:00").toLocaleDateString("fr-FR") : "données du " + new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`;
+  `${D.club.nom} · ${periode()} · ${D.date_reference ? "archive, état au " + new Date(D.date_reference + "T12:00").toLocaleDateString("fr-FR") : "données du " + new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`;
 window.addEventListener("hashchange", route);
 route();
 </script>

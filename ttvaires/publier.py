@@ -50,7 +50,7 @@ PUBLIES = {
 }
 
 # Images à partager rangées à part (et non avec la page qui les produit)
-GROUPES_A_PART = {"recap_": "récapitulatif", "programme_": "programme", "paris_": "paris", "classements_": "classements",
+GROUPES_A_PART = {"recap_": "récapitulatif", "programme_": "programme", "paris_": "paris", "jeunes_": "jeunes", "classements_": "classements",
                   "progression_": "progression"}
 
 

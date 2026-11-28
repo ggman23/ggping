@@ -120,7 +120,7 @@ def donnees_classements(donnees):
             "regle": departage.REGLES.get(e["classement"][0].get("regle")) if e["classement"] else None,
         })
     sortie = {"club": {"numero": club, "nom": donnees["club"].get("nom", "")}, "saison": donnees["saison"],
-              "phase": donnees["phase"], "genere_le": donnees.get("genere_le"),
+              "phase": donnees["phase"], "genere_le": donnees.get("genere_le"), "championnat": donnees.get("championnat", "france"),
               "journee": derniere_journee(donnees), "poules": poules}
     if donnees.get("date_reference"):
         sortie["date_reference"] = donnees["date_reference"]
@@ -290,6 +290,74 @@ def recuperer(client, numero_club="08770250", aujourdhui=None, dossier_import=No
     completer_avec_pingpocket(client, donnees, dossier_import, tous_les_historiques, fichier_etat)
     ajouter_forme(client, donnees, detail, debut, min(fin, auj), auj)
     return donnees
+
+
+def equipes_du_championnat(client, numero_club="08770250", aujourdhui=None, championnat="paris"):
+    """Équipes de Vaires d'un autre championnat que celui de France (paris, jeunes), lues dans l'API comme
+    celles du championnat de France : poule, calendrier, scores (points-parties) et classement de la poule
+    (classement_poule : points-rencontres de l'API, départage de l'article I.202). Toute la saison (une seule
+    poule de septembre à juin). Renvoie {"equipes": [...], "detail": {id: feuille}, "etats": {...}} ; les
+    équipes ont le format de donnees["equipes"] (id v1, v2... ; championnat "P" ou "J")."""
+    aujourdhui = aujourdhui or date.today()
+    auj = aujourdhui.isoformat()
+    debut, fin = fftt.bornes(aujourdhui, championnat)
+    id_club = fftt.id_interne_club(client, numero_club, fftt.bornes_phase(aujourdhui)[0])
+    nos_equipes = {}
+    for r in fftt.rencontres_club(client, id_club, debut, fin, ttl=3 * HEURE, championnat=championnat):
+        for cote in ("homeOpponent", "awayOpponent"):
+            t = fftt.equipe(r, cote)
+            if fftt.club_de(t)[0] == numero_club:
+                nos_equipes.setdefault(t["name"], {"poule": r["pool"]["id"], "division": r["division"]["name"],
+                                                   "numero": fftt.numero_equipe(t["name"]) or 0})
+    poules = sorted({e["poule"] for e in nos_equipes.values()})
+    infos = {p: fftt.lire(client, f"/pools/{p}", ttl=JOUR) for p in poules}
+    rencontres_poules = {p: fftt.rencontres_poule(client, p, ttl=3 * HEURE) for p in poules}
+    etats = {}
+    detail = fftt.details(client, [r for rs in rencontres_poules.values() for r in rs], auj, etats)
+    salles = {}
+    for info in infos.values():
+        for po in info.get("poolOpponents", []):
+            t = (po.get("opponent") or {}).get("team") or {}
+            if t.get("name"):
+                salles[t["name"]] = (t.get("sportHall") or {}).get("name")
+    lettre = {"paris": "P", "jeunes": "J"}.get(championnat, "M")
+    equipes = []
+    for nom, e in sorted(nos_equipes.items(), key=lambda x: x[1]["numero"]):
+        rencontres = []
+        for r in rencontres_poules[e["poule"]]:
+            dom, ext = fftt.equipe(r, "homeOpponent"), fftt.equipe(r, "awayOpponent")
+            if nom not in (dom.get("name"), ext.get("name")):
+                continue
+            chez_nous = dom.get("name") == nom
+            adv = ext if chez_nous else dom
+            d = detail.get(r["id"])
+            salle = salles.get(dom.get("name"))
+            rencontres.append({
+                "journee": r["day"]["position"], "date": r["date"][:10], "date_reelle": None, "heure": fftt.heure(r),
+                "domicile": {"libelle": dom.get("name"), "club": fftt.club_de(dom)[0]},
+                "exterieur": {"libelle": ext.get("name"), "club": fftt.club_de(ext)[0]},
+                "vaires_domicile": chez_nous,
+                "score": [d["homeGamePoints"], d["awayGamePoints"]] if d else None,
+                "adversaire": {"club": fftt.club_de(adv)[0], "libelle": adv["name"],
+                               "numero": fftt.numero_equipe(adv["name"])} if adv.get("name") else None,
+                "salle": {"nom": salle} if salle else None,
+            })
+        rencontres.sort(key=lambda x: (x["journee"], x["date"]))
+        equipes.append({
+            "id": f"v{e['numero']}", "libelle": nom, "nom_court": f"Vaires {e['numero']}", "numero": e["numero"],
+            "championnat": lettre, "division": fftt.libelle_division(e["division"]),
+            "division_courte": fftt.division_courte(e["division"]),
+            "poule": f"Poule {infos[e['poule']].get('name', '')}".strip(),
+            "jour": fftt.jour_habituel([x["date"] for x in rencontres]), "rencontres": rencontres,
+            "classement": classement_poule(infos[e["poule"]], rencontres_poules[e["poule"]], detail),
+        })
+    for e in equipes:  # journal : chiffres et noms d'équipes seulement
+        jouees = [r for r in e["rencontres"] if r["score"]]
+        print(f"  {fftt.NOMS_CHAMPIONNATS[championnat]} : {e['libelle']} ({e['division']}, {e['poule']}) : "
+              f"{len(e['rencontres'])} rencontres, {len(jouees)} jouée(s) avec résultat"
+              + (f", dernier score {jouees[-1]['score'][0]}-{jouees[-1]['score'][1]}" if jouees else "")
+              + (f", classement de {len(e['classement'])} équipes" if e["classement"] else ""), flush=True)
+    return {"equipes": equipes, "detail": detail, "etats": etats, "rencontres_poules": rencontres_poules}
 
 
 def recuperer_paris(client, numero_club="08770250", aujourdhui=None, dossier_import=None, tous_les_historiques=False,

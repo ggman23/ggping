@@ -156,7 +156,7 @@ def equipes_de_la_journee(rencontres):
             if len(p["nous"]) != 1:
                 continue
             moi = p["nous"][0]
-            j = joueurs.setdefault(moi["licence"], {**moi, "v": 0, "d": 0, "perfs": []})
+            j = joueurs.setdefault(moi["licence"], {**moi, "v": 0, "d": 0, "perfs": [], "groupe": p.get("groupe") or 0})
             j["v" if p["gagne"] else "d"] += 1
             adv = (p["eux"] or [{}])[0].get("points")
             if p["gagne"] and adv and moi.get("points") and adv > moi["points"]:
@@ -164,7 +164,7 @@ def equipes_de_la_journee(rencontres):
         libelle, couleur = _resultat(r)
         nb_doubles = sum(1 for p in r["parties"] if p["double"])
         equipes.append({"titre": titre, "resultat": libelle, "couleur": couleur,
-                        "joueurs": sorted(joueurs.values(), key=lambda j: (j.get("lettre") or "", j["nom"])),
+                        "joueurs": sorted(joueurs.values(), key=lambda j: (j["groupe"], j.get("lettre") or "", j["nom"])),
                         "doubles": doubles if nb_doubles else None, "nb_doubles": nb_doubles})
     return equipes
 
@@ -198,6 +198,30 @@ def _emplacements(nb):
         places += [(x, 517 + rangee * PAS_RANGEE) for x in COLONNES]
         rangee += 1
     return places[:nb]
+
+
+def hauteur_bloc(equipe):
+    """Hauteur d'un bloc d'équipe : bandeau, puis une ligne par joueur (et les doubles)."""
+    return 85 + (len(equipe["joueurs"]) + (1 if equipe["doubles"] else 0) - 1) * PAS_LIGNE + 30
+
+
+def _emplacements_variables(hauteurs):
+    """Championnat de Paris (équipes de 9, 6 et 3 joueurs) : à gauche de la photo tant que les blocs y tiennent,
+    puis des rangées de trois sous la photo, chaque rangée aussi haute que son plus grand bloc. Le dernier
+    emplacement (le top 5, 221 points de haut) suit les équipes. Renvoie (emplacements, hauteur de l'image)."""
+    places, y = [], 58
+    i = 0
+    while i < len(hauteurs) and y + hauteurs[i] <= PHOTO[3] + 10:
+        places.append((COLONNES[0], y))
+        y += hauteurs[i] + 12
+        i += 1
+    y = 517
+    reste = hauteurs[i:] + [221 + 14]
+    while reste:
+        rangee, reste = reste[:3], reste[3:]
+        places += [(x, y) for x in COLONNES[:len(rangee)]]
+        y += max(rangee) + 12
+    return places, max(HAUTEUR_MIN, y + 10)
 
 
 def _bloc(d, x0, y0, equipe, noms):
@@ -326,16 +350,16 @@ def _image_du_dossier(dossier_import, debut):
     return None
 
 
-def _photo(img, d, dossier_import, journee):
+def _photo(img, d, dossier_import, journee, debut="photo_j"):
     x0, y0, x1, y1 = PHOTO
-    photo = _image_du_dossier(dossier_import, f"photo_j{journee}")
+    photo = _image_du_dossier(dossier_import, f"{debut}{journee}")
     if photo:
         cadre = ImageOps.fit(photo.convert("RGB"), ((x1 - x0) * F, (y1 - y0) * F), Image.LANCZOS, centering=(0.5, 0.4))
         img.paste(cadre, (x0 * F, y0 * F))
     else:
         d.rectangle([x0 * F, y0 * F, x1 * F, y1 * F], fill="#F1F3F5")
         ecrire(d, (x0 + x1) / 2, (y0 + y1) / 2 - 6, "Photo de l'équipe", MAIN, 30, "#ADB5BD", "ms")
-        ecrire(d, (x0 + x1) / 2, (y0 + y1) / 2 + 28, f"(import\\photo_J{journee}.jpg, ou à coller ici)", MAIN, 19, "#ADB5BD", "ms")
+        ecrire(d, (x0 + x1) / 2, (y0 + y1) / 2 + 28, f"(import\\{debut.replace('_j', '_J')}{journee}.jpg, ou à coller ici)", MAIN, 19, "#ADB5BD", "ms")
     for cote, (cx, cy, lmax, hmax) in LOGOS.items():
         logo = _image_du_dossier(dossier_import, f"logo_{cote}")
         if not logo:
@@ -346,31 +370,43 @@ def _photo(img, d, dossier_import, journee):
     return bool(photo)
 
 
-def image_recap(donnees, dossier_import, dossier):
-    """Écrit recap_J<n>.png pour la dernière journée. Renvoie [(chemin, titre)]."""
-    for f in Path(dossier).glob("recap_*.png"):
+def image_recap(donnees, dossier_import, dossier, prefixe=""):
+    """Écrit recap_J<n>.png pour la dernière journée. Renvoie [(chemin, titre)]. Championnat de Paris
+    (prefixe « paris_ », donnees["championnat"] = "paris") : paris_recap_J<n>.png, titre « CHAMPIONNAT DE
+    PARIS », joueurs rangés par groupe, photo import/photo_paris_J<n>.jpg."""
+    paris = (donnees.get("championnat") or "france") != "france"
+    for f in Path(dossier).glob(f"{prefixe}recap_*.png"):
         f.unlink()
     if not donnees.get("journees"):
         return []
     j = donnees["journees"][-1]
-    equipes = equipes_de_la_journee([r for r in donnees["rencontres"] if r["journee"] == j])
+    du_jour = [r for r in donnees["rencontres"] if r["journee"] == j]
+    if paris and not any(r["parties"] for r in du_jour):
+        return []  # Paris, jeunes : pas d'image tant qu'aucune feuille de la journée n'est saisie
+    equipes = equipes_de_la_journee(du_jour)
     if not equipes:
         return []
     tous = {jj["licence"]: jj for e in equipes for jj in e["joueurs"]}
     noms = noms_affiches(list(tous.values()), lire_surnoms(dossier_import))
-    places = _emplacements(len(equipes) + 1)  # + le top 5
-    hauteur = max(HAUTEUR_MIN, places[-1][1] + PAS_RANGEE)
+    if paris:
+        places, hauteur = _emplacements_variables([hauteur_bloc(e) for e in equipes])
+    else:
+        places = _emplacements(len(equipes) + 1)  # + le top 5
+        hauteur = max(HAUTEUR_MIN, places[-1][1] + PAS_RANGEE)
     img = Image.new("RGB", (LARGEUR * F, hauteur * F), "white")
     d = ImageDraw.Draw(img)
-    ecrire(d, 19, 42, "CHAMPIONNAT DE FRANCE", TITRE, 34.5, ROUGE)
-    ecrire(d, 454, 38, f"Journée {j} - Phase {donnees['phase']} - {donnees['saison']}", MAIN, 26.5, NOIR)
-    avec_photo = _photo(img, d, dossier_import, j)
+    titre = {"paris": "CHAMPIONNAT DE PARIS", "jeunes": "CHAMPIONNAT DES JEUNES"}.get(donnees.get("championnat"), "CHAMPIONNAT DE FRANCE")
+    ecrire(d, 19, 42, titre, TITRE, 34.5, ROUGE)
+    ecrire(d, 454, 38, f"Journée {j} - {donnees['saison']}" if paris else f"Journée {j} - Phase {donnees['phase']} - {donnees['saison']}",
+           MAIN, 26.5, NOIR)
+    avec_photo = _photo(img, d, dossier_import, j, f"photo_{prefixe}j" if paris else "photo_j")
     _perfs_vertical(img, d)
     for (x, y), equipe in zip(places, equipes):
         _bloc(d, x, y, equipe, noms)
     x, y = places[-1]
     _top5(img, d, x + 1, y - 1, top_perfs(equipes, noms))
-    chemin = Path(dossier) / f"recap_J{j}.png"
+    chemin = Path(dossier) / f"{prefixe}recap_J{j}.png"
     chemin.parent.mkdir(parents=True, exist_ok=True)
     img.resize((LARGEUR, hauteur), Image.LANCZOS).save(chemin, optimize=True)
-    return [(chemin, f"Récapitulatif J{j}" + ("" if avec_photo else " (photo à ajouter)"))]
+    court = {"paris": "Paris · ", "jeunes": "Jeunes · "}.get(donnees.get("championnat"), "")
+    return [(chemin, court + f"Récapitulatif J{j}" + ("" if avec_photo else " (photo à ajouter)"))]

@@ -69,6 +69,9 @@ def raccourcir(texte, nom, taille, place):
 def sous_titre(c):
     saison = c["saison"].replace("-", "–")
     debut = f"APRÈS LA JOURNÉE {c['journee']:02d}" if c["journee"] else "AVANT LA PREMIÈRE JOURNÉE"
+    if (c.get("championnat") or "france") != "france":  # Paris, jeunes : une poule sur toute la saison
+        nom = {"paris": "CHAMPIONNAT DE PARIS", "jeunes": "CHAMPIONNAT DES JEUNES"}[c["championnat"]]
+        return f"{nom}   •   {debut}   •   {saison}"
     return f"{debut}   •   PHASE {c['phase']}   •   {saison}"
 
 
@@ -253,9 +256,10 @@ def _carte(img, d, x, y, w, h, poule):
             ecrire(d, col[c], yt, valeur, GRAS if c == "PTS" else gras, 13, BLANC if c == "PTS" or l["nous"] else couleur, "ms")
 
 
-def image_classements(donnees, dossier_import, dossier):
-    """Écrit classements_poules.png (toutes les poules des équipes de Vaires). Renvoie [(chemin, titre)]."""
-    for f in Path(dossier).glob("classements_*.png"):
+def image_classements(donnees, dossier_import, dossier, prefixe=""):
+    """Écrit classements_poules.png (toutes les poules des équipes de Vaires). Renvoie [(chemin, titre)].
+    prefixe « paris_ » : paris_classements_poules.png, pour les poules du championnat de Paris."""
+    for f in Path(dossier).glob(f"{prefixe}classements_*.png"):
         f.unlink()
     c = donnees_classements(donnees)
     if not c["poules"]:
@@ -286,8 +290,9 @@ def image_classements(donnees, dossier_import, dossier):
     if incomplet:
         ecrire(d, MARGE + 16, hauteur - 14, "* sets incomplets : certaines parties ont été saisies sans le détail des sets",
                NORMAL, 11, GRIS_CLAIR)
-    chemin = Path(dossier) / "classements_poules.png"
+    chemin = Path(dossier) / f"{prefixe}classements_poules.png"
     chemin.parent.mkdir(parents=True, exist_ok=True)
     img.resize((LARGEUR, hauteur), Image.LANCZOS).save(chemin, optimize=True)
-    titre_image = "Classements des poules" + (f" après la J{c['journee']}" if c["journee"] else "")
+    titre_image = ({"paris": "Paris · ", "jeunes": "Jeunes · "}.get(c.get("championnat"), "")
+                   + "Classements des poules" + (f" après la J{c['journee']}" if c["journee"] else ""))
     return [(chemin, titre_image)]

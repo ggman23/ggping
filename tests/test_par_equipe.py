@@ -74,7 +74,9 @@ def test_equipes_de_l_espace_club(tmp_path):
     page = (tmp_path / "club" / "index.html").read_text(encoding="utf-8")
     donnees = json.loads(page.split('<script id="donnees" type="application/json">')[1].split("</script>")[0])
     assert [e["code"] for e in donnees["equipes"]] == ["v2", "v1f", "p1", "j1"] and "FICTIFNOM" not in page
-    assert "Par équipe" in page and "#equipe/" in page and '"#seule/" + encodeURIComponent(seuleCourante)' in page
+    assert "Par équipe" in page and "#equipe/" in page and '"#" + seuleCourante' in page
+    # Paris (28/11) : les pages avec le sélecteur s'ouvrent sur l'équipe de Paris (#paris/seule/v2)
+    assert '`${equipe.espace ? equipe.espace + "/" : ""}seule/${equipe.seule}`' in page and "PAGES_CHAMP" in page
 
 
 V2_DIR = Path(netlify.__file__).with_name("v2")
@@ -116,7 +118,8 @@ def test_onglets_en_haut_de_la_fiche_d_equipe_v2():
 
 def test_fiche_d_equipe_et_mon_equipe_sur_l_accueil_v2():
     equipe = (V2_DIR / "equipes" / "index.html").read_text(encoding="utf-8")
-    assert 'class="segments equipe-nav"' in equipe and "V2.ongletsEquipe(t, club)" in equipe and "#seule/" in equipe
+    assert 'class="segments equipe-nav"' in equipe and "V2.ongletsEquipe(t, club)" in equipe and 'seule/${encodeURIComponent' in equipe
+    assert 'o.championnat ? o.championnat + "/" : ""' in equipe  # Paris, jeunes : #paris/seule/v2 (sélecteur de la page)
     assert "C'est mon équipe" in equipe and "V2.R.equipe" in equipe and "vignette" in equipe
     accueil = (V2_DIR / "index.html").read_text(encoding="utf-8")
     assert "m.innerHTML = heros + monEquipe" in accueil and "Tout sur ${esc(mienne.nom)}" in accueil

@@ -18,6 +18,10 @@ ENTETES = {"Accept": "application/ld+json", "X-Requested-With": None, "Referer":
 # Identifiant interne de l'API pour les clubs connus (numéro FFTT -> identifiant).
 IDS_CLUBS = {"08770250": 12770250}
 CHAMPIONNAT_PAR_EQUIPES = "Championnat de France par Equipes"
+# Championnats par équipes suivis : un morceau du nom de la compétition dans l'API (« FED_Championnat de France
+# par Equipes Masculin », « L08_Championnat de Paris IDF », « Chpt Jeunes par Equipes 77 2526 »)
+CHAMPIONNATS = {"france": CHAMPIONNAT_PAR_EQUIPES, "paris": "Championnat de Paris", "jeunes": "Jeunes par Equipes"}
+NOMS_CHAMPIONNATS = {"france": "Championnat de France", "paris": "Championnat de Paris", "jeunes": "Championnat des jeunes"}
 JOURS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
 # Une feuille de match peut être corrigée après sa saisie (réclamation, validation par la commission) :
 # tant que la rencontre a moins de RELECTURE_JOURS jours, sa feuille est relue si elle date de plus de
@@ -42,6 +46,15 @@ def bornes_phase(jour):
     return ("%d-07-01" % annee, "%d-12-31" % annee) if phase == 1 else ("%d-01-01" % (annee + 1), "%d-06-30" % (annee + 1))
 
 
+def bornes(jour, championnat="france"):
+    """Dates à lire pour un championnat : la phase en cours pour le championnat de France (brûlages, résultats
+    remis à zéro à chaque phase), toute la saison pour Paris et les jeunes (une seule poule de septembre à juin)."""
+    if championnat == "france":
+        return bornes_phase(jour)
+    annee = int(phase_et_saison(jour)[1][:4])
+    return f"{annee}-07-01", f"{annee + 1}-06-30"
+
+
 def libelle_division(txt):
     """Rend lisibles les codes de division FFTT ('L08_R2' -> 'Régionale 2', 'DEP 3 Ph1' -> 'Départementale 3')."""
     txt = " ".join((txt or "").replace("FED_", "").split())
@@ -49,6 +62,11 @@ def libelle_division(txt):
     txt = re.sub(r"^L\d+_R(\d+)", r"Régionale \1", txt)
     txt = re.sub(r"^PRE-REG\b", "Pré-régionale", txt)
     txt = re.sub(r"^DEP (\d+)", r"Départementale \1", txt)
+    # Championnat de Paris IDF : « L08_Honneur », « L08_Promo Honneur », « L08_2eme Division »
+    txt = re.sub(r"^L\d+_", "", txt)
+    txt = re.sub(r"^Promo\.? Honneur$", "Promotion d'Honneur", txt, flags=re.I)
+    txt = re.sub(r"^Promo\.? Excellence$", "Promotion Excellence", txt, flags=re.I)
+    txt = re.sub(r"^(\d)(?:e|ère|eme|ème|ere|er) Division$", r"Division \1", txt, flags=re.I)
     return txt
 
 
@@ -57,7 +75,9 @@ def division_courte(txt):
     'L08_R2' -> 'R2', 'PRE-REG' -> 'PR', 'Nationale 1' -> 'N1'. Vide si inconnue."""
     t = " ".join((txt or "").replace("FED_", "").upper().split())
     for motif, forme in ((r"^(?:DEP|D)\s*(\d+)\b", "D{}"), (r"^L\d+_R(\d+)", "R{}"), (r"^R(?:EGIONALE|ÉGIONALE)?\s*(\d+)\b", "R{}"),
-                         (r"^PRE-?REG", "PR"), (r"^PRE-?NAT", "PN"), (r"^N(?:ATIONALE)?\s*(\d+)\b", "N{}")):
+                         (r"^PRE-?REG", "PR"), (r"^PRE-?NAT", "PN"), (r"^N(?:ATIONALE)?\s*(\d+)\b", "N{}"),
+                         (r"^L\d+_PROMO\.? HONNEUR", "PH"), (r"^L\d+_HONNEUR", "HO"), (r"^L\d+_PROMO\.? EXCELLENCE", "PE"),
+                         (r"^L\d+_EXCELLENCE", "EX"), (r"^L\d+_(\d)\w* DIVISION", "D{}")):
         m = re.search(motif, t)
         if m:
             return forme.format(*m.groups())
@@ -70,7 +90,8 @@ def jour_habituel(dates):
 
 
 def numero_equipe(nom):
-    m = re.search(r"(\d+)\s*$", nom or "")
+    """'VAIRES CVTT 2' -> 2 ; 'VAIRES CVTT (3)' -> 3 (équipes du championnat de Paris dans l'API)."""
+    m = re.search(r"\(?(\d+)\)?\s*$", nom or "")
     return int(m[1]) if m else None
 
 
@@ -117,11 +138,11 @@ def id_interne_club(client, numero, debut_saison):
     raise ValueError(f"club {numero} introuvable dans l'API FFTT")
 
 
-def rencontres_club(client, id_club, debut, fin, ttl):
-    """Rencontres de championnat par équipes d'un club entre deux dates (sans le détail)."""
+def rencontres_club(client, id_club, debut, fin, ttl, championnat="france"):
+    """Rencontres d'un championnat par équipes (france, paris, jeunes) d'un club entre deux dates (sans le détail)."""
     filtre = (f"{_q('or[homeOpponent.team.clubs.id]')}={id_club}&{_q('or[awayOpponent.team.clubs.id]')}={id_club}"
               f"&{_q('date[after]')}={debut}&{_q('date[before]')}={fin}&{_q('order[date]')}=asc&itemsPerPage=100")
-    rencontres = [r for r in lire_tout(client, f"/sport_matches?{filtre}", ttl) if championnat_par_equipes(r)]
+    rencontres = [r for r in lire_tout(client, f"/sport_matches?{filtre}", ttl) if du_championnat(r, championnat)]
     return sorted(rencontres, key=lambda r: (r["date"], r["id"]))  # l'API ne garantit pas l'ordre à date égale
 
 
@@ -169,6 +190,10 @@ def details(client, rencontres, aujourdhui, etats=None):
 
 def championnat_par_equipes(rencontre):
     return CHAMPIONNAT_PAR_EQUIPES in rencontre["division"].get("contest", {}).get("name", "")
+
+
+def du_championnat(rencontre, championnat="france"):
+    return CHAMPIONNATS[championnat].lower() in ((rencontre.get("division") or {}).get("contest") or {}).get("name", "").lower()
 
 
 def feminin(rencontre):

@@ -675,6 +675,43 @@ Le cas se lit sur les scores d'une poule (le même total de points-parties parto
 goal-average particulier (détail au survol). Le règlement du comité (cdtt77.fr, que l'outil ne lit pas : le
 site interdit toute lecture automatique) a été envoyé le 21/11/2026 ; une nouvelle version : me l'envoyer.
 
+## Championnat de Paris et des jeunes dans les pages du club (depuis le 28/11)
+
+Les rencontres du championnat de Paris IDF (« L08_Championnat de Paris IDF », 21 rencontres de Vaires) et du
+championnat des jeunes (« Chpt Jeunes par Equipes 77 », 14 rencontres) sont maintenant dans l'API de la FFTT
+(mise à jour du 28/11). Elles sont lues comme celles du championnat de France (`fftt.CHAMPIONNATS`, toute la
+saison : `fftt.bornes`), et les pages les montrent avec un **sélecteur en haut de la page** :
+« Championnat de France · Championnat de Paris · Championnat des jeunes » (un championnat n'apparaît que s'il a
+des données).
+
+- **Pages concernées** : Résultats des joueurs, Feuilles de match, Classements des poules. Adresse :
+  `#paris` ou `#jeunes` (ex. `rencontres.html#paris`), et pour une seule équipe `#paris/seule/v2` (Vaires 2
+  de Paris). La page garde toutes les données ; le choix met celles du championnat demandé à la place de
+  `<script id="donnees">` avant que la page ne les lise (`rendu.generer_html(..., autres=...)`).
+- **Feuilles de match de Paris** : équipes de 9 (Honneur : 3 groupes de 3), 6 (Promotion d'Honneur : 2 groupes)
+  ou 3 joueurs (Division 2) ; 9 parties par groupe. Chaque partie a son groupe (`resultats.groupes_des_parties` :
+  les joueurs qui se rencontrent forment un groupe ; groupe 1 = celui des meilleurs joueurs de Vaires, règlement
+  article 8), chaque groupe son score et ses points (6, 5 ou 4 par partie gagnée en groupe 1, 2 ou 3, article 7).
+  Le résultat de la rencontre se lit en points-parties (ex. victoire 90-45).
+- **Résultats des joueurs** : points gagnés ou perdus avec le coefficient du championnat lu dans l'API (Paris :
+  0,75 ; jeunes : celui de l'API, 0,5 sinon), journées J1 à J7 sur la saison.
+- **Classements des poules** : les poules de Paris et des jeunes, comme celles du championnat de France
+  (points-rencontres de l'API, départage de l'article I.202).
+- **Images** (à part, préfixe `paris_` ou `jeunes_`, groupe « Championnat de Paris » / « Championnat des jeunes »
+  de l'espace club) : récapitulatif de la journée (`paris_recap_J1.png` : « CHAMPIONNAT DE PARIS », les 9, 6 et
+  3 joueurs de chaque équipe rangés par groupe, top 5 des perfs ; photo : `import/photo_paris_J1.jpg`), une
+  feuille de match par équipe (`paris_rencontres_J1_V2.png`, avec les groupes), résultats de la journée et cumul
+  (`paris_resultats_J1.png`, `paris_resultats_cumul.png`), classements des poules (`paris_classements_poules.png`).
+- **Par équipe** (espace club et v2) : pour les équipes de Paris et des jeunes, en plus de /paris/ (ou /jeunes/) :
+  Feuilles de match, Classement de la poule et Résultats des joueurs, ouverts sur l'équipe (`#paris/seule/v2`),
+  et leurs images (celles de leur championnat, sans celles des autres équipes).
+- Le journal de la mise à jour écrit, pour chaque feuille de Paris, ce que l'API donne (aucun nom) : nombre de
+  parties, points-parties, lettres des joueurs, groupes trouvés (« groupes {1: 9, 2: 9, 3: 9} »).
+- À venir (même demande) : brûlages de Paris (règlement de la ligue, article 12 : par groupe de 3 d'une équipe
+  2 ou 3, un seul joueur ayant joué 3 fois ou plus dans une équipe de numéro inférieur), colonnes Paris du
+  classement virtuel, progression des 9, 6 et 3 joueurs, images des prochains adversaires, espace club rangé par
+  championnat (onglets), et tout cela dans la v2.
+
 ## Championnat de Paris : /paris/ (les trois équipes de Vaires)
 
 **/paris/** sur chaque site (https://ggping-pap.pages.dev/paris/, https://ggman23.github.io/ggping/paris/,

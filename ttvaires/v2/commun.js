@@ -237,8 +237,12 @@ const V2 = (() => {
     const docs = club?.documents || [];
     const suffixe = new RegExp(`_${codeEquipe(t).toUpperCase()}(?:_|\\.)`);
     const rang = (d) => [ORDRE_IMAGES.indexOf(d.groupe), /_complet\./.test(d.fichier) ? 0 : /brules/.test(d.fichier) ? 2 : 1];
-    const siennes = (t.comp === "paris" ? docs.filter((d) => d.type === "image" && d.groupe === "paris")
-      : t.comp === "jeunes" ? [] : docs.filter((d) => d.type === "image" && suffixe.test(d.fichier)))
+    // Paris, jeunes : les images de leur groupe (paris_..., jeunes_...), sans celles des autres équipes du même championnat ;
+    // France : celles qui portent le code de l'équipe, hors Paris et jeunes
+    const autre = /_V\d+F?(?:_|\.)/i;
+    const siennes = (t.comp === "paris" || t.comp === "jeunes"
+      ? docs.filter((d) => d.type === "image" && d.groupe === t.comp && (!autre.test(d.fichier) || suffixe.test(d.fichier)))
+      : docs.filter((d) => d.type === "image" && !["paris", "jeunes"].includes(d.groupe) && suffixe.test(d.fichier)))
       .map((d, i) => ({ d, i, r: rang(d) })).sort((a, b) => a.r[0] - b.r[0] || a.r[1] - b.r[1] || a.i - b.i).map((x) => x.d);
     if (t.comp === "paris") for (const r of club?.ressources || []) siennes.push(...r.documents.filter((d) => d.type === "image" && /paris/i.test(d.fichier + r.nom)).map((d) => ({ ...d, rubrique: r.nom })));
     return { siennes, club: docs.filter((d) => d.type === "image" && d.groupe === "programme") };
@@ -248,6 +252,11 @@ const V2 = (() => {
     if (t.comp === "paris" || t.comp === "jeunes") {
       l.push({ id: "poule", nom: "Poule et adversaires", externe: `${RACINE}../${t.comp}/#seule/${codeEquipe(t)}` });
       if (t.comp === "paris") l.push({ id: "dispos", nom: "Disponibilités", externe: `${RACINE}../paris/#dispo` });
+      // Pages du site avec le sélecteur de championnat : ouvertes sur ce championnat et cette équipe (#paris/seule/v2)
+      for (const [id, fichier, nom] of PAGES_EQUIPE.filter(([i]) => ["feuilles", "poule", "resultats"].includes(i))) {
+        const d = docs.find((x) => x.fichier === fichier);
+        if (d) l.push({ id, nom, doc: d, championnat: t.comp });
+      }
     } else {
       for (const [id, fichier, nom] of PAGES_EQUIPE) { const d = docs.find((x) => x.fichier === fichier); if (d) l.push({ id, nom, doc: d }); }
     }

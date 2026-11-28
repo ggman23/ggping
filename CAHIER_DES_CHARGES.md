@@ -805,3 +805,12 @@ Pas d'onglet dans l'application pour l'instant.
   été recopiée sans date, donc les résultats n'étaient pas cherchés. Réalisation : indivs.date_du_tour (jour où le
   plus de joueurs de la liste ont joué en critérium après la recopie des poules), poule marquée date_deduite et
   mention « date d'après les parties jouées » sur /indivs/ et dans la v2.
+- Championnats de Paris et des jeunes comme celui de France (28/11) : « les rencontres du championnat de Paris ont eu
+  lieu : résultats des joueurs (différencier France et Paris), feuilles de match, classement des poules, brûlages
+  (règlement de Paris pour les équipes du 77), classement virtuel (colonne Paris, qui a joué dans Vaires 1 à 3),
+  récapitulatif de la journée, prochains adversaires, résultats, progression (9, 6 et 3 joueurs), html et
+  images ; la même chose pour le championnat des jeunes ; revoir la page club (menu trop long) ; en v1 et en v2 ».
+  Choix : un sélecteur France · Paris · Jeunes en haut de chaque page, des onglets par championnat dans l'espace
+  club, jeunes : qui peut jouer selon la catégorie (brûlage à préciser plus tard), livraison par étapes.
+  Première étape : rencontres, feuilles (groupes de 3), résultats et classements de Paris et des jeunes lus dans
+  l'API, pages avec sélecteur, images paris_ / jeunes_, vue par équipe de Paris.

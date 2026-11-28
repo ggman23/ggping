@@ -9,7 +9,7 @@ from pathlib import Path
 
 from .brulage import enrichir
 from .demo import donnees_demo
-from .adversaires import donnees_classements, recuperer
+from .adversaires import donnees_classements, equipes_du_championnat, recuperer
 from .effectif import recuperer_effectif
 from .progression import donnees_progression
 from .rendu import (GABARIT_77, GABARIT_CLASSEMENTS, GABARIT_EFFECTIF, GABARIT_FICHES, GABARIT_INDIVS, GABARIT_PROGRESSION, GABARIT_RENCONTRES,
@@ -75,8 +75,10 @@ def page_adversaires(client, club, ctx, tous_les_historiques=False):
         try:
             from . import paris
             competitions = paris.diagnostic_api(client, club, ctx.aujourdhui or datetime.now().date())
-            # Autre chose que le championnat de France (Paris : « L08_… », jeunes) : à brancher le jour venu
-            nouvelles_competitions = {nom: n for nom, n in competitions.items() if "Championnat de France" not in nom}
+            # Compétition par équipes que l'outil ne lit pas encore (France, Paris et jeunes sont branchés : fftt.CHAMPIONNATS)
+            from . import fftt
+            nouvelles_competitions = {nom: n for nom, n in competitions.items()
+                                      if not any(c.lower() in nom.lower() for c in fftt.CHAMPIONNATS.values())}
         except Exception as e:  # noqa: BLE001 (un contrôle ne bloque jamais la mise à jour)
             print(f"  championnat de Paris : contrôle impossible ({type(e).__name__})", flush=True)
     ctx.donnees(donnees)
@@ -88,9 +90,17 @@ def page_adversaires(client, club, ctx, tous_les_historiques=False):
     if nouvelles_competitions:  # le jour où la ligue ou le comité les saisit : résultats et compositions récupérables
         resume += " ; nouveau dans l'API FFTT : " + ", ".join(f"{nom} ({n} rencontres de Vaires)" for nom, n in nouvelles_competitions.items())
     html = generer_html(donnees, ctx.sortie / "vaires.html")
-    # Classements des poules de toutes les équipes du club : une page et une image à partager
-    classements = generer_html(donnees_classements(donnees), ctx.sortie / "classements_vaires.html", GABARIT_CLASSEMENTS)
+    # Classements des poules de toutes les équipes du club : une page et une image à partager ; championnat de
+    # Paris (sélecteur de la page, image à part) : ses poules lues dans l'API comme celles du championnat de France
+    autres_equipes, notes = autres_championnats("classements", lambda ch: (lambda r: {
+        "club": donnees["club"], "saison": donnees["saison"], "phase": donnees["phase"], "genere_le": donnees.get("genere_le"),
+        "championnat": ch, "equipes": r["equipes"]} if r["equipes"] else None)(
+        equipes_du_championnat(client, club, ctx.aujourdhui, championnat=ch)), ctx)
+    classements = generer_html(donnees_classements(donnees), ctx.sortie / "classements_vaires.html", GABARIT_CLASSEMENTS,
+                               autres={ch: donnees_classements(d) for ch, d in autres_equipes.items()})
     fichiers = [html, classements, *faire_images("image_classements", donnees, IMPORT, dossier=ctx.images),
+                *[i for ch, d in autres_equipes.items() for i in faire_images("image_classements", d, IMPORT, dossier=ctx.images,
+                                                                                prefixe=f"{ch}_")],
                 *faire_images("images_adversaires", donnees, dossier=ctx.images, aujourdhui=ctx.aujourdhui)]
     if not ctx.archive:  # championnat de Paris : clubs adverses, leurs joueurs et leur forme (page /paris/)
         try:
@@ -138,24 +148,58 @@ def page_jeunes(client, club, ctx, tous_les_historiques=False):
     return page
 
 
+AUTRES_CHAMPIONNATS = ("paris", "jeunes")  # championnats par équipes lus en plus du championnat de France (sélecteur des pages)
+
+
+def autres_championnats(nom, lire, ctx):
+    """{championnat: données} des autres championnats (Paris...) pour une page : une erreur ne bloque jamais la
+    page du championnat de France (elle est écrite dans le journal et dans le bilan)."""
+    res, notes = {}, []
+    for ch in AUTRES_CHAMPIONNATS:
+        try:
+            d = lire(ch)
+        except Exception as e:  # noqa: BLE001
+            print(f"  ! {nom} du championnat {ch} non faits ({type(e).__name__} : {e})", flush=True)
+            notes.append(f"{ch} : non fait ({type(e).__name__})")
+            continue
+        if d:
+            res[ch] = ctx.donnees(d)
+    return res, notes
+
+
 def page_resultats(client, club, ctx):
     print("=== Résultats des joueurs de Vaires", flush=True)
     resultats = recuperer_parties(client, club, ctx.aujourdhui)
     donnees = ctx.donnees(donnees_page(resultats))
-    html = generer_html(donnees, ctx.sortie / "resultats_vaires.html", GABARIT_RESULTATS)
+    autres, notes = autres_championnats("résultats", lambda ch: (lambda r: donnees_page(r) if r["parties"] else None)(
+        recuperer_parties(client, club, ctx.aujourdhui, championnat=ch)), ctx)
+    html = generer_html(donnees, ctx.sortie / "resultats_vaires.html", GABARIT_RESULTATS, autres=autres)
     xlsx = ecrire_xlsx(resultats, ctx.sortie / "resultats_vaires.xlsx")
     print(f"Classeur Excel : {xlsx}")
     pngs = faire_images("images_resultats", donnees, dossier=ctx.images)
-    return [html, xlsx, *pngs], verifications.afficher_club(resultats["verification"], "résultats des équipes de Vaires")
+    for ch, d in autres.items():
+        pngs += faire_images("images_resultats", d, dossier=ctx.images, prefixe=f"{ch}_")
+    resume = verifications.afficher_club(resultats["verification"], "résultats des équipes de Vaires")
+    resume += "".join(f" ; {ch} : {len(d['lignes'])} lignes (J{', J'.join(str(j['numero']) for j in d['journees'])})"
+                      for ch, d in autres.items()) + "".join(f" ; {n}" for n in notes)
+    return [html, xlsx, *pngs], resume
 
 
 def page_rencontres(client, club, ctx):
     print("=== Feuilles de match des équipes de Vaires : parties et scores des manches", flush=True)
     donnees = ctx.donnees(recuperer_rencontres(client, club, ctx.aujourdhui))
     resume = verifications.afficher_club(donnees["verification"], "feuilles de match des équipes de Vaires")
-    html = generer_html(donnees, ctx.sortie / "rencontres_vaires.html", GABARIT_RENCONTRES)
-    return [html, *faire_images("image_recap", donnees, IMPORT, dossier=ctx.images),
-            *faire_images("images_rencontres", donnees, dossier=ctx.images)], resume
+    autres, notes = autres_championnats("feuilles de match", lambda ch: (lambda r: r if r["rencontres"] else None)(
+        recuperer_rencontres(client, club, ctx.aujourdhui, championnat=ch)), ctx)
+    html = generer_html(donnees, ctx.sortie / "rencontres_vaires.html", GABARIT_RENCONTRES, autres=autres)
+    images = [*faire_images("image_recap", donnees, IMPORT, dossier=ctx.images),
+              *faire_images("images_rencontres", donnees, dossier=ctx.images)]
+    for ch, d in autres.items():
+        images += faire_images("image_recap", d, IMPORT, dossier=ctx.images, prefixe=f"{ch}_")
+        images += faire_images("images_rencontres", d, dossier=ctx.images, prefixe=f"{ch}_")
+        avec = [r for r in d["rencontres"] if r.get("parties")]
+        resume += f" ; {ch} : {len(avec)} feuille(s) sur {len(d['rencontres'])} rencontre(s) jouée(s)"
+    return [html, *images], resume + "".join(f" ; {n}" for n in notes)
 
 
 def page_effectif(client, club, ctx):

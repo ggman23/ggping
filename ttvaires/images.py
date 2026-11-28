@@ -448,6 +448,21 @@ def _genere(donnees):
         return ""
 
 
+NOMS_CHAMPIONNATS = {"france": "Championnat de France", "paris": "Championnat de Paris", "jeunes": "Championnat des jeunes"}
+COURTS_CHAMPIONNATS = {"france": "", "paris": "Paris · ", "jeunes": "Jeunes · "}
+
+
+def _periode(donnees):
+    """« phase 1 2026-2027 » (championnat de France) ou « Championnat de Paris 2026-2027 » (une poule sur la saison)."""
+    ch = donnees.get("championnat") or "france"
+    return f"phase {donnees['phase']} {donnees['saison']}" if ch == "france" else f"{NOMS_CHAMPIONNATS[ch]} {donnees['saison']}"
+
+
+def _court(donnees):
+    """Début du titre d'une image dans la liste de l'espace club : rien (France), « Paris · », « Jeunes · »."""
+    return COURTS_CHAMPIONNATS.get(donnees.get("championnat") or "france", "")
+
+
 def _tableau_pagine(dossier, prefixe, titre, sous_titre, colonnes, lignes, pied, titre_court):
     """Un tableau découpé en plusieurs images si besoin. Renvoie [(chemin, titre)].
     S'il est découpé, il est aussi donné en une seule image verticale (en plus des autres)."""
@@ -519,12 +534,14 @@ def images_virtuel(donnees, dossier):
 # Résultats des joueurs de Vaires
 # ---------------------------------------------------------------------------
 
-def images_resultats(donnees, dossier):
-    _nettoyer(dossier, "resultats_")
+def images_resultats(donnees, dossier, prefixe=""):
+    """Résultats de la dernière journée et cumul ; prefixe « paris_ » : celles du championnat de Paris."""
+    _nettoyer(dossier, f"{prefixe}resultats_")
     sorties = []
     if not donnees.get("journees"):
         return sorties
-    sous_base = f"{donnees['club']['nom']} · phase {donnees['phase']} {donnees['saison']}"
+    sous_base = f"{donnees['club']['nom']} · {_periode(donnees)}"
+    court = _court(donnees)
     derniere = donnees["journees"][-1]
     j = derniere["numero"]
     lignes_j = sorted((l for l in donnees["lignes"] if l["journee"] == j),
@@ -550,13 +567,14 @@ def images_resultats(donnees, dossier):
         ])
     dates = ", ".join(jour_fr(x) for x in derniere["dates"])
     sorties += _tableau_pagine(
-        dossier, f"resultats_J{j}", f"Résultats de la J{j}", f"{sous_base} · {dates} · {_genere(donnees)}",
+        dossier, f"{prefixe}resultats_J{j}", f"Résultats de la J{j}", f"{sous_base} · {dates} · {_genere(donnees)}",
         colonnes, lignes,
         f"Trié par points gagnés sur la journée. Points J{j} = classement virtuel estimé (points officiels + total depuis la J1). "
         "Meilleure victoire = écart avec le mieux classé des joueurs battus (ses points)."
         + (" « + V1F … » : aussi aligné(e) dans cette équipe pour la journée (voir son autre ligne) ; "
-           "Points et Total se cumulent dans l'ordre des dates." if any(l.get("autres") for l in lignes_j) else ""),
-        f"Résultats J{j}")
+           "Points et Total se cumulent dans l'ordre des dates." if any(l.get("autres") for l in lignes_j) else "")
+        + (f" Coefficient {fmt(donnees.get('coefficient'), 2)} du championnat." if court else ""),
+        f"{court}Résultats J{j}")
 
     js = [x["numero"] for x in donnees["journees"]]
     cumuls = sorted(donnees["cumuls"], key=lambda c: (-c["total"], -c["points"], c["joueur"]))
@@ -579,8 +597,9 @@ def images_resultats(donnees, dossier):
             cel_victoires(c["v"], c["matchs"]),
         ])
     sorties += _tableau_pagine(
-        dossier, "resultats_cumul", f"Cumul J1 à J{js[-1]}", f"{sous_base} · championnat par équipes · {_genere(donnees)}",
-        colonnes, lignes, "Trié par points gagnés au total depuis la J1. Virt. = points officiels + total.", "Résultats : cumul")
+        dossier, f"{prefixe}resultats_cumul", f"Cumul J1 à J{js[-1]}",
+        f"{sous_base} · {'championnat par équipes' if not court else 'toutes les journées'} · {_genere(donnees)}",
+        colonnes, lignes, "Trié par points gagnés au total depuis la J1. Virt. = points officiels + total.", f"{court}Résultats : cumul")
     return sorties
 
 
@@ -597,8 +616,11 @@ def _cel_joueurs(joueurs, gras=False):
     return C(" / ".join(noms) or "—", align="g", gras=gras, alternatives=[" / ".join(n.split()[0] for n in noms if n)])
 
 
-def images_rencontres(donnees, dossier):
-    _nettoyer(dossier, "rencontres_")
+def images_rencontres(donnees, dossier, prefixe=""):
+    """Une image par rencontre de la dernière journée ; championnat de Paris (prefixe « paris_ ») : les parties
+    rangées par groupe de 3 joueurs, le score en points-parties (6, 5 ou 4 par partie gagnée selon le groupe)."""
+    _nettoyer(dossier, f"{prefixe}rencontres_")
+    court = _court(donnees)
     sorties = []
     if not donnees.get("journees"):
         return sorties
@@ -607,7 +629,15 @@ def images_rencontres(donnees, dossier):
                                LARGEUR - 2 * MARGE)
     for r in [x for x in donnees["rencontres"] if x["journee"] == j and x["parties"]]:
         lignes = []
+        groupes = {g["numero"]: g for g in r.get("groupes") or []}
+        vu = None
         for p in r["parties"]:
+            if len(groupes) > 1 and p.get("groupe") != vu:  # Paris : une ligne de titre par groupe de 3 joueurs
+                vu = p.get("groupe")
+                g = groupes.get(vu) or {"score": [0, 0], "points": [0, 0], "bareme": 0}
+                lignes.append([C(f"Groupe {vu}", gras=True, align="g"), C(f"{g['score'][0]}-{g['score'][1]}", gras=True),
+                               C(f"{g['points'][0]}-{g['points'][1]} points (×{g['bareme']})", couleur=DOUX, align="g"),
+                               C("")])
             sets = [s for s in p["sets"] if None not in s]
             g = p["gagne"]
             fond, couleur = (POS_FOND, POS_TEXTE) if g else (NEG_FOND, NEG_TEXTE) if g is False else (PUCE_FOND, DOUX)
@@ -619,11 +649,14 @@ def images_rencontres(donnees, dossier):
             lignes.append([_cel_joueurs(p["nous"], gras=g is True), C(puces=[(resultat, fond, couleur)], taille_puces=21),
                            _cel_joueurs(p["eux"], gras=g is False), manches])
         nous, eux = r["score"]
+        pp = r.get("points_partie") or [None, None]
+        if court and None not in pp:  # Paris : le résultat de la rencontre se lit en points-parties
+            nous, eux = pp
         issue = "victoire" if nous > eux else "défaite" if nous < eux else "nul"
         equipe = r["equipe"].replace("VAIRES", "Vaires")
         img = Rendu()
         img.titre(f"{equipe} · {issue} {nous}-{eux}",
-                  f"J{j} · {jour_fr(r['date'])} · {'reçoit' if r['domicile'] else 'se déplace à'} {r['adversaire']} · {r['division']}")
+                  f"{court}J{j} · {jour_fr(r['date'])} · {'reçoit' if r['domicile'] else 'se déplace à'} {r['adversaire']} · {r['division']}")
         img.espace(10)
         img.tableau(colonnes, lignes)
         if r["bilan"]:
@@ -640,17 +673,19 @@ def images_rencontres(donnees, dossier):
                 precisions.append(f"{t['sans_detail']} partie(s) sans le détail des manches")
             if precisions:
                 img.texte(" · ".join(precisions), 17, DOUX)
-        img.pied("Manches dans l'ordre, score de Vaires en premier (vert : manche gagnée par Vaires). "
+        img.pied(("Championnat de Paris : groupes de 3 joueurs, 9 parties par groupe ; une partie gagnée rapporte 6 points en "
+                  "groupe 1, 5 en groupe 2, 4 en groupe 3 (le score de la rencontre). " if court and r.get("groupes") else "")
+                 + "Manches dans l'ordre, score de Vaires en premier (vert : manche gagnée par Vaires). "
                  "En gras : le vainqueur de la partie.")
-        nom = f"rencontres_J{j}_{equipe_courte(r['equipe'])}.png"
-        sorties.append((_enregistrer(img.image(), dossier, nom), f"{equipe} : feuille de match J{j}"))
+        nom = f"{prefixe}rencontres_J{j}_{equipe_courte(r['equipe'])}.png"
+        sorties.append((_enregistrer(img.image(), dossier, nom), f"{court}{equipe} : feuille de match J{j}"))
     return sorties
 
 
-def image_recap(donnees, dossier_import, dossier):
+def image_recap(donnees, dossier_import, dossier, prefixe=""):
     """Récapitulatif de la journée sur le modèle de l'image du club (voir recap.py)."""
     from .recap import image_recap as dessiner
-    return dessiner(donnees, dossier_import, dossier)
+    return dessiner(donnees, dossier_import, dossier, prefixe)
 
 
 def image_programme(donnees, dossier, aujourdhui=None):
@@ -665,10 +700,10 @@ def image_paris(dossier, aujourdhui=None):
     return dessiner(dossier, aujourdhui)
 
 
-def image_classements(donnees, dossier_import, dossier):
+def image_classements(donnees, dossier_import, dossier, prefixe=""):
     """Classements des poules de toutes les équipes de Vaires (voir classements.py)."""
     from .classements import image_classements as dessiner
-    return dessiner(donnees, dossier_import, dossier)
+    return dessiner(donnees, dossier_import, dossier, prefixe)
 
 
 def _nom_prenom(complet):

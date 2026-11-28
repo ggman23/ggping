@@ -60,6 +60,9 @@ tr.detail td { background: #f7f8fa; text-align: left; font-size: 13.5px; color: 
 <script>
 "use strict";
 const D = JSON.parse(document.getElementById("donnees").textContent);
+// Championnat de la page (sélecteur en haut : France, Paris, jeunes) : « phase 1 2026-2027 » ou « Championnat de Paris 2026-2027 »
+const CHAMP = D.championnat || "france";
+const periode = () => CHAMP === "france" ? `phase ${D.phase} ${D.saison}` : `${{ paris: "Championnat de Paris", jeunes: "Championnat des jeunes" }[CHAMP]} ${D.saison}`;
 const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const nombre = (x, dec) => x == null ? "" : x.toLocaleString("fr-FR", { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -177,7 +180,8 @@ function afficher() {
   }));
 }
 function note() {
-  return `<p class="note">Points virtuels calculés avec le barème FFTT (coefficient 1, championnat par équipes), ${D.mensuel
+  return `<p class="note">Points virtuels calculés avec le barème FFTT (coefficient ${String(D.coefficient ?? 1).replace(".", ",")}, ${
+    CHAMP === "france" ? "championnat par équipes" : CHAMP === "paris" ? "championnat de Paris" : "championnat des jeunes"}), ${D.mensuel
     ? "mois par mois comme la FFTT : chaque partie avec la valeur des deux joueurs à la fin du mois précédent (le cumul part des points officiels de la phase)"
     : "à partir des points inscrits sur les feuilles de match"}. Clique sur un titre de colonne pour trier.</p>`;
 }
@@ -192,7 +196,7 @@ function route() {
   afficher();
 }
 document.getElementById("sous-titre").textContent =
-  `${D.club.nom} · phase ${D.phase} ${D.saison} · ${D.date_reference ? "archive, état au " + new Date(D.date_reference + "T12:00").toLocaleDateString("fr-FR") : "données du " + new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`;
+  `${D.club.nom} · ${periode()} · ${D.date_reference ? "archive, état au " + new Date(D.date_reference + "T12:00").toLocaleDateString("fr-FR") : "données du " + new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`;
 window.addEventListener("hashchange", route);
 route();
 </script>

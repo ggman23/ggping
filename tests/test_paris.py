@@ -150,7 +150,8 @@ def test_le_bilan_dit_quand_le_championnat_de_paris_arrive_dans_l_api(tmp_path, 
     monkeypatch.setattr(m, "recuperer", lambda *a, **k: donnees)
     monkeypatch.setattr(m, "enrichir", lambda d: d)
     monkeypatch.setattr(m.verifications, "afficher_adversaires", lambda *a: "tout est là")
-    monkeypatch.setattr(m, "generer_html", lambda d, chemin, *a: chemin)
+    monkeypatch.setattr(m, "generer_html", lambda d, chemin, *a, **k: chemin)
+    monkeypatch.setattr(m, "equipes_du_championnat", lambda *a, **k: {"equipes": []})
     monkeypatch.setattr(m, "donnees_classements", lambda d: d)
     monkeypatch.setattr(m, "faire_images", lambda *a, **k: [])
     monkeypatch.setattr(m, "page_paris", lambda *a, **k: tmp_path / "paris_vaires.html")
@@ -159,9 +160,12 @@ def test_le_bilan_dit_quand_le_championnat_de_paris_arrive_dans_l_api(tmp_path, 
     competitions = {"FED_Championnat de France par Equipes Masculin": 42}
     monkeypatch.setattr(paris, "diagnostic_api", lambda *a: competitions)
     assert m.page_adversaires(None, "08770250", ctx)[1] == "tout est là"
-    competitions["L08_Championnat de Paris"] = 21
+    # Paris et les jeunes sont lus depuis le 28/11 : seule une autre compétition par équipes est signalée
+    competitions.update({"L08_Championnat de Paris IDF": 21, "Chpt Jeunes par Equipes 77 2526": 14})
+    assert m.page_adversaires(None, "08770250", ctx)[1] == "tout est là"
+    competitions["Coupe Vétérans par équipes"] = 2
     assert m.page_adversaires(None, "08770250", ctx)[1] == (
-        "tout est là ; nouveau dans l'API FFTT : L08_Championnat de Paris (21 rencontres de Vaires)")
+        "tout est là ; nouveau dans l'API FFTT : Coupe Vétérans par équipes (2 rencontres de Vaires)")
 
 
 def test_disponibilites_joueurs_du_club_et_noms_colles(tmp_path):
