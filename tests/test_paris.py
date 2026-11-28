@@ -154,7 +154,7 @@ def test_le_bilan_dit_quand_le_championnat_de_paris_arrive_dans_l_api(tmp_path, 
     monkeypatch.setattr(m, "equipes_du_championnat", lambda *a, **k: {"equipes": []})
     monkeypatch.setattr(m, "donnees_classements", lambda d: d)
     monkeypatch.setattr(m, "faire_images", lambda *a, **k: [])
-    monkeypatch.setattr(m, "page_paris", lambda *a, **k: tmp_path / "paris_vaires.html")
+    monkeypatch.setattr(m, "page_paris", lambda *a, **k: [tmp_path / "paris_vaires.html"])
     monkeypatch.setattr(m, "page_jeunes", lambda *a, **k: tmp_path / "jeunes_vaires.html")
     ctx = SimpleNamespace(archive=False, aujourdhui=date(2026, 11, 25), sortie=tmp_path, images=tmp_path, donnees=lambda d: d)
     competitions = {"FED_Championnat de France par Equipes Masculin": 42}

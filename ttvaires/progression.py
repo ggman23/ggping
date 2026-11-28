@@ -32,6 +32,20 @@ def semaines(premiere, derniere):
     return sortie
 
 
+def equipe_paris(texte):
+    """Équipe de Paris principale d'un joueur (« P1 ×2, P2 » -> "V1" : la plus jouée, la plus forte à égalité), ou None."""
+    if not texte:
+        return None
+    jouees = []
+    for morceau in texte.split(","):
+        m = morceau.strip().replace("×", " ").split()
+        if m and m[0].startswith("P") and m[0][1:].isdigit():
+            jouees.append((int(m[1]) if len(m) > 1 and m[1].isdigit() else 1, -int(m[0][1:])))
+    if not jouees:
+        return None
+    return f"V{-max(jouees)[1]}"
+
+
 def debut_saison(saison):
     """« 2026-2027 » -> 1er septembre 2026."""
     return date(int(saison[:4]), 9, 1)
@@ -104,6 +118,7 @@ def donnees_progression(virtuel, aujourdhui=None):
                 contres[i] += bool(not p["victoire"] and ecart < 0)
         serie = [round(_valeur(phases, (d + timedelta(days=6)).isoformat()), 1) for d in liste]
         x = {"id": j["id"], "nom": j.get("nom"), "prenom": j.get("prenom"), "equipe": j.get("equipe"),
+             "equipe_paris": equipe_paris(j.get("equipes_paris")),
              "categorie": j.get("categorie"), "officiels": j["officiels"], "serie": serie, "parties": nb,
              "victoires": victoires, "perfs": perfs, "contres": contres, "v": sum(victoires), "d": sum(nb) - sum(victoires),
              "nb_perfs": sum(perfs), "nb_contres": sum(contres), "total": round(serie[-1] - serie[0], 1)}

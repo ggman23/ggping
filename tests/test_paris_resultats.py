@@ -239,3 +239,49 @@ def test_classement_virtuel_colonne_paris(tmp_path):
     assert chemin.name == "classement_virtuel.png"
     gabarit = (rendu.GABARIT_VIRTUEL).read_text(encoding="utf-8")
     assert "AVEC_PARIS" in gabarit and "parisComp" in gabarit
+
+
+def test_progression_des_equipes_de_paris(tmp_path):
+    """28/11 : une image de progression par équipe de Paris (l'équipe de Paris la plus jouée de chaque joueur)."""
+    from ttvaires.progression import equipe_paris
+
+    assert equipe_paris("P1") == "V1" and equipe_paris("P1 ×2, P2") == "V1" and equipe_paris("P1, P2 ×3") == "V2"
+    assert equipe_paris("P2, P3") == "V2" and equipe_paris(None) is None and equipe_paris("") is None
+    pytest.importorskip("PIL")
+    from ttvaires import images
+
+    joueur = lambda i, eq, ep: {"id": str(i), "nom": f"FICTIF{i}", "prenom": "Un", "equipe": eq, "equipe_paris": ep,
+                                "categorie": "S", "officiels": 800, "serie": [800, 805, 810], "parties": [0, 3, 3],
+                                "victoires": [0, 2, 2], "perfs": [0, 1, 0], "contres": [0, 0, 1], "v": 4, "d": 2,
+                                "nb_perfs": 1, "nb_contres": 1, "total": 10, "tendance": "stable", "lecture": ""}
+    d = {"semaines": ["2026-09-07", "2026-11-16", "2026-11-23"], "debut_saison": "2026-09-01", "genere_le": "2026-11-28T10:42",
+         "joueurs": [joueur(1, "V1", "V1"), joueur(2, "V2", "V1"), joueur(3, "V3", "V2"), joueur(4, "V4", None)]}
+    noms = sorted(c.name for c, _ in images.images_progression(d, tmp_path))
+    assert "paris_progression_V1.png" in noms and "paris_progression_V2.png" in noms and "progression_V4.png" in noms
+
+
+def test_images_du_prochain_adversaire_de_paris(tmp_path):
+    """28/11 : prochaine journée de Paris et prochain adversaire de chaque équipe : les joueurs déjà alignés par
+    l'équipe adverse au championnat de Paris (feuilles de la poule), puis les autres joueurs de son club."""
+    pytest.importorskip("PIL")
+    from ttvaires import images
+
+    api = equipes_du_championnat(FauxClient(_site()), VAIRES, AUJ, championnat="paris")
+    joueur = lambda j: {"id": j["identifier"], "nom": j["person"]["familyName"], "prenom": "Fictif", "points": j["points"],
+                        "renouvele": True, "forme": {"v": 3, "d": 1, "points": 12.5}}
+    adv = {"saison": "2026-2027", "genere_le": "2026-11-28T10:43",
+           "clubs": {"08940524": {"joueurs": [joueur(j) for j in LEURS] + [joueur({"identifier": "77", "points": 1500,
+                                                                                    "person": {"familyName": "AUTRE"}})]}}}
+    sorties = images.images_adversaires_paris(adv, api, tmp_path, AUJ)
+    assert [(c.name, t) for c, t in sorties] == [("paris_adversaires_prochaine_journee.png", "Paris · Prochaine journée"),
+                                                  ("paris_adversaires_V1.png", "Paris · Vaires 1 : prochain adversaire")]
+
+
+def test_v2_lit_les_donnees_de_paris_dans_les_pages_a_selecteur():
+    from ttvaires import v2
+
+    html = ('<script id="donnees" type="application/json">{"x": 1}</script>\n'
+            '<script id="donnees-paris" type="application/json">{"x": 2}</script>')
+    assert v2.donnees_de_la_page(html) == {"x": 1} and v2.donnees_de_la_page(html, "paris") == {"x": 2}
+    assert v2.donnees_de_la_page(html, "jeunes") is None
+    assert v2.SOURCES_CHAMP["rencontres_paris"] == ("rencontres.html", "paris")

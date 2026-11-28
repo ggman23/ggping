@@ -39,14 +39,21 @@ SOURCES = {"france": "adversaires.html", "effectif": "effectif.html", "virtuel":
            "fiches": "fiches.html", "progression": "progression.html", "resultats": "resultats.html",
            "rencontres": "rencontres.html", "classements": "classements.html", "paris": "paris.html",
            "jeunes": "jeunes.html", "indivs": "indivs.html", "departement": "77.html"}
+# Données des autres championnats dans les pages à sélecteur (<script id="donnees-paris">...) : nom -> (page, championnat)
+SOURCES_CHAMP = {"rencontres_paris": ("rencontres.html", "paris"), "rencontres_jeunes": ("rencontres.html", "jeunes"),
+                 "resultats_paris": ("resultats.html", "paris")}
 CHIFFRE = re.compile(r'<script id="chiffre" type="text/plain">([^<]+)</script>')
 DONNEES_SCRIPT = re.compile(r'<script id="donnees" type="application/json">(.*?)</script>', re.S)
 VERIF = b"cvtt-vaires-club"  # le même témoin que /club/ (netlify.VERIF_CLUB)
 NUIT, ROUGE = (15, 39, 64), (198, 40, 40)
 
 
-def donnees_de_la_page(html):
-    """Le JSON intégré à une page du site : <script id="donnees"> ou « const D = {...}; »."""
+def donnees_de_la_page(html, championnat=None):
+    """Le JSON intégré à une page du site : <script id="donnees"> ou « const D = {...}; » ; `championnat` (paris,
+    jeunes) : celui du championnat dans une page à sélecteur (<script id="donnees-paris">), None s'il n'y est pas."""
+    if championnat:
+        m = re.search(rf'<script id="donnees-{championnat}" type="application/json">(.*?)</script>', html, re.S)
+        return json.loads(m[1]) if m else None
     m = DONNEES_SCRIPT.search(html)
     if m:
         return json.loads(m[1])
@@ -56,8 +63,9 @@ def donnees_de_la_page(html):
     return None
 
 
-def lire_page(site, nom, cle_site):
-    """Données d'une page publiée du site (None si elle n'existe pas ou ne s'ouvre pas)."""
+def lire_page(site, nom, cle_site, championnat=None):
+    """Données d'une page publiée du site (None si elle n'existe pas ou ne s'ouvre pas) ; `championnat` : celles
+    d'un autre championnat dans une page à sélecteur."""
     fichier = Path(site) / nom
     if not fichier.exists():
         return None
@@ -65,7 +73,7 @@ def lire_page(site, nom, cle_site):
     if not m:
         return None
     try:
-        return donnees_de_la_page(publier.dechiffrer(base64.b64decode(m[1]), cle_site).decode("utf-8"))
+        return donnees_de_la_page(publier.dechiffrer(base64.b64decode(m[1]), cle_site).decode("utf-8"), championnat)
     except Exception:  # autre clé, page abîmée : la v2 fait sans
         return None
 
@@ -135,6 +143,11 @@ def construire(site, dossier, cle_site, cle_club, club_index=None):
     publiees = []
     for nom, page in SOURCES.items():
         donnees = lire_page(site, page, cle_site)
+        if donnees is not None:
+            (sortie / f"{nom}.json.chiffre").write_bytes(_chiffre(donnees, cle_club))
+            publiees.append(nom)
+    for nom, (page, championnat) in SOURCES_CHAMP.items():  # Paris, jeunes (28/11)
+        donnees = lire_page(site, page, cle_site, championnat)
         if donnees is not None:
             (sortie / f"{nom}.json.chiffre").write_bytes(_chiffre(donnees, cle_club))
             publiees.append(nom)

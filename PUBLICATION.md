@@ -750,8 +750,16 @@ des données).
 - **Classement virtuel** : colonne **Paris** (points gagnés ou perdus en championnat de Paris, coefficient 0,75) et,
   dessous, l'équipe de Paris de chaque joueur (P1 à P3, d'après les feuilles de Paris) ; « Autre » ne compte plus
   Paris (Champ. + Paris + Autre = Total). Les colonnes Paris n'apparaissent qu'une fois le championnat commencé.
-- À venir (même demande) : progression des 9, 6 et 3 joueurs de Paris, images des prochains adversaires de
-  Paris, et ces données dans les fiches d'équipe de la v2.
+- **Progression** : une image par équipe de Paris (`paris_progression_V1.png`...) avec ses joueurs (9, 6 ou 3 :
+  ceux qui ont joué dans cette équipe de Paris, l'équipe la plus jouée pour chacun ; `progression.equipe_paris`).
+- **Prochains adversaires** (`paris_adversaires_prochaine_journee.png`, `paris_adversaires_V1.png`...) : la prochaine
+  journée de Paris, puis pour chaque équipe son prochain adversaire : les joueurs que cette équipe adverse a déjà
+  alignés au championnat de Paris (feuilles de la poule, nombre de rencontres), puis les autres joueurs de son club
+  les mieux classés (points, meilleur classement, forme de la phase).
+- **v2** : les fiches des équipes de Paris ont leurs scores et leur classement (repris de /paris/), les onglets
+  Feuilles de match, Poule, Effectif et Résultats ouverts sur Paris, et les feuilles de Paris (et des jeunes) sont
+  lues dans les pages à sélecteur (`v2.SOURCES_CHAMP` : données `rencontres_paris`, `rencontres_jeunes`,
+  `resultats_paris`).
 
 ## Championnat de Paris : /paris/ (les trois équipes de Vaires)
 

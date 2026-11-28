@@ -95,7 +95,8 @@ def page_adversaires(client, club, ctx, tous_les_historiques=False):
     # Paris (sélecteur de la page, image à part) : ses poules lues dans l'API comme celles du championnat de France
     autres_equipes, notes = autres_championnats("classements", lambda ch: (lambda r: {
         "club": donnees["club"], "saison": donnees["saison"], "phase": donnees["phase"], "genere_le": donnees.get("genere_le"),
-        "championnat": ch, "equipes": r["equipes"]} if r["equipes"] else None)(
+        "championnat": ch, "equipes": r["equipes"], "detail": r["detail"], "rencontres_poules": r["rencontres_poules"]}
+        if r["equipes"] else None)(
         equipes_du_championnat(client, club, ctx.aujourdhui, championnat=ch)), ctx)
     classements = generer_html(donnees_classements(donnees), ctx.sortie / "classements_vaires.html", GABARIT_CLASSEMENTS,
                                autres={ch: donnees_classements(d) for ch, d in autres_equipes.items()})
@@ -105,7 +106,7 @@ def page_adversaires(client, club, ctx, tous_les_historiques=False):
                 *faire_images("images_adversaires", donnees, dossier=ctx.images, aujourdhui=ctx.aujourdhui)]
     if not ctx.archive:  # championnat de Paris : clubs adverses, leurs joueurs et leur forme (page /paris/)
         try:
-            fichiers.append(page_paris(client, club, ctx, tous_les_historiques, (autres_equipes.get("paris") or {}).get("equipes")))
+            fichiers += page_paris(client, club, ctx, tous_les_historiques, autres_equipes.get("paris"))
         except Exception as e:  # noqa: BLE001 (la page du championnat de France ne dépend pas de celle de Paris)
             print(f"  ! championnat de Paris : page non faite ({type(e).__name__} : {e})", flush=True)
         try:  # championnat des jeunes : les jeunes des clubs adverses (page /jeunes/)
@@ -118,19 +119,21 @@ def page_adversaires(client, club, ctx, tous_les_historiques=False):
     return fichiers, resume
 
 
-def page_paris(client, club, ctx, tous_les_historiques=False, resultats=None):
+def page_paris(client, club, ctx, tous_les_historiques=False, api=None):
+    """Page /paris/ (et ses images : prochain adversaire de chaque équipe) ; `api` : équipes de Paris lues dans l'API
+    (scores, classements, feuilles de la poule : equipes_du_championnat)."""
     from . import paris
     from .adversaires import recuperer_paris
 
     donnees = recuperer_paris(client, club, aujourdhui=ctx.aujourdhui, dossier_import=IMPORT,
                               tous_les_historiques=tous_les_historiques, fichier_etat=CACHE / "effectif_adversaires_paris.json")
     page = ctx.sortie / "paris_vaires.html"
-    page.write_bytes(paris.page(donnees, paris.joueurs_memorises(CACHE / "joueurs_vaires.json"), resultats))
+    page.write_bytes(paris.page(donnees, paris.joueurs_memorises(CACHE / "joueurs_vaires.json"), (api or {}).get("equipes")))
     joueurs = sum(len(c["joueurs"]) for c in donnees["clubs"].values())
     complets = sum(1 for c in donnees["clubs"].values() if c.get("effectif_complet"))
     print(f"Championnat de Paris : {len(donnees['clubs'])} clubs adverses, {joueurs} joueurs, "
           f"{complets} effectifs complets (pingpocket.fr)", flush=True)
-    return page
+    return [page, *faire_images("images_adversaires_paris", donnees, api, dossier=ctx.images, aujourdhui=ctx.aujourdhui)]
 
 
 def page_jeunes(client, club, ctx, tous_les_historiques=False, resultats=None):

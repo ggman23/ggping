@@ -117,17 +117,19 @@ const V2 = (() => {
   let _equipes = null;
   async function equipes() {
     if (_equipes) return _equipes;
-    const [fr, pa, je, fe] = await Promise.all(["france", "paris", "jeunes", "rencontres"].map(facultatif));
-    const feuilles = {};
-    for (const r of fe?.rencontres || []) feuilles[clefFeuille(r.numero, r.feminine, r.journee)] = r;
+    const [fr, pa, je, fe, fp, fj] = await Promise.all(["france", "paris", "jeunes", "rencontres", "rencontres_paris", "rencontres_jeunes"].map(facultatif));
+    // Feuilles de match de chaque championnat (Paris, jeunes : depuis le 28/11)
+    const feuillesDe = (d) => Object.fromEntries((d?.rencontres || []).map((r) => [clefFeuille(r.numero, r.feminine, r.journee), r]));
+    const parChamp = { france: feuillesDe(fe), femmes: feuillesDe(fe), paris: feuillesDe(fp), jeunes: feuillesDe(fj) };
     const liste = [];
     const ajouter = (src, e, comp) => {
       const num = src.club?.numero;
       const t = { cle: `${comp}-${e.numero}`, comp, nom: e.nom_court || e.libelle, numero: e.numero, division: e.division,
                   poule: e.poule, age: e.age, source: src, brut: e, classement: (e.classement || []).map((l) => ({ ...l, nous: l.club === num })) };
       t.rencontres = (e.rencontres || []).map((r) => {
-        const s = r.score, dom = !!r.vaires_domicile, f = comp === "france" || comp === "femmes" ? feuilles[clefFeuille(e.numero, comp === "femmes", r.journee)] : null;
-        const parties = f?.score && f.parties?.length ? f.score : null;  // score en parties (feuille de match), nous d'abord
+        const s = r.score, dom = !!r.vaires_domicile, f = parChamp[comp]?.[clefFeuille(e.numero, comp === "femmes", r.journee)] || null;
+        // Championnat de France : score en parties (feuille de match), nous d'abord ; Paris, jeunes : en points-parties (API)
+        const parties = (comp === "france" || comp === "femmes") && f?.score && f.parties?.length ? f.score : null;
         const points = s ? (dom ? [s[0], s[1]] : [s[1], s[0]]) : null;
         const score = parties || points;
         const adv = r.adversaire;

@@ -1146,6 +1146,89 @@ def images_adversaires(donnees, dossier, aujourdhui=None):
 # Individuels (critérium) : une image par poule où joue un joueur de Vaires
 # ---------------------------------------------------------------------------
 
+def images_adversaires_paris(adv, api, dossier, aujourdhui=None):
+    """Championnat de Paris (28/11) : la prochaine journée de Paris (paris_adversaires_prochaine_journee.png) et le
+    prochain adversaire de chaque équipe (paris_adversaires_V1.png...) : les joueurs que cette équipe adverse a
+    déjà alignés au championnat de Paris (feuilles de la poule, nombre de rencontres), puis les autres joueurs de son
+    club les mieux classés ; points, meilleur classement, forme de la phase. `adv` : adversaires.recuperer_paris ;
+    `api` : adversaires.equipes_du_championnat (équipes, feuilles de la poule)."""
+    from collections import Counter as Compte
+
+    _nettoyer(dossier, "paris_adversaires_")
+    auj = (aujourdhui or date.today()).isoformat()
+    equipes = (api or {}).get("equipes") or []
+    detail = (api or {}).get("detail") or {}
+    alignes = {}  # nom de l'équipe dans l'API -> {licence: nombre de rencontres}
+    for rs in ((api or {}).get("rencontres_poules") or {}).values():
+        for r in rs:
+            d = detail.get(r["id"])
+            if not d:
+                continue
+            for cote in ("home", "away"):
+                nom = ((d.get(f"{cote}Opponent") or r.get(f"{cote}Opponent") or {}).get("team") or {}).get("name")
+                for ligne in d.get(f"{cote}SheetMatches") or []:
+                    lic = (ligne.get("player") or {}).get("identifier")
+                    if nom and lic:
+                        alignes.setdefault(nom, Compte())[lic] += 1
+    prochaines = []
+    for e in equipes:
+        r = next((x for x in e.get("rencontres", []) if (x.get("date") or "") >= auj and x.get("adversaire")), None)
+        if r:
+            prochaines.append((e, r))
+    if not prochaines:
+        return []
+    sous_base = f"CVTT VAIRES · Championnat de Paris {adv.get('saison') or ''} · {_genere(adv)}".replace("  ", " ")
+    sorties = []
+    # 1. La prochaine journée de Paris (toutes les équipes)
+    colonnes = colonnes_egales([Col("Équipe", 130, "g"), Col("Date", 150), Col("Adversaire", None, "g"), Col("", 86)],
+                               LARGEUR - 2 * MARGE)
+    lignes = [[C(e["nom_court"], gras=True, align="g", sous=e.get("division")), C(jour_fr(r["date"]), sous=r.get("heure") or ""),
+               C(r["adversaire"]["libelle"], gras=True, sous=(r.get("salle") or {}).get("nom") if r["vaires_domicile"] else None),
+               C(puces=[("DOM", DOM_FOND, DOM_TEXTE) if r["vaires_domicile"] else ("EXT", EXT_FOND, EXT_TEXTE)])]
+              for e, r in prochaines]
+    img = Rendu()
+    img.titre(f"Championnat de Paris · J{min(r['journee'] for _, r in prochaines)}", sous_base)
+    img.espace(10)
+    img.tableau(colonnes, lignes)
+    img.pied("Vendredi 20 h 30. Le détail de chaque adversaire : une image par équipe de Vaires.")
+    sorties.append((_enregistrer(img.image(), dossier, "paris_adversaires_prochaine_journee.png"), "Paris · Prochaine journée"))
+    # 2. Le prochain adversaire de chaque équipe
+    colonnes = colonnes_egales([Col("Joueur", None, "g"), Col("Clt", 64), Col("Pts", 86), Col("Meilleur", 160),
+                                Col("Phase", 150), Col("Paris", 104)], LARGEUR - 2 * MARGE)
+    for e, r in prochaines:
+        club = (adv.get("clubs") or {}).get(r["adversaire"]["club"]) or {}
+        par_id = {j["id"]: j for j in club.get("joueurs", [])}
+        deja = alignes.get(r["adversaire"]["libelle"]) or Compte()
+
+        def ligne(j, n):
+            nom_j = cel_nom(j.get("nom"), j.get("prenom"), apres="F" if j.get("sexe") == "F" else None)
+            nom_j.sous = _hors_championnat(j.get("forme")) or None
+            return [nom_j, C(_clt(j) or "", gras=True), C(fmt(_pts(j)) if _pts(j) else "", couleur=DOUX), _cel_meilleur(j),
+                    _cel_forme(j.get("forme")), C(f"×{n}" if n else "", gras=bool(n))]
+        joues = sorted((par_id[lic] for lic in deja if lic in par_id), key=lambda j: -(_pts(j) or 0))
+        inconnus = sum(1 for lic in deja if lic not in par_id)
+        autres = sorted((j for j in club.get("joueurs", []) if j["id"] not in deja and j.get("renouvele", True)
+                         and not j.get("loisir")), key=lambda j: -(_pts(j) or 0))[:8]
+        dom = r["vaires_domicile"]
+        img = Rendu()
+        img.titre(f"{e['nom_court']} (Paris) · J{r['journee']} · {jour_fr(r['date'])} {r.get('heure') or ''}".strip(),
+                  f"{'reçoit' if dom else 'se déplace à'} {r['adversaire']['libelle']} · {e.get('division') or ''}")
+        img.espace(6)
+        img.section(f"Alignés au championnat de Paris par {r['adversaire']['libelle']}", "nombre de rencontres : colonne Paris")
+        img.tableau(colonnes, [ligne(j, deja[j["id"]]) for j in joues]
+                    or [[C("pas encore de rencontre saisie", couleur=DOUX, align="g"), C(), C(), C(), C(), C()]])
+        if autres:
+            img.section("Autres joueurs du club", "les mieux classés")
+            img.tableau(colonnes, [ligne(j, 0) for j in autres])
+        img.pied("Alignés : joueurs inscrits sur les feuilles de match de cette équipe au championnat de Paris (le format : "
+                 "9, 6 ou 3 joueurs en groupes de 3). Phase : victoires / parties et points gagnés depuis le début de la phase, "
+                 "toutes compétitions. Meilleur : meilleur classement (points officiels d'une phase) et l'année."
+                 + (f" {inconnus} joueur(s) aligné(s) pas dans la liste du club." if inconnus else ""))
+        sorties.append((_enregistrer(img.image(), dossier, f"paris_adversaires_V{e['numero']}.png"),
+                        f"Paris · {e['nom_court']} : prochain adversaire"))
+    return sorties
+
+
 def images_indivs(donnees, dossier):
     """Une image par poule, à partager sur téléphone : les joueurs du plus fort au plus faible d'après
     les points virtuels, ceux de Vaires sur fond bleu ; sous le nom, le club puis le critérium et les
@@ -1267,8 +1350,10 @@ def _panneaux(rendu, joueurs, depuis):
 
 def images_progression(donnees, dossier):
     """Une image par équipe de Vaires (et une pour les joueurs sans équipe cette phase) : la courbe de
-    chaque joueur qui a joué, du mieux classé au moins bien classé. Titres sans nom de joueur."""
+    chaque joueur qui a joué, du mieux classé au moins bien classé. Titres sans nom de joueur. Championnat de Paris
+    (28/11) : une image par équipe de Paris (ses 9, 6 ou 3 joueurs : équipe de Paris la plus jouée), paris_progression_V1.png..."""
     _nettoyer(dossier, "progression_")
+    _nettoyer(dossier, "paris_progression_")
     semaines = donnees.get("semaines") or []
     if not semaines:
         return []
@@ -1300,4 +1385,24 @@ def images_progression(donnees, dossier):
                   if sans else ""))
         fichier = f"progression_{code.replace(' ', '') or 'autres'}.png"
         sorties.append((_enregistrer(r.image(), dossier, fichier), f"Progression · {nom}"))
+    # Championnat de Paris : les joueurs de chaque équipe de Paris (même courbe, toutes compétitions)
+    paris = {}
+    for j in donnees["joueurs"]:
+        if j.get("equipe_paris"):
+            paris.setdefault(j["equipe_paris"], []).append(j)
+    for code in sorted(paris, key=lambda e: int(re.sub(r"\D", "", e) or 0)):
+        joueurs = sorted((j for j in paris[code] if j["v"] + j["d"]), key=lambda j: -j["serie"][-1])
+        if not joueurs:
+            continue
+        nom = _nom_equipe(code)
+        r = Rendu()
+        r.titre(f"Progression · {nom} (Paris)",
+                f"Championnat de Paris · {len(joueurs)} joueurs · points virtuels (estimation) semaine après semaine depuis le "
+                f"{depart} (toutes compétitions) · {_genere(donnees)}")
+        r.espace(12)
+        _panneaux(r, joueurs, f"au {depart_court}")
+        r.pied(f"Les joueurs qui ont joué dans {nom} au championnat de Paris (l'équipe de Paris où ils ont le plus joué). "
+               f"Chiffre en couleur : points gagnés ou perdus depuis le {depart}, toutes compétitions. Triangle vert : semaine "
+               "avec une perf ; rouge : avec une contre. Chaque courbe a sa propre échelle (au moins 40 points de haut).")
+        sorties.append((_enregistrer(r.image(), dossier, f"paris_progression_{code}.png"), f"Paris · Progression · {nom}"))
     return sorties
