@@ -95,3 +95,24 @@ def test_meme_prenom_et_meme_initiale_debut_du_nom():
     noms = recap.noms_affiches([j("1", "GARNIER", "Paul"), j("2", "GOBERT", "Paul"), j("3", "DURAND", "Luc"),
                                 j("4", "DUMONT", "Luc"), j("5", "MOREAU", "Luc"), j("6", "LE GALL", "Tom"), j("7", "LEROY", "Tom")])
     assert noms == {"1": "Paul Ga.", "2": "Paul Go.", "3": "Luc Dur.", "4": "Luc Dum.", "5": "Luc M", "6": "Tom LG", "7": "Tom L"}
+
+
+def test_recap_de_paris_avec_les_equipes_jeunes(tmp_path):
+    """28/11 : les équipes jeunes dans l'image de Paris (titre « Paris + jeunes », bandeaux « Vaires 1 (−15 ans) »),
+    placées sous les blocs courts ; une équipe jeune sans feuille garde sa place (« Pas encore saisi »)."""
+    paris = {"championnat": "paris", "saison": "2026-2027", "phase": 1, "journees": [1],
+             "rencontres": [_rencontre(RENCONTRE["parties"], numero=n, journee=1) for n in (1, 2, 3)]}
+    jeunes = {"championnat": "jeunes", "saison": "2026-2027", "journees": [2],
+              "rencontres": [{**_rencontre(RENCONTRE["parties"], numero=1, journee=2), "division": "MOINS 15", "division_courte": ""},
+                             {**_rencontre([], numero=2, journee=2), "division": "MOINS 13", "division_courte": ""}]}
+    [(chemin, titre)] = recap.image_recap(paris, None, tmp_path, prefixe="paris_", jeunes=jeunes)
+    assert chemin.name == "paris_recap_J1.png" and titre.startswith("Paris + jeunes · Récapitulatif J1")
+    assert Image.open(chemin).size[1] >= recap.HAUTEUR_MIN
+    assert [recap.titre_jeunes(r) for r in jeunes["rencontres"]] == ["Vaires 1 (−15 ans)", "Vaires 2 (−13 ans)"]
+    # Emplacements : Paris (9, 6, 3 joueurs), top 5, puis les jeunes dans les colonnes qui finissent le plus haut
+    places, top5, places_jeunes, hauteur = recap._emplacements_en_colonnes([380, 281, 181.5], [214.75, 214.75])
+    assert places == [(18, 58), (18, 517), (436, 517)] and top5 == (855, 517)
+    assert places_jeunes == [(436, 710.5), (855, 764)] and hauteur == 1001
+    # Sans données des jeunes : l'image de Paris seule, comme avant
+    [(_, seul)] = recap.image_recap(paris, None, tmp_path, prefixe="paris_")
+    assert seul.startswith("Paris · ")

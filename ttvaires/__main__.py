@@ -199,8 +199,13 @@ def page_rencontres(client, club, ctx):
     html = generer_html(donnees, ctx.sortie / "rencontres_vaires.html", GABARIT_RENCONTRES, autres=autres)
     images = [*faire_images("image_recap", donnees, IMPORT, dossier=ctx.images),
               *faire_images("images_rencontres", donnees, dossier=ctx.images)]
+    jeunes_dans_paris = False  # 28/11 : les équipes jeunes vont dans le récapitulatif de Paris (s'il y en a un)
     for ch, d in autres.items():
-        images += faire_images("image_recap", d, IMPORT, dossier=ctx.images, prefixe=f"{ch}_")
+        if not (ch == "jeunes" and jeunes_dans_paris):
+            recap_ch = faire_images("image_recap", d, IMPORT, dossier=ctx.images, prefixe=f"{ch}_",
+                                    **({"jeunes": autres.get("jeunes")} if ch == "paris" else {}))
+            jeunes_dans_paris = ch == "paris" and bool(recap_ch) and bool((autres.get("jeunes") or {}).get("journees"))
+            images += recap_ch
         images += faire_images("images_rencontres", d, dossier=ctx.images, prefixe=f"{ch}_")
         avec = [r for r in d["rencontres"] if r.get("parties")]
         resume += f" ; {ch} : {len(avec)} feuille(s) sur {len(d['rencontres'])} rencontre(s) jouée(s)"

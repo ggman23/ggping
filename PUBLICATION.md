@@ -764,6 +764,13 @@ des données).
   enregistrées par la page des clubs du 77 de la mise à jour précédente. Quand cette page (faite à la fin) les
   change, le classement virtuel et les résultats sont refaits avec elles (`refaire_avec_les_valeurs_du_mois`, les
   parties sont déjà en cache) ; une page qui échoue garde sa première version.
+- **Récapitulatif de Paris avec les jeunes** (28/11) : `paris_recap_J<n>.png` montre aussi les équipes jeunes de la
+  dernière journée jouée du championnat des jeunes : titre « CHAMPIONNAT DE PARIS + CHAMPIONNAT JEUNES » (la
+  seconde partie en bleu), bandeaux bleus « Vaires 1 (−15 ans) » et « Vaires 2 (−13 ans) » (catégorie lue dans la
+  division de l'API, « MOINS 15 »), placés dans les places libres sous les blocs courts (Vaires 3, le top 5) ;
+  le top 5 compte les perfs des deux championnats. Une équipe jeune sans feuille garde sa place (« Pas encore
+  saisi »). Si Paris et les jeunes ne sont pas à la même journée : « Paris J2 · Jeunes J1 ». Le récapitulatif
+  des jeunes seul (`jeunes_recap_J<n>.png`) n'est plus fait quand l'image de Paris existe.
 - **Récapitulatif** : deux joueurs du même prénom avec la même initiale (« Marc G » deux fois) : le début du nom
   les distingue (« Marc Gu. », « Marc Go. » ; `recap._distinction`).
 - **Progression** : une image par équipe de Paris (`paris_progression_V1.png`...) avec ses joueurs (9, 6 ou 3 :

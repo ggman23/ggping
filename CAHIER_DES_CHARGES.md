@@ -839,3 +839,7 @@ Pas d'onglet dans l'application pour l'instant.
   écarté de nos tableaux ; deux joueurs à licence loisir n'ont pas les résultats d'un tournoi du 22/11 : vérifier les
   licences loisir du club » → leurs parties sont lues, ceux qui ont joué sont gardés (marqués loisir), le journal
   donne les dates de leurs parties dans l'API (chiffres seulement).
+- Récapitulatif de Paris (28/11) : « ajouter aussi les 2 équipes jeunes ; titre Championnat de Paris + Championnat
+  Jeunes, et prévoir la place dans la zone libre pour les 2 équipes jeunes en précisant −15 ans et −13 ans » →
+  recap.image_recap(..., jeunes=...) : bandeaux bleus « Vaires 1 (−15 ans) », « Vaires 2 (−13 ans) », placés sous
+  les blocs courts, top 5 commun.
