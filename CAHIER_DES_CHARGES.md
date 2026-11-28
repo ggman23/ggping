@@ -843,3 +843,6 @@ Pas d'onglet dans l'application pour l'instant.
   Jeunes, et prévoir la place dans la zone libre pour les 2 équipes jeunes en précisant −15 ans et −13 ans » →
   recap.image_recap(..., jeunes=...) : bandeaux bleus « Vaires 1 (−15 ans) », « Vaires 2 (−13 ans) », placés sous
   les blocs courts, top 5 commun.
+- Disposition du récapitulatif Paris + jeunes (28/11) : « remonte Vaires 2 (PH) sous Vaires 1, Vaires 3 (D2) en
+  dessous ; Vaires 1 (−15 ans) à la place de Vaires 3, Vaires 2 (−13 ans) en dessous ; top 10 voire top 15 des perfs
+  si tu as la place » → fait (top 15 au plus, cadre à la taille du nombre de perfs : 5, 10 ou 15 lignes).

@@ -109,10 +109,11 @@ def test_recap_de_paris_avec_les_equipes_jeunes(tmp_path):
     assert chemin.name == "paris_recap_J1.png" and titre.startswith("Paris + jeunes · Récapitulatif J1")
     assert Image.open(chemin).size[1] >= recap.HAUTEUR_MIN
     assert [recap.titre_jeunes(r) for r in jeunes["rencontres"]] == ["Vaires 1 (−15 ans)", "Vaires 2 (−13 ans)"]
-    # Emplacements : Paris (9, 6, 3 joueurs), top 5, puis les jeunes dans les colonnes qui finissent le plus haut
-    places, top5, places_jeunes, hauteur = recap._emplacements_en_colonnes([380, 281, 181.5], [214.75, 214.75])
-    assert places == [(18, 58), (18, 517), (436, 517)] and top5 == (855, 517)
-    assert places_jeunes == [(436, 710.5), (855, 764)] and hauteur == 1001
+    # Emplacements : Paris (9, 6, 3 joueurs) l'un sous l'autre à gauche, les jeunes sous la photo, un top 15 à droite
+    places, top, places_jeunes, hauteur, lignes = recap._emplacements_paris_jeunes([381, 281.25, 181.5], [214.75, 214.75])
+    assert places == [(18, 58), (18, 451), (18, 744.25)] and top == (855, 517)
+    assert places_jeunes == [(436, 517), (436, 743.75)] and (hauteur, lignes) == (987, 15)
+    assert recap._emplacements_paris_jeunes([381, 281.25], [100])[4] == 15
     # Sans données des jeunes : l'image de Paris seule, comme avant
     [(_, seul)] = recap.image_recap(paris, None, tmp_path, prefixe="paris_")
     assert seul.startswith("Paris · ")

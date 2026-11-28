@@ -226,24 +226,27 @@ def hauteur_bloc(equipe):
     return 85 + (len(equipe["joueurs"]) + (1 if equipe["doubles"] else 0) - 1) * PAS_LIGNE + 30
 
 
-def _emplacements_en_colonnes(hauteurs, hauteurs_jeunes):
-    """Paris + jeunes (28/11) : les équipes de Paris comme _emplacements_variables (à gauche de la photo, puis une
-    rangée sous la photo, le top 5 ensuite) ; puis chaque équipe jeune dans la colonne qui finit le plus haut (les
-    places libres sous les blocs courts). Renvoie (emplacements des équipes de Paris, du top 5, des équipes
-    jeunes, hauteur de l'image)."""
-    places, y = [], 58
-    i = 0
-    while i < len(hauteurs) and y + hauteurs[i] <= PHOTO[3] + 10:
-        places.append((COLONNES[0], y))
-        y += hauteurs[i] + 12
-        i += 1
-    bas = [517] * len(COLONNES)
-    for k, h in enumerate(hauteurs[i:] + [221 + 14] + list(hauteurs_jeunes)):
-        c = k if k < len(COLONNES) else min(range(len(COLONNES)), key=lambda c: (bas[c], c))
-        places.append((COLONNES[c], bas[c]))
-        bas[c] += h + 12
-    n = len(hauteurs)
-    return places[:n], places[n], places[n + 1:], max(HAUTEUR_MIN, round(max(bas) + 10))
+def hauteur_top(n):
+    """Hauteur du cadre des perfs pour n lignes (221 points pour le top 5 du modèle)."""
+    return 221 + (n - 5) * 23.75
+
+
+def _emplacements_paris_jeunes(hauteurs, hauteurs_jeunes):
+    """Paris + jeunes (28/11, demande du club) : les équipes de Paris l'une sous l'autre à gauche (Vaires 1, 2, 3),
+    les équipes jeunes l'une sous l'autre sous la photo (−15 ans, puis −13 ans), le cadre des perfs à droite, aussi
+    haut que la place le permet : top 15, sinon top 10, sinon top 5. Renvoie (emplacements des équipes de Paris,
+    du cadre des perfs, des équipes jeunes, hauteur de l'image, nombre de lignes du cadre)."""
+    def pile(x, y, hs):
+        places = []
+        for h in hs:
+            places.append((x, y))
+            y += h + 12
+        return places, y - 12
+    places, bas_gauche = pile(COLONNES[0], 58, hauteurs)
+    places_jeunes, bas_jeunes = pile(COLONNES[1], 517, hauteurs_jeunes)
+    hauteur = max(HAUTEUR_MIN, round(max(bas_gauche, bas_jeunes, 517 + hauteur_top(5)) + 20))
+    lignes = next(n for n in (15, 10, 5) if n == 5 or 516 + hauteur_top(n) <= hauteur - 12)
+    return places, (COLONNES[2], 517), places_jeunes, hauteur, lignes
 
 
 def titre_jeunes(rencontre):
@@ -340,8 +343,9 @@ def _graphique(d, x, y, hausse):
         _fleche(d, (x + 40, y + 20), (x + 14, y + 18), (x + 2, y + 1), "#37B24D")
 
 
-def _top5(img, d, x0, y0, perfs):
-    x1, y1 = x0 + 416, y0 + 221
+def _top5(img, d, x0, y0, perfs, lignes=5):
+    """Cadre « TOP 5 Perf » du modèle ; lignes = 10 ou 15 quand la place le permet (Paris + jeunes, 28/11)."""
+    x1, y1 = x0 + 416, y0 + hauteur_top(lignes)
     d.rounded_rectangle([x0 * F, y0 * F, x1 * F, y1 * F], radius=22 * F, fill=JAUNE)
     # Trait « à main levée » d'Excalidraw : deux contours bronze presque superposés
     for dx, dy, l in ((0, 0, 2.2), (0.8, 1.6, 1.4)):
@@ -349,10 +353,10 @@ def _top5(img, d, x0, y0, perfs):
                             outline=BRONZE, width=round(l * F))
     _graphique(d, x0 + 59, y0 + 11, True)
     _graphique(d, x0 + 311, y0 + 11, False)
-    ecrire(d, (x0 + x1) / 2, y0 + 29, "TOP 5 Perf", MAIN, 19.5, ORANGE, "mm")
+    ecrire(d, (x0 + x1) / 2, y0 + 29, f"TOP {lignes} Perf", MAIN, 19.5, ORANGE, "mm")
     if not perfs:
         ecrire(d, (x0 + x1) / 2, y0 + 120, "Pas de perf cette journée", MAIN, 19.5, NOIR, "mm")
-    for i, (nom, battus, ecart) in enumerate(perfs):
+    for i, (nom, battus, ecart) in enumerate(perfs[:lignes]):
         base = y0 + 99 + i * 23.75
         texte = f"{i + 1}. {nom} bat {_liste(battus)}"
         ecrire(d, x0 + 14, base, texte, MAIN, ajuste(texte, MAIN, 19.5, 325), NOIR)
@@ -424,7 +428,8 @@ def image_recap(donnees, dossier_import, dossier, prefixe="", jeunes=None):
     (prefixe « paris_ », donnees["championnat"] = "paris") : paris_recap_J<n>.png, titre « CHAMPIONNAT DE
     PARIS », joueurs rangés par groupe, photo import/photo_paris_J<n>.jpg. `jeunes` (données du championnat des
     jeunes, 28/11) : ses équipes de la dernière journée jouée sont ajoutées à l'image de Paris (bandeaux bleus
-    « Vaires 1 (−15 ans) », titre « CHAMPIONNAT DE PARIS + CHAMPIONNAT JEUNES », top 5 commun)."""
+    « Vaires 1 (−15 ans) », titre « CHAMPIONNAT DE PARIS + CHAMPIONNAT JEUNES ») : Paris à gauche, les jeunes sous
+    la photo, les perfs des deux championnats à droite (top 10 ou 15 selon leur nombre)."""
     paris = (donnees.get("championnat") or "france") != "france"
     for f in Path(dossier).glob(f"{prefixe}recap_*.png"):
         f.unlink()
@@ -446,9 +451,9 @@ def image_recap(donnees, dossier_import, dossier, prefixe="", jeunes=None):
     tous = {jj["licence"]: jj for e in equipes + avec_jeunes for jj in e["joueurs"]}
     noms = noms_affiches(list(tous.values()), lire_surnoms(dossier_import))
     if avec_jeunes:
-        places, place_top5, places_jeunes, hauteur = _emplacements_en_colonnes([hauteur_bloc(e) for e in equipes],
-                                                                              [hauteur_bloc(e) for e in avec_jeunes])
-        places = places + [place_top5]
+        places, place_top, places_jeunes, hauteur, lignes_top = _emplacements_paris_jeunes(
+            [hauteur_bloc(e) for e in equipes], [hauteur_bloc(e) for e in avec_jeunes])
+        places = places + [place_top]
     elif paris:
         places, hauteur = _emplacements_variables([hauteur_bloc(e) for e in equipes])
     else:
@@ -476,7 +481,12 @@ def image_recap(donnees, dossier_import, dossier, prefixe="", jeunes=None):
     for (x, y), equipe in zip(places_jeunes if avec_jeunes else [], avec_jeunes):
         _bloc(d, x, y, equipe, noms)
     x, y = places[-1]
-    _top5(img, d, x + 1, y - 1, top_perfs(equipes + avec_jeunes, noms))
+    if avec_jeunes:  # top 15 (ou 10) : autant de perfs que la place en laisse, sans cadre trop grand pour elles
+        perfs = top_perfs(equipes + avec_jeunes, noms, lignes_top)
+        lignes_top = next((n for n in (5, 10, 15) if n >= len(perfs) and n <= lignes_top), lignes_top)
+        _top5(img, d, x + 1, y - 1, perfs, lignes_top)
+    else:
+        _top5(img, d, x + 1, y - 1, top_perfs(equipes, noms))
     chemin = Path(dossier) / f"{prefixe}recap_J{j}.png"
     chemin.parent.mkdir(parents=True, exist_ok=True)
     img.resize((LARGEUR, hauteur), Image.LANCZOS).save(chemin, optimize=True)
