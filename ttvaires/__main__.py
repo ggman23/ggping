@@ -272,8 +272,13 @@ def page_indivs(client, club, ctx):
 def page_departement(client, club, ctx, perimetre="tous"):
     """Clubs du 77 : licenciés (sexe, catégories, points) et équipes engagées de chaque club du département ;
     perimetre : joueurs dont les points virtuels sont relus (jeunes, adultes, tous, aucun)."""
+    from . import mensuel
+
     print("=== Clubs du 77 : joueurs et équipes de chaque club du département", flush=True)
+    avant = mensuel.References.lire(client).table
     donnees = departement.recuperer_departement(client, club, ctx.aujourdhui, dossier_import=IMPORT, perimetre=perimetre)
+    # Valeurs du mois enregistrées pour les pages de Vaires : changées ? (le classement virtuel, fait avant, est alors refait)
+    ctx.references_changees = mensuel.References.lire(client).table != avant
     html = generer_html(donnees, ctx.sortie / "departement_77.html", GABARIT_77)
     return [html], departement.resume(donnees)
 
@@ -291,6 +296,21 @@ def generer_pages(client, club, ctx, a_faire):
             print(f"\n!!! Page {nom} non générée : {e}\n")
             bilans.append((nom, f"PAGE NON GÉNÉRÉE ({e})", []))
     return pages, bilans
+
+
+def refaire_avec_les_valeurs_du_mois(client, club, ctx, pages, bilans, resultats=True):
+    """Le classement virtuel (et les résultats, qui le reprennent) est fait au début, avec les valeurs du mois
+    enregistrées par la page des clubs du 77 du lancement précédent. Quand cette page, faite à la fin, les a
+    changées (lecture du lundi, troisième cercle...), ils sont refaits avec elles : une seule mise à jour suffit
+    (28/11). Les parties sont déjà en cache : quelques secondes. Une page qui échoue garde sa première version."""
+    print("\n=== Valeurs du mois mises à jour par la page des clubs du 77 : classement virtuel"
+          + (" et résultats refaits" if resultats else " refait") + " avec elles", flush=True)
+    refaire = [("classement virtuel", page_virtuel)] + ([("résultats", page_resultats)] if resultats else [])
+    nouvelles, nouveaux_bilans = generer_pages(client, club, ctx, refaire)
+    for nom, resume, fichiers in nouveaux_bilans:
+        if not resume.startswith("PAGE NON GÉNÉRÉE"):
+            bilans = [(nom, resume, fichiers) if b[0] == nom else b for b in bilans]
+    return pages + [f for f in nouvelles if f not in pages], bilans
 
 
 TOUTES_LES_PAGES = [("classement virtuel", page_virtuel), ("résultats", page_resultats), ("rencontres", page_rencontres),
@@ -366,6 +386,8 @@ def main():
             a_faire.append(("clubs du 77", lambda c, club, ctx: page_departement(c, club, ctx, args.virtuels_77)))
         ctx = Contexte()
         pages, bilans = generer_pages(client, args.club, ctx, a_faire)
+        if args.virtuel and args.departement and getattr(ctx, "references_changees", False):
+            pages, bilans = refaire_avec_les_valeurs_du_mois(client, args.club, ctx, pages, bilans, args.resultats)
         print(f"Pages téléchargées : {client.nb_telecharges}, reprises du cache : {client.nb_cache}")
         # Hors ligne, rien n'a été lu de nouveau : rien à envoyer au site.
         envoi = None if args.sans_envoi or args.pingpocket_cache or args.hors_ligne else synchro.apres_lancement()

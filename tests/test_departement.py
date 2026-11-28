@@ -239,13 +239,13 @@ def test_points_virtuels_en_ligne_seulement_choix_des_jeunes():
     assert [j for j in v["joueurs"] if len(j) == 6] == [[540, "M", "B1", 0, "PETIT Tom",
                                                          [round(540 + gagne, 1), round(gagne, 1), 1, 1, lu, [round(gagne, 1)], 2, 2]]]
     assert lues(client.ttls) == {"8": True, "999": True}  # son adversaire d'un autre département aussi
-    assert d["virtuels"] == {"joueurs": 7, "a_relire": 1, "connus": 1, "lus": 1, "reportes": 0, "plus_ancienne": lu,
+    assert d["virtuels"] == {"joueurs": 8, "a_relire": 1, "connus": 1, "lus": 1, "reportes": 0, "plus_ancienne": lu,
                              "plus_recente": lu, "perimetre": "jeunes", "hors_championnat": 0, "verifiees": 0, "details_lus": 0,
                              "details_restants": 0, "methode": "mensuel", "periodes": ["2026-10"], "exterieurs": 1,
                              "exterieurs_connus": 0, "exterieurs_lus": 1, "exterieurs_restants": 0,
                              "adversaires_vaires": 1, "adversaires_vaires_estimes": 0, "cercle3": 0, "cercle3_lus": 0,
-                             "seuils": [5, 20], "fiabilite": [0, 1, 0, 0], "fiabilite_gris": 0}  # 7 licences (Vaires 6, Chelles 1)
-    assert "points virtuels de 1 joueurs sur 7 (relus : jeunes)" in departement.resume(d)
+                             "seuils": [5, 20], "fiabilite": [0, 1, 0, 0], "fiabilite_gris": 0}  # 8 licences (Vaires 6 et 1 loisir, Chelles 1)
+    assert "points virtuels de 1 joueurs sur 8 (relus : jeunes)" in departement.resume(d)
     assert "licence" not in json.dumps(d)  # pas de numéro de licence dans la page
     # Par défaut : seulement en ligne (pingpocket.fr lu dans les pages du PC) ; sur le PC, aucune partie demandée
     pc = ClientParties(_listes(), parties)
@@ -259,13 +259,14 @@ def test_choix_des_joueurs_a_relire_les_autres_gardent_leur_derniere_lecture():
     client = ClientParties(_listes(), {})
     # « adultes » : les 6 adultes compétition relus (sans partie : virtuels = points mensuels), pas le benjamin
     d = departement.recuperer_departement(client, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True, perimetre="adultes")
-    assert set(client.ttls) == {"1", "2", "3", "6", "7", "9"} and d["virtuels"]["connus"] == 6
+    # (et la licence loisir de Vaires, 4 : lue, sans partie donc sans points virtuels)
+    assert set(client.ttls) == {"1", "2", "3", "4", "6", "7", "9"} and d["virtuels"]["connus"] == 6
     martin = next(j for c in d["clubs"] if c["numero"] == VAIRES for j in c["joueurs"] if j[4] == "MARTIN Paul")
     assert martin[5][:4] == [1450, 0, 0, 0]
     # « jeunes » ensuite : le benjamin lu ; les adultes, lus cette semaine, gardent leur lecture (sans requête)
     client.ttls.clear()
     d = departement.recuperer_departement(client, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True, perimetre="jeunes")
-    assert lues(client.ttls) == {"8": True, **{l: False for l in ("1", "2", "3", "6", "7", "9")}}
+    assert lues(client.ttls) == {"8": True, **{l: False for l in ("1", "2", "3", "4", "6", "7", "9")}}
     assert d["virtuels"]["connus"] == 7
     # « aucun » : aucune requête, tout ce qui a déjà été lu reste affiché
     client.ttls.clear()
@@ -273,7 +274,7 @@ def test_choix_des_joueurs_a_relire_les_autres_gardent_leur_derniere_lecture():
     assert set(client.ttls.values()) == {None} and d["virtuels"]["connus"] == 7 and d["virtuels"]["lus"] == 0
     # « tous » sur un appareil neuf : tout le monde ; choix inconnu refusé
     neuf = ClientParties(_listes(), {})
-    assert departement.recuperer_departement(neuf, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True, perimetre="tous")["virtuels"]["lus"] == 7
+    assert departement.recuperer_departement(neuf, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True, perimetre="tous")["virtuels"]["lus"] == 8
     import pytest
     with pytest.raises(ValueError):
         departement.recuperer_departement(neuf, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True, perimetre="minimes")
@@ -435,3 +436,13 @@ def test_troisieme_cercle_adversaires_des_adversaires_de_vaires(tmp_path):
     client.ttls.clear()
     departement.recuperer_departement(client, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True, perimetre="jeunes")
     assert not any(lues(client.ttls).values())
+
+
+def test_licence_loisir_de_vaires_qui_a_joue(tmp_path):
+    """Une licence loisir de Vaires qui a joué (critérium, 28/11) : ses parties sont lues et ses points virtuels affichés."""
+    from ttvaires.resultats import points_partie
+    client = ClientParties(_listes(), {"4": [_partie(1, "4", 500, 600, True)]})
+    client.dossier = tmp_path
+    d = departement.recuperer_departement(client, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True, perimetre="adultes")
+    loisir = next(j for c in d["clubs"] if c["numero"] == VAIRES for j in c["joueurs"] if j[4] == "LOISIR Jean")
+    assert loisir[3] == 1 and loisir[5][:4] == [round(500 + points_partie(500, 600, True, 1), 1), round(points_partie(500, 600, True, 1), 1), 1, 0]

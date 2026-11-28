@@ -177,7 +177,7 @@ def memoriser_joueurs(virtuel, chemin):
     seulement. Gardés dans le cache (pas dans le dépôt) : la page /paris/ les reprend à chaque mise à jour."""
     joueurs = [{"nom": j.get("nom") or "", "prenom": j.get("prenom") or "", "sexe": j.get("sexe"),
                 "virtuels": j.get("virtuels") if j.get("virtuels") is not None else j.get("officiels")}
-               for j in virtuel.get("joueurs", [])]
+               for j in virtuel.get("joueurs", []) if not j.get("loisir")]
     joueurs.sort(key=lambda j: (-(j["virtuels"] or 0), j["nom"], j["prenom"]))
     chemin = Path(chemin)
     chemin.parent.mkdir(parents=True, exist_ok=True)

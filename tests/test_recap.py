@@ -87,3 +87,11 @@ def test_image_avec_la_place_de_la_photo_puis_avec_la_photo(tmp_path):
     with Image.open(chemin) as img:
         r, g, b = img.getpixel((600, 300))[:3]
         assert abs(r - 10) < 8 and abs(g - 120) < 8 and abs(b - 200) < 8  # photo collée dans le cadre
+
+
+def test_meme_prenom_et_meme_initiale_debut_du_nom():
+    """Deux « Marc G » sur la même image (28/11) : « Marc Gu. » et « Marc Go. » ; les initiales restent quand elles suffisent."""
+    j = lambda lic, nom, prenom: {"licence": lic, "nom": nom, "prenom": prenom}
+    noms = recap.noms_affiches([j("1", "GARNIER", "Paul"), j("2", "GOBERT", "Paul"), j("3", "DURAND", "Luc"),
+                                j("4", "DUMONT", "Luc"), j("5", "MOREAU", "Luc"), j("6", "LE GALL", "Tom"), j("7", "LEROY", "Tom")])
+    assert noms == {"1": "Paul Ga.", "2": "Paul Go.", "3": "Luc Dur.", "4": "Luc Dum.", "5": "Luc M", "6": "Tom LG", "7": "Tom L"}

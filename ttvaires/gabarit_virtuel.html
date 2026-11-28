@@ -115,6 +115,8 @@ function fmtDate(iso) { const d = new Date(iso + "T12:00:00"); return `${JOURS[d
 const nomComplet = (j) => `${j.nom || ""} ${j.prenom || ""}`.trim();
 const autresComp = (j) => j.parties.filter((p) => !p.championnat && !p.paris).length;
 const parisComp = (j) => j.parties.filter((p) => p.paris).length;
+// Équipe de Paris principale (« P1 ») ; pages d'avant le 28/11 : la première de « P1 ×2, P2 »
+const eqParis = (j) => j.equipe_paris || ((j.equipes_paris || "").match(/P\d+/) || [""])[0];
 const AVEC_PARIS = D.joueurs.some((j) => j.paris || j.equipes_paris);  // colonnes Paris : quand le championnat de Paris a commencé
 
 let vue = "classement", filtre = "tous", recherche = "", tri = null, parJoueur = false;
@@ -126,12 +128,15 @@ const LIMITE = 30;
 const COLONNES = [
   { t: "#", k: (j) => j.rang, v: (j) => j.virtuels == null ? "" : j.rang },
   { t: "Joueur", k: (j) => nomComplet(j), c: "g joueur",
-    v: (j) => `<span class="nom">${esc(j.nom || "")} <span class="prenom">${esc(j.prenom || "")}</span></span>${j.categorie ? `<span class="cat">${esc(j.categorie)}</span>` : ""}` },
-  { t: "Équipe", k: (j) => j.equipe || "~", v: (j) => esc(j.equipe || ""), c: "n col-option" },
+    v: (j) => `<span class="nom">${esc(j.nom || "")} <span class="prenom">${esc(j.prenom || "")}</span></span>${j.categorie ? `<span class="cat">${esc(j.categorie)}</span>` : ""}`
+      + (j.loisir ? ` <span class="cat" title="Licence loisir : gardée ici parce que la FFTT compte ses parties (points gagnés ou perdus)">loisir</span>` : "") },
+  { t: "Équipe", titre: "Équipe de France la plus jouée, puis celle du championnat de Paris (V1 / P1)", k: (j) => j.equipe || eqParis(j) || "~",
+    v: (j) => { const t = [j.equipe, eqParis(j)].filter(Boolean).join(" / ");
+      return j.equipes_paris ? `<span title="Championnat de Paris : ${esc(j.equipes_paris)}">${esc(t)}</span>` : esc(t); }, c: "n col-option" },
   { t: "Pts off.", titre: "Points officiels de la phase", c: "n", k: (j) => j.officiels ?? -1, v: (j) => j.officiels == null ? "—" : nombre(j.officiels, 0) },
   { t: "Champ.", titre: "Championnat par équipes", c: "n col-option", k: (j) => j.championnat, v: (j) => j.parties.some((p) => p.championnat) ? pts(j.championnat) : "", cls: (j) => clsTexte(j.championnat) },
-  ...(AVEC_PARIS ? [{ t: "Paris", titre: "Championnat de Paris (coefficient 0,75) ; en dessous, l'équipe de Paris (P1 à P3) et le nombre de rencontres",
-      c: "n col-option", k: (j) => j.paris ?? 0, v: (j) => (parisComp(j) ? pts(j.paris) : "") + (j.equipes_paris ? `<span class="cat" style="display:block">${esc(j.equipes_paris)}</span>` : ""),
+  ...(AVEC_PARIS ? [{ t: "Paris", titre: "Championnat de Paris (coefficient 0,75) ; l'équipe de Paris est dans la colonne Équipe (V1 / P1)",
+      c: "n col-option", k: (j) => j.paris ?? 0, v: (j) => (parisComp(j) ? pts(j.paris) : ""),
       cls: (j) => clsTexte(j.paris) }] : []),
   { t: "Autre", titre: "Autres compétitions : critérium, tournois, compétitions jeunes...", c: "n col-option", k: (j) => j.autres, v: (j) => autresComp(j) ? pts(j.autres) : "", cls: (j) => clsTexte(j.autres) },
   { t: "Total", c: "n", k: (j) => j.total, v: (j) => j.parties.length ? pts(j.total) : "", cls: (j) => clsFond(j.total) },

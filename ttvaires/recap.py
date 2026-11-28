@@ -8,7 +8,7 @@ le dossier import contient photo_J3.jpg (J3 = la journée), de même que les log
 et logo_droite.png ; sinon la place reste libre pour la coller soi-même.
 
 Les noms : le prénom, suivi des initiales du nom quand deux joueurs de l'image ont le même prénom
-(« Jérôme D », « Jérôme L »). Le fichier import/surnoms.txt peut imposer un nom affiché, une
+(« Jérôme D », « Jérôme L ») ; si les initiales sont les mêmes, le début du nom (« Marc Gu. », « Marc Go. »). Le fichier import/surnoms.txt peut imposer un nom affiché, une
 ligne par joueur : « GUITTON Marc = Marc G ». Pour la mise à jour lancée depuis le site, les mêmes
 lignes peuvent aussi être mises dans le secret GitHub SURNOMS (il l'emporte sur le fichier).
 
@@ -116,9 +116,29 @@ def noms_affiches(joueurs, surnoms=None):
             continue
         nom = max(graphies[_cle(j["prenom"])], key=lambda g: (sum(not c.isascii() for c in g), g)) or j["nom"]
         if len(par_prenom[_cle(j["prenom"])]) > 1:
-            nom += " " + "".join(m[0] for m in re.split(r"[\s-]+", j["nom"].strip()) if m)
+            nom += " " + _distinction(j, [x for x in joueurs if _cle(x["prenom"]) == _cle(j["prenom"])])
         noms[j["licence"]] = nom
     return noms
+
+
+def _initiales(nom):
+    return "".join(m[0] for m in re.split(r"[\s-]+", (nom or "").strip()) if m)
+
+
+def _distinction(joueur, meme_prenom):
+    """Ce qui suit le prénom quand plusieurs joueurs de l'image le portent : les initiales du nom (« D », « L ») ;
+    si elles ne suffisent pas, le début du nom jusqu'à ce qu'il les distingue (« Gu. » et « Go. », 28/11)."""
+    autres = [x for x in meme_prenom if x["licence"] != joueur["licence"]]
+    initiales = _initiales(joueur["nom"])
+    if all(_cle(_initiales(x["nom"])) != _cle(initiales) for x in autres):
+        return initiales
+    nom = " ".join((joueur["nom"] or "").split())
+    rivaux = [_cle(" ".join((x["nom"] or "").split())) for x in autres if _cle(_initiales(x["nom"])) == _cle(initiales)]
+    for k in range(2, len(nom) + 1):
+        debut = _cle(nom[:k])
+        if all(not r.startswith(debut) for r in rivaux):
+            return nom[:k].strip().capitalize() + ("." if k < len(nom) else "")
+    return nom.title()  # même prénom et même nom : le nom entier
 
 
 def _resultat(r):

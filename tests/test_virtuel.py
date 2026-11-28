@@ -205,3 +205,23 @@ def test_historique_des_classements_des_joueurs_du_club():
     en_ligne = EnLigne({CHEMIN_HISTORIQUE.format("100"): HISTORIQUE})
     assert set(historiques_classement(en_ligne, joueurs, date(2026, 11, 12))) == {"100"}
     assert en_ligne.demandes == [CHEMIN_HISTORIQUE.format("100")]
+
+
+def test_licence_loisir_qui_a_joue_gardee_dans_le_classement(tmp_path, capsys):
+    """Licence loisir (28/11) : écartée tant qu'elle n'a pas joué ; gardée, marquée loisir, si ses parties comptent."""
+    pages = _site(avec_listes=False)
+    dossier = tmp_path / "import"
+    dossier.mkdir()
+    _page_enregistree(dossier / "vaires.html", _ecrans_vaires("CATEGORY", "LICENCE_STATE"))
+    for lic, ps in {"100": [], "200": [], "300": [],
+                    "400": [_partie(21, "2026-09-26", ("400", 500), ("9", 600), contest=TOP_JEUNE)]}.items():
+        pages[url_parties(lic)] = json.dumps({"@context": "/api/contexts/Game", "hydra:member": ps})
+    pages[f"{API}/contests/2"] = json.dumps({"@context": "/api/contexts/Contest", "name": TOP_JEUNE["name"], "coefficient": 0.5})
+    pages[f"{API}/games/21"] = json.dumps({"@context": "/api/contexts/Game", "notCounted": False})
+    d = recuperer_virtuel(FauxClient(pages), VAIRES, aujourdhui=date(2026, 10, 6), dossier_import=dossier)
+    j = {x["id"]: x for x in d["joueurs"]}
+    assert j["400"]["loisir"] and j["400"]["officiels"] == 500 and j["400"]["virtuels"] > 500
+    assert not any(x.get("loisir") for x in d["joueurs"] if x["id"] != "400")
+    assert "licences loisir : 1 au club, 1 avec des parties dans l'API cette phase ; parties par date : 26/09 ×1" in capsys.readouterr().out
+    from ttvaires import paris
+    assert [x["nom"] for x in paris.memoriser_joueurs(d, tmp_path / "j.json") if x["nom"] == "LOISIR"] == []  # pas pour Paris

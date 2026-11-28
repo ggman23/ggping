@@ -747,9 +747,25 @@ des données).
   numéro inférieur (`brulage.SEUILS` : France 2, Paris 3) ; il peut encore y jouer, mais **un seul brûlé par groupe
   de 3** (deux brûlés dans un même groupe : tous deux non qualifiés) ; un joueur ne joue qu'une équipe par journée.
   Toute la saison compte. Images : effectif du club, joueurs disponibles et joueurs brûlés de Vaires 2 et 3.
-- **Classement virtuel** : colonne **Paris** (points gagnés ou perdus en championnat de Paris, coefficient 0,75) et,
-  dessous, l'équipe de Paris de chaque joueur (P1 à P3, d'après les feuilles de Paris) ; « Autre » ne compte plus
-  Paris (Champ. + Paris + Autre = Total). Les colonnes Paris n'apparaissent qu'une fois le championnat commencé.
+- **Classement virtuel** : colonne **Paris** (points gagnés ou perdus en championnat de Paris, coefficient 0,75) ;
+  « Autre » ne compte plus Paris (Champ. + Paris + Autre = Total). Les colonnes Paris n'apparaissent qu'une fois le
+  championnat commencé. Colonne Équipe (page et image) sur une seule ligne : **« V1 / P1 »** = Vaires 1 au
+  championnat de France et P1 à Paris (l'équipe la plus jouée de chacun, `equipe_paris`) ; « V1 » seul pour un
+  joueur qui n'a pas joué Paris, « P1 » seul pour un joueur qui n'a joué que Paris ; au survol, le détail de Paris
+  (« P1 ×2, P2 »). Avant le 28/11 au soir, l'équipe de Paris était écrite sous l'équipe et sous les points :
+  deux lignes par joueur.
+- **Licences loisir** (28/11) : un joueur à licence loisir (« L » sur pingpocket.fr, sans points) peut avoir des
+  parties que la FFTT compte (critérium). Les parties des licences loisir du club sont donc lues aussi : celles qui
+  ont joué sont dans le classement virtuel (marquées « loisir », « (L) » sur l'image), la progression, les fiches et
+  /77/ ; les autres restent écartées, et elles ne sont jamais proposées pour Paris (tableau des disponibilités). Le
+  journal donne seulement des chiffres et des dates : « licences loisir : N au club, M avec des parties dans l'API
+  cette phase ; parties par date : 14/11 ×7 » (pour voir si un tournoi est remonté à la FFTT).
+- **Une seule mise à jour suffit** (28/11) : le classement virtuel est fait au début, avec les valeurs du mois
+  enregistrées par la page des clubs du 77 de la mise à jour précédente. Quand cette page (faite à la fin) les
+  change, le classement virtuel et les résultats sont refaits avec elles (`refaire_avec_les_valeurs_du_mois`, les
+  parties sont déjà en cache) ; une page qui échoue garde sa première version.
+- **Récapitulatif** : deux joueurs du même prénom avec la même initiale (« Marc G » deux fois) : le début du nom
+  les distingue (« Marc Gu. », « Marc Go. » ; `recap._distinction`).
 - **Progression** : une image par équipe de Paris (`paris_progression_V1.png`...) avec ses joueurs (9, 6 ou 3 :
   ceux qui ont joué dans cette équipe de Paris, l'équipe la plus jouée pour chacun ; `progression.equipe_paris`).
 - **Prochains adversaires** (`paris_adversaires_prochaine_journee.png`, `paris_adversaires_V1.png`...) : la prochaine

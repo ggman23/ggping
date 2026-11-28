@@ -391,6 +391,11 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
     liste, source = liste_licencies(client, numero_club, dossier_import)
 
     joueurs = {j["id"]: j for j in liste if j["renouvele"] and not j["loisir"]}
+    # Licences loisir (28/11) : sans points ni compétition en principe, mais un joueur a joué le critérium avec une
+    # licence loisir (points gagnés pour la FFTT). Leurs parties sont lues aussi ; seuls ceux qui ont joué sont gardés.
+    loisirs = {j["id"] for j in liste if j["renouvele"] and j["loisir"] and j.get("id")}
+    for lic in loisirs:
+        joueurs.setdefault(lic, next(j for j in liste if j.get("id") == lic))
     for lic, vu in feuilles["vus"].items():  # un joueur aligné est forcément réinscrit
         j = joueurs.setdefault(lic, dict(vu))
         j["points"] = vu["points"] or j.get("points")
@@ -413,8 +418,11 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
         if lic in joueurs:
             compte = Counter(p["numero"] for p in ps)
             joueurs[lic]["equipes_paris"] = ", ".join(f"P{n}" + (f" ×{c}" if c > 1 else "") for n, c in sorted(compte.items()))
+            # Équipe de Paris principale (la plus jouée, la plus forte à égalité), affichée « V1 / P1 » (28/11)
+            joueurs[lic]["equipe_paris"] = f"P{max(compte.items(), key=lambda e: (e[1], -e[0]))[0]}"
 
-    print(f"3/4 Parties de toutes les compétitions : {len(joueurs)} joueurs (API FFTT)", flush=True)
+    print(f"3/4 Parties de toutes les compétitions : {len(joueurs)} joueurs, dont {len(loisirs & set(joueurs))} licences loisir "
+          "(API FFTT)", flush=True)
     toutes = _lire_parties(client, sorted(joueurs))
     # En phase 2, les parties de la phase 1 (déjà dans la liste de la saison) servent aussi : la page
     # « Progression des joueurs » suit toute la saison, depuis le 1er septembre
@@ -426,11 +434,15 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
     # pour la progression, s'en passent (sinon des centaines de requêtes de plus en janvier)
     etats = _etats(client, [p for p in du_club if debut <= p["date"][:10] <= fin], feuilles["detail"])
 
-    resultat, sans_reponse = [], 0
+    resultat, sans_reponse, loisir_dates = [], 0, Counter()
     for lic, j in joueurs.items():
         parties = toutes.get(lic)
-        sans_reponse += parties is None
         lignes, officiels, ecartees = analyser(lic, parties or [], competitions, etats, debut, fin)
+        if lic in loisirs:  # licence loisir : gardée seulement si elle a joué (cette phase, ou la phase 1 en phase 2)
+            if not lignes and not (debut1 and analyser(lic, parties or [], competitions, etats, debut1, fin1)[0]):
+                continue
+            loisir_dates.update(l["date"][:10] for l in lignes)
+        sans_reponse += parties is None
         off = officiels.most_common(1)[0][0] if officiels else (j.get("points") or j.get("points_mensuels"))
         if references:  # calcul mois par mois, comme la FFTT (valeurs enregistrées par la page des clubs du 77)
             mensuel.recalculer(lignes, lic, off, references)
@@ -450,18 +462,25 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
             "id": lic, "nom": j.get("nom"), "prenom": j.get("prenom"), "sexe": j.get("sexe"),
             "categorie": j.get("categorie"), "equipe": j.get("equipe"), "nouveau": j.get("nouveau", False),
             "officiels": off, "classement": classement(off), "championnat": championnat, "paris": paris, "autres": autres,
-            "equipes_paris": j.get("equipes_paris"),
+            "equipes_paris": j.get("equipes_paris"), "equipe_paris": j.get("equipe_paris"),
             "total": total, "virtuels": virtuels, "classement_virtuel": classement(virtuels),
             "v": sum(l["victoire"] for l in lignes), "d": sum(not l["victoire"] for l in lignes),
             "parties": lignes, "ecartees": dict(ecartees), "inconnu": parties is None, "exterieurs": exterieurs,
             "estimees": estimees,
             "alignements": j.get("alignements") or [],
         })
+        if lic in loisirs:
+            resultat[-1]["loisir"] = True
         if debut1:  # phase 1 de la saison : ses points officiels et ses parties (progression depuis septembre)
             lignes1, officiels1, _ = analyser(lic, parties or [], competitions, etats, debut1, fin1)
             resultat[-1]["phase1"] = {"officiels": officiels1.most_common(1)[0][0] if officiels1 else None,
                                       "parties": lignes1}
     resultat.sort(key=lambda j: (j["virtuels"] is None, -(j["virtuels"] or 0), j["nom"] or ""))
+    if loisirs:  # contrôle (chiffres et dates seulement) : des parties de licences loisir remontent-elles à la FFTT ?
+        gardes = sum(1 for j in resultat if j.get("loisir"))
+        print(f"  licences loisir : {len(loisirs)} au club, {gardes} avec des parties dans l'API cette phase"
+              + (" ; parties par date : " + ", ".join(f"{d[8:10]}/{d[5:7]} ×{n}" for d, n in sorted(loisir_dates.items()))
+                 if loisir_dates else ""), flush=True)
 
     print("4/4 Historique des classements des joueurs (pingpocket.fr, pages gardées toute la phase)", flush=True)
     historiques = historiques_classement(client, resultat, aujourdhui)

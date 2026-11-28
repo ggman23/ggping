@@ -500,9 +500,9 @@ def images_virtuel(donnees, dossier):
     _nettoyer(dossier, "classement_virtuel")
     # Championnat de Paris (28/11) : sa colonne de points, et l'équipe de Paris sous l'équipe de France
     avec_paris = any(j.get("paris") or j.get("equipes_paris") for j in donnees["joueurs"])
-    largeur_num = 86 if avec_paris else 94
-    colonnes = colonnes_egales([Col("#", 44), Col("Joueur", None, "g")]
-                               + [Col(t, largeur_num) for t in ("Éq.", "Pts off.", "Champ.", *(("Paris",) if avec_paris else ()),
+    largeur_num = 84 if avec_paris else 94
+    colonnes = colonnes_egales([Col("#", 44), Col("Joueur", None, "g"), Col("Éq.", 126 if avec_paris else largeur_num)]
+                               + [Col(t, largeur_num) for t in ("Pts off.", "Champ.", *(("Paris",) if avec_paris else ()),
                                                                  "Autre", "Total", "Virt.", "Clt", "V/D")], LARGEUR - 2 * MARGE)
     lignes = []
     for i, j in enumerate(donnees["joueurs"], 1):
@@ -511,11 +511,11 @@ def images_virtuel(donnees, dossier):
         a_champ = any(p["championnat"] for p in j["parties"])
         a_paris = any(p.get("paris") for p in j["parties"])
         a_autres = any(not p["championnat"] and not p.get("paris") for p in j["parties"])
-        eq_paris = (j.get("equipes_paris") or "").split(",")[0].split(" ")[0]
+        eq_paris = j.get("equipe_paris") or (j.get("equipes_paris") or "").split(",")[0].split(" ")[0]
         lignes.append([
             C(i if j.get("virtuels") is not None else "", couleur=DOUX),
-            cel_nom(j.get("nom"), j.get("prenom"), apres=j.get("categorie")),
-            C(equipe_courte(j.get("equipe")), couleur=DOUX, sous=eq_paris or None) if avec_paris else C(equipe_courte(j.get("equipe")), couleur=DOUX),
+            cel_nom(j.get("nom"), j.get("prenom"), apres=" ".join(x for x in (j.get("categorie"), "(L)" if j.get("loisir") else None) if x)),
+            C(" / ".join(x for x in (equipe_courte(j.get("equipe")), eq_paris) if x), couleur=DOUX),  # « V1 / P1 » (28/11)
             C(fmt(j.get("officiels")) if j.get("officiels") is not None else "—"),
             cel_points(j["championnat"]) if a_champ else C(""),
             *((cel_points(j.get("paris")) if a_paris else C(""),) if avec_paris else ()),
@@ -530,9 +530,10 @@ def images_virtuel(donnees, dossier):
     sous = f"{donnees['club']['nom']} · phase {donnees['phase']} {donnees['saison']} · toutes compétitions · estimation · {_genere(donnees)}"
     pied = ("Virt. = estimation des points virtuels : points officiels + points gagnés ou perdus depuis le début de la phase "
             "(championnat, critérium, tournois...) ; seule la situation mensuelle publiée par la FFTT est officielle. "
-            + ("Paris = championnat de Paris (coefficient 0,75) ; sous l'équipe : l'équipe de Paris (P1 à P3). Autre = les autres "
+            + ("Paris = championnat de Paris (coefficient 0,75) ; Éq. : l'équipe de France, puis celle de Paris (V1 / P1). Autre = les autres "
                "compétitions. " if avec_paris else "")
-            + "Clt : ▲ ▼ = changement de classement. V/D = victoires / défaites.")
+            + "Clt : ▲ ▼ = changement de classement. V/D = victoires / défaites."
+            + (" (L) = licence loisir (ses parties comptent pour la FFTT)." if any(j.get("loisir") for j in donnees["joueurs"]) else ""))
     return _tableau_pagine(dossier, "classement_virtuel", "Classement virtuel", sous, colonnes, lignes, pied,
                            "Classement virtuel")
 

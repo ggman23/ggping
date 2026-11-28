@@ -296,7 +296,7 @@ function calculer() {
         cats: Object.fromEntries(D.categories.map((k) => [k, js.filter((j) => lettre(j[2]) === k).length])),
         meilleur: pts[0] ?? null, top4: moy(4), top10: moy(10), mille: pts.filter((p) => p >= 1000).length });
       // Jeunes dont les points virtuels sont connus (licences compétition) : niveau et points gagnés depuis le début de la phase
-      const jv = js.filter((j) => !j[3] && j[5] && JEUNES.includes(lettre(j[2])));
+      const jv = js.filter((j) => j[5] && JEUNES.includes(lettre(j[2])));  // licence loisir qui a joué comprise (28/11)
       const virt = jv.map((j) => j[5][0]).sort((a, b) => b - a);
       Object.assign(s, { jeunesTop4: virt.length ? Math.round(virt.slice(0, 4).reduce((a, b) => a + b, 0) / Math.min(4, virt.length)) : null,
         jeunesProg: jv.length ? Math.round(jv.reduce((a, j) => a + j[5][1], 0)) : null });
@@ -460,8 +460,9 @@ const ordreCat = (a, b) => D.categories.indexOf(lettre(a)) - D.categories.indexO
   || (parseInt(a.slice(1), 10) || 0) - (parseInt(b.slice(1), 10) || 0) || a.localeCompare(b);
 
 /* ---------- Vue « Joueurs » : tous les joueurs du département, triables et filtrables ---------- */
-// Licences compétition seulement (les licences loisir n'ont pas de points) ; une ligne par joueur
-const JOUEURS = CLUBS.flatMap((c) => (c.joueurs || []).filter((j) => !j[3]).map((j) => (
+// Licences compétition seulement (les licences loisir n'ont pas de points), et licences loisir qui ont joué (points
+// virtuels connus, 28/11) ; une ligne par joueur
+const JOUEURS = CLUBS.flatMap((c) => (c.joueurs || []).filter((j) => !j[3] || j[5]).map((j) => (
   { points: j[0], sexe: j[1], cat: j[2], nom: j[4] || "", club: c.numero, clubNom: c.nom, vaires: c.vaires,
     jeune: JEUNES.includes(lettre(j[2])), virt: j[5] ? j[5][0] : null, prog: j[5] ? j[5][1] : null,
     v: j[5] ? j[5][2] : null, d: j[5] ? j[5][3] : null, lu: j[5] ? j[5][4] : null, mois: j[5] ? j[5][5] : null,
@@ -586,7 +587,7 @@ function ficheClub(num) {
   const cats = s.cats ? D.categories.map((k) => `<span class="niv" title="${esc(CATS[k])}">${k} ${s.cats[k]}</span>`).join("") : "";
   const meilleurs = (c.joueurs || []).filter((j) => !j[3]).sort((a, b) => (b[0] || 0) - (a[0] || 0)).slice(0, 10);
   // Jeunes du club (points virtuels connus) : ceux qui ont gagné le plus de points depuis le début de la phase
-  const jeunes = (c.joueurs || []).filter((j) => !j[3] && j[5] && JEUNES.includes(lettre(j[2])));
+  const jeunes = (c.joueurs || []).filter((j) => j[5] && JEUNES.includes(lettre(j[2])));
   const enProgres = jeunes.slice().sort((a, b) => b[5][1] - a[5][1] || b[5][0] - a[5][0]).slice(0, 8);
   document.getElementById("fiche-corps").innerHTML = `<h2 id="fiche-titre">${esc(c.nom)}</h2>
     <p class="intro">N° ${esc(c.numero)}${c.date_liste ? ` · liste des licenciés du ${c.date_liste.slice(8, 10)}/${c.date_liste.slice(5, 7)}` : " · liste des licenciés pas encore lue"}</p>

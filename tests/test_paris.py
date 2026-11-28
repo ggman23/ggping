@@ -195,3 +195,28 @@ def test_disponibilites_joueurs_du_club_et_noms_colles(tmp_path):
               " 'Inconnu Total', 'Martin'].map((t) => (trouverJoueur(t) || {}).nom || null)));")
     sortie = subprocess.run(["node", "-e", script], capture_output=True, text=True, check=True).stdout
     assert json.loads(sortie) == ["DUPONT", "MARTIN", "LE CERF", "D'ALMEIDA", None, None]
+
+
+def test_classement_virtuel_refait_quand_les_valeurs_du_mois_changent(tmp_path, monkeypatch):
+    """Les valeurs du mois changées par la page des clubs du 77 (faite à la fin) : classement virtuel et résultats
+    refaits dans la même mise à jour ; une page qui échoue garde sa première version (28/11)."""
+    import ttvaires.__main__ as m
+    from ttvaires.reseau import ErreurReseau
+    appels = []
+
+    def virtuel(client, club, ctx):
+        appels.append("virtuel")
+        return [tmp_path / "classement_virtuel.html"], "refait"
+
+    def resultats(client, club, ctx):
+        appels.append("résultats")
+        raise ErreurReseau("API muette")
+
+    monkeypatch.setattr(m, "page_virtuel", virtuel)
+    monkeypatch.setattr(m, "page_resultats", resultats)
+    ctx = m.Contexte(sortie=tmp_path)
+    pages = [tmp_path / "classement_virtuel.html", tmp_path / "resultats_vaires.html"]
+    bilans = [("classement virtuel", "premier", ["classement_virtuel.html"]), ("résultats", "premier", ["resultats_vaires.html"])]
+    pages2, bilans2 = m.refaire_avec_les_valeurs_du_mois(None, "1", ctx, pages, bilans)
+    assert appels == ["virtuel", "résultats"] and pages2 == pages
+    assert [(n, r) for n, r, _ in bilans2] == [("classement virtuel", "refait"), ("résultats", "premier")]

@@ -369,6 +369,9 @@ def recuperer_departement(client, numero_club="08770250", aujourdhui=None, dossi
     listes, reportees = listes_licencies(client, clubs, dossier_import)
     joueurs_par_club = {num: joueurs_du_club(listes[num][0]) for num in clubs if num in listes}
     competition = {j["licence"]: j for js in joueurs_par_club.values() for j in js if not j["loisir"] and j.get("licence")}
+    # Licences loisir de Vaires (28/11) : lues aussi (un joueur a joué le critérium avec une licence loisir) ; affichées
+    # seulement si elles ont des parties (sans partie, pas de points virtuels)
+    competition.update({j["licence"]: j for j in joueurs_par_club.get(numero_club, []) if j["loisir"] and j.get("licence")})
     choisis = set(competition) if perimetre == "tous" else \
         {lic for lic, j in competition.items() if j["cat"][:1].upper() in PERIMETRES[perimetre]}  # « tous » : catégorie inconnue comprise
     if virtuels:

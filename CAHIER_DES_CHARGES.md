@@ -831,3 +831,11 @@ Pas d'onglet dans l'application pour l'instant.
   club), mais le cercle suivant là où il sert ; « fais la proposition ciblée ». Réalisation : troisième cercle
   (departement.virtuels_des_joueurs, cibles = joueurs de Vaires) : adversaires hors du 77 des adversaires de Vaires
   d'autres départements, lus une fois par semaine (MAX_CERCLE3) ; nombres dans le journal.
+- Retours du 28/11 au soir : « différencier les deux Marc G du récapitulatif (Marc Gu. et Marc Go.) » → début du nom
+  quand les initiales ne suffisent pas ; « V1 / P1 sur une seule ligne dans le classement virtuel, page et image, au
+  lieu de P1 dessous » ; « toujours 912 au lieu de 911,3 » → le troisième cercle n'avait pas encore tourné, et le
+  classement virtuel prenait les valeurs du mois de la mise à jour précédente : il est maintenant refait dans la
+  même mise à jour ; « un joueur à licence loisir a fait les indivs et a des points virtuels pour la FFTT, il est
+  écarté de nos tableaux ; deux joueurs à licence loisir n'ont pas les résultats d'un tournoi du 22/11 : vérifier les
+  licences loisir du club » → leurs parties sont lues, ceux qui ont joué sont gardés (marqués loisir), le journal
+  donne les dates de leurs parties dans l'API (chiffres seulement).
