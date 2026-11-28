@@ -21,7 +21,9 @@ week-end), sinon sa réponse enregistrée sert. Le lancement choisit qui relire 
 défaut, les jeunes, les adultes, aucun) ; les autres gardent leur dernière réponse enregistrée, avec sa
 date. Rien ne disparaît. Les adversaires d'autres départements (2 349 au 15/11/2026) sont lus de même,
 pour calculer leur valeur mois par mois. Environ 11 minutes pour chacun des deux groupes la première
-fois, puis chaque lundi ; MAX_VIRTUELS et MAX_EXTERIEURS ne sont que des bornes de sécurité.
+fois, puis chaque lundi ; MAX_VIRTUELS et MAX_EXTERIEURS ne sont que des bornes de sécurité. Troisième
+cercle (28/11) : les adversaires hors du 77 des adversaires de Vaires d'autres départements, lus de même
+(MAX_CERCLE3), pour que la valeur du mois de ces adversaires de Vaires (Paris, critérium) soit presque exacte.
 
 Force d'une équipe (estimation, pour voir les favoris d'une poule) : la moyenne des points des quatre
 joueurs que son numéro lui donne dans le club, par points décroissants (équipe 1 : joueurs 1 à 4, équipe
@@ -55,6 +57,9 @@ MAX_VIRTUELS = 2500      # borne de sécurité : joueurs dont les parties sont l
 # ceux des joueurs choisis, les plus récents d'abord (6 623 parties hors championnat au 15/11/2026)
 MAX_DETAILS = 2500
 MAX_EXTERIEURS = 3000    # borne de sécurité : adversaires d'autres départements lus au plus par lancement (2 349 au 15/11/2026)
+# Troisième cercle (28/11) : les adversaires des adversaires de Vaires d'autres départements (championnat de Paris,
+# critérium, tournois) ; sans leurs parties, la valeur du mois de ces adversaires de Vaires est estimée
+MAX_CERCLE3 = 1500      # par lancement (environ 7 minutes : le lundi dure déjà 35 minutes sur 60 permises) ; le reste au suivant
 
 
 def debut_de_semaine(instant):
@@ -191,7 +196,7 @@ def joueurs_du_club(listes):
     return sortie
 
 
-def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire=None):
+def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire=None, cibles=None):
     """Points virtuels : ({licence: [virtuels, points gagnés depuis le début de la phase, victoires,
     défaites, date de lecture « AAAA-MM-JJ », [gains de chaque période], parties contre d'autres départements,
     parties contre un adversaire dont la valeur du mois est estimée]}, {"joueurs", "a_relire", "connus", "lus", "reportes",
@@ -212,7 +217,12 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
     Adversaires d'autres départements : leurs listes aussi (même règle, MAX_EXTERIEURS au plus ; ceux des
     joueurs choisis), pour calculer leur valeur mois par mois ; sans elles, ils gardent leurs points de la
     phase. Le nombre de parties de chaque joueur contre eux est donné, et celui des parties contre un
-    adversaire dont la valeur du mois est estimée (fiabilité : mensuel.niveau)."""
+    adversaire dont la valeur du mois est estimée (fiabilité : mensuel.niveau).
+
+    cibles (les joueurs de Vaires) : leurs adversaires d'autres départements (championnat de Paris, critérium...)
+    ont une valeur du mois calculée, mais avec les points de la phase de leurs propres adversaires hors du 77 :
+    ceux-ci (le « troisième cercle ») sont lus aussi, chaque semaine (MAX_CERCLE3 au plus), pour que la valeur des
+    adversaires de Vaires soit presque exacte."""
     debut, fin = fftt.bornes_phase(aujourdhui)
     fin = min(fin, aujourdhui.isoformat())
     maintenant = time.time()
@@ -235,6 +245,19 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
     if a_lire_ext:
         print(f"  adversaires d'autres départements : {len(a_lire_ext)} listes à lire sur {len(exterieurs)}", flush=True)
     toutes_ext = _lire_listes(client, a_lire_ext, gardes_ext, maintenant, "des adversaires d'autres départements")
+    # Troisième cercle : les adversaires (hors du 77) des adversaires de Vaires d'autres départements
+    adversaire = lambda p, lic: (lambda h, a: a if h == lic else h)((p.get("homePlayer") or {}).get("identifier"),
+                                                                   (p.get("awayPlayer") or {}).get("identifier"))
+    dans_la_phase = lambda p: _simple(p) and debut <= (p.get("date") or "")[:10] <= fin
+    deja_vus = du_77 | set(exterieurs)
+    vaires_ext = {adversaire(p, lic) for lic in (cibles or ()) for p in toutes.get(lic) or [] if dans_la_phase(p)} - du_77 - {None}
+    cercle3 = sorted({adversaire(p, adv) for adv in vaires_ext for p in toutes_ext.get(adv) or [] if dans_la_phase(p)}
+                     - deja_vus - {None})
+    a_lire_c3, gardes_c3, perimes_c3, dates_c3 = _a_relire(client, cercle3, set(cercle3), maintenant, MAX_CERCLE3)
+    if cibles:
+        print(f"  troisième cercle : {len(vaires_ext)} adversaires de Vaires d'autres départements, {len(cercle3)} de leurs "
+              f"adversaires hors du 77 ({len(a_lire_c3)} listes à lire)", flush=True)
+    toutes_c3 = _lire_listes(client, a_lire_c3, gardes_c3, maintenant, "du troisième cercle") if cercle3 else {}
     # Parties de simple hors championnat de la phase : date (les plus récentes d'abord) et joueurs choisis
     hors, du_choix = {}, set()
     for lic, parties in toutes.items():
@@ -254,7 +277,7 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
     attente = sorted(du_choix - deja, key=lambda i: (hors[i], i), reverse=True)
     nouveaux = attente[:MAX_DETAILS]
     etats = lire_etats_parties(client, deja, nouveaux, message="détail des parties hors championnat (forfaits)")
-    ensemble = {**toutes_ext, **toutes}  # joueurs du 77 et adversaires d'autres départements
+    ensemble = {**toutes_c3, **toutes_ext, **toutes}  # joueurs du 77, adversaires d'autres départements, troisième cercle
     simples = [p for ps in ensemble.values() if ps for p in ps if debut <= (p.get("date") or "")[:10] <= fin and _simple(p)]
     competitions = _competitions(client, {(p.get("contest") or {}).get("id") for p in simples} - {None})
     lignes, depart = mensuel.lignes_des_joueurs(ensemble, competitions, etats, debut, fin)
@@ -296,7 +319,9 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
     print(f"  fiabilité (parties contre un adversaire dont la valeur du mois est estimée) : {fiabilite[0]} joueurs sans ({gris} avec des adversaires d'autres départements : pastille grise), "
           f"{fiabilite[1]} de 1 à {mensuel.SEUILS[0]}, {fiabilite[2]} jusqu'à {mensuel.SEUILS[1]}, {fiabilite[3]} au-delà "
           f"(au plus {max((r[7] for r in res.values()), default=0)}) ; adversaires d'autres départements à valeur estimée "
-          f"après une période : {ext_estimes} sur {len(exterieurs)}", flush=True)
+          f"après une période : {ext_estimes} sur {len(exterieurs)}"
+          + (f" ; adversaires de Vaires d'autres départements à valeur estimée : {sum(1 for x in vaires_ext if x in estime)} "
+             f"sur {len(vaires_ext)}" if cibles else ""), flush=True)
     return res, {"joueurs": len(licences), "a_relire": len(a_relire), "connus": len(res), "lus": len(a_lire),
                  "reportes": sum(1 for lic in perimes[MAX_VIRTUELS:] if dates[lic] is None),
                  "plus_ancienne": jours[0] if jours else None, "plus_recente": jours[-1] if jours else None,
@@ -305,6 +330,8 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
                  "exterieurs": len(exterieurs), "exterieurs_connus": sum(1 for x in exterieurs if x in lignes),
                  "exterieurs_lus": len(a_lire_ext),
                  "exterieurs_restants": sum(1 for x in perimes_ext[MAX_EXTERIEURS:] if dates_ext[x] is None),
+                 "adversaires_vaires": len(vaires_ext), "adversaires_vaires_estimes": sum(1 for x in vaires_ext if x in estime),
+                 "cercle3": len(cercle3), "cercle3_lus": len(a_lire_c3),
                  "seuils": list(mensuel.SEUILS), "fiabilite": [fiabilite[k] for k in range(4)], "fiabilite_gris": gris}
 
 
@@ -347,8 +374,9 @@ def recuperer_departement(client, numero_club="08770250", aujourdhui=None, dossi
     if virtuels:
         print(f"4/4 Points virtuels : {len(choisis)} joueurs à relire ({perimetre}) sur {len(competition)} (API FFTT ; "
               "ceux lus depuis lundi ne sont pas redemandés, les autres gardent leur dernière lecture)", flush=True)
+        vaires = {j["licence"] for j in joueurs_par_club.get(numero_club, []) if j.get("licence")}
         virt, controle_virt = virtuels_des_joueurs(client, sorted(competition), {lic: j["points"] for lic, j in competition.items()},
-                                                   aujourdhui, choisis)
+                                                   aujourdhui, choisis, cibles=vaires)
         controle_virt["perimetre"] = perimetre
         try:  # écarts signalés avec la FFTT : mesures dans le journal (chiffres seulement) ; jamais bloquant
             controle_parties.controler(client, sorted(competition), debut, min(fin, aujourdhui.isoformat()))

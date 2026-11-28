@@ -243,6 +243,7 @@ def test_points_virtuels_en_ligne_seulement_choix_des_jeunes():
                              "plus_recente": lu, "perimetre": "jeunes", "hors_championnat": 0, "verifiees": 0, "details_lus": 0,
                              "details_restants": 0, "methode": "mensuel", "periodes": ["2026-10"], "exterieurs": 1,
                              "exterieurs_connus": 0, "exterieurs_lus": 1, "exterieurs_restants": 0,
+                             "adversaires_vaires": 1, "adversaires_vaires_estimes": 0, "cercle3": 0, "cercle3_lus": 0,
                              "seuils": [5, 20], "fiabilite": [0, 1, 0, 0], "fiabilite_gris": 0}  # 7 licences (Vaires 6, Chelles 1)
     assert "points virtuels de 1 joueurs sur 7 (relus : jeunes)" in departement.resume(d)
     assert "licence" not in json.dumps(d)  # pas de numéro de licence dans la page
@@ -405,3 +406,32 @@ def test_fiabilite_parties_contre_un_adversaire_a_valeur_estimee(tmp_path):
     ref = mensuel.References.lire(client)
     assert ref.estimee("x", "2026-10-03") is False and ref.estimee("x", "2026-11-07") is True
     assert ref.estimee("inconnu", "2026-09-20") is False and ref.estimee("inconnu", "2026-10-20") is True
+
+
+def test_troisieme_cercle_adversaires_des_adversaires_de_vaires(tmp_path):
+    """x (autre département) a perdu en octobre contre y (autre département, pas un adversaire du 77) ; Tom (Vaires)
+    joue x en novembre. y est lu (troisième cercle) : la valeur de novembre de x est calculée, pas estimée. Les
+    adversaires de y (z) ne sont pas lus."""
+    from ttvaires.resultats import points_partie
+    y_sept = _partie(1, "y", 1000, 800, True, jour="2026-09-12")             # y bat z (800) en septembre
+    y_sept["awayPlayer"]["identifier"] = "z"
+    x_octo = _partie(2, "x", 900, 1000, False, jour="2026-10-10")            # x perd contre y
+    x_octo["awayPlayer"]["identifier"] = "y"
+    tom = _partie(3, "8", 540, 900, False, jour="2026-11-07")                # Tom perd contre x
+    tom["awayPlayer"]["identifier"] = "x"
+    client = ClientParties(_listes(), {"8": [tom], "x": [x_octo], "y": [y_sept, x_octo]})
+    client.dossier = tmp_path
+    d = departement.recuperer_departement(client, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True, perimetre="jeunes")
+    assert lues(client.ttls) == {"8": True, "x": True, "y": True}  # z (quatrième cercle) : pas demandé
+    v = d["virtuels"]
+    assert (v["adversaires_vaires"], v["adversaires_vaires_estimes"], v["cercle3"], v["cercle3_lus"]) == (1, 0, 1, 1)
+    y_octobre = 1000 + points_partie(1000, 800, True, 1)
+    x_novembre = 900 + points_partie(900, y_octobre, False, 1)
+    j = next(j for c in d["clubs"] for j in c["joueurs"] if j[4] == "PETIT Tom")
+    assert j[5][1] == round(points_partie(540, x_novembre, False, 1), 1)
+    assert j[5][7] == 0  # sans le troisième cercle : valeur de novembre de x estimée (y non lu)
+    assert mensuel.References.lire(client).estimee("x", "2026-11-07") is False
+    # Lancement suivant de la même semaine : rien n'est redemandé
+    client.ttls.clear()
+    departement.recuperer_departement(client, VAIRES, aujourdhui=date(2026, 11, 15), virtuels=True, perimetre="jeunes")
+    assert not any(lues(client.ttls).values())

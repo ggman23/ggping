@@ -918,6 +918,16 @@ D'où viennent les données :
   mois par mois. Leur liste est refaite à chaque lecture des joueurs du 77 : un nouvel adversaire (jamais
   lu) est lu en premier, sans rien faire. MAX_EXTERIEURS (3 000) borne seulement le nombre lu en une
   mise à jour : au-delà, le reste l'est à la suivante.
+- **Troisième cercle** (28/11/2026, pour le championnat de Paris, le critérium et les tournois) : les
+  adversaires de Vaires d'autres départements ont une valeur du mois calculée, mais avec les points de
+  début de phase de leurs propres adversaires hors du 77 ; une défaite contre un joueur estimé à 851,2
+  au lieu de moins de 850 donnait par exemple 912 au lieu de 911,3. Les adversaires de ces adversaires
+  (hors du 77, et pas déjà lus) sont donc lus aussi, une fois par semaine, seulement pour eux : leur
+  valeur devient presque exacte. MAX_CERCLE3 (1 500, environ 7 minutes : la mise à jour du lundi dure
+  déjà environ 35 minutes sur les 60 permises) borne le nombre lu en une fois ; le reste l'est à la
+  suivante (jamais lus d'abord). Le journal
+  donne les nombres (« troisième cercle : N adversaires de Vaires d'autres départements, M de leurs
+  adversaires hors du 77 », et combien restent à valeur estimée).
 - **Affichage** : points virtuels à une décimale, comme l'appli FFTT (909,5). Règle de la FFTT
   (règlements administratifs, juillet 2025) : une situation mensuelle garde ses décimales ; les
   points publiés sur la licence sont arrondis à l'entier le plus proche (1525,50 donne 1526), et en

@@ -825,3 +825,9 @@ Pas d'onglet dans l'application pour l'instant.
   partie de Paris (adversaire hors du 77 estimé à 851,2 : sous 850 pour la FFTT, la défaite coûte 0,75 de plus) ;
   « préciser que ce sont les archives du championnat de France » ; « dans les résultats de Paris, Points J1 et Total
   induisent en erreur (ce n'est pas le classement virtuel) » → colonne Virt. = classement virtuel du club.
+- Joueurs d'Île-de-France (28/11) : « on va rencontrer ce problème régulièrement vu qu'on affronte des joueurs des
+  autres départements ; ne faudrait-il pas récupérer les classements de tous les joueurs d'Île-de-France comme pour
+  le 77 ? » Proposé : pas toute l'Île-de-France (des dizaines de milliers de listes chaque semaine avec le compte du
+  club), mais le cercle suivant là où il sert ; « fais la proposition ciblée ». Réalisation : troisième cercle
+  (departement.virtuels_des_joueurs, cibles = joueurs de Vaires) : adversaires hors du 77 des adversaires de Vaires
+  d'autres départements, lus une fois par semaine (MAX_CERCLE3) ; nombres dans le journal.
