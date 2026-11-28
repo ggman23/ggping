@@ -186,7 +186,8 @@ def analyser(licence, parties, competitions, etats, debut, fin):
             if manches and cote == "away":
                 manches = [[b, a] for a, b in manches]
             lignes.append({
-                "id": g["id"], "date": jour, "competition": libelle_competition(nom), "division": etat.get("division"),
+                "id": g["id"], "date": jour, "effet": (g.get("effectiveDate") or "")[:10] or jour,  # date de prise en compte
+                "competition": libelle_competition(nom), "division": etat.get("division"),
                 "championnat": est_championnat(nom), "coef": comp["coef"],
                 "pts_joueur": moi["points"], "adversaire": adversaire["nom"], "adv_licence": adversaire["licence"],
                 "adv_points": adv["points"],
@@ -444,7 +445,11 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
             loisir_dates.update(l["date"][:10] for l in lignes)
         sans_reponse += parties is None
         off = officiels.most_common(1)[0][0] if officiels else (j.get("points") or j.get("points_mensuels"))
+        virtuels_effet = None
         if references:  # calcul mois par mois, comme la FFTT (valeurs enregistrées par la page des clubs du 77)
+            if references.table.get(mensuel.CLE_EFFET):  # contrôle (28/11) : parties rangées par date de prise en compte
+                lignes_effet = mensuel.recalculer([dict(l) for l in lignes], lic, off, references, effet=True)
+                virtuels_effet = round(off + sum(l["points"] for l in lignes_effet), 3) if off else None
             mensuel.recalculer(lignes, lic, off, references)
         # Parties contre des joueurs d'autres départements, et contre un adversaire dont la valeur du mois est
         # estimée (fiabilité de l'estimation : pastille de couleur ; None sans l'information)
@@ -466,7 +471,7 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
             "total": total, "virtuels": virtuels, "classement_virtuel": classement(virtuels),
             "v": sum(l["victoire"] for l in lignes), "d": sum(not l["victoire"] for l in lignes),
             "parties": lignes, "ecartees": dict(ecartees), "inconnu": parties is None, "exterieurs": exterieurs,
-            "estimees": estimees,
+            "estimees": estimees, "virtuels_effet": virtuels_effet,
             "alignements": j.get("alignements") or [],
         })
         if lic in loisirs:
@@ -476,6 +481,11 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
             resultat[-1]["phase1"] = {"officiels": officiels1.most_common(1)[0][0] if officiels1 else None,
                                       "parties": lignes1}
     resultat.sort(key=lambda j: (j["virtuels"] is None, -(j["virtuels"] or 0), j["nom"] or ""))
+    differents = [round(j["virtuels_effet"] - j["virtuels"], 3) for j in resultat
+                  if j.get("virtuels_effet") is not None and j.get("virtuels") is not None and abs(j["virtuels_effet"] - j["virtuels"]) > 0.001]
+    if any(j.get("virtuels_effet") is not None for j in resultat):  # contrôle (28/11), chiffres seulement
+        print(f"  calcul par date de prise en compte : points virtuels différents pour {len(differents)} joueurs sur {len(resultat)}"
+              + (f" (écarts : {', '.join(f'{x:+g}' for x in sorted(differents))})" if differents else ""), flush=True)
     if loisirs:  # contrôle (chiffres et dates seulement) : des parties de licences loisir remontent-elles à la FFTT ?
         gardes = sum(1 for j in resultat if j.get("loisir"))
         print(f"  licences loisir : {len(loisirs)} au club, {gardes} avec des parties dans l'API cette phase"

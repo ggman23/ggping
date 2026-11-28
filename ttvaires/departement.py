@@ -59,6 +59,7 @@ MAX_DETAILS = 2500
 MAX_EXTERIEURS = 3000    # borne de sécurité : adversaires d'autres départements lus au plus par lancement (2 349 au 15/11/2026)
 # Troisième cercle (28/11) : les adversaires des adversaires de Vaires d'autres départements (championnat de Paris,
 # critérium, tournois) ; sans leurs parties, la valeur du mois de ces adversaires de Vaires est estimée
+MAX_DETAILS_VAIRES_EXT = 1500  # détail des parties hors championnat des adversaires de Vaires hors du 77 (forfaits, 28/11)
 MAX_CERCLE3 = 3000      # borne de sécurité par lancement (environ 14 minutes au plus) ; le reste au suivant
 
 
@@ -196,6 +197,28 @@ def joueurs_du_club(listes):
     return sortie
 
 
+def _controle_prise_en_compte(lignes, references, references_effet, vaires_ext, courante):
+    """Journal (chiffres seulement) : parties rangées dans un autre mois par leur date de prise en compte, et valeur du
+    mois en cours des adversaires de Vaires d'autres départements selon les deux calculs."""
+    vues, decalages = set(), []
+    for ls in lignes.values():
+        for l in ls:
+            if l["id"] in vues:
+                continue
+            vues.add(l["id"])
+            if mensuel.periode_de(l, True) != mensuel.periode(l["date"]):
+                decalages.append((datetime.fromisoformat(l["effet"]) - datetime.fromisoformat(l["date"])).days)
+    decalages.sort()
+    print(f"  date de prise en compte (effectiveDate) : {len(decalages)} parties sur {len(vues)} dans un autre mois que celui de "
+          f"leur date" + (f" (décalage : {decalages[len(decalages) // 2]} jours en médiane, de {decalages[0]} à {decalages[-1]})"
+                          if decalages else ""), flush=True)
+    paires = sorted((references.get(x, {}).get(courante), references_effet.get(x, {}).get(courante)) for x in vaires_ext)
+    differentes = [(a, b) for a, b in paires if a is not None and b is not None and round(a, 2) != round(b, 2)]
+    print(f"  adversaires de Vaires d'autres départements, valeur au début de {courante} : différente selon la date de prise "
+          f"en compte pour {len(differentes)} sur {len(paires)}"
+          + (" (" + " ; ".join(f"{a:.1f} → {b:.1f}" for a, b in differentes[:40]) + ")" if differentes else ""), flush=True)
+
+
 def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire=None, cibles=None):
     """Points virtuels : ({licence: [virtuels, points gagnés depuis le début de la phase, victoires,
     défaites, date de lecture « AAAA-MM-JJ », [gains de chaque période], parties contre d'autres départements,
@@ -276,7 +299,18 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
                 deja.add(i)
     attente = sorted(du_choix - deja, key=lambda i: (hors[i], i), reverse=True)
     nouveaux = attente[:MAX_DETAILS]
-    etats = lire_etats_parties(client, deja, nouveaux, message="détail des parties hors championnat (forfaits)")
+    # Adversaires de Vaires d'autres départements (28/11) : le détail de leurs parties hors championnat est lu aussi (une
+    # fois, gardé pour toujours) : un forfait ou une partie non comptée change leur valeur du mois, que la FFTT prend
+    # pour nos parties contre eux (championnat de Paris, critérium)
+    ext_hors = {p["id"] for adv in vaires_ext for p in toutes_ext.get(adv) or []
+                if isinstance(p.get("id"), int) and dans_la_phase(p) and not est_championnat((p.get("contest") or {}).get("name"))}
+    nouveaux_ext = sorted(ext_hors - deja - set(nouveaux))[:MAX_DETAILS_VAIRES_EXT] if a_relire else []
+    etats = lire_etats_parties(client, deja, nouveaux + nouveaux_ext, message="détail des parties hors championnat (forfaits)")
+    if cibles:
+        print(f"  parties hors championnat des adversaires de Vaires d'autres départements : {len(ext_hors)}, détail connu pour "
+              f"{sum(1 for i in ext_hors if i in etats)} ({len(nouveaux_ext)} lus maintenant) : "
+              f"{sum(1 for i in ext_hors if (etats.get(i) or {}).get('forfait'))} forfaits, "
+              f"{sum(1 for i in ext_hors if (etats.get(i) or {}).get('non_comptee'))} non comptées", flush=True)
     ensemble = {**toutes_c3, **toutes_ext, **toutes}  # joueurs du 77, adversaires d'autres départements, troisième cercle
     simples = [p for ps in ensemble.values() if ps for p in ps if debut <= (p.get("date") or "")[:10] <= fin and _simple(p)]
     competitions = _competitions(client, {(p.get("contest") or {}).get("id") for p in simples} - {None})
@@ -286,8 +320,13 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
     # Fiabilité : valeur du mois estimée des joueurs qui ont joué, après la première période, un joueur non lu
     premiere = mensuel.periode(debut)
     estime = mensuel.incertitudes(lignes, depart, premiere)
+    # Contrôle (28/11) : le même calcul, chaque partie dans le mois de sa date de prise en compte (effectiveDate) ;
+    # enregistré à part, non affiché, pour comparer aux valeurs de la FFTT (chiffres seulement dans le journal)
+    references_effet = {}
+    mensuel.calcul_mensuel(lignes, depart, references_effet, effet=True)
+    _controle_prise_en_compte(lignes, references, references_effet, vaires_ext, mensuel.periode(fin))
     mensuel.enregistrer(client, {**references, mensuel.CLE_77: sorted(du_77), mensuel.CLE_PREMIERE: premiere,
-                                 mensuel.CLE_ESTIME: estime})  # pour les pages de Vaires du lancement suivant
+                                 mensuel.CLE_ESTIME: estime, mensuel.CLE_EFFET: references_effet})  # pages de Vaires
     variables, avec_parties = mensuel.points_variables(lignes)
     ecart = sum(abs(sum(points_m[lic]) - sum(l["points"] for l in lignes[lic])) for lic in toutes if lic in lignes) / max(1, len(toutes))
     print(f"  points des joueurs lus dans les parties : différents d'une partie à l'autre pour {variables} joueurs sur {avec_parties} ; "

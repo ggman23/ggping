@@ -846,3 +846,8 @@ Pas d'onglet dans l'application pour l'instant.
 - Disposition du récapitulatif Paris + jeunes (28/11) : « remonte Vaires 2 (PH) sous Vaires 1, Vaires 3 (D2) en
   dessous ; Vaires 1 (−15 ans) à la place de Vaires 3, Vaires 2 (−13 ans) en dessous ; top 10 voire top 15 des perfs
   si tu as la place » → fait (top 15 au plus, cadre à la taille du nombre de perfs : 5, 10 ou 15 lignes).
+- Retours du 28/11 après la mise à jour n° 121 : « top 15 plutôt que top 10 » → cadre des perfs en top 15 quand la place
+  le permet ; « toujours 912 au lieu de 911,3, et l'autre joueur passe de 914,8 (juste) à 915,1 » → l'écart vient d'un
+  seul adversaire de Paris commun aux deux, compté 852,2 (851,2 avant le troisième cercle) quand la FFTT a 850 ou
+  moins. Ajouts : détail (forfaits) des parties hors championnat des adversaires de Vaires d'autres départements,
+  calcul de contrôle par date de prise en compte (effectiveDate), comparés à la prochaine mise à jour.

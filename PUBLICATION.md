@@ -769,7 +769,7 @@ des données).
   seconde partie en bleu), bandeaux bleus « Vaires 1 (−15 ans) » et « Vaires 2 (−13 ans) » (catégorie lue dans la
   division de l'API, « MOINS 15 »). Disposition demandée par le club : Vaires 1, 2 et 3 de Paris l'une sous
   l'autre à gauche, les équipes jeunes l'une sous l'autre sous la photo, à droite le cadre des perfs des deux
-  championnats, en top 10 ou top 15 selon leur nombre (`recap._emplacements_paris_jeunes`). Une équipe jeune
+  championnats, en top 15 (top 10 ou 5 seulement si la place manque ; `recap._emplacements_paris_jeunes`). Une équipe jeune
   sans feuille garde sa place (« Pas encore saisi »). Si Paris et les jeunes ne sont pas à la même journée : « Paris J2 · Jeunes J1 ». Le récapitulatif
   des jeunes seul (`jeunes_recap_J<n>.png`) n'est plus fait quand l'image de Paris existe.
 - **Récapitulatif** : deux joueurs du même prénom avec la même initiale (« Marc G » deux fois) : le début du nom
@@ -954,6 +954,17 @@ D'où viennent les données :
   contre une mise à jour bloquée ; le lundi dure 35 à 50 minutes). Le journal
   donne les nombres (« troisième cercle : N adversaires de Vaires d'autres départements, M de leurs
   adversaires hors du 77 », et combien restent à valeur estimée).
+- **Écart de 911,3 / 912 (28/11)** : les deux joueurs signalés ont joué le même adversaire de Paris (autre
+  département), à 852,2 pour l'outil après le troisième cercle (851,2 avant). La FFTT le compte forcément à 850 ou
+  moins : défaite à −7 × 0,75 depuis 900 et victoire à 5 × 0,75 depuis 902 demandent toutes deux un écart d'au
+  moins 50. Le troisième cercle n'était donc pas la cause. Deux pistes, mesurées à la mise à jour suivante : le
+  détail des parties hors championnat des adversaires de Vaires d'autres départements est maintenant lu
+  (forfaits et parties non comptées écartés, comme pour le 77 ; MAX_DETAILS_VAIRES_EXT = 1 500, une fois, gardé) ;
+  et un calcul de contrôle range chaque partie dans le mois de sa **date de prise en compte** (effectiveDate de
+  l'API) au lieu de sa date : enregistré à part (`mensuel.CLE_EFFET`), non affiché, il donne `virtuels_effet` à
+  chaque joueur de la page chiffrée et, au journal, le nombre de parties décalées et la valeur du mois des
+  adversaires de Vaires selon les deux calculs (chiffres seulement). S'il retrouve 911,3 et 914,8, il deviendra
+  le calcul affiché.
 - **Affichage** : points virtuels à une décimale, comme l'appli FFTT (909,5). Règle de la FFTT
   (règlements administratifs, juillet 2025) : une situation mensuelle garde ses décimales ; les
   points publiés sur la licence sont arrondis à l'entier le plus proche (1525,50 donne 1526), et en

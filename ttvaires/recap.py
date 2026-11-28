@@ -429,7 +429,7 @@ def image_recap(donnees, dossier_import, dossier, prefixe="", jeunes=None):
     PARIS », joueurs rangés par groupe, photo import/photo_paris_J<n>.jpg. `jeunes` (données du championnat des
     jeunes, 28/11) : ses équipes de la dernière journée jouée sont ajoutées à l'image de Paris (bandeaux bleus
     « Vaires 1 (−15 ans) », titre « CHAMPIONNAT DE PARIS + CHAMPIONNAT JEUNES ») : Paris à gauche, les jeunes sous
-    la photo, les perfs des deux championnats à droite (top 10 ou 15 selon leur nombre)."""
+    la photo, les perfs des deux championnats à droite (top 15 quand la place le permet)."""
     paris = (donnees.get("championnat") or "france") != "france"
     for f in Path(dossier).glob(f"{prefixe}recap_*.png"):
         f.unlink()
@@ -481,10 +481,8 @@ def image_recap(donnees, dossier_import, dossier, prefixe="", jeunes=None):
     for (x, y), equipe in zip(places_jeunes if avec_jeunes else [], avec_jeunes):
         _bloc(d, x, y, equipe, noms)
     x, y = places[-1]
-    if avec_jeunes:  # top 15 (ou 10) : autant de perfs que la place en laisse, sans cadre trop grand pour elles
-        perfs = top_perfs(equipes + avec_jeunes, noms, lignes_top)
-        lignes_top = next((n for n in (5, 10, 15) if n >= len(perfs) and n <= lignes_top), lignes_top)
-        _top5(img, d, x + 1, y - 1, perfs, lignes_top)
+    if avec_jeunes:  # top 15 quand la place le permet (demande du club : plus de joueurs à l'honneur)
+        _top5(img, d, x + 1, y - 1, top_perfs(equipes + avec_jeunes, noms, lignes_top), lignes_top)
     else:
         _top5(img, d, x + 1, y - 1, top_perfs(equipes, noms))
     chemin = Path(dossier) / f"{prefixe}recap_J{j}.png"
