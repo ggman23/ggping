@@ -533,7 +533,7 @@ def images_virtuel(donnees, dossier):
         eq_paris = j.get("equipe_paris") or (j.get("equipes_paris") or "").split(",")[0].split(" ")[0]
         lignes.append([
             C(i if j.get("virtuels") is not None else "", couleur=DOUX),
-            cel_nom(j.get("nom"), j.get("prenom"), apres=" ".join(x for x in (j.get("categorie"), "(L)" if j.get("loisir") else None) if x)),
+            cel_nom(j.get("nom"), j.get("prenom"), apres=j.get("categorie")),  # licence loisir : sans mention (28/11)
             C(" / ".join(x for x in (equipe_courte(j.get("equipe")), eq_paris) if x), couleur=DOUX),  # « V1 / P1 » (28/11)
             C(fmt(j.get("officiels")) if j.get("officiels") is not None else "—"),
             cel_points(j["championnat"]) if a_champ else C(""),
@@ -551,8 +551,7 @@ def images_virtuel(donnees, dossier):
             "(championnat, critérium, tournois...) ; seule la situation mensuelle publiée par la FFTT est officielle. "
             + ("Paris = championnat de Paris (coefficient 0,75) ; Éq. : l'équipe de France, puis celle de Paris (V1 / P1). Autre = les autres "
                "compétitions. " if avec_paris else "")
-            + "Clt : ▲ ▼ = changement de classement. V/D = victoires / défaites."
-            + (" (L) = licence loisir (ses parties comptent pour la FFTT)." if any(j.get("loisir") for j in donnees["joueurs"]) else ""))
+            + "Clt : ▲ ▼ = changement de classement. V/D = victoires / défaites.")
     return _tableau_pagine(dossier, "classement_virtuel", "Classement virtuel", sous, colonnes, lignes, pied,
                            "Classement virtuel")
 

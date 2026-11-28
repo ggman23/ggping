@@ -128,8 +128,7 @@ const LIMITE = 30;
 const COLONNES = [
   { t: "#", k: (j) => j.rang, v: (j) => j.virtuels == null ? "" : j.rang },
   { t: "Joueur", k: (j) => nomComplet(j), c: "g joueur",
-    v: (j) => `<span class="nom">${esc(j.nom || "")} <span class="prenom">${esc(j.prenom || "")}</span></span>${j.categorie ? `<span class="cat">${esc(j.categorie)}</span>` : ""}`
-      + (j.loisir ? ` <span class="cat" title="Licence loisir : gardée ici parce que la FFTT compte ses parties (points gagnés ou perdus)">loisir</span>` : "") },
+    v: (j) => `<span class="nom">${esc(j.nom || "")} <span class="prenom">${esc(j.prenom || "")}</span></span>${j.categorie ? `<span class="cat">${esc(j.categorie)}</span>` : ""}` },
   { t: "Équipe", titre: "Équipe de France la plus jouée, puis celle du championnat de Paris (V1 / P1)", k: (j) => j.equipe || eqParis(j) || "~",
     v: (j) => { const t = [j.equipe, eqParis(j)].filter(Boolean).join(" / ");
       return j.equipes_paris ? `<span title="Championnat de Paris : ${esc(j.equipes_paris)}">${esc(t)}</span>` : esc(t); }, c: "n col-option" },

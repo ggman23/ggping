@@ -863,3 +863,5 @@ Pas d'onglet dans l'application pour l'instant.
   moment où on la met pour certains, il faut la mettre partout (même un joueur loisir a sa catégorie) ». Cause : la
   catégorie sautait quand elle ne tenait pas à côté du nom ; le nom se raccourcit maintenant d'abord. Rien à lancer
   depuis le PC : les données avaient la catégorie des 63 joueurs.
+- Licence loisir (28/11) : « pas besoin de mettre M2 (L), M2 suffit » → plus de mention « (L) » sur l'image ni « loisir »
+  sur la page du classement virtuel (l'information reste dans les données : pas de joueur loisir proposé pour Paris).

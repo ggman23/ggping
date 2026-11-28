@@ -756,8 +756,8 @@ des données).
   deux lignes par joueur.
 - **Licences loisir** (28/11) : un joueur à licence loisir (« L » sur pingpocket.fr, sans points) peut avoir des
   parties que la FFTT compte (critérium). Les parties des licences loisir du club sont donc lues aussi : celles qui
-  ont joué sont dans le classement virtuel (marquées « loisir », « (L) » sur l'image), la progression, les fiches et
-  /77/ ; les autres restent écartées, et elles ne sont jamais proposées pour Paris (tableau des disponibilités). Le
+  ont joué sont dans le classement virtuel (sans mention de la licence loisir : la catégorie suffit, demande du
+  28/11), la progression, les fiches et /77/ ; les autres restent écartées, et elles ne sont jamais proposées pour Paris (tableau des disponibilités). Le
   journal donne seulement des chiffres et des dates : « licences loisir : N au club, M avec des parties dans l'API
   cette phase ; parties par date : 14/11 ×7 » (pour voir si un tournoi est remonté à la FFTT).
 - **Une seule mise à jour suffit** (28/11) : le classement virtuel est fait au début, avec les valeurs du mois
