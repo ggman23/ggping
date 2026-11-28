@@ -36,6 +36,7 @@ class Contexte:
 
     def __init__(self, sortie=SORTIE, aujourdhui=None):
         self.sortie, self.aujourdhui = Path(sortie), aujourdhui
+        self.virtuels = None  # {licence: points virtuels} du classement virtuel (fait avant les résultats)
         self.images = self.sortie / "images"
         self.archive = aujourdhui is not None
 
@@ -104,11 +105,11 @@ def page_adversaires(client, club, ctx, tous_les_historiques=False):
                 *faire_images("images_adversaires", donnees, dossier=ctx.images, aujourdhui=ctx.aujourdhui)]
     if not ctx.archive:  # championnat de Paris : clubs adverses, leurs joueurs et leur forme (page /paris/)
         try:
-            fichiers.append(page_paris(client, club, ctx, tous_les_historiques))
+            fichiers.append(page_paris(client, club, ctx, tous_les_historiques, (autres_equipes.get("paris") or {}).get("equipes")))
         except Exception as e:  # noqa: BLE001 (la page du championnat de France ne dépend pas de celle de Paris)
             print(f"  ! championnat de Paris : page non faite ({type(e).__name__} : {e})", flush=True)
         try:  # championnat des jeunes : les jeunes des clubs adverses (page /jeunes/)
-            fichiers.append(page_jeunes(client, club, ctx, tous_les_historiques))
+            fichiers.append(page_jeunes(client, club, ctx, tous_les_historiques, (autres_equipes.get("jeunes") or {}).get("equipes")))
         except Exception as e:  # noqa: BLE001
             print(f"  ! championnat des jeunes : page non faite ({type(e).__name__} : {e})", flush=True)
         # Programme de toutes les équipes (France, Paris, jeunes) en une image au format téléphone
@@ -117,14 +118,14 @@ def page_adversaires(client, club, ctx, tous_les_historiques=False):
     return fichiers, resume
 
 
-def page_paris(client, club, ctx, tous_les_historiques=False):
+def page_paris(client, club, ctx, tous_les_historiques=False, resultats=None):
     from . import paris
     from .adversaires import recuperer_paris
 
     donnees = recuperer_paris(client, club, aujourdhui=ctx.aujourdhui, dossier_import=IMPORT,
                               tous_les_historiques=tous_les_historiques, fichier_etat=CACHE / "effectif_adversaires_paris.json")
     page = ctx.sortie / "paris_vaires.html"
-    page.write_bytes(paris.page(donnees, paris.joueurs_memorises(CACHE / "joueurs_vaires.json")))
+    page.write_bytes(paris.page(donnees, paris.joueurs_memorises(CACHE / "joueurs_vaires.json"), resultats))
     joueurs = sum(len(c["joueurs"]) for c in donnees["clubs"].values())
     complets = sum(1 for c in donnees["clubs"].values() if c.get("effectif_complet"))
     print(f"Championnat de Paris : {len(donnees['clubs'])} clubs adverses, {joueurs} joueurs, "
@@ -132,14 +133,14 @@ def page_paris(client, club, ctx, tous_les_historiques=False):
     return page
 
 
-def page_jeunes(client, club, ctx, tous_les_historiques=False):
+def page_jeunes(client, club, ctx, tous_les_historiques=False, resultats=None):
     from . import jeunes
     from .adversaires import recuperer_jeunes
 
     donnees = recuperer_jeunes(client, club, aujourdhui=ctx.aujourdhui, dossier_import=IMPORT,
                                tous_les_historiques=tous_les_historiques, fichier_etat=CACHE / "effectif_adversaires_jeunes.json")
     page = ctx.sortie / "jeunes_vaires.html"
-    page.write_bytes(jeunes.page(donnees))
+    page.write_bytes(jeunes.page(donnees, resultats))
     joueurs = sum(len(c["joueurs"]) for c in donnees["clubs"].values())
     loisirs = sum(1 for c in donnees["clubs"].values() for j in c["joueurs"] if j.get("loisir"))
     complets = sum(1 for c in donnees["clubs"].values() if c.get("effectif_complet"))
@@ -170,8 +171,9 @@ def autres_championnats(nom, lire, ctx):
 def page_resultats(client, club, ctx):
     print("=== Résultats des joueurs de Vaires", flush=True)
     resultats = recuperer_parties(client, club, ctx.aujourdhui)
-    donnees = ctx.donnees(donnees_page(resultats))
-    autres, notes = autres_championnats("résultats", lambda ch: (lambda r: donnees_page(r) if r["parties"] else None)(
+    virtuels = getattr(ctx, "virtuels", None)
+    donnees = ctx.donnees(donnees_page(resultats, virtuels))
+    autres, notes = autres_championnats("résultats", lambda ch: (lambda r: donnees_page(r, virtuels) if r["parties"] else None)(
         recuperer_parties(client, club, ctx.aujourdhui, championnat=ch)), ctx)
     html = generer_html(donnees, ctx.sortie / "resultats_vaires.html", GABARIT_RESULTATS, autres=autres)
     xlsx = ecrire_xlsx(resultats, ctx.sortie / "resultats_vaires.xlsx")
@@ -220,6 +222,7 @@ def page_virtuel(client, club, ctx):
     resume = verifications.afficher_club(donnees["verification"], "feuilles de match des équipes de Vaires")
     resume = " ; ".join([resume] + verifications.afficher_controle_parties(donnees["controle"]))
     html = generer_html(donnees, ctx.sortie / "classement_virtuel.html", GABARIT_VIRTUEL)
+    ctx.virtuels = {j["id"]: j.get("virtuels") for j in donnees.get("joueurs", [])}  # pour la page des résultats
     if not ctx.archive:  # joueurs du club pour le tableau des disponibilités de /paris/
         from . import paris
         paris.memoriser_joueurs(donnees, CACHE / "joueurs_vaires.json")
@@ -278,8 +281,8 @@ def generer_pages(client, club, ctx, a_faire):
     return pages, bilans
 
 
-TOUTES_LES_PAGES = [("résultats", page_resultats), ("rencontres", page_rencontres), ("effectif", page_effectif),
-                    ("classement virtuel", page_virtuel), ("adversaires", page_adversaires)]
+TOUTES_LES_PAGES = [("classement virtuel", page_virtuel), ("résultats", page_resultats), ("rencontres", page_rencontres),
+                    ("effectif", page_effectif), ("adversaires", page_adversaires)]
 
 
 def ecrire_bilan(ctx, debut, bilans):
@@ -334,14 +337,14 @@ def main():
                         sites_cache_seul={"www.pingpocket.fr"} if args.pingpocket_cache else ())
         compte_fftt.connecter(client)  # l'API de la FFTT demande une connexion (compte licencié)
         a_faire = []
+        if args.virtuel:  # d'abord : la page des résultats reprend le classement virtuel du club
+            a_faire.append(("classement virtuel", page_virtuel))
         if args.resultats:
             a_faire.append(("résultats", page_resultats))
         if args.resultats or args.rencontres:
             a_faire.append(("rencontres", page_rencontres))
         if args.effectif:
             a_faire.append(("effectif", page_effectif))
-        if args.virtuel:
-            a_faire.append(("classement virtuel", page_virtuel))
         if args.indivs:
             a_faire.append(("individuels", page_indivs))
         if args.adversaires or not (args.resultats or args.rencontres or args.effectif or args.virtuel or args.indivs

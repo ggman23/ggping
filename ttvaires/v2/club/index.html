@@ -154,7 +154,7 @@ function accueil(club, eq) {
     html += `<h3 style="margin:14px 2px 8px;font-size:.92rem">${esc(TITRES[g] || g)}</h3><div class="grille">${l.map((d) =>
       tuile(lien(d), "image", "img", d.titre, d.date ? V2.dateCourte(d.date) : "", V2.estNouveau(d.date))).join("")}</div>`;
   }
-  if ((club.archives || []).length) html += `<div class="section"><h2>Archives des journées</h2></div><div class="liste">${club.archives.map((a) =>
+  if ((club.archives || []).length) html += `<div class="section"><h2>Archives du championnat de France</h2></div><div class="liste">${club.archives.map((a) =>
     `<a href="../../club/#archives/${encodeURIComponent(a.cle)}">${svg("club")}<span class="grow nom">${esc(a.titre)}</span><span class="petit">${esc(a.date_reference ? V2.dateCourte(a.date_reference) : "")}</span></a>`).join("")}</div>`;
   // Autres espaces : la page de la v2 quand elle existe, sinon celle du site actuel
   const V2_PAGES = { indivs: "../indivs/", 77: "../77/", tournois: "../tournois/", cal: "../agenda/#calendrier" };

@@ -820,3 +820,8 @@ Pas d'onglet dans l'application pour l'instant.
   et intuitive, bien rangée : dans le menu de gauche il y a tellement de liens d'images qu'on est obligé de trop
   scroller ». Réalisation : accueil en gros boutons de rubriques, une rangée de boutons dans chaque rubrique, images
   par type dans des sections repliables, menu de gauche réduit aux rubriques, « Tout » = l'ancienne page ; idem v2.
+- Retours du 28/11 : « pas de classement de la poule pour Vaires 1 Paris » → scores et classements des poules de
+  l'API dans /paris/ et /jeunes/ ; « un joueur à 911,3 dans l'application de la FFTT, 912 chez nous » → écart d'une
+  partie de Paris (adversaire hors du 77 estimé à 851,2 : sous 850 pour la FFTT, la défaite coûte 0,75 de plus) ;
+  « préciser que ce sont les archives du championnat de France » ; « dans les résultats de Paris, Points J1 et Total
+  induisent en erreur (ce n'est pas le classement virtuel) » → colonne Virt. = classement virtuel du club.

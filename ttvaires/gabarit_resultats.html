@@ -62,6 +62,7 @@ tr.detail td { background: #f7f8fa; text-align: left; font-size: 13.5px; color: 
 const D = JSON.parse(document.getElementById("donnees").textContent);
 // Championnat de la page (sélecteur en haut : France, Paris, jeunes) : « phase 1 2026-2027 » ou « Championnat de Paris 2026-2027 »
 const CHAMP = D.championnat || "france";
+const VIRT = D.virtuels_club || null;  // classement virtuel du club (toutes compétitions), par licence
 const periode = () => CHAMP === "france" ? `phase ${D.phase} ${D.saison}` : `${{ paris: "Championnat de Paris", jeunes: "Championnat des jeunes" }[CHAMP]} ${D.saison}`;
 const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -109,7 +110,8 @@ function colonnesJournee(j) {
     { t: "Victoires", k: (l) => l.v / l.matchs + l.matchs / 1000, v: (l) => `${l.v}/${l.matchs}`, cls: (l) => clsVict(l.v, l.matchs) },
     { t: "Meilleure<br>victoire", k: (l) => l.meilleure ?? -99999,
       v: (l) => l.meilleure == null ? "" : `${signe(l.meilleure)} <span class="adv" title="points de l'adversaire battu">(${nombre(l.meilleure_adv, 0)})</span>` },
-    { t: `Points J${j}`, k: (l) => l.apres, v: (l) => nombre(l.apres, 1) },
+    VIRT ? { t: "Virt.", k: (l) => VIRT[l.licence] ?? -1, v: (l) => VIRT[l.licence] == null ? "—" : nombre(VIRT[l.licence], 1) }
+      : { t: `Points J${j}`, k: (l) => l.apres, v: (l) => nombre(l.apres, 1) },
     { t: "Total", k: (l) => l.total, v: (l) => nombre(l.total, 1), cls: (l) => clsDelta(l.total) },
   ];
 }
@@ -121,7 +123,8 @@ function colonnesCumul() {
     ...D.journees.map((j) => ({ t: `J${j.numero}`, k: (c) => c.journees[j.numero] ?? -99999,
       v: (c) => c.journees[j.numero] == null ? "" : nombre(c.journees[j.numero], 1), cls: (c) => clsTexte(c.journees[j.numero]) })),
     { t: "Total", k: (c) => c.total, v: (c) => nombre(c.total, 1), cls: (c) => clsDelta(c.total) },
-    { t: "Points virtuels (estim.)", k: (c) => c.virtuels, v: (c) => nombre(c.virtuels, 1) },
+    VIRT ? { t: "Virt.", k: (c) => VIRT[c.licence] ?? -1, v: (c) => VIRT[c.licence] == null ? "—" : nombre(VIRT[c.licence], 1) }
+      : { t: "Points virtuels (estim.)", k: (c) => c.virtuels, v: (c) => nombre(c.virtuels, 1) },
     { t: "Victoires", k: (c) => c.v / c.matchs + c.matchs / 1000, v: (c) => `${c.v}/${c.matchs}`, cls: (c) => clsVict(c.v, c.matchs) },
   ];
 }
@@ -157,14 +160,16 @@ function afficher() {
     + `<a href="#cumul" class="${vue === "cumul" ? "actif" : ""}">Cumul</a>` + (SEULE ? '<a href="#toutes">Toutes les équipes</a>' : "");
   const seule = SEULE ? bandeauSeule(nomDuCode(SEULE)) : "";
   if (vue === "cumul") {
-    main.innerHTML = verif + seule + `<p class="sous">Points gagnés ou perdus à chaque journée, total depuis la J1 et classement virtuel
-      (points officiels + total).</p>${tableau(D.cumuls.filter(cumulDeLEquipe), colonnesCumul(), false)}${note()}`;
+    main.innerHTML = verif + seule + `<p class="sous">Points gagnés ou perdus à chaque journée et total depuis la J1${VIRT
+      ? ". Virt. = classement virtuel du club aujourd'hui (toutes compétitions, le même que la page Classement virtuel)"
+      : " et classement virtuel (points officiels + total)"}.</p>${tableau(D.cumuls.filter(cumulDeLEquipe), colonnesCumul(), false)}${note()}`;
   } else {
     const j = Number(vue.slice(1));
     const info = D.journees.find((x) => x.numero === j);
     const lignes = D.lignes.filter((l) => l.journee === j && deLEquipe(l));
-    main.innerHTML = verif + seule + `<p class="sous">Journée ${j} — ${info.dates.map(fmtDate).join(", ")}. Points J${j} = classement virtuel
-      (points officiels + total depuis la J1). Meilleure victoire = écart avec le mieux classé des joueurs battus,
+    main.innerHTML = verif + seule + `<p class="sous">Journée ${j} — ${info.dates.map(fmtDate).join(", ")}. ${VIRT
+      ? "Virt. = classement virtuel du club aujourd'hui (toutes compétitions, le même que la page Classement virtuel) ; Total = points gagnés dans ce championnat depuis la J1."
+      : `Points J${j} = classement virtuel (points officiels + total depuis la J1).`} Meilleure victoire = écart avec le mieux classé des joueurs battus,
       ses points entre parenthèses. Clique sur un joueur pour le détail de ses parties.</p>`
       + tableau(lignes, colonnesJournee(j), true) + note();
   }

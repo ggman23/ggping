@@ -546,8 +546,9 @@ def images_resultats(donnees, dossier, prefixe=""):
     j = derniere["numero"]
     lignes_j = sorted((l for l in donnees["lignes"] if l["journee"] == j),
                       key=lambda l: (-l["delta"], -(l["total"] or 0), l["joueur"]))
+    virt = donnees.get("virtuels_club")  # classement virtuel du club (toutes compétitions), par licence
     colonnes = colonnes_egales([Col("Éq.", 64), Col("Joueur", None, "g"), Col("Points", 88), Col("+/-", 92),
-                                Col("Vict.", 78), Col("Meilleure\nvictoire", 140), Col(f"Points\nJ{j}", 104),
+                                Col("Vict.", 78), Col("Meilleure\nvictoire", 140), Col("Virt." if virt else f"Points\nJ{j}", 104),
                                 Col("Total", 92)], LARGEUR - 2 * MARGE)
     lignes = []
     for l in lignes_j:
@@ -562,14 +563,17 @@ def images_resultats(donnees, dossier, prefixe=""):
             cel_points(l["delta"], fond=True, dec=1),
             cel_victoires(l["v"], l["matchs"]),
             C(signe(l["meilleure"], 0), apres=f"({fmt(l['meilleure_adv'])})") if l.get("meilleure") is not None else C(""),
-            C(fmt(l["apres"], 1), gras=True),
+            C(fmt(virt.get(l["licence"]), 1) if virt else fmt(l["apres"], 1), gras=True),
             cel_points(l["total"], dec=1),
         ])
     dates = ", ".join(jour_fr(x) for x in derniere["dates"])
     sorties += _tableau_pagine(
         dossier, f"{prefixe}resultats_J{j}", f"Résultats de la J{j}", f"{sous_base} · {dates} · {_genere(donnees)}",
         colonnes, lignes,
-        f"Trié par points gagnés sur la journée. Points J{j} = classement virtuel estimé (points officiels + total depuis la J1). "
+        "Trié par points gagnés sur la journée. "
+        + ("Virt. = classement virtuel du club (toutes compétitions, le même que sa page). Total = points gagnés dans ce championnat depuis la J1. "
+           if virt else f"Points J{j} = classement virtuel estimé (points officiels + total depuis la J1). ")
+        + 
         "Meilleure victoire = écart avec le mieux classé des joueurs battus (ses points)."
         + (" « + V1F … » : aussi aligné(e) dans cette équipe pour la journée (voir son autre ligne) ; "
            "Points et Total se cumulent dans l'ordre des dates." if any(l.get("autres") for l in lignes_j) else "")
@@ -593,13 +597,14 @@ def images_resultats(donnees, dossier, prefixe=""):
             *[C(signe(par_j[n], 1), couleur=POS_TEXTE if par_j[n] > 0 else NEG_TEXTE if par_j[n] < 0 else NOIR)
               if n in par_j else C("") for n in js],
             cel_points(c["total"], fond=True, dec=1),
-            C(fmt(c["virtuels"], 1), gras=True),
+            C(fmt(virt.get(c["licence"]) if virt else c["virtuels"], 1), gras=True),
             cel_victoires(c["v"], c["matchs"]),
         ])
     sorties += _tableau_pagine(
         dossier, f"{prefixe}resultats_cumul", f"Cumul J1 à J{js[-1]}",
         f"{sous_base} · {'championnat par équipes' if not court else 'toutes les journées'} · {_genere(donnees)}",
-        colonnes, lignes, "Trié par points gagnés au total depuis la J1. Virt. = points officiels + total.", f"{court}Résultats : cumul")
+        colonnes, lignes, "Trié par points gagnés au total depuis la J1. "
+        + ("Virt. = classement virtuel du club (toutes compétitions)." if virt else "Virt. = points officiels + total."), f"{court}Résultats : cumul")
     return sorties
 
 

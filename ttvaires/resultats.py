@@ -362,10 +362,15 @@ def synthese(parties):
     return lignes, cumuls
 
 
-def donnees_page(resultats):
+def donnees_page(resultats, virtuels=None):
+    """Données de la page des résultats. `virtuels` ({licence: points virtuels}, page Classement virtuel) : la
+    colonne « Virt. » montre le classement virtuel du club (toutes compétitions, le même que sa page), et non les
+    points officiels + le total du seul championnat, qui pouvait induire en erreur (28/11)."""
     lignes, cumuls = synthese(resultats["parties"])
     journees = sorted({l["journee"] for l in lignes})
+    licences = {l["licence"] for l in lignes}
     return {
+        "virtuels_club": {lic: v for lic, v in (virtuels or {}).items() if lic in licences and v is not None} if virtuels else None,
         **{k: resultats[k] for k in ("genere_le", "saison", "phase", "club")},
         "championnat": resultats.get("championnat", "france"), "coefficient": resultats.get("coefficient", COEFFICIENT_CHAMPIONNAT),
         "verification": resultats.get("verification"), "mensuel": bool(resultats.get("mensuel")),

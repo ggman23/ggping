@@ -134,6 +134,43 @@ def donnees(adversaires=None):
             "debut_forme": (sources.get("forme") or {}).get("debut"), "historiques_restants": sources.get("historiques_restants", 0)}
 
 
+def avec_resultats(donnees_page, equipes_api):
+    """Scores, dates et classement de la poule lus dans l'API de la FFTT (adversaires.equipes_du_championnat, depuis
+    le 28/11) mis dans les données de /paris/ ou /jeunes/ (poules recopiées des documents) : une équipe de Vaires
+    est reconnue par son numéro, une rencontre par sa journée, une équipe du classement par son club et son numéro
+    (le nom de la page est gardé). Le score suit le sens de la page (équipe qui reçoit d'abord)."""
+    from .fftt import numero_equipe
+
+    if not equipes_api:
+        return donnees_page
+    par_numero = {e.get("numero"): e for e in equipes_api}
+    for e in donnees_page.get("equipes", []):
+        a = par_numero.get(e.get("numero"))
+        if not a:
+            continue
+        par_journee = {r["journee"]: r for r in a.get("rencontres", [])}
+        for r in e.get("rencontres", []):
+            x = par_journee.get(r["journee"])
+            if not x:
+                continue
+            if x.get("score") and None not in x["score"]:
+                nous, eux = x["score"] if x["vaires_domicile"] else x["score"][::-1]
+                r["score"] = [nous, eux] if r.get("vaires_domicile") else [eux, nous]
+            if x.get("date") and x["date"] != r.get("date"):
+                r["date_reelle"] = x["date"]
+            if x.get("heure"):
+                r["heure"] = x["heure"]
+        lignes = a.get("classement") or []
+        if not any(c.get("joues") for c in lignes):
+            continue
+        cle = lambda club, libelle: (club, numero_equipe(libelle))
+        page = {cle(c.get("club"), c.get("libelle")): c for c in e.get("classement", [])}
+        e["classement"] = [{**page.get(cle(c.get("club"), c.get("libelle")), {"libelle": c["libelle"], "club": c.get("club"), "dep": None}),
+                            **{k: c.get(k) for k in ("rang", "points", "joues", "v", "n", "d", "departage")}} for c in lignes]
+        e["resultats_api"] = True
+    return donnees_page
+
+
 def memoriser_joueurs(virtuel, chemin):
     """Joueurs de Vaires pour le tableau des disponibilités de /paris/ : ceux du dernier classement virtuel
     (licences compétition : pas les loisirs), du mieux au moins bien classé, nom, prénom et points virtuels
@@ -156,10 +193,10 @@ def joueurs_memorises(chemin):
         return None
 
 
-def page(adversaires=None, joueurs=None):
+def page(adversaires=None, joueurs=None, resultats=None):
     """Page /paris/ (HTML) : le gabarit avec les données ; `joueurs` (joueurs_memorises) : le tableau des
-    disponibilités de chaque journée."""
-    d = donnees(adversaires)
+    disponibilités de chaque journée ; `resultats` (équipes de l'API) : scores et classement des poules."""
+    d = avec_resultats(donnees(adversaires), resultats)
     if joueurs:
         d["joueurs_vaires"], d["date_virtuel"] = joueurs.get("joueurs", []), joueurs.get("date")
     js = json.dumps(d, ensure_ascii=False).replace("<", "\\u003c")

@@ -63,7 +63,9 @@ def _site(melanger=False):
                "awaySheetMatches": [{"identifier": "UVWXYZRST"[i], "player": j} for i, j in enumerate(LEURS)]}
     assert gagnees in (None, [6, 6, 6])
     liste = {"@context": "/api/contexts/SportMatch", "hydra:member": [CHAMP_FR, PARIS, PARIS_J2]}
+    poule = {"@context": "/api/contexts/SportMatch", "hydra:member": [PARIS, PARIS_J2]}
     return {
+        f"{fftt.API}/sport_matches?{fftt._q('pool.id')}=55": json.dumps(poule),  # avant la liste du club (préfixes)
         f"{fftt.API}/sport_matches/101": json.dumps(feuille),
         f"{fftt.API}/sport_matches/201": json.dumps({**CHAMP_FR, "@context": "x", "homeGamePoints": 22, "awayGamePoints": 20,
                                                      "games": [], "homeSheetMatches": [{}]}),
@@ -127,7 +129,7 @@ def test_classement_de_la_poule_de_paris():
     (e,) = res["equipes"]
     assert (e["id"], e["championnat"], e["division"], e["nom_court"]) == ("v1", "P", "Honneur", "Vaires 1")
     assert [r["journee"] for r in e["rencontres"]] == [1, 2] and e["rencontres"][0]["score"] == [90, 45]
-    assert [(c["libelle"], c["points"], c["v"]) for c in e["classement"]] == [("VAIRES CVTT (1)", 3, 1), ("NOGENT TT (1)", 1, 0)]
+    assert [(c["libelle"], c["points"], c["v"], c["joues"]) for c in e["classement"]] == [("VAIRES CVTT (1)", 3, 1, 1), ("NOGENT TT (1)", 1, 0, 1)]
     c = donnees_classements({"club": {"numero": VAIRES, "nom": "CVTT VAIRES"}, "saison": "2026-2027", "phase": 1,
                              "championnat": "paris", "equipes": res["equipes"]})
     assert c["championnat"] == "paris" and c["journee"] == 1 and c["poules"][0]["lignes"][0]["nous"]
@@ -164,3 +166,35 @@ def test_images_de_paris(tmp_path):
     (tmp_path / "rencontres_J5_V2.png").write_bytes(b"x")
     images.images_rencontres(d, tmp_path, prefixe="paris_")
     assert (tmp_path / "rencontres_J5_V2.png").exists()
+
+
+def test_scores_et_classement_dans_la_page_de_paris():
+    """28/11 : /paris/ (poules recopiées des documents) reçoit les scores et le classement lus dans l'API, dans le
+    sens de la page (équipe qui reçoit d'abord) ; les noms de la page sont gardés."""
+    from ttvaires import paris
+
+    eq = equipes_du_championnat(FauxClient(_site()), VAIRES, AUJ, championnat="paris")["equipes"]
+    page = {"equipes": [{"numero": 1, "rencontres": [
+        {"journee": 1, "date": "2026-11-27", "vaires_domicile": True, "score": None},
+        {"journee": 2, "date": "2027-01-08", "vaires_domicile": False, "score": None}],
+        "classement": [{"rang": None, "libelle": "VAIRES CTT 1", "club": VAIRES, "dep": "77", "points": None},
+                       {"rang": None, "libelle": "NOGENT TT 1", "club": "08940524", "dep": "94", "points": None}]}]}
+    d = paris.avec_resultats(page, eq)
+    e = d["equipes"][0]
+    assert e["rencontres"][0]["score"] == [90, 45] and e["rencontres"][1]["score"] is None
+    assert [(c["rang"], c["libelle"], c["dep"], c["points"], c["joues"]) for c in e["classement"]] == [
+        (1, "VAIRES CTT 1", "77", 3, 1), (2, "NOGENT TT 1", "94", 1, 1)]
+    # Vaires à l'extérieur : le score suit le sens de la page
+    eq[0]["rencontres"][0]["vaires_domicile"] = False
+    eq[0]["rencontres"][0]["score"] = [45, 90]
+    page["equipes"][0]["rencontres"][0].update(vaires_domicile=False, score=None)
+    assert paris.avec_resultats(page, eq)["equipes"][0]["rencontres"][0]["score"] == [45, 90]
+    assert paris.avec_resultats({"equipes": []}, None) == {"equipes": []}
+
+
+def test_colonne_virtuel_du_club_dans_les_resultats():
+    """28/11 : « Virt. » = classement virtuel du club (toutes compétitions), pas les points + le total du championnat."""
+    r = recuperer_parties(FauxClient(_site()), VAIRES, AUJ, championnat="paris")
+    d = donnees_page(r, {"1": 1415.5, "999": 800})
+    assert d["virtuels_club"] == {"1": 1415.5}
+    assert donnees_page(r)["virtuels_club"] is None

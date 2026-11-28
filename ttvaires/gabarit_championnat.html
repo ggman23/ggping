@@ -182,7 +182,7 @@ button.action.principal { background: var(--accent); border-color: var(--accent)
    adversaires du championnat de France (gabarit.html). Poules et calendrier : ttvaires/paris.py et
    ttvaires/jeunes.py. Clubs adverses : adversaires.clubs_des_poules (joueurs alignés en championnat de France,
    effectif et meilleur classement lus sur pingpocket.fr par le PC, forme depuis le début de la phase). Leurs
-   rencontres ne sont pas dans l'API de la FFTT : ni score, ni composition, ni brûlage. Jeunes : chaque équipe
+   scores et classements viennent de l'API de la FFTT depuis le 28/11 (paris.avec_resultats). Jeunes : chaque équipe
    ne montre que les joueurs qui ont l'âge (e.categories), licences loisir comprises. */
 const D = JSON.parse(document.getElementById("donnees").textContent);
 const ESPACE = D.espace || "paris", NOM_ESPACE = { paris: "Paris", jeunes: "Jeunes" }[ESPACE] || ESPACE;
@@ -316,7 +316,7 @@ function lieu(r) {
 function scoreTxt(r) {
   if (!r.adversaire) return "";
   if (!r.score) return dateRenc(r) && dateRenc(r) < AUJOURDHUI
-    ? `<span class="petit" title="Les résultats du ${TITRE} ne sont pas dans l'API de la FFTT">non disponible</span>` : "";
+    ? `<span class="petit" title="Le résultat sera là quand la FFTT l'aura saisi (en général dans les 48 h)">pas encore saisi</span>` : "";
   const [a, b] = r.score;
   const nous = r.vaires_domicile ? a : b, eux = r.vaires_domicile ? b : a;
   const cls = nous > eux ? "okb" : nous < eux ? "brule" : "neutre";
@@ -431,8 +431,8 @@ function vueRecap(filtre) {
         <td data-l="Score">${scoreTxt(r)}</td></tr>`).join("")}
       </tbody></table></div></article>`;
   });
-  const source = `<p class="petit">${esc(D.source || "")}. Les rencontres du ${esc(TITRE)} ne sont pas dans l'API de la FFTT :
-    ni score ni composition. Pour chaque club adverse : ses joueurs (alignés en championnat de France, liste des licenciés
+  const source = `<p class="petit">${esc(D.source || "")}. Scores et classement des poules : API de la FFTT (rencontres saisies
+    depuis le 28/11 ; feuilles de match dans la page Feuilles de match de l'espace club). Pour chaque club adverse : ses joueurs (alignés en championnat de France, liste des licenciés
     de pingpocket.fr${D.avec_loisir ? " ; pour les jeunes, licences loisir comprises" : ""}), leur meilleur classement et leur
     forme depuis le début de la phase.</p>`;
   return bandeauEtat() + filtres + blocs.join("") + source;
@@ -455,8 +455,8 @@ function vueEquipe(e, journee) {
     ${classement.map((c) => `<tr class="${c.club === D.club.numero ? "vaires" : ""}"><td class="num">${c.rang ?? "—"}</td>
       <td>${esc(c.libelle)}${c.dep ? ` <span class="petit">(${esc(c.dep)})</span>` : ""}</td>
       ${["points", "joues", "v", "n", "d"].map((k) => `<td class="num">${c[k] ?? "—"}</td>`).join("")}</tr>`).join("")}
-    </tbody></table></div>${vide ? `<p class="petit">Vide pour l'instant : les résultats du ${esc(TITRE)} ne sont pas dans l'API
-    de la FFTT. Équipes dans l'ordre de la poule.</p>` : ""}</div>`;
+    </tbody></table></div>${vide ? `<p class="petit">Classement disponible après la première journée jouée. Équipes dans l'ordre de la poule.</p>`
+      : `<p class="petit">Classement d'après les résultats saisis dans l'API de la FFTT (points-rencontres ; égalités : article I.202).</p>`}</div>`;
   const puces = `<div class="carte"><h3>Adversaires — clique sur une équipe pour voir son club</h3><div class="puces">
     ${rencs.filter((r) => r.adversaire).map((r) => `<a href="#e/${e.id}/j/${r.journee}" class="${r.journee === journee ? "actif" : ""}">
       <b>${libelleAdv(r)}</b><span class="petit">J${r.journee} · ${fmtDate(dateRenc(r))} · ${r.vaires_domicile ? "dom." : "ext."}</span></a>`).join("")}
@@ -522,8 +522,7 @@ function tableEffectif(club, r, e) {
     de Vaires ; en petit, les points virtuels. Hors championnat : les compétitions individuelles jouées. Lu pour ${e.categories
     ? "tous les jeunes (sauf les licences loisir)" : "les joueurs déjà alignés et les licenciés à plus de 500 points"}.</p>` : "")
     + (avecFrance ? `<p class="petit">Éq. France : équipe du club dans laquelle le joueur a joué cette phase en championnat de France
-    (×4 = 4 rencontres). On ne sait pas qui joue dans quelle équipe du ${esc(TITRE)} : ses rencontres ne sont pas dans
-    l'API de la FFTT.</p>` : "")
+    (×4 = 4 rencontres).</p>` : "")
     + (e.categories ? `<p class="petit">${esc(e.division)} : ${esc(nomsCategories(e))} (la catégorie de l'équipe et les plus
     jeunes). Les licences loisir sont gardées (<span class="badge neutre">loisir</span>) : le club les changera pour faire jouer
     ces jeunes ; pas de forme pour elles.</p>` : "")

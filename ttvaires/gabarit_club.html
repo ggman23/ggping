@@ -286,7 +286,7 @@ const RUBRIQUES = [
   { id: "joueurs", nom: "Joueurs du club", texte: "Classement virtuel, progression, fiches des joueurs", couleur: "#2b8a3e" },
   { id: "individuels", nom: "Individuels", texte: "Critérium : poules et résultats des joueurs de Vaires", couleur: "#e8590c" },
   { id: "documents", nom: "Documents du club", texte: "Affiche, matériel, préparation mentale", couleur: "#8a5a00" },
-  { id: "archives", nom: "Archives", texte: "Les pages et images des journées passées", couleur: "#5f3dc4" },
+  { id: "archives", nom: "Archives", texte: "Championnat de France : les pages et images de chaque journée passée", couleur: "#5f3dc4" },
   { id: "tout", nom: "Tout", texte: "Toutes les pages et toutes les images sur une seule page", couleur: "#495057" },
 ];
 const RUB = Object.fromEntries(RUBRIQUES.map((r) => [r.id, r]));
@@ -352,8 +352,8 @@ function vueRubrique(id) {
       tuile(d, `#rubrique/documents/${encodeURIComponent(d.id)}`)).join("")}</div>`).join("") : "<p>Aucun document pour le moment.</p>") + "</div>";
   }
   if (id === "archives") {
-    return tete + (archives.length ? `<div class="tuiles">${archives.map((a) => `<a class="tuile" href="#archives/${encodeURIComponent(a.cle)}">
-      <span class="icone archive">${ICONES.archive}</span><b>${esc(a.titre)}</b>
+    return tete + (archives.length ? `<h2 class="titre-section">Archives du championnat de France</h2><div class="tuiles">${archives.map((a) => `<a class="tuile" href="#archives/${encodeURIComponent(a.cle)}">
+      <span class="icone archive">${ICONES.archive}</span><b>${esc(a.titre)} · championnat de France</b>
       <span>Phase ${esc(a.phase)} ${esc(a.saison)} · état au ${esc(jour(a.date_reference))}</span></a>`).join("")}</div>` : "<p>Pas encore d'archive.</p>") + "</div>";
   }
   const c = contenuRubrique(id);
@@ -554,7 +554,7 @@ function vueTout() {
 }
 function vueArchive(a) {
   const imgs = imagesDe(a.docs);
-  return `<div class="accueil"><h1>${esc(a.titre)} <span class="etiquette">archive</span></h1>
+  return `<div class="accueil"><h1>${esc(a.titre)} du championnat de France <span class="etiquette">archive</span></h1>
     <p>Phase ${esc(a.phase)} ${esc(a.saison)} : les pages, l'Excel et les images telles qu'au ${esc(jour(a.date_reference))}
       (veille de la journée suivante).</p>
     <div class="tuiles">${[...imgs.filter((d) => A_LA_UNE.includes(d.groupe)), ...pagesDe(a.docs)].map(tuile).join("")}</div>
@@ -592,7 +592,7 @@ async function route() {
   document.getElementById("partager").hidden = true;
   const titre = document.getElementById("titre"), sous = document.getElementById("sous-titre");
   if (archive) {
-    titre.textContent = `${archive.titre} · archive`;
+    titre.textContent = `${archive.titre} · championnat de France · archive`;
     sous.textContent = `Phase ${archive.phase} · état au ${jour(archive.date_reference)}`;
     vue.innerHTML = vueArchive(archive);
     document.getElementById("tout-archive").addEventListener("click", (ev) => toutTelecharger(archive.docs, ev.target, archive));

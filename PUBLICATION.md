@@ -724,7 +724,12 @@ des données).
   article 8), chaque groupe son score et ses points (6, 5 ou 4 par partie gagnée en groupe 1, 2 ou 3, article 7).
   Le résultat de la rencontre se lit en points-parties (ex. victoire 90-45).
 - **Résultats des joueurs** : points gagnés ou perdus avec le coefficient du championnat lu dans l'API (Paris :
-  0,75 ; jeunes : celui de l'API, 0,5 sinon), journées J1 à J7 sur la saison.
+  0,75 ; jeunes : celui de l'API, 0,5 sinon), journées J1 à J7 sur la saison. La colonne **Virt.** (page et images,
+  tous les championnats) est le classement virtuel du club, toutes compétitions (le même que la page Classement
+  virtuel, faite maintenant en premier) ; « Total » = points gagnés dans ce championnat depuis la J1. Avant le
+  28/11, « Points J5 » valait points officiels + total du seul championnat : pas le vrai classement virtuel.
+- **/paris/ et /jeunes/** : scores de chaque rencontre et classement de la poule lus dans l'API
+  (`paris.avec_resultats` : équipe reconnue par son numéro, rencontre par sa journée ; noms de la page gardés).
 - **Classements des poules** : les poules de Paris et des jeunes, comme celles du championnat de France
   (points-rencontres de l'API, départage de l'article I.202).
 - **Images** (à part, préfixe `paris_` ou `jeunes_`, groupe « Championnat de Paris » / « Championnat des jeunes »
@@ -780,7 +785,7 @@ https://ggping.netlify.app/paris/), avec le **mot de passe du club** (ouverture 
   (rouge, gris), noms seulement, à télécharger ou partager. Les réponses restent dans le navigateur (le
   téléphone) qui les a saisies ; la liste des joueurs vient de la mise à jour (`cache/joueurs_vaires.json`,
   écrit par l'étape du classement virtuel, jamais dans le dépôt).
-- Pas de résultats ni de compositions du championnat de Paris : ses rencontres ne sont pas dans l'API
+- (Jusqu'au 28/11) Pas de résultats ni de compositions du championnat de Paris : ses rencontres n'étaient pas dans l'API
   de la FFTT (contrôle du 18/11/2026, mise à jour n° 89 : seulement le championnat de France, 42
   rencontres masculines et 7 féminines ; le journal le redit à chaque mise à jour, « Championnat de
   Paris dans l'API FFTT ? »). Les poules sont sorties le 17/11 : la ligue les saisira. Le jour où elles

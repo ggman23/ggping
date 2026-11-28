@@ -153,9 +153,10 @@ def donnees(adversaires=None, numeros=None):
             "debut_forme": (sources.get("forme") or {}).get("debut"), "historiques_restants": sources.get("historiques_restants", 0)}
 
 
-def page(adversaires=None):
-    """Page /jeunes/ (HTML) : le gabarit du championnat de Paris avec les données des jeunes."""
-    js = json.dumps(donnees(adversaires), ensure_ascii=False).replace("<", "\\u003c")
+def page(adversaires=None, resultats=None):
+    """Page /jeunes/ (HTML) : le gabarit du championnat de Paris avec les données des jeunes ; `resultats` (équipes
+    de l'API) : scores et classement des poules (paris.avec_resultats)."""
+    js = json.dumps(paris.avec_resultats(donnees(adversaires), resultats), ensure_ascii=False).replace("<", "\\u003c")
     return paris.GABARIT.read_text(encoding="utf-8").replace("__DONNEES_JSON__", js).encode("utf-8")
 
 
