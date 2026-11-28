@@ -772,6 +772,10 @@ des données).
   championnats, en top 15 (top 10 ou 5 seulement si la place manque ; `recap._emplacements_paris_jeunes`). Une équipe jeune
   sans feuille garde sa place (« Pas encore saisi »). Si Paris et les jeunes ne sont pas à la même journée : « Paris J2 · Jeunes J1 ». Le récapitulatif
   des jeunes seul (`jeunes_recap_J<n>.png`) n'est plus fait quand l'image de Paris existe.
+- **Arrondi des images** (28/11) : 911,25 s'écrit 911,3, comme la FFTT et les pages (arrondi au-dessus à la moitié ;
+  le format de Python arrondissait au pair : 911,2 sur l'image du classement virtuel, 911,3 sur la page).
+- **Surnoms** (secret SURNOMS, import/surnoms.txt) : un surnom qui peut se confondre avec le nom d'un autre joueur de
+  l'image (« Marc G » à côté de « Marc Go. ») n'est pas pris : le nom distinctif reste (« Marc Gu. »).
 - **Récapitulatif** : deux joueurs du même prénom avec la même initiale (« Marc G » deux fois) : le début du nom
   les distingue (« Marc Gu. », « Marc Go. » ; `recap._distinction`).
 - **Progression** : une image par équipe de Paris (`paris_progression_V1.png`...) avec ses joueurs (9, 6 ou 3 :

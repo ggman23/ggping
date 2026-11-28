@@ -102,24 +102,34 @@ def lire_surnoms(dossier_import):
 
 def noms_affiches(joueurs, surnoms=None):
     """{licence: nom affiché} : le prénom, suivi des initiales du nom si un autre joueur de l'image
-    a le même prénom ; un surnom de import/surnoms.txt l'emporte."""
+    a le même prénom ; un surnom de import/surnoms.txt (ou du secret SURNOMS) l'emporte, sauf s'il peut se confondre
+    avec le nom d'un autre joueur de l'image."""
     surnoms = surnoms or {}
     par_prenom = defaultdict(set)
     graphies = defaultdict(set)  # « Jerome » et « Jérôme » : le même prénom, écrit avec ses accents
     for j in joueurs:
         par_prenom[_cle(j["prenom"])].add(j["licence"])
         graphies[_cle(j["prenom"])].add(j["prenom"])
-    noms = {}
+    automatiques = {}
     for j in joueurs:
-        surnom = surnoms.get(_cle(f"{j['nom']} {j['prenom']}"))
-        if surnom:
-            noms[j["licence"]] = surnom
-            continue
         nom = max(graphies[_cle(j["prenom"])], key=lambda g: (sum(not c.isascii() for c in g), g)) or j["nom"]
         if len(par_prenom[_cle(j["prenom"])]) > 1:
             nom += " " + _distinction(j, [x for x in joueurs if _cle(x["prenom"]) == _cle(j["prenom"])])
-        noms[j["licence"]] = nom
+        automatiques[j["licence"]] = nom
+    noms = dict(automatiques)
+    for j in joueurs:
+        surnom = surnoms.get(_cle(f"{j['nom']} {j['prenom']}"))
+        # Un surnom l'emporte, sauf s'il peut se confondre avec le nom d'un autre joueur de l'image (« Marc G » à côté de
+        # « Marc Go. », 28/11) : le nom distinctif est alors gardé (« Marc Gu. »)
+        if surnom and not any(_confusion(surnom, n) for lic, n in automatiques.items() if lic != j["licence"]):
+            noms[j["licence"]] = surnom
     return noms
+
+
+def _confusion(a, b):
+    """Deux noms affichés qu'on peut confondre : égaux, ou l'un est le début de l'autre (« Marc G », « Marc Go. »)."""
+    a, b = _cle(a).rstrip(". "), _cle(b).rstrip(". ")
+    return a == b or b.startswith(a) or a.startswith(b)
 
 
 def _initiales(nom):

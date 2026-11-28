@@ -17,6 +17,7 @@ import math
 import re
 from collections import Counter
 from datetime import date, datetime, timedelta
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -368,11 +369,14 @@ def _flamme(d, n):
 # ---------------------------------------------------------------------------
 
 def fmt(x, dec=None):
+    """Nombre à la française. Arrondi « au-dessus » à la moitié, comme la FFTT et les pages (911,25 donne 911,3) :
+    le format de Python arrondit au pair (911,2), d'où l'écart signalé le 28/11 entre l'image et la page."""
     if x is None:
         return ""
     if dec is None:
         dec = 0 if float(x).is_integer() else (1 if float(x * 2).is_integer() else 2)
-    return f"{x:,.{dec}f}".replace(",", " ").replace(".", ",")
+    arrondi = Decimal(str(x)).quantize(Decimal(1).scaleb(-dec), rounding=ROUND_HALF_UP)
+    return f"{arrondi:,.{dec}f}".replace(",", " ").replace(".", ",")
 
 
 def signe(x, dec=None):

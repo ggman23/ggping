@@ -855,3 +855,7 @@ Pas d'onglet dans l'application pour l'instant.
   de l'adversaire de Paris en tournoi, comptée par l'outil ; le détail des parties hors championnat des adversaires de
   Vaires d'autres départements est maintenant lu. Captures de l'application FFTT d'un autre joueur de cette équipe
   (fin octobre 889,0) : 889,0 dans l'outil. Date de prise en compte : piste écartée (aucune partie décalée).
+- Vérification de la mise à jour n° 124 (28/11) : récapitulatif Paris + jeunes publié (top 15, équipes jeunes « Pas
+  encore saisi ») ; restaient « Marc G » (surnom du secret SURNOMS) à côté de « Marc Go. » → un surnom qui se confond
+  avec un autre nom de l'image n'est plus pris ; et 911,2 sur l'image du classement virtuel (911,3 sur la page) →
+  arrondi au-dessus à la moitié dans les images.

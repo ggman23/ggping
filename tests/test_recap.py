@@ -121,3 +121,19 @@ def test_recap_de_paris_avec_les_equipes_jeunes(tmp_path):
     from ttvaires import __main__ as m
     [chemin] = m.faire_images("image_recap", paris, None, dossier=tmp_path, prefixe="paris_", jeunes=jeunes)
     assert m._titres_images[str(chemin)].startswith("Paris + jeunes · ")
+
+
+
+def test_surnom_qui_se_confond_avec_un_autre_joueur():
+    """28/11 : surnom « Paul G » pour l'un, l'autre « Paul Go. » : le surnom se confond, le nom distinctif reste."""
+    j = lambda lic, nom, prenom: {"licence": lic, "nom": nom, "prenom": prenom}
+    joueurs = [j("1", "GARNIER", "Paul"), j("2", "GOBERT", "Paul"), j("3", "DURAND", "Luc")]
+    assert recap.noms_affiches(joueurs, {"GARNIER PAUL": "Paul G"}) == {"1": "Paul Ga.", "2": "Paul Go.", "3": "Luc"}
+    assert recap.noms_affiches(joueurs, {"GARNIER PAUL": "Polo", "DURAND LUC": "Lulu"}) == {"1": "Polo", "2": "Paul Go.", "3": "Lulu"}
+
+
+def test_arrondi_des_images_comme_la_fftt():
+    """28/11 : 911,25 s'écrit 911,3 (arrondi au-dessus, comme la FFTT et les pages), pas 911,2 (arrondi au pair)."""
+    from ttvaires.images import fmt, signe
+    assert (fmt(911.25, 1), fmt(914.75, 1), fmt(1420.25, 1), fmt(12345.5), signe(-0.75), fmt(1410)) == \
+        ("911,3", "914,8", "1 420,3", "12 345,5", "-0,75", "1 410")
