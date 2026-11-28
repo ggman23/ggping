@@ -218,6 +218,18 @@ class Rendu:
 # Texte : ajustement, coupure, alignement
 # ---------------------------------------------------------------------------
 
+_INITIALE = re.compile(r"^(.*\S)( \w\.)$")
+
+
+def couper_un_peu(texte):
+    """Un caractère de moins, avec « … » ; l'initiale du prénom d'un « NOM P. » reste (« DELACROIX DOM… A. »)."""
+    m = _INITIALE.match(texte)
+    if m and len(m[1]) > 2:
+        base = m[1].rstrip("…")
+        return base[:-1].rstrip() + "…" + m[2]
+    return texte[:-2] + "…"
+
+
 def ajuster(texte, largeur, taille, gras=False, alternatives=(), taille_min=None):
     """Texte qui tient dans la largeur : alternatives plus courtes, puis police réduite, puis « … »."""
     taille_min = taille_min or taille * 0.78
@@ -229,7 +241,7 @@ def ajuster(texte, largeur, taille, gras=False, alternatives=(), taille_min=None
     while tl > taille_min and largeur_texte(t, tl, gras) > largeur:
         tl -= 0.5
     while len(t) > 1 and largeur_texte(t, tl, gras) > largeur:
-        t = t[:-2] + "…"
+        t = couper_un_peu(t)
     return t, tl
 
 
@@ -280,8 +292,8 @@ def _avec_suffixe(cel, place, taille):
     t, tl = (cel.alternatives or [cel.texte])[-1], taille
     while tl > taille * 0.72 and largeur_texte(t, tl, cel.gras) > place:
         tl -= 0.5
-    while len(t) > 6 and largeur_texte(t, tl, cel.gras) > place:  # nom très long : « DELACROIX DOMIN… » plutôt que sans catégorie
-        t = t[:-2].rstrip() + "…"
+    while len(t) > 6 and largeur_texte(t, tl, cel.gras) > place:  # nom très long : « DELACROIX DOM… A. » plutôt que sans catégorie
+        t = couper_un_peu(t)
     return (t, tl) if largeur_texte(t, tl, cel.gras) <= place else None
 
 
@@ -406,9 +418,11 @@ def jour_fr(iso):
 
 
 def nom_alternatives(nom, prenom):
+    """(« NOM Prénom », formes plus courtes). L'initiale du prénom reste toujours (« DURAND C. », demande du 28/11 :
+    deux frères ont le même nom) : jamais le nom seul ; s'il le faut, le nom est coupé (« DELACROIX DOM… A. »)."""
     nom, prenom = (nom or "").strip(), (prenom or "").strip()
     complet = f"{nom} {prenom}".strip()
-    return complet, ([f"{nom} {prenom[0]}."] if prenom else []) + [nom]
+    return complet, [f"{nom} {prenom[0]}."] if prenom else [nom]
 
 
 def cel_nom(nom, prenom, apres=None, gras=False):

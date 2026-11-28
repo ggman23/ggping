@@ -146,3 +146,14 @@ def test_categorie_gardee_quand_le_nom_est_long():
     place = images.largeur_texte("GRIFFE K.", images.TAILLE) + 2
     assert images._avec_suffixe(cel, place, images.TAILLE) == ("GRIFFE K.", images.TAILLE)
     assert images._avec_suffixe(cel, 5, images.TAILLE) is None  # vraiment trop étroit : le suffixe saute
+
+
+def test_initiale_du_prenom_toujours_presente_dans_les_images():
+    """28/11 : jamais le nom seul (deux frères ont le même nom) : « NOM P. », et un nom trop long est coupé avant l'initiale."""
+    from ttvaires import images
+    assert images.nom_alternatives("DUPOND DURAND", "Alex") == ("DUPOND DURAND Alex", ["DUPOND DURAND A."])
+    assert images.couper_un_peu("DUPOND DURAND A.") == "DUPOND DURAN… A."
+    assert images.couper_un_peu("DUPOND DURAN… A.") == "DUPOND DURA… A."
+    t, _ = images.ajuster("DUPOND DURAND Alexandre", images.largeur_texte("DUPOND DU… A.", images.TAILLE * 0.78), images.TAILLE,
+                          alternatives=["DUPOND DURAND A."])
+    assert t.endswith("… A.")

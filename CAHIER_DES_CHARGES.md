@@ -865,3 +865,7 @@ Pas d'onglet dans l'application pour l'instant.
   depuis le PC : les données avaient la catégorie des 63 joueurs.
 - Licence loisir (28/11) : « pas besoin de mettre M2 (L), M2 suffit » → plus de mention « (L) » sur l'image ni « loisir »
   sur la page du classement virtuel (l'information reste dans les données : pas de joueur loisir proposé pour Paris).
+- Noms dans les images (28/11) : « il faut obligatoirement l'initiale du prénom avec un point (DURAND C.) ; deux
+  frères ont le même nom » → plus jamais le nom seul ; un nom trop long est coupé avant l'initiale. « Pourquoi le
+  second frère n'apparaît pas ? » → licence loisir dans la liste du club (pingpocket, 15/11) et aucune partie cette
+  phase : les licences loisir n'apparaissent qu'une fois qu'elles ont joué (comme deux autres jeunes).
