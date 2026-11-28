@@ -253,7 +253,7 @@ def virtuels_des_joueurs(client, licences, points_mensuels, aujourdhui, a_relire
     vaires_ext = {adversaire(p, lic) for lic in (cibles or ()) for p in toutes.get(lic) or [] if dans_la_phase(p)} - du_77 - {None}
     cercle3 = sorted({adversaire(p, adv) for adv in vaires_ext for p in toutes_ext.get(adv) or [] if dans_la_phase(p)}
                      - deja_vus - {None})
-    a_lire_c3, gardes_c3, perimes_c3, dates_c3 = _a_relire(client, cercle3, set(cercle3), maintenant, MAX_CERCLE3)
+    a_lire_c3, gardes_c3, perimes_c3, dates_c3 = _a_relire(client, cercle3, set(cercle3) if a_relire else set(), maintenant, MAX_CERCLE3)  # « aucun » : rien
     if cibles:
         print(f"  troisième cercle : {len(vaires_ext)} adversaires de Vaires d'autres départements, {len(cercle3)} de leurs "
               f"adversaires hors du 77 ({len(a_lire_c3)} listes à lire)", flush=True)
