@@ -137,3 +137,12 @@ def test_arrondi_des_images_comme_la_fftt():
     from ttvaires.images import fmt, signe
     assert (fmt(911.25, 1), fmt(914.75, 1), fmt(1420.25, 1), fmt(12345.5), signe(-0.75), fmt(1410)) == \
         ("911,3", "914,8", "1 420,3", "12 345,5", "-0,75", "1 410")
+
+
+def test_categorie_gardee_quand_le_nom_est_long():
+    """28/11 : la catégorie ne saute plus quand le nom et elle ne tiennent pas ensemble : le nom se raccourcit d'abord."""
+    from ttvaires import images
+    cel = images.cel_nom("GRIFFE", "Kevin", apres="M2 (L)")
+    place = images.largeur_texte("GRIFFE K.", images.TAILLE) + 2
+    assert images._avec_suffixe(cel, place, images.TAILLE) == ("GRIFFE K.", images.TAILLE)
+    assert images._avec_suffixe(cel, 5, images.TAILLE) is None  # vraiment trop étroit : le suffixe saute

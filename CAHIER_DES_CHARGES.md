@@ -859,3 +859,7 @@ Pas d'onglet dans l'application pour l'instant.
   encore saisi ») ; restaient « Marc G » (surnom du secret SURNOMS) à côté de « Marc Go. » → un surnom qui se confond
   avec un autre nom de l'image n'est plus pris ; et 911,2 sur l'image du classement virtuel (911,3 sur la page) →
   arrondi au-dessus à la moitié dans les images.
+- Catégories d'âge absentes sur l'image du classement virtuel (28/11) : « plein de joueurs sans catégorie ; à partir du
+  moment où on la met pour certains, il faut la mettre partout (même un joueur loisir a sa catégorie) ». Cause : la
+  catégorie sautait quand elle ne tenait pas à côté du nom ; le nom se raccourcit maintenant d'abord. Rien à lancer
+  depuis le PC : les données avaient la catégorie des 63 joueurs.

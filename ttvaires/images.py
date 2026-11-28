@@ -272,6 +272,17 @@ def _texte_aligne(d, texte, taille, gras, x, largeur, y, align, couleur):
     return x0, lt
 
 
+def _avec_suffixe(cel, place, taille):
+    """(texte, taille) du nom qui laisse la place du suffixe, ou None."""
+    for t in (cel.texte, *cel.alternatives):
+        if largeur_texte(t, taille, cel.gras) <= place:
+            return t, taille
+    t, tl = (cel.alternatives or [cel.texte])[-1], taille
+    while tl > taille * 0.78 and largeur_texte(t, tl, cel.gras) > place:
+        tl -= 0.5
+    return (t, tl) if largeur_texte(t, tl, cel.gras) <= place else None
+
+
 def _cellule(d, img, cel, col, x, y, h):
     if cel.fond:
         d.rectangle([(x + 1) * S, (y + 1) * S, (x + col.largeur - 1) * S, (y + h - 1) * S], fill=cel.fond)
@@ -287,7 +298,11 @@ def _cellule(d, img, cel, col, x, y, h):
     suffixe = f" {cel.apres}" if cel.apres else ""
     t, tl = ajuster(cel.texte, dispo, taille, cel.gras, cel.alternatives)
     if suffixe and largeur_texte(t, tl, cel.gras) + largeur_texte(suffixe, tp) > dispo:
-        suffixe = ""
+        # 28/11 : la catégorie (ou ce qui suit le nom) reste ; le nom se raccourcit d'abord (« GRIFFE K. », « GRIFFE »),
+        # puis sa police (jusqu'à 78 %) ; le suffixe ne saute que si rien de cela ne suffit
+        t, tl = _avec_suffixe(cel, dispo - largeur_texte(suffixe, tp), taille) or (t, tl)
+        if largeur_texte(t, tl, cel.gras) + largeur_texte(suffixe, tp) > dispo:
+            suffixe = ""
     ty = y + 7 if cel.sous else y + (h - tl * 1.15) / 2
     lt_total = largeur_texte(t, tl, cel.gras) + (largeur_texte(suffixe, tp) if suffixe else 0) + (16 if cel.icone else 0)
     if align == "g":
