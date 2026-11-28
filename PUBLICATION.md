@@ -742,10 +742,16 @@ des données).
   et leurs images (celles de leur championnat, sans celles des autres équipes).
 - Le journal de la mise à jour écrit, pour chaque feuille de Paris, ce que l'API donne (aucun nom) : nombre de
   parties, points-parties, lettres des joueurs, groupes trouvés (« groupes {1: 9, 2: 9, 3: 9} »).
-- À venir (même demande) : brûlages de Paris (règlement de la ligue, article 12 : par groupe de 3 d'une équipe
-  2 ou 3, un seul joueur ayant joué 3 fois ou plus dans une équipe de numéro inférieur), colonnes Paris du
-  classement virtuel, progression des 9, 6 et 3 joueurs, images des prochains adversaires, espace club rangé par
-  championnat (onglets), et tout cela dans la v2.
+- **Effectif et brûlages de Paris** (sélecteur de la page Effectif, images `paris_effectif_...`) : règlement de la
+  ligue, article 12 : est brûlé pour l'équipe 2 ou 3 un joueur qui a joué **3 fois ou plus** dans une équipe de
+  numéro inférieur (`brulage.SEUILS` : France 2, Paris 3) ; il peut encore y jouer, mais **un seul brûlé par groupe
+  de 3** (deux brûlés dans un même groupe : tous deux non qualifiés) ; un joueur ne joue qu'une équipe par journée.
+  Toute la saison compte. Images : effectif du club, joueurs disponibles et joueurs brûlés de Vaires 2 et 3.
+- **Classement virtuel** : colonne **Paris** (points gagnés ou perdus en championnat de Paris, coefficient 0,75) et,
+  dessous, l'équipe de Paris de chaque joueur (P1 à P3, d'après les feuilles de Paris) ; « Autre » ne compte plus
+  Paris (Champ. + Paris + Autre = Total). Les colonnes Paris n'apparaissent qu'une fois le championnat commencé.
+- À venir (même demande) : progression des 9, 6 et 3 joueurs de Paris, images des prochains adversaires de
+  Paris, et ces données dans les fiches d'équipe de la v2.
 
 ## Championnat de Paris : /paris/ (les trois équipes de Vaires)
 

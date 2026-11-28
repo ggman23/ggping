@@ -198,3 +198,44 @@ def test_colonne_virtuel_du_club_dans_les_resultats():
     d = donnees_page(r, {"1": 1415.5, "999": 800})
     assert d["virtuels_club"] == {"1": 1415.5}
     assert donnees_page(r)["virtuels_club"] is None
+
+
+def test_brulage_de_paris_trois_matchs():
+    """Règlement de la ligue, article 12 : brûlé pour l'équipe N après 3 matchs (et non 2) dans des équipes plus fortes."""
+    from ttvaires.brulage import SEUILS, brulage_par_equipe, equipe_max
+
+    deux, trois = [{"numero": 1}, {"numero": 1}], [{"numero": 1}, {"numero": 2}, {"numero": 1}]
+    assert SEUILS == {"france": 2, "paris": 3}
+    assert not brulage_par_equipe(deux, [1, 2, 3], 3)[2]["brule"] and brulage_par_equipe(deux, [1, 2, 3])[2]["brule"]
+    b = brulage_par_equipe(trois, [1, 2, 3], 3)
+    assert (b[2]["brule"], b[3]["brule"]) == (False, True) and equipe_max(trois, 3) == 2 and equipe_max(deux, 3) is None
+
+
+def test_effectif_de_paris_page_et_images(tmp_path):
+    from ttvaires import images
+    from ttvaires.effectif import recuperer_effectif
+
+    d = recuperer_effectif(FauxClient(_site()), VAIRES, AUJ, championnat="paris")
+    assert d["championnat"] == "paris" and d["seuil_brulage"] == 3
+    assert [(e["id"], e["championnat"], e["division"]) for e in d["equipes"]] == [("v1", "M", "Honneur")]
+    alignes = [j for j in d["joueurs"] if j["matchs"]]
+    assert len(alignes) == 9 and all(m["n"] == 1 for j in alignes for m in j["matchs"])
+    pytest.importorskip("PIL")
+    noms = [c.name for c, _ in images.images_effectif(d, tmp_path, prefixe="paris_")]
+    assert noms and all(n.startswith("paris_effectif_") for n in noms)
+
+
+def test_classement_virtuel_colonne_paris(tmp_path):
+    """28/11 : colonne Paris (points du championnat de Paris, à part des « autres » compétitions) et l'équipe de Paris."""
+    pytest.importorskip("PIL")
+    from ttvaires import images
+
+    partie = lambda champ, paris, pts: {"championnat": champ, "paris": paris, "points": pts}
+    j = {"nom": "FICTIF", "prenom": "Un", "categorie": "V50", "equipe": "V1", "officiels": 889, "classement": 8,
+         "championnat": 23.5, "paris": 2.2, "autres": 0.05, "total": 25.75, "virtuels": 914.75, "classement_virtuel": 9,
+         "v": 10, "d": 8, "equipes_paris": "P1", "parties": [partie(True, False, 23.5), partie(False, True, 2.2), partie(False, False, 0.05)]}
+    d = {"club": {"nom": "CVTT VAIRES"}, "phase": 1, "saison": "2026-2027", "genere_le": "2026-11-28T10:42", "joueurs": [j]}
+    ((chemin, titre),) = images.images_virtuel(d, tmp_path)
+    assert chemin.name == "classement_virtuel.png"
+    gabarit = (rendu.GABARIT_VIRTUEL).read_text(encoding="utf-8")
+    assert "AVEC_PARIS" in gabarit and "parisComp" in gabarit

@@ -66,7 +66,8 @@ const RUBRIQUES = [
 ];
 const RUB = Object.fromEntries(RUBRIQUES.map((r) => [r.id, r]));
 const PAGES_JOUEURS = ["classement_virtuel.html", "progression_vaires.html", "fiches_vaires.html"];
-const PAGES_CHAMP = ["rencontres_vaires.html", "classements_vaires.html", "resultats_vaires.html"];  // pages à sélecteur
+const PAGES_CHAMP = { paris: ["rencontres_vaires.html", "classements_vaires.html", "resultats_vaires.html", "effectif_vaires.html"],
+  jeunes: ["rencontres_vaires.html", "classements_vaires.html", "resultats_vaires.html"] };  // pages à sélecteur
 const GROUPES_FRANCE = ["récapitulatif", "classements", "rencontres", "résultats", "adversaires", "effectif"];
 const TYPES_CHAMP = [[/recap_/, "Récapitulatif de la journée"], [/classements_/, "Classements des poules"], [/rencontres_/, "Feuilles de match"],
   [/resultats_/, "Résultats des joueurs"], [/effectif_/, "Effectif et brûlages"], [/adversaires_/, "Prochains adversaires"],
@@ -112,7 +113,7 @@ function vueRubrique(club, eq, id) {
   } else if (id === "paris" || id === "jeunes") {
     liste = [tuile(`../../${id}/`, "page", "", `${r.nom} : poules et adversaires`, "Calendrier, salles, classement, joueurs des clubs adverses", false)];
     if (id === "paris") liste.push(tuile("../../paris/#dispo", "agenda", "", "Disponibilités des joueurs", "Qui est disponible pour chaque journée", false));
-    liste.push(...PAGES_CHAMP.map((f) => pages.find((d) => d.fichier === f)).filter(Boolean).map((d) =>
+    liste.push(...PAGES_CHAMP[id].map((f) => pages.find((d) => d.fichier === f)).filter(Boolean).map((d) =>
       tuile(`#doc/${encodeURIComponent(d.fichier)}/${id}`, "page", "", d.titre, `${r.nom} seulement`, false)));
     const siennes = [...images.filter((d) => d.groupe === id),
       ...(id === "paris" ? (club.ressources || []).flatMap((rb) => rb.documents.filter((d) => d.type === "image" && /paris/i.test(d.fichier)).map((d) => ({ ...d, rubrique: rb.nom }))) : [])];

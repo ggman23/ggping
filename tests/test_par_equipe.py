@@ -111,6 +111,7 @@ def test_onglets_en_haut_de_la_fiche_d_equipe_v2():
     assert o["f1"][-1] == ["images", "Images (1)", None, ["adversaires_V1F.png"]]
     assert o["p2"] == [["resume", "Résumé", None, None], ["poule", "Poule et adversaires", "../../paris/#seule/v2", None],
                        ["dispos", "Disponibilités", "../../paris/#dispo", None],
+                       ["effectif", "Effectif", "effectif_vaires.html", None],  # brûlages de Paris (28/11)
                        ["images", "Images (2)", None, ["paris_infographie.png", "affiche-championnat-de-paris.jpg"]]]
     assert o["j1"] == [["resume", "Résumé", None, None], ["poule", "Poule et adversaires", "../../jeunes/#seule/v1", None],
                        ["images", "Images", None, []]]

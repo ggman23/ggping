@@ -253,7 +253,7 @@ const V2 = (() => {
       l.push({ id: "poule", nom: "Poule et adversaires", externe: `${RACINE}../${t.comp}/#seule/${codeEquipe(t)}` });
       if (t.comp === "paris") l.push({ id: "dispos", nom: "Disponibilités", externe: `${RACINE}../paris/#dispo` });
       // Pages du site avec le sélecteur de championnat : ouvertes sur ce championnat et cette équipe (#paris/seule/v2)
-      for (const [id, fichier, nom] of PAGES_EQUIPE.filter(([i]) => ["feuilles", "poule", "resultats"].includes(i))) {
+      for (const [id, fichier, nom] of PAGES_EQUIPE.filter(([i]) => ["feuilles", "poule", "resultats", ...(t.comp === "paris" ? ["effectif"] : [])].includes(i))) {
         const d = docs.find((x) => x.fichier === fichier);
         if (d) l.push({ id, nom, doc: d, championnat: t.comp });
       }

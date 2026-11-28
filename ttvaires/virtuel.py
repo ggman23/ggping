@@ -403,6 +403,17 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
         j["alignements"] = sorted(({"journee": p["journee"], "date": p["date"], "equipe": f"V{p['numero']}" + (" F" if p["championnat"] == "F" else "")}
                                    for p in feuilles["parts"].get(lic, [])), key=lambda a: (a["date"], a["journee"], a["equipe"]))
 
+    # Championnat de Paris (28/11) : l'équipe de Paris de chaque joueur, d'après les feuilles de Paris (toute la saison)
+    try:
+        feuilles_paris = feuilles_du_club(client, numero_club, aujourdhui, "paris")["parts"]
+    except Exception as e:  # noqa: BLE001 (le classement virtuel ne dépend pas de Paris)
+        print(f"  ! équipes de Paris non lues ({type(e).__name__})", flush=True)
+        feuilles_paris = {}
+    for lic, ps in feuilles_paris.items():
+        if lic in joueurs:
+            compte = Counter(p["numero"] for p in ps)
+            joueurs[lic]["equipes_paris"] = ", ".join(f"P{n}" + (f" ×{c}" if c > 1 else "") for n, c in sorted(compte.items()))
+
     print(f"3/4 Parties de toutes les compétitions : {len(joueurs)} joueurs (API FFTT)", flush=True)
     toutes = _lire_parties(client, sorted(joueurs))
     # En phase 2, les parties de la phase 1 (déjà dans la liste de la saison) servent aussi : la page
@@ -428,14 +439,18 @@ def recuperer_virtuel(client, numero_club="08770250", aujourdhui=None, dossier_i
         exterieurs = sum(1 for l in lignes if du_77 and l.get("adv_licence") and l["adv_licence"] not in du_77)
         drapeaux = [references.estimee(l.get("adv_licence"), l["date"]) for l in lignes] if references else []
         estimees = None if not references or any(d is None for d in drapeaux) else sum(drapeaux)
+        for l in lignes:  # championnat de Paris : à part de « autres » (colonne Paris)
+            l["paris"] = not l["championnat"] and "championnat de paris" in (l.get("competition") or "").lower()
         championnat = round(sum(l["points"] for l in lignes if l["championnat"]), 3)
-        autres = round(sum(l["points"] for l in lignes if not l["championnat"]), 3)
-        total = round(championnat + autres, 3)
+        paris = round(sum(l["points"] for l in lignes if l["paris"]), 3)
+        autres = round(sum(l["points"] for l in lignes if not l["championnat"] and not l["paris"]), 3)
+        total = round(championnat + paris + autres, 3)
         virtuels = round(off + total, 3) if off else None
         resultat.append({
             "id": lic, "nom": j.get("nom"), "prenom": j.get("prenom"), "sexe": j.get("sexe"),
             "categorie": j.get("categorie"), "equipe": j.get("equipe"), "nouveau": j.get("nouveau", False),
-            "officiels": off, "classement": classement(off), "championnat": championnat, "autres": autres,
+            "officiels": off, "classement": classement(off), "championnat": championnat, "paris": paris, "autres": autres,
+            "equipes_paris": j.get("equipes_paris"),
             "total": total, "virtuels": virtuels, "classement_virtuel": classement(virtuels),
             "v": sum(l["victoire"] for l in lignes), "d": sum(not l["victoire"] for l in lignes),
             "parties": lignes, "ecartees": dict(ecartees), "inconnu": parties is None, "exterieurs": exterieurs,

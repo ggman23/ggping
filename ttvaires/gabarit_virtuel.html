@@ -113,7 +113,9 @@ const clsTexte = (x) => x > 0 ? "t-pos" : x < 0 ? "t-neg" : "";
 const clsFond = (x) => x > 0 ? "pos" : x < 0 ? "neg" : "";
 function fmtDate(iso) { const d = new Date(iso + "T12:00:00"); return `${JOURS[d.getDay()]} ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`; }
 const nomComplet = (j) => `${j.nom || ""} ${j.prenom || ""}`.trim();
-const autresComp = (j) => j.parties.filter((p) => !p.championnat).length;
+const autresComp = (j) => j.parties.filter((p) => !p.championnat && !p.paris).length;
+const parisComp = (j) => j.parties.filter((p) => p.paris).length;
+const AVEC_PARIS = D.joueurs.some((j) => j.paris || j.equipes_paris);  // colonnes Paris : quand le championnat de Paris a commencé
 
 let vue = "classement", filtre = "tous", recherche = "", tri = null, parJoueur = false;
 const ouverts = new Set(), toutVoir = new Set();
@@ -128,6 +130,9 @@ const COLONNES = [
   { t: "Équipe", k: (j) => j.equipe || "~", v: (j) => esc(j.equipe || ""), c: "n col-option" },
   { t: "Pts off.", titre: "Points officiels de la phase", c: "n", k: (j) => j.officiels ?? -1, v: (j) => j.officiels == null ? "—" : nombre(j.officiels, 0) },
   { t: "Champ.", titre: "Championnat par équipes", c: "n col-option", k: (j) => j.championnat, v: (j) => j.parties.some((p) => p.championnat) ? pts(j.championnat) : "", cls: (j) => clsTexte(j.championnat) },
+  ...(AVEC_PARIS ? [{ t: "Paris", titre: "Championnat de Paris (coefficient 0,75) ; en dessous, l'équipe de Paris (P1 à P3) et le nombre de rencontres",
+      c: "n col-option", k: (j) => j.paris ?? 0, v: (j) => (parisComp(j) ? pts(j.paris) : "") + (j.equipes_paris ? `<span class="cat" style="display:block">${esc(j.equipes_paris)}</span>` : ""),
+      cls: (j) => clsTexte(j.paris) }] : []),
   { t: "Autre", titre: "Autres compétitions : critérium, tournois, compétitions jeunes...", c: "n col-option", k: (j) => j.autres, v: (j) => autresComp(j) ? pts(j.autres) : "", cls: (j) => clsTexte(j.autres) },
   { t: "Total", c: "n", k: (j) => j.total, v: (j) => j.parties.length ? pts(j.total) : "", cls: (j) => clsFond(j.total) },
   { t: 'Virt.<span class="estim">estim.</span>', titre: "Estimation des points virtuels = points officiels + total", k: (j) => j.virtuels ?? -1,

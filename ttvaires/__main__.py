@@ -7,7 +7,7 @@ import webbrowser
 from datetime import datetime
 from pathlib import Path
 
-from .brulage import enrichir
+from .brulage import SEUILS, enrichir
 from .demo import donnees_demo
 from .adversaires import donnees_classements, equipes_du_championnat, recuperer
 from .effectif import recuperer_effectif
@@ -212,8 +212,17 @@ def page_effectif(client, club, ctx):
     resume = verifications.afficher_club(donnees["verification"], "feuilles de match des équipes de Vaires")
     if not donnees["source"]["liste"]:
         resume += " ; liste des licenciés indisponible (voir import/LISEZ-MOI.txt)"
-    html = generer_html(donnees, ctx.sortie / "effectif_vaires.html", GABARIT_EFFECTIF)
-    return [html, *faire_images("images_effectif", donnees, dossier=ctx.images)], resume
+    # Championnat de Paris : même page (sélecteur en haut) avec ses brûlages (3 matchs, un brûlé par groupe de 3)
+    autres, notes = autres_championnats("effectif", lambda ch: (lambda d: d if d["equipes"] else None)(
+        recuperer_effectif(client, club, aujourdhui=ctx.aujourdhui, dossier_import=IMPORT, championnat=ch))
+        if ch in SEUILS else None, ctx)
+    html = generer_html(donnees, ctx.sortie / "effectif_vaires.html", GABARIT_EFFECTIF, autres=autres)
+    images = faire_images("images_effectif", donnees, dossier=ctx.images)
+    for ch, d in autres.items():
+        images += faire_images("images_effectif", d, dossier=ctx.images, prefixe=f"{ch}_")
+        brules = sum(1 for j in d["joueurs"] if any((b or {}).get("brule") for b in (j.get("brulage") or {}).values()))
+        resume += f" ; {ch} : {len(d['equipes'])} équipes, {brules} joueur(s) brûlé(s) pour une équipe"
+    return [html, *images], resume + "".join(f" ; {n}" for n in notes)
 
 
 def page_virtuel(client, club, ctx):

@@ -43,22 +43,24 @@ def _joueur_feuille(j):
     }
 
 
-def feuilles_du_club(client, numero_club, aujourdhui):
-    """Équipes du club et joueurs alignés cette phase, d'après les feuilles de match (API FFTT).
+def feuilles_du_club(client, numero_club, aujourdhui, championnat="france"):
+    """Équipes du club et joueurs alignés cette phase (championnat de France) ou cette saison (Paris), d'après les
+    feuilles de match (API FFTT).
 
     Renvoie {"equipes": {(championnat, n): équipe}, "vus": {licence: joueur}, "parts": {licence:
     [participations]}, "prochaines": {championnat: prochaine journée}, "nom_club", "detail"}.
+    Championnat de Paris : toutes ses équipes sont « M » (équipes mixtes, un seul brûlage).
     """
     auj = aujourdhui.isoformat()
-    debut, fin = fftt.bornes_phase(aujourdhui)
-    id_club = fftt.id_interne_club(client, numero_club, debut)
-    rencontres = fftt.rencontres_club(client, id_club, debut, fin, ttl=HEURE)
+    debut, fin = fftt.bornes(aujourdhui, championnat)
+    id_club = fftt.id_interne_club(client, numero_club, fftt.bornes_phase(aujourdhui)[0])
+    rencontres = fftt.rencontres_club(client, id_club, debut, fin, ttl=HEURE, championnat=championnat)
     etats = {}
     detail = fftt.details(client, rencontres, auj, etats)
 
     equipes, vus, parts, prochaines, nom_club = {}, {}, defaultdict(list), {}, numero_club
     for r in rencontres:
-        ch = "F" if fftt.feminin(r) else "M"
+        ch = "F" if championnat == "france" and fftt.feminin(r) else "M"
         for cote in ("home", "away"):
             t = fftt.equipe(r, f"{cote}Opponent")
             num, _, nom = fftt.club_de(t)
@@ -88,12 +90,18 @@ def feuilles_du_club(client, numero_club, aujourdhui):
             "detail": detail, "verification": bilan_club(rencontres, etats, auj, numero_club, nom_club)}
 
 
-def recuperer_effectif(client, numero_club="08770250", aujourdhui=None, fichier_etat=None, dossier_import=None):
+def recuperer_effectif(client, numero_club="08770250", aujourdhui=None, fichier_etat=None, dossier_import=None,
+                       championnat="france"):
+    """Effectif et brûlages d'un championnat : France (phase, brûlé après 2 matchs en équipes plus fortes) ou Paris
+    (saison, brûlé après 3 matchs : brulage.SEUILS) ; mêmes joueurs du club (liste des licenciés)."""
+    from .brulage import SEUILS
     aujourdhui = aujourdhui or date.today()
     phase, saison = fftt.phase_et_saison(aujourdhui)
+    seuil = SEUILS[championnat]
 
-    print(f"1/2 Équipes et feuilles de match du club {numero_club} (phase {phase} {saison}, API FFTT)", flush=True)
-    f = feuilles_du_club(client, numero_club, aujourdhui)
+    print(f"1/2 Équipes et feuilles de match du club {numero_club} : {fftt.NOMS_CHAMPIONNATS[championnat]} "
+          f"({f'phase {phase} ' if championnat == 'france' else ''}{saison}, API FFTT)", flush=True)
+    f = feuilles_du_club(client, numero_club, aujourdhui, championnat)
     equipes, vus, parts, prochaines, nom_club = f["equipes"], f["vus"], f["parts"], f["prochaines"], f["nom_club"]
 
     print("2/2 Licenciés du club : réinscriptions, licences loisir (pingpocket.fr)", flush=True)
@@ -114,14 +122,15 @@ def recuperer_effectif(client, numero_club="08770250", aujourdhui=None, fichier_
         matchs = sorted(parts.get(j["id"], []), key=lambda p: (p["date"], p["numero"]))
         masculin = [p for p in matchs if p["championnat"] == "M"]
         j["matchs"] = [{"j": p["journee"], "n": p["numero"], "ch": p["championnat"], "d": p["date"]} for p in matchs]
-        j["brulage"] = brulage_par_equipe(masculin, numeros_m)
-        j["equipe_max"] = equipe_max(masculin)
+        j["brulage"] = brulage_par_equipe(masculin, numeros_m, seuil)
+        j["equipe_max"] = equipe_max(masculin, seuil)
         habituelles = Counter(p["numero"] for p in masculin).most_common(1)
         j["habituelle"] = habituelles[0][0] if habituelles else None
 
     precedent = _nouveaux(joueurs, fichier_etat, source)
     return {
         "genere_le": datetime.now().isoformat(timespec="minutes"), "saison": saison, "phase": phase,
+        "championnat": championnat, "seuil_brulage": seuil,
         "club": {"numero": numero_club, "nom": nom_club},
         "equipes": sorted(equipes.values(), key=lambda e: (e["championnat"] == "F", e["numero"])),
         "prochaines": prochaines, "source": source, "precedent": precedent, "verification": f["verification"],

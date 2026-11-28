@@ -498,22 +498,27 @@ def _tableau_pagine(dossier, prefixe, titre, sous_titre, colonnes, lignes, pied,
 
 def images_virtuel(donnees, dossier):
     _nettoyer(dossier, "classement_virtuel")
-    largeur_num = 94
+    # Championnat de Paris (28/11) : sa colonne de points, et l'équipe de Paris sous l'équipe de France
+    avec_paris = any(j.get("paris") or j.get("equipes_paris") for j in donnees["joueurs"])
+    largeur_num = 86 if avec_paris else 94
     colonnes = colonnes_egales([Col("#", 44), Col("Joueur", None, "g")]
-                               + [Col(t, largeur_num) for t in ("Éq.", "Pts off.", "Champ.", "Autre", "Total",
-                                                                 "Virt.", "Clt", "V/D")], LARGEUR - 2 * MARGE)
+                               + [Col(t, largeur_num) for t in ("Éq.", "Pts off.", "Champ.", *(("Paris",) if avec_paris else ()),
+                                                                 "Autre", "Total", "Virt.", "Clt", "V/D")], LARGEUR - 2 * MARGE)
     lignes = []
     for i, j in enumerate(donnees["joueurs"], 1):
         clt = j.get("classement_virtuel")
         ecart = (clt - j["classement"]) if clt is not None and j.get("classement") is not None else 0
         a_champ = any(p["championnat"] for p in j["parties"])
-        a_autres = any(not p["championnat"] for p in j["parties"])
+        a_paris = any(p.get("paris") for p in j["parties"])
+        a_autres = any(not p["championnat"] and not p.get("paris") for p in j["parties"])
+        eq_paris = (j.get("equipes_paris") or "").split(",")[0].split(" ")[0]
         lignes.append([
             C(i if j.get("virtuels") is not None else "", couleur=DOUX),
             cel_nom(j.get("nom"), j.get("prenom"), apres=j.get("categorie")),
-            C(equipe_courte(j.get("equipe")), couleur=DOUX),
+            C(equipe_courte(j.get("equipe")), couleur=DOUX, sous=eq_paris or None) if avec_paris else C(equipe_courte(j.get("equipe")), couleur=DOUX),
             C(fmt(j.get("officiels")) if j.get("officiels") is not None else "—"),
             cel_points(j["championnat"]) if a_champ else C(""),
+            *((cel_points(j.get("paris")) if a_paris else C(""),) if avec_paris else ()),
             cel_points(j["autres"]) if a_autres else C(""),
             cel_points(j["total"], fond=True) if j["parties"] else C(""),
             C(fmt(j["virtuels"], 0 if float(j["virtuels"]).is_integer() else 1) if j.get("virtuels") is not None else "—",
@@ -525,7 +530,9 @@ def images_virtuel(donnees, dossier):
     sous = f"{donnees['club']['nom']} · phase {donnees['phase']} {donnees['saison']} · toutes compétitions · estimation · {_genere(donnees)}"
     pied = ("Virt. = estimation des points virtuels : points officiels + points gagnés ou perdus depuis le début de la phase "
             "(championnat, critérium, tournois...) ; seule la situation mensuelle publiée par la FFTT est officielle. "
-            "Clt : ▲ ▼ = changement de classement. V/D = victoires / défaites.")
+            + ("Paris = championnat de Paris (coefficient 0,75) ; sous l'équipe : l'équipe de Paris (P1 à P3). Autre = les autres "
+               "compétitions. " if avec_paris else "")
+            + "Clt : ▲ ▼ = changement de classement. V/D = victoires / défaites.")
     return _tableau_pagine(dossier, "classement_virtuel", "Classement virtuel", sous, colonnes, lignes, pied,
                            "Classement virtuel")
 
@@ -729,10 +736,10 @@ def _brulage(j, n):
     return b.get(n) or b.get(str(n)) or {}
 
 
-def _images_disponibles(equipe, joueurs, sous_base, dossier):
-    """Joueurs qui peuvent jouer dans l'équipe, triés par points : déjà joué où, et remarque."""
+def _images_disponibles(equipe, joueurs, sous_base, dossier, prefixe="", seuil=2, court=""):
+    """Joueurs qui peuvent jouer dans l'équipe, triés par points : déjà joué où, et remarque. Championnat de Paris
+    (prefixe « paris_ », seuil 3) : les joueurs non brûlés pour l'équipe."""
     n, feminine = equipe["numero"], equipe["championnat"] == "F"
-    court = equipe["nom_court"].replace("Vaires ", "V").replace(" ", "")
     colonnes = colonnes_egales([Col("Joueur", None, "g"), Col("Clt", 64), Col("Pts", 86), Col("A joué", 230),
                                 Col("Remarque", 330, "g")], LARGEUR - 2 * MARGE)
     lignes = []
@@ -751,8 +758,9 @@ def _images_disponibles(equipe, joueurs, sous_base, dossier):
                                                                     for k, c in sorted(masculin.items())))
         else:
             fortes = _brulage(j, n).get("plus_fortes") or []
-            if len(fortes) == 1:
-                remarques.append(f"1 match en V{fortes[0]} : plus qu'1")
+            if fortes and len(fortes) == seuil - 1:
+                remarques.append(f"{len(fortes)} match{'s' if len(fortes) > 1 else ''} en "
+                                 + ", ".join(f"V{x}" for x in fortes) + " : plus qu'1")
                 alerte = True
             hab = j.get("habituelle")
             if hab and hab < n:
@@ -767,27 +775,34 @@ def _images_disponibles(equipe, joueurs, sous_base, dossier):
               sous=" · ".join(remarques[1:]) or None),
         ])
     qui = "joueuses" if feminine else "joueurs"
-    titre = f"{equipe['nom_court']} : {qui} disponibles"
+    titre = f"{court}{equipe['nom_court']} : {qui} disponibles"
     sous_titre = f"{len(lignes)} {qui} · {sous_base}"
     pied = ("Toutes les joueuses du club peuvent jouer en équipe féminine (pas de brûlage en championnat féminin), "
             "du mieux classée à la moins bien classée. A joué : rencontres de la phase en équipe féminine."
             if feminine else
             f"Joueurs non brûlés pour la {n}, du mieux classé au moins bien classé. A joué : équipes et nombre de "
-            f"rencontres cette phase. « Plus qu'1 match » : un match de plus dans une équipe plus forte que la {n} "
-            f"et le joueur sera brûlé pour {equipe['nom_court']}.")
+            f"rencontres {'cette saison' if prefixe else 'cette phase'}. « Plus qu'1 » : un match de plus dans une équipe "
+            f"plus forte que la {n} et le joueur sera brûlé pour {equipe['nom_court']}."
+            + (" Championnat de Paris : un joueur brûlé peut encore jouer, mais un seul par groupe de 3 (règlement, article 12)."
+               if prefixe == "paris_" else ""))
     if not lignes:
         return []
-    return _tableau_pagine(dossier, f"effectif_disponibles_{court}", titre, sous_titre, colonnes, lignes, pied, titre)
+    nom_court = equipe["nom_court"].replace("Vaires ", "V").replace(" ", "")
+    return _tableau_pagine(dossier, f"{prefixe}effectif_disponibles_{nom_court}", titre, sous_titre, colonnes, lignes, pied, titre)
 
 
-def images_effectif(donnees, dossier):
-    _nettoyer(dossier, "effectif_")
+def images_effectif(donnees, dossier, prefixe=""):
+    """Effectif du club, puis pour chaque équipe (sauf la 1) ses joueurs disponibles et ses brûlés. Championnat de
+    Paris (prefixe « paris_ ») : brûlé après 3 matchs en équipes plus fortes (donnees["seuil_brulage"])."""
+    _nettoyer(dossier, f"{prefixe}effectif_")
+    seuil, court = donnees.get("seuil_brulage", 2), _court(donnees)
+    paris = prefixe == "paris_"
     sorties = []
     masc = [e for e in donnees["equipes"] if e["championnat"] == "M"]
     fem = [e for e in donnees["equipes"] if e["championnat"] == "F"]
     actifs = [j for j in donnees["joueurs"] if j.get("renouvele") and not j.get("loisir")]
     journees = sorted({m["j"] for j in actifs for m in j.get("matchs", [])})
-    sous_base = f"{donnees['club']['nom']} · phase {donnees['phase']} {donnees['saison']} · {_genere(donnees)}"
+    sous_base = f"{donnees['club']['nom']} · {_periode(donnees)} · {_genere(donnees)}"
 
     # Vue du club : équipes jouées à chaque journée, puis ✓ / flamme pour chaque équipe
     larg_j = 52 if len(journees) <= 5 else 46
@@ -809,16 +824,20 @@ def images_effectif(donnees, dossier):
         lignes.append([cel_nom(j.get("nom"), j.get("prenom"), apres=j.get("categorie")), C(fmt(pts) if pts else "", couleur=DOUX),
                        *cel_j, *cel_m, *cel_f])
     sorties += _tableau_pagine(
-        dossier, "effectif_club", "Effectif : qui peut jouer où ?", sous_base, colonnes, lignes,
-        "J1, J2... : équipe jouée à chaque journée (F = équipe féminine). Coche = peut jouer dans l'équipe ; "
-        "flamme = brûlé (2 matchs en équipes plus fortes). Les matchs en équipe féminine ne comptent pas pour le "
-        "brûlage masculin.", "Effectif : club")
+        dossier, f"{prefixe}effectif_club", "Effectif : qui peut jouer où ?", sous_base, colonnes, lignes,
+        ("J1, J2... : équipe jouée à chaque journée. Coche = pas brûlé pour l'équipe ; flamme = brûlé (3 matchs ou plus "
+         "dans des équipes plus fortes) : il peut encore y jouer, mais un seul brûlé par groupe de 3 (règlement de la "
+         "ligue, article 12)." if paris else
+         "J1, J2... : équipe jouée à chaque journée (F = équipe féminine). Coche = peut jouer dans l'équipe ; "
+         "flamme = brûlé (2 matchs en équipes plus fortes). Les matchs en équipe féminine ne comptent pas pour le "
+         "brûlage masculin."), f"{court}Effectif : club")
 
     # Une image par équipe masculine (sauf la 1, où tout le monde peut jouer) : les joueurs disponibles,
     # du mieux classé au moins bien classé, puis les joueurs brûlés
     for e in masc[1:]:
         n = e["numero"]
-        sorties += _images_disponibles(e, [j for j in actifs if not _brulage(j, n).get("brule")], sous_base, dossier)
+        sorties += _images_disponibles(e, [j for j in actifs if not _brulage(j, n).get("brule")], sous_base, dossier,
+                                       prefixe, seuil, court)
         brules = [j for j in actifs if _brulage(j, n).get("brule")]
         colonnes = colonnes_egales([Col("Joueur", None, "g"), Col("Pts", 88), Col("Matchs en équipes\nplus fortes", 290),
                                     Col("Peut encore\njouer en", 230)], LARGEUR - 2 * MARGE)
@@ -833,18 +852,21 @@ def images_effectif(donnees, dossier):
                 C(puces=[(f"V{p}", NEG_FOND, NEG_TEXTE) for p in plus_fortes[:6]]),
                 C(", ".join(f"V{p}" for p in possibles), couleur=OK_TEXTE),
             ])
-        titre = f"{e['nom_court']} : joueurs brûlés"
+        titre = f"{court}{e['nom_court']} : joueurs brûlés"
         if not lignes:
             r = Rendu()
             r.titre(titre, sous_base)
             r.espace(10)
             r.texte(f"Aucun joueur brûlé pour {e['nom_court']} pour le moment.", 22, NOIR)
-            sorties.append((_enregistrer(r.image(), dossier, f"effectif_brules_V{n}.png"), titre))
+            sorties.append((_enregistrer(r.image(), dossier, f"{prefixe}effectif_brules_V{n}.png"), titre))
             continue
         sorties += _tableau_pagine(
-            dossier, f"effectif_brules_V{n}", titre, sous_base, colonnes, lignes,
-            f"Ces joueurs ont joué 2 matchs dans des équipes plus fortes que la {n} : ils ne peuvent plus jouer en "
-            f"{e['nom_court']} cette phase.", titre)
+            dossier, f"{prefixe}effectif_brules_V{n}", titre, sous_base, colonnes, lignes,
+            (f"Ces joueurs ont joué 3 matchs ou plus dans des équipes plus fortes que la {n} : ils peuvent encore jouer "
+             f"en {e['nom_court']}, mais un seul par groupe de 3 (deux brûlés dans un même groupe : tous deux non "
+             f"qualifiés ; règlement de la ligue, article 12)." if paris else
+             f"Ces joueurs ont joué 2 matchs dans des équipes plus fortes que la {n} : ils ne peuvent plus jouer en "
+             f"{e['nom_court']} cette phase."), titre)
     # Équipe féminine : toutes les joueuses (pas de brûlage en championnat féminin)
     for e in fem:
         sorties += _images_disponibles(e, [j for j in actifs if j.get("sexe") == "F"], sous_base, dossier)

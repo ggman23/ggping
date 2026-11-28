@@ -93,6 +93,10 @@ const D = JSON.parse(document.getElementById("donnees").textContent);
 const JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 function fmtDate(iso) { if (!iso) return ""; const d = new Date(iso + "T12:00:00"); return `${JOURS[d.getDay()]} ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`; }
+// Championnat de la page (sélecteur en haut) : France (brûlé après 2 matchs en équipes plus fortes) ou Paris (après 3 ;
+// un brûlé peut encore jouer, mais un seul par groupe de 3 : règlement de la ligue, article 12)
+const CHAMP = D.championnat || "france", PARIS = CHAMP === "paris", SEUIL = D.seuil_brulage || 2;
+const periode = () => CHAMP === "france" ? `phase ${D.phase} ${D.saison}` : `${{ paris: "Championnat de Paris", jeunes: "Championnat des jeunes" }[CHAMP]} ${D.saison}`;
 const MASC = D.equipes.filter((e) => e.championnat === "M");
 const FEM = D.equipes.filter((e) => e.championnat === "F");
 const ACTIFS = D.joueurs.filter((j) => j.renouvele && !j.loisir);
@@ -117,7 +121,8 @@ function statut(j) {
     return une.length ? `<span class="badge ok">libre</span> <span class="petit">1 match en V${une[0].n}</span>` : '<span class="badge ok">libre</span>';
   }
   if (j.equipe_max >= derniere) return '<span class="badge ok">libre</span>';
-  return `<span class="badge brule">brûlé à partir de V${j.equipe_max + 1}</span>`;
+  return PARIS ? `<span class="badge brule" title="Il peut encore y jouer, mais un seul brûlé par groupe de 3">brûlé pour V${j.equipe_max + 1}${j.equipe_max + 1 < derniere ? " et plus" : ""}</span>`
+    : `<span class="badge brule">brûlé à partir de V${j.equipe_max + 1}</span>`;
 }
 function resumeMatchs(j, ch) {
   const compte = {};
@@ -191,7 +196,7 @@ function vueClub() {
   const lignes = liste.map((j) => `<tr>
     <td>${nom(j)}</td><td>${esc(j.categorie ?? "")}</td><td class="num">${ptsTxt(j)}</td>
     ${js.map((jn) => `<td class="c">${matchsJournee(j, jn)}</td>`).join("")}
-    ${MASC.map((e) => `<td class="c">${j.brulage[e.numero]?.brule ? `<span class="badge brule" title="2 matchs en équipes plus fortes : V${j.brulage[e.numero].plus_fortes.join(" + V")}">brûlé</span>` : '<span class="badge ok">✓</span>'}</td>`).join("")}
+    ${MASC.map((e) => `<td class="c">${j.brulage[e.numero]?.brule ? `<span class="badge brule" title="${SEUIL} matchs ou plus en équipes plus fortes : V${j.brulage[e.numero].plus_fortes.join(" + V")}">brûlé</span>` : '<span class="badge ok">✓</span>'}</td>`).join("")}
     ${FEM.map(() => `<td class="c">${j.sexe === "F" ? '<span class="badge ok">✓</span>' : '<span class="petit">—</span>'}</td>`).join("")}
     <td>${statut(j)}</td></tr>`).join("");
   const nb = (f) => ACTIFS.filter((j) => f === "tous" || (f === "joue" ? j.matchs.length : !j.matchs.length)).length;
@@ -199,8 +204,9 @@ function vueClub() {
     <div class="outils"><input id="recherche" type="search" placeholder="Rechercher un joueur" value="${esc(recherche)}">
       <span class="filtres">${[["tous", "Tous"], ["joue", "Ont joué"], ["pas", "Pas encore joué"]].map(([f, t]) => `<a data-f="${f}" class="${filtre === f ? "actif" : ""}">${t} (${nb(f)})</a>`).join(" ")}</span></div>
     <p class="petit">Colonnes J1, J2… : équipe dans laquelle le joueur a joué (<span class="m">4</span> = Vaires 4, <span class="m f">1F</span> = Vaires 1 féminine).
-      Colonnes V1 à V${MASC.length ? MASC[MASC.length - 1].numero : ""} : <span class="badge ok">✓</span> peut jouer, <span class="badge brule">brûlé</span> ne peut plus jouer dans cette équipe.
-      Les matchs en équipe féminine ne comptent pas pour le brûlage masculin.</p>
+      Colonnes V1 à V${MASC.length ? MASC[MASC.length - 1].numero : ""} : <span class="badge ok">✓</span> peut jouer, <span class="badge brule">brûlé</span> ${PARIS
+        ? "a joué 3 fois ou plus dans des équipes plus fortes : il peut encore jouer dans cette équipe, mais un seul brûlé par groupe de 3 (deux brûlés dans un même groupe : tous deux non qualifiés ; règlement de la ligue, article 12). Un joueur ne joue que dans une équipe par journée."
+        : "ne peut plus jouer dans cette équipe. Les matchs en équipe féminine ne comptent pas pour le brûlage masculin."}</p>
     <div class="defil"><table><thead><tr>
       <th class="tri" data-t="joueur">Joueur${fl("joueur")}</th><th>Cat.</th><th class="num tri" data-t="points">Clt · pts${fl("points")}</th>
       ${js.map((jn) => `<th class="c">J${jn}</th>`).join("")}
@@ -220,7 +226,7 @@ function vueEquipe(e) {
   const remarque = (j) => {
     const r = [];
     const fortes = j.brulage[N]?.plus_fortes || [];
-    if (fortes.length === 1) r.push(`<span class="badge att" title="Encore 1 match dans une équipe plus forte que V${N} et il sera brûlé pour V${N}">1 match en V${fortes[0]} : plus qu'1</span>`);
+    if (fortes.length && fortes.length === SEUIL - 1) r.push(`<span class="badge att" title="Encore 1 match dans une équipe plus forte que V${N} et il sera brûlé pour V${N}">${fortes.length} match${fortes.length > 1 ? "s" : ""} en V${fortes.join(", V")} : plus qu'1</span>`);
     if (j.habituelle && j.habituelle < N) r.push(`renfort (habituellement V${j.habituelle})`);
     if (j.habituelle && j.habituelle > N) r.push(`habituellement V${j.habituelle}`);
     return r.join(" · ");
@@ -233,7 +239,7 @@ function vueEquipe(e) {
     <div class="carte"><h3>Joueurs possibles pour V${N} (${possibles.length})</h3>
       ${table(possibles, "A joué · remarque", (j) => `${resumeMatchs(j, "M")}${remarque(j) ? `<br><span class="petit">${remarque(j)}</span>` : ""}`)}</div>
     <div class="carte"><h3>Brûlés pour V${N} (${brules.length})</h3>
-      <p class="petit">2 matchs ou plus dans des équipes plus fortes que V${N}. Dans la liste de gauche,
+      <p class="petit">${SEUIL} matchs ou plus dans des équipes plus fortes que V${N}${PARIS ? " : ils peuvent encore jouer en V" + N + ", mais un seul par groupe de 3" : ""}. Dans la liste de gauche,
         <span class="badge att">plus qu'1</span> signale un joueur à qui il reste un seul match possible en équipe plus forte avant d'être brûlé pour V${N}.</p>
       ${table(brules, "Brûlé par", (j) => `<span class="badge brule">V${j.brulage[N].plus_fortes.join(" + V")}</span>`)}</div>
   </div>`;
@@ -298,7 +304,7 @@ function route() {
   window.scrollTo(0, 0);
 }
 document.getElementById("sous-titre").textContent =
-  `${D.club.nom} · phase ${D.phase} ${D.saison} · ${D.date_reference ? "archive, état au " + new Date(D.date_reference + "T12:00").toLocaleDateString("fr-FR") : "données du " + new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`;
+  `${D.club.nom} · ${periode()} · ${D.date_reference ? "archive, état au " + new Date(D.date_reference + "T12:00").toLocaleDateString("fr-FR") : "données du " + new Date(D.genere_le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`;
 window.addEventListener("hashchange", route);
 route();
 </script>

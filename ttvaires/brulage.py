@@ -43,27 +43,33 @@ def participations(club, championnat):
     return dict(res)
 
 
-def equipe_max(parts):
+# Matchs dans des équipes plus fortes à partir desquels un joueur est brûlé : championnat de France 2 (FFTT) ;
+# championnat de Paris 3 (règlement de la ligue IDF, article 12 : « ayant joué 3 fois ou plus dans une équipe de
+# numéro inférieur » ; un tel joueur peut encore jouer, mais un seul par groupe de 3 d'une équipe 2, 3...)
+SEUILS = {"france": 2, "paris": 3}
+
+
+def equipe_max(parts, seuil=2):
     """Numéro de la plus faible équipe où le joueur peut encore jouer (None = aucune limite).
 
-    Le joueur peut jouer en équipe N tant qu'il a moins de 2 matchs dans des équipes de
-    numéro < N : la limite est donc le 2e plus petit numéro d'équipe dans lequel il a joué.
+    Le joueur peut jouer en équipe N tant qu'il a moins de `seuil` matchs dans des équipes de
+    numéro < N : la limite est donc le seuil-ième plus petit numéro d'équipe dans lequel il a joué.
     """
     numeros = sorted(p["numero"] for p in parts)
-    return numeros[1] if len(numeros) >= 2 else None
+    return numeros[seuil - 1] if len(numeros) >= seuil else None
 
 
-def brulage_par_equipe(parts, numeros):
+def brulage_par_equipe(parts, numeros, seuil=2):
     """Pour chaque numéro d'équipe : le joueur est-il brûlé, et à cause de quels matchs ?
 
     `parts` : matchs du joueur dans un même championnat (chacun avec "numero"). Brûlé pour
-    l'équipe N = au moins 2 matchs dans des équipes de numéro < N. Renvoie
+    l'équipe N = au moins `seuil` matchs dans des équipes de numéro < N. Renvoie
     {N: {"brule": bool, "plus_fortes": [numéros des équipes plus fortes où il a joué]}}.
     """
     res = {}
     for n in numeros:
         plus_fortes = sorted(p["numero"] for p in parts if p["numero"] < n)
-        res[n] = {"brule": len(plus_fortes) >= 2, "plus_fortes": plus_fortes}
+        res[n] = {"brule": len(plus_fortes) >= seuil, "plus_fortes": plus_fortes}
     return res
 
 
